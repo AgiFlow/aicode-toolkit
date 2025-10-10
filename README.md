@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/agiflow-aicode-toolkit-badge.png)](https://mseep.ai/app/agiflow-aicode-toolkit)
+
 # AI Code Toolkit
 
 > Scale your AI coding agents with scaffolding, architecture patterns, and validation rules
