@@ -6,7 +6,7 @@
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg?style=flat-square)](https://opensource.org/licenses/AGPL-3.0)
 [![Discord](https://dcbadge.limes.pink/api/server/https://discord.gg/NsB6q9Vas9?style=flat-square)](https://discord.gg/NsB6q9Vas9)
 
-![AI Code Toolkit Banner](./docs/banner.jpg)
+![AI Code Toolkit Banner](./docs/banner.png)
 
 A collection of [Model Context Protocol (MCP)](https://modelcontextprotocol.io) servers and tools that help AI coding agents maintain consistency, follow conventions, and scale with your codebase.
 
@@ -41,11 +41,11 @@ As projects evolve from MVP to production, they develop patterns, conventions, a
 
 **AI Code Toolkit provides building blocks to scale coding agent capabilities:**
 
-- ✅ Generate code that follows your team's conventions
-- ✅ Enforce architectural patterns automatically
-- ✅ Validate agent outputs programmatically
-- ✅ Work with any AI coding agent (Claude, Cursor, etc.)
-- ✅ Support any tech stack (Next.js, React, or custom frameworks)
+- Generate code that follows your team's conventions
+- Enforce architectural patterns automatically
+- Validate agent outputs programmatically
+- Work with any AI coding agent (Claude, Cursor, etc.)
+- Support any tech stack (Next.js, React, or custom frameworks)
 
 ### The Perfect Complement to Spec Driven Development
 

@@ -125,11 +125,10 @@ export class CodeReviewService {
     const userPrompt = this.buildUserPrompt(fileContent, filePath, rules);
 
     try {
-      // Update system prompt configuration
-      await this.claudeService.updatePrompt({ systemPrompt });
-
+      // Pass system prompt directly to invokeAsLlm (don't write to CLAUDE.md)
       const response = await this.claudeService.invokeAsLlm({
         prompt: userPrompt,
+        systemPrompt,
         maxTokens: 4000,
       });
 
