@@ -1,3 +1,13 @@
+## 1.0.2 (2025-10-23)
+
+### 🩹 Fixes
+
+- **architect-mcp:** code-review Fix issue when code review update AGENTS.md and CLAUDE.md ([3f0174b](https://github.com/AgiFlow/aicode-toolkit/commit/3f0174b))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.1 (2025-10-14)
 
 ### 🚀 Features
