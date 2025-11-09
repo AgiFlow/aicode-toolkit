@@ -41,4 +41,10 @@ export interface UseBoilerplateRequest {
 
 export interface ListBoilerplateResponse {
   boilerplates: BoilerplateInfo[];
+  nextCursor?: string; // Cursor token for pagination (next item index)
+  _meta?: {
+    total: number; // Total number of boilerplates
+    offset: number; // Current offset (start index)
+    limit: number; // Page size
+  };
 }

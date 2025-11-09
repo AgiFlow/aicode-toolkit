@@ -33,7 +33,13 @@ export class ListScaffoldingMethodsTool {
     });
 
     // Build properties based on mode
-    const properties: Record<string, any> = {};
+    const properties: Record<string, any> = {
+      cursor: {
+        type: 'string',
+        description:
+          'Optional pagination cursor to fetch the next page of results. Omit to fetch the first page.',
+      },
+    };
 
     // Only add parameters in monorepo mode
     // In monolith mode, automatically use current directory and read template from toolkit.yaml
@@ -66,9 +72,10 @@ export class ListScaffoldingMethodsTool {
    */
   async execute(args: Record<string, any>): Promise<CallToolResult> {
     try {
-      const { projectPath, templateName } = args as {
+      const { projectPath, templateName, cursor } = args as {
         projectPath?: string;
         templateName?: string;
+        cursor?: string;
       };
 
       let result;
@@ -78,10 +85,10 @@ export class ListScaffoldingMethodsTool {
         try {
           const config = await ProjectConfigResolver.resolveProjectConfig(process.cwd());
           const resolvedTemplateName = config.sourceTemplate;
-          result =
-            await this.scaffoldingMethodsService.listScaffoldingMethodsByTemplate(
-              resolvedTemplateName,
-            );
+          result = await this.scaffoldingMethodsService.listScaffoldingMethodsByTemplate(
+            resolvedTemplateName,
+            cursor,
+          );
         } catch (error) {
           throw new Error(
             `Failed to read template name from configuration: ${error instanceof Error ? error.message : String(error)}`,
@@ -95,10 +102,11 @@ export class ListScaffoldingMethodsTool {
 
         // If both are provided, prioritize projectPath
         if (projectPath) {
-          result = await this.scaffoldingMethodsService.listScaffoldingMethods(projectPath);
+          result = await this.scaffoldingMethodsService.listScaffoldingMethods(projectPath, cursor);
         } else {
           result = await this.scaffoldingMethodsService.listScaffoldingMethodsByTemplate(
             templateName!,
+            cursor,
           );
         }
       }

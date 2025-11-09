@@ -3,6 +3,7 @@ import { log, ProjectConfigResolver } from '@agiflowai/aicode-utils';
 import yaml from 'js-yaml';
 import type { IFileSystemService } from '../types/interfaces';
 import type { ScaffoldResult } from '../types/scaffold';
+import { PaginationHelper } from '../utils/pagination';
 import { TemplateService } from './TemplateService';
 
 export interface ScaffoldMethod {
@@ -22,6 +23,12 @@ export interface ListScaffoldingMethodsResult {
   sourceTemplate: string;
   templatePath: string;
   methods: ScaffoldMethod[];
+  nextCursor?: string; // Cursor token for pagination (next item index)
+  _meta?: {
+    total: number; // Total number of methods
+    offset: number; // Current offset (start index)
+    limit: number; // Page size
+  };
 }
 
 export interface UseScaffoldMethodRequest {
@@ -44,7 +51,10 @@ export class ScaffoldingMethodsService {
     this.templateService = new TemplateService();
   }
 
-  async listScaffoldingMethods(projectPath: string): Promise<ListScaffoldingMethodsResult> {
+  async listScaffoldingMethods(
+    projectPath: string,
+    cursor?: string,
+  ): Promise<ListScaffoldingMethodsResult> {
     const absoluteProjectPath = path.resolve(projectPath);
 
     // Use ProjectConfigResolver to get sourceTemplate
@@ -52,11 +62,12 @@ export class ScaffoldingMethodsService {
     const projectConfig = await ProjectConfigResolver.resolveProjectConfig(absoluteProjectPath);
 
     const sourceTemplate = projectConfig.sourceTemplate;
-    return this.listScaffoldingMethodsByTemplate(sourceTemplate);
+    return this.listScaffoldingMethodsByTemplate(sourceTemplate, cursor);
   }
 
   async listScaffoldingMethodsByTemplate(
     templateName: string,
+    cursor?: string,
   ): Promise<ListScaffoldingMethodsResult> {
     const templatePath = await this.findTemplatePath(templateName);
 
@@ -96,10 +107,15 @@ export class ScaffoldingMethodsService {
       });
     }
 
+    // Apply pagination with metadata
+    const paginatedResult = PaginationHelper.paginate(methods, cursor);
+
     return {
       sourceTemplate: templateName,
       templatePath,
-      methods,
+      methods: paginatedResult.items,
+      nextCursor: paginatedResult.nextCursor,
+      _meta: paginatedResult._meta,
     };
   }
 
@@ -109,8 +125,9 @@ export class ScaffoldingMethodsService {
   async listScaffoldingMethodsWithVariables(
     projectPath: string,
     variables: Record<string, any>,
+    cursor?: string,
   ): Promise<ListScaffoldingMethodsResult> {
-    const result = await this.listScaffoldingMethods(projectPath);
+    const result = await this.listScaffoldingMethods(projectPath, cursor);
 
     // Process instructions with nunjucks templating
     const processedMethods = result.methods.map((method) => ({
@@ -287,9 +304,15 @@ export class ScaffoldingMethodsService {
     if (!result.success) {
       throw new Error(result.message);
     }
+
+    // Process instruction with template variables
+    const processedInstruction = method.instruction
+      ? this.processScaffoldInstruction(method.instruction, variables)
+      : '';
+
     const message = `
 Successfully scaffolded ${scaffold_feature_name} in ${projectPath}.
-Please follow this **instruction**: \n ${method.instruction}.
+Please follow this **instruction**: \n ${processedInstruction}.
 -> Create or update the plan based on the instruction.
 `;
 

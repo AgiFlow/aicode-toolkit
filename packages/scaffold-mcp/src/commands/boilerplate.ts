@@ -13,11 +13,14 @@ export const boilerplateCommand = new Command('boilerplate').description(
 boilerplateCommand
   .command('list')
   .description('List all available boilerplate templates')
-  .action(async () => {
+  .option('-c, --cursor <cursor>', 'Pagination cursor for next page')
+  .action(async (options) => {
     try {
       const templatesDir = await TemplatesManagerService.findTemplatesPath();
       const boilerplateService = new BoilerplateService(templatesDir);
-      const { boilerplates } = await boilerplateService.listBoilerplates();
+      const { boilerplates, nextCursor } = await boilerplateService.listBoilerplates(
+        options.cursor,
+      );
 
       if (boilerplates.length === 0) {
         messages.warning('No boilerplate templates found.');
@@ -41,6 +44,13 @@ boilerplateCommand
           print.debug(`    Required: ${required.join(', ')}`);
         }
         print.newline();
+      }
+
+      // Show pagination info if there are more results
+      if (nextCursor) {
+        print.newline();
+        print.info(`${icons.info} More results available. Use --cursor to fetch next page:`);
+        print.debug(`  scaffold-mcp boilerplate list --cursor "${nextCursor}"`);
       }
     } catch (error) {
       messages.error('Error listing boilerplates:', error as Error);
@@ -84,9 +94,17 @@ boilerplateCommand
       // Get boilerplate info
       const boilerplate = await boilerplateService.getBoilerplate(boilerplateName);
       if (!boilerplate) {
-        const { boilerplates } = await boilerplateService.listBoilerplates();
+        // Fetch all boilerplates by collecting all pages
+        let allBoilerplates: any[] = [];
+        let cursor: string | undefined;
+        do {
+          const result = await boilerplateService.listBoilerplates(cursor);
+          allBoilerplates = allBoilerplates.concat(result.boilerplates);
+          cursor = result.nextCursor;
+        } while (cursor);
+
         messages.error(`Boilerplate '${boilerplateName}' not found.`);
-        print.warning(`Available boilerplates: ${boilerplates.map((b) => b.name).join(', ')}`);
+        print.warning(`Available boilerplates: ${allBoilerplates.map((b) => b.name).join(', ')}`);
         process.exit(1);
       }
 

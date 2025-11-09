@@ -31,7 +31,13 @@ export class ListBoilerplatesTool {
       description: description.trim(),
       inputSchema: {
         type: 'object',
-        properties: {},
+        properties: {
+          cursor: {
+            type: 'string',
+            description:
+              'Optional pagination cursor to fetch the next page of results. Omit to fetch the first page.',
+          },
+        },
         additionalProperties: false,
       },
     };
@@ -40,9 +46,11 @@ export class ListBoilerplatesTool {
   /**
    * Execute the tool
    */
-  async execute(_args: Record<string, any> = {}): Promise<CallToolResult> {
+  async execute(args: Record<string, any> = {}): Promise<CallToolResult> {
     try {
-      const result: ListBoilerplateResponse = await this.boilerplateService.listBoilerplates();
+      const { cursor } = args as { cursor?: string };
+      const result: ListBoilerplateResponse =
+        await this.boilerplateService.listBoilerplates(cursor);
 
       return {
         content: [
