@@ -9,3 +9,5 @@ export {
   findWorkspaceRoot,
   parseGitHubUrl,
 } from './git';
+
+export { PaginationHelper, type PaginationResult } from './pagination';

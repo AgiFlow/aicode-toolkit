@@ -23,11 +23,12 @@ describe('ListBoilerplatesTool', () => {
       expect(definition.inputSchema.type).toBe('object');
     });
 
-    it('should have no required properties', () => {
+    it('should have cursor as optional property', () => {
       const definition = tool.getDefinition();
 
       expect(definition.inputSchema.required).toBeUndefined();
-      expect(Object.keys(definition.inputSchema.properties || {})).toHaveLength(0);
+      expect(Object.keys(definition.inputSchema.properties || {})).toHaveLength(1);
+      expect(definition.inputSchema.properties).toHaveProperty('cursor');
     });
   });
 

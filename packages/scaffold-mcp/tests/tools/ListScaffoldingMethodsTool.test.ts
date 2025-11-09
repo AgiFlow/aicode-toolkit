@@ -78,7 +78,7 @@ describe('ListScaffoldingMethodsTool', () => {
       expect(response.sourceTemplate).toBe('nextjs-15');
       expect(response.methods).toHaveLength(2);
       expect(response.methods[0].name).toBe('scaffold-route');
-      expect(spy).toHaveBeenCalledWith('/test/apps/my-app');
+      expect(spy).toHaveBeenCalledWith('/test/apps/my-app', undefined);
     });
 
     it('should return error when both projectPath and templateName are missing', async () => {
@@ -121,7 +121,7 @@ describe('ListScaffoldingMethodsTool', () => {
       expect(response.sourceTemplate).toBe('typescript-mcp-package');
       expect(response.methods).toHaveLength(1);
       expect(response.methods[0].name).toBe('scaffold-tool');
-      expect(spy).toHaveBeenCalledWith('typescript-mcp-package');
+      expect(spy).toHaveBeenCalledWith('typescript-mcp-package', undefined);
     });
 
     it('should prioritize projectPath over templateName when both are provided', async () => {
@@ -141,7 +141,7 @@ describe('ListScaffoldingMethodsTool', () => {
 
       await tool.execute({ projectPath: '/test/apps/my-app', templateName: 'nextjs-15' });
 
-      expect(projectPathSpy).toHaveBeenCalledWith('/test/apps/my-app');
+      expect(projectPathSpy).toHaveBeenCalledWith('/test/apps/my-app', undefined);
       expect(templateNameSpy).not.toHaveBeenCalled();
     });
 

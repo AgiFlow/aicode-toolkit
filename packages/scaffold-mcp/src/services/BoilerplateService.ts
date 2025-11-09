@@ -11,6 +11,7 @@ import type {
   UseBoilerplateRequest,
 } from '../types/boilerplateTypes';
 import type { ScaffoldResult } from '../types/scaffold';
+import { PaginationHelper } from '../utils/pagination';
 import { FileSystemService } from './FileSystemService';
 import { ScaffoldConfigLoader } from './ScaffoldConfigLoader';
 import { ScaffoldService } from './ScaffoldService';
@@ -43,9 +44,11 @@ export class BoilerplateService {
   }
 
   /**
-   * Scans all scaffold.yaml files and returns available boilerplates
+   * Scans all scaffold.yaml files and returns available boilerplates with pagination
+   * @param cursor - Optional pagination cursor
+   * @returns Paginated list of boilerplates
    */
-  async listBoilerplates(): Promise<ListBoilerplateResponse> {
+  async listBoilerplates(cursor?: string): Promise<ListBoilerplateResponse> {
     const boilerplates: BoilerplateInfo[] = [];
 
     // Dynamically discover all template directories
@@ -88,7 +91,14 @@ export class BoilerplateService {
       }
     }
 
-    return { boilerplates };
+    // Apply pagination with metadata
+    const paginatedResult = PaginationHelper.paginate(boilerplates, cursor);
+
+    return {
+      boilerplates: paginatedResult.items,
+      nextCursor: paginatedResult.nextCursor,
+      _meta: paginatedResult._meta,
+    };
   }
 
   /**
@@ -251,9 +261,20 @@ export class BoilerplateService {
         );
       }
 
+      // Process instruction with template variables
+      const processedInstruction = boilerplate.instruction
+        ? this.processBoilerplateInstruction(boilerplate.instruction, variables)
+        : '';
+
+      // Append instruction to the result message if available
+      let enhancedMessage = result.message;
+      if (processedInstruction) {
+        enhancedMessage += `\n\nPlease follow this **instruction**:\n${processedInstruction}`;
+      }
+
       return {
         success: result.success,
-        message: result.message,
+        message: enhancedMessage,
         warnings: result.warnings,
         createdFiles: result.createdFiles,
         existingFiles: result.existingFiles,

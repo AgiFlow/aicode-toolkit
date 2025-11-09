@@ -22,6 +22,7 @@ scaffoldCommand
   .command('list [projectPath]')
   .description('List available scaffolding methods for a project or template')
   .option('-t, --template <name>', 'Template name (e.g., nextjs-15, typescript-mcp-package)')
+  .option('-c, --cursor <cursor>', 'Pagination cursor for next page')
   .action(async (projectPath, options) => {
     try {
       // Require either projectPath or template option
@@ -59,11 +60,17 @@ scaffoldCommand
           process.exit(1);
         }
 
-        result = await scaffoldingMethodsService.listScaffoldingMethods(absolutePath);
+        result = await scaffoldingMethodsService.listScaffoldingMethods(
+          absolutePath,
+          options.cursor,
+        );
         displayName = projectPath;
       } else {
         // Use template name
-        result = await scaffoldingMethodsService.listScaffoldingMethodsByTemplate(options.template);
+        result = await scaffoldingMethodsService.listScaffoldingMethodsByTemplate(
+          options.template,
+          options.cursor,
+        );
         displayName = `template: ${options.template}`;
       }
 
@@ -86,6 +93,20 @@ scaffoldCommand
           print.debug(`    Required: ${method.variables_schema.required.join(', ')}`);
         }
         print.newline();
+      }
+
+      // Show pagination info if there are more results
+      if (result.nextCursor) {
+        print.newline();
+        print.info(`${icons.info} More results available. Use --cursor to fetch next page:`);
+        const cursorOption = `--cursor "${result.nextCursor}"`;
+        if (projectPath) {
+          print.debug(`  scaffold-mcp scaffold list ${projectPath} ${cursorOption}`);
+        } else {
+          print.debug(
+            `  scaffold-mcp scaffold list --template ${options.template} ${cursorOption}`,
+          );
+        }
       }
     } catch (error) {
       messages.error('Error listing scaffolding methods:', error as Error);
@@ -136,14 +157,23 @@ scaffoldCommand
         templatesDir,
       );
 
-      // Get scaffold method info
-      const listResult = await scaffoldingMethodsService.listScaffoldingMethods(projectPath);
-      const methods = listResult.methods;
-      const method = methods.find((m) => m.name === featureName);
+      // Get scaffold method info - fetch all pages to find the method
+      let allMethods: any[] = [];
+      let cursor: string | undefined;
+      do {
+        const listResult = await scaffoldingMethodsService.listScaffoldingMethods(
+          projectPath,
+          cursor,
+        );
+        allMethods = allMethods.concat(listResult.methods);
+        cursor = listResult.nextCursor;
+      } while (cursor);
+
+      const method = allMethods.find((m) => m.name === featureName);
 
       if (!method) {
         messages.error(`Scaffold method '${featureName}' not found.`);
-        print.warning(`Available methods: ${methods.map((m) => m.name).join(', ')}`);
+        print.warning(`Available methods: ${allMethods.map((m) => m.name).join(', ')}`);
         print.debug(
           `Run 'scaffold-mcp scaffold list ${options.project}' to see all available methods`,
         );
@@ -246,7 +276,9 @@ scaffoldCommand
         templatesDir,
       );
 
-      let result;
+      // Fetch all pages to find the method
+      let allMethods: any[] = [];
+      let cursor: string | undefined;
 
       if (options.project) {
         // Use project path
@@ -264,14 +296,28 @@ scaffoldCommand
           process.exit(1);
         }
 
-        result = await scaffoldingMethodsService.listScaffoldingMethods(projectPath);
+        // Fetch all pages
+        do {
+          const result = await scaffoldingMethodsService.listScaffoldingMethods(
+            projectPath,
+            cursor,
+          );
+          allMethods = allMethods.concat(result.methods);
+          cursor = result.nextCursor;
+        } while (cursor);
       } else {
-        // Use template name
-        result = await scaffoldingMethodsService.listScaffoldingMethodsByTemplate(options.template);
+        // Use template name - fetch all pages
+        do {
+          const result = await scaffoldingMethodsService.listScaffoldingMethodsByTemplate(
+            options.template,
+            cursor,
+          );
+          allMethods = allMethods.concat(result.methods);
+          cursor = result.nextCursor;
+        } while (cursor);
       }
 
-      const methods = result.methods;
-      const method = methods.find((m) => m.name === featureName);
+      const method = allMethods.find((m) => m.name === featureName);
 
       if (!method) {
         messages.error(`❌ Scaffold method '${featureName}' not found.`);
