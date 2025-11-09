@@ -1,3 +1,13 @@
+## 1.0.3 (2025-11-09)
+
+### 🚀 Features
+
+- **scaffold-mcp:** pagination Add pagination support for list-boilerplates and list-scaffold-methods. \n Fix instruction variables replacement. ([cc80ff8](https://github.com/AgiFlow/aicode-toolkit/commit/cc80ff8))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.2 (2025-10-23)
 
 ### 🩹 Fixes

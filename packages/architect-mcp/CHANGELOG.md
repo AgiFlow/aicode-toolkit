@@ -1,3 +1,7 @@
+## 1.0.3 (2025-11-09)
+
+This was a version bump only for @agiflowai/architect-mcp to align it with other projects, there were no code changes.
+
 ## 1.0.2 (2025-10-23)
 
 ### 🩹 Fixes
