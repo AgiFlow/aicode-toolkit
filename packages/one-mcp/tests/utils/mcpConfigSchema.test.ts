@@ -4,6 +4,7 @@ import {
   InternalMcpConfigSchema,
   transformClaudeCodeConfig,
   parseMcpConfig,
+  validateRemoteConfigSource,
 } from '../../src/utils/mcpConfigSchema';
 import { ZodError } from 'zod';
 
@@ -531,6 +532,287 @@ describe('mcpConfigSchema', () => {
       };
 
       expect(() => InternalMcpConfigSchema.parse(config)).toThrow(ZodError);
+    });
+  });
+
+  describe('validateRemoteConfigSource', () => {
+    it('should pass validation when no validation rules are provided', () => {
+      const source = {
+        url: 'https://example.com/mcp-config.json',
+      };
+
+      expect(() => validateRemoteConfigSource(source)).not.toThrow();
+    });
+
+    it('should validate URL against regex pattern', () => {
+      const source = {
+        url: 'https://example.com/mcp-config.json',
+        validation: {
+          url: '^https://.*',
+        },
+      };
+
+      expect(() => validateRemoteConfigSource(source)).not.toThrow();
+    });
+
+    it('should throw error when URL does not match pattern', () => {
+      const source = {
+        url: 'http://example.com/mcp-config.json',
+        validation: {
+          url: '^https://.*',
+        },
+      };
+
+      expect(() => validateRemoteConfigSource(source)).toThrow(
+        'does not match validation pattern'
+      );
+    });
+
+    it('should validate URL with environment variable interpolation', () => {
+      process.env.TEST_URL = 'https://secure.example.com';
+
+      const source = {
+        url: '${TEST_URL}/mcp-config.json',
+        validation: {
+          url: '^https://secure\\..*',
+        },
+      };
+
+      expect(() => validateRemoteConfigSource(source)).not.toThrow();
+
+      delete process.env.TEST_URL;
+    });
+
+    it('should validate header values against regex patterns', () => {
+      const source = {
+        url: 'https://example.com/mcp-config.json',
+        headers: {
+          Authorization: 'Bearer token123',
+          'Content-Type': 'application/json',
+        },
+        validation: {
+          headers: {
+            Authorization: '^Bearer .*',
+            'Content-Type': '^application/json$',
+          },
+        },
+      };
+
+      expect(() => validateRemoteConfigSource(source)).not.toThrow();
+    });
+
+    it('should throw error when header value does not match pattern', () => {
+      const source = {
+        url: 'https://example.com/mcp-config.json',
+        headers: {
+          Authorization: 'Basic token123',
+          'Content-Type': 'application/json',
+        },
+        validation: {
+          headers: {
+            Authorization: '^Bearer .*',
+          },
+        },
+      };
+
+      expect(() => validateRemoteConfigSource(source)).toThrow(
+        'does not match validation pattern'
+      );
+    });
+
+    it('should throw error when required headers are missing', () => {
+      const source = {
+        url: 'https://example.com/mcp-config.json',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        validation: {
+          headers: {
+            Authorization: '^Bearer .*',
+            'Content-Type': '^application/json$',
+          },
+        },
+      };
+
+      expect(() => validateRemoteConfigSource(source)).toThrow(
+        'missing required header: Authorization'
+      );
+    });
+
+    it('should throw error when headers object is not provided but required', () => {
+      const source = {
+        url: 'https://example.com/mcp-config.json',
+        validation: {
+          headers: {
+            Authorization: '^Bearer .*',
+          },
+        },
+      };
+
+      expect(() => validateRemoteConfigSource(source)).toThrow(
+        'missing required headers: Authorization'
+      );
+    });
+
+    it('should validate header values with environment variable interpolation', () => {
+      process.env.TEST_TOKEN = 'secret-token-123';
+
+      const source = {
+        url: 'https://example.com/mcp-config.json',
+        headers: {
+          Authorization: 'Bearer ${TEST_TOKEN}',
+        },
+        validation: {
+          headers: {
+            Authorization: '^Bearer secret-token-.*',
+          },
+        },
+      };
+
+      expect(() => validateRemoteConfigSource(source)).not.toThrow();
+
+      delete process.env.TEST_TOKEN;
+    });
+
+    it('should validate both URL pattern and headers together', () => {
+      const source = {
+        url: 'https://api.example.com/mcp-config.json',
+        headers: {
+          Authorization: 'Bearer token123',
+          'X-API-Key': 'key123',
+        },
+        validation: {
+          url: '^https://api\\..*',
+          headers: {
+            Authorization: '^Bearer .*',
+            'X-API-Key': '^key\\d+$',
+          },
+        },
+      };
+
+      expect(() => validateRemoteConfigSource(source)).not.toThrow();
+    });
+
+    it('should throw error when URL pattern fails even if headers are valid', () => {
+      const source = {
+        url: 'http://api.example.com/mcp-config.json',
+        headers: {
+          Authorization: 'Bearer token',
+        },
+        validation: {
+          url: '^https://.*',
+          headers: {
+            Authorization: '^Bearer .*',
+          },
+        },
+      };
+
+      expect(() => validateRemoteConfigSource(source)).toThrow(
+        'does not match validation pattern'
+      );
+    });
+  });
+
+  describe('remoteConfigs schema validation', () => {
+    it('should validate config with remoteConfigs', () => {
+      const config = {
+        mcpServers: {
+          'local-server': {
+            command: 'node',
+            args: ['server.js'],
+          },
+        },
+        remoteConfigs: [
+          {
+            url: 'https://example.com/mcp-config.json',
+            headers: {
+              Authorization: 'Bearer token',
+            },
+            mergeStrategy: 'local-priority' as const,
+          },
+        ],
+      };
+
+      const result = ClaudeCodeMcpConfigSchema.parse(config);
+      expect(result.remoteConfigs).toBeDefined();
+      expect(result.remoteConfigs?.[0].url).toBe('https://example.com/mcp-config.json');
+    });
+
+    it('should validate config with multiple remoteConfigs', () => {
+      const config = {
+        mcpServers: {},
+        remoteConfigs: [
+          {
+            url: 'https://example1.com/config.json',
+            mergeStrategy: 'local-priority' as const,
+          },
+          {
+            url: 'https://example2.com/config.json',
+            mergeStrategy: 'remote-priority' as const,
+          },
+          {
+            url: 'https://example3.com/config.json',
+            mergeStrategy: 'merge-deep' as const,
+          },
+        ],
+      };
+
+      const result = ClaudeCodeMcpConfigSchema.parse(config);
+      expect(result.remoteConfigs).toHaveLength(3);
+    });
+
+    it('should validate remoteConfig with validation rules', () => {
+      const config = {
+        mcpServers: {},
+        remoteConfigs: [
+          {
+            url: 'https://example.com/config.json',
+            headers: {
+              Authorization: 'Bearer token',
+            },
+            validation: {
+              url: '^https://.*',
+              headers: {
+                Authorization: '^Bearer .*',
+              },
+            },
+            mergeStrategy: 'local-priority' as const,
+          },
+        ],
+      };
+
+      const result = ClaudeCodeMcpConfigSchema.parse(config);
+      expect(result.remoteConfigs?.[0].validation).toBeDefined();
+      expect(result.remoteConfigs?.[0].validation?.url).toBe('^https://.*');
+      expect(result.remoteConfigs?.[0].validation?.headers?.Authorization).toBe('^Bearer .*');
+    });
+
+    it('should validate config without remoteConfigs (optional field)', () => {
+      const config = {
+        mcpServers: {
+          'local-server': {
+            command: 'node',
+            args: ['server.js'],
+          },
+        },
+      };
+
+      const result = ClaudeCodeMcpConfigSchema.parse(config);
+      expect(result.remoteConfigs).toBeUndefined();
+    });
+
+    it('should throw error for invalid merge strategy', () => {
+      const config = {
+        mcpServers: {},
+        remoteConfigs: [
+          {
+            url: 'https://example.com/config.json',
+            mergeStrategy: 'invalid-strategy',
+          },
+        ],
+      };
+
+      expect(() => ClaudeCodeMcpConfigSchema.parse(config)).toThrow(ZodError);
     });
   });
 });

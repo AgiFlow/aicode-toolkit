@@ -11,6 +11,28 @@
 # - config.toolBlacklist: Array of tool names to hide/block from this server
 # - config.omitToolDescription: Boolean to show only tool names without descriptions (saves tokens)
 
+# Remote Configuration Sources (OPTIONAL)
+# Fetch and merge configurations from remote URLs
+# Remote configs are merged with local configs based on merge strategy
+remoteConfigs:
+  # Example 1: Simple remote config (no validation)
+  # - url: ${AGIFLOW_URL}/api/v1/mcp-configs
+  #   headers:
+  #     Authorization: Bearer ${AGIFLOW_API_KEY}
+  #   mergeStrategy: local-priority  # Options: local-priority (default), remote-priority, merge-deep
+  #
+  # Example 2: Remote config with validation (OPTIONAL)
+  # - url: ${AGIFLOW_URL}/api/v1/mcp-configs
+  #   headers:
+  #     Authorization: Bearer ${AGIFLOW_API_KEY}
+  #     X-API-Key: ${AGIFLOW_API_KEY}
+  #   validation:  # OPTIONAL: Validate URL and headers before fetching
+  #     url: ^https://.*  # OPTIONAL: Regex pattern to validate URL format (after env var interpolation)
+  #     headers:  # OPTIONAL: Regex patterns to validate header values (after env var interpolation)
+  #       Authorization: ^Bearer [A-Za-z0-9_-]+$
+  #       X-API-Key: ^[A-Za-z0-9_-]{32,}$
+  #   mergeStrategy: local-priority
+
 mcpServers:
   # Example MCP server using stdio transport
   example-server:

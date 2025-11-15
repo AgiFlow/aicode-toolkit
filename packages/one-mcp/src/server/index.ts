@@ -48,6 +48,7 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
     try {
       const configFetcher = new ConfigFetcherService({
         configFilePath: options.configFilePath,
+        useCache: !options.noCache, // Disable cache reading when --no-cache is provided
       });
 
       // Force refresh if noCache option is enabled

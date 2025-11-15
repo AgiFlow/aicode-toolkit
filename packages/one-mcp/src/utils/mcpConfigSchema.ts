@@ -78,6 +78,62 @@ function interpolateEnvVarsInObject<T>(obj: T): T {
 }
 
 /**
+ * Validate a remote config source against its validation rules
+ *
+ * @param source - Remote config source with validation rules
+ * @throws Error if validation fails
+ */
+export function validateRemoteConfigSource(source: RemoteConfigSource): void {
+  if (!source.validation) {
+    return;
+  }
+
+  // Validate URL format if pattern is provided
+  if (source.validation.url) {
+    const urlPattern = new RegExp(source.validation.url);
+    const interpolatedUrl = interpolateEnvVars(source.url);
+
+    if (!urlPattern.test(interpolatedUrl)) {
+      throw new Error(
+        `Remote config URL "${interpolatedUrl}" does not match validation pattern: ${source.validation.url}`
+      );
+    }
+  }
+
+  // Validate header values against regex patterns
+  if (source.validation.headers && Object.keys(source.validation.headers).length > 0) {
+    // Check if headers are provided in the source
+    if (!source.headers) {
+      const requiredHeaders = Object.keys(source.validation.headers);
+      throw new Error(
+        `Remote config is missing required headers: ${requiredHeaders.join(', ')}`
+      );
+    }
+
+    // Validate each header value against its regex pattern
+    for (const [headerName, pattern] of Object.entries(source.validation.headers)) {
+      // Check if header exists
+      if (!(headerName in source.headers)) {
+        throw new Error(
+          `Remote config is missing required header: ${headerName}`
+        );
+      }
+
+      // Interpolate environment variables in the header value
+      const interpolatedHeaderValue = interpolateEnvVars(source.headers[headerName]);
+
+      // Validate header value against regex pattern
+      const headerPattern = new RegExp(pattern);
+      if (!headerPattern.test(interpolatedHeaderValue)) {
+        throw new Error(
+          `Remote config header "${headerName}" value "${interpolatedHeaderValue}" does not match validation pattern: ${pattern}`
+        );
+      }
+    }
+  }
+}
+
+/**
  * Claude Code / Claude Desktop standard MCP config format
  * This is the format users write in their config files
  */
@@ -115,11 +171,28 @@ const ClaudeCodeServerConfigSchema = z.union([
   ClaudeCodeHttpServerSchema,
 ]);
 
+// Remote config validation schema
+const RemoteConfigValidationSchema = z.object({
+  url: z.string().optional(), // Regex pattern to validate URL
+  headers: z.record(z.string(), z.string()).optional(), // Header name to regex pattern mapping for validating header values
+}).optional();
+
+// Remote config source schema
+const RemoteConfigSourceSchema = z.object({
+  url: z.string(), // URL to fetch remote config from (supports env var interpolation)
+  headers: z.record(z.string(), z.string()).optional(), // Headers for the request (supports env var interpolation)
+  validation: RemoteConfigValidationSchema, // Optional validation rules
+  mergeStrategy: z.enum(['local-priority', 'remote-priority', 'merge-deep']).optional(), // Merge strategy (default: local-priority)
+});
+
+export type RemoteConfigSource = z.infer<typeof RemoteConfigSourceSchema>;
+
 /**
  * Full Claude Code MCP configuration schema
  */
 export const ClaudeCodeMcpConfigSchema = z.object({
   mcpServers: z.record(z.string(), ClaudeCodeServerConfigSchema),
+  remoteConfigs: z.array(RemoteConfigSourceSchema).optional(), // Optional remote config sources
 });
 
 export type ClaudeCodeMcpConfig = z.infer<typeof ClaudeCodeMcpConfigSchema>;

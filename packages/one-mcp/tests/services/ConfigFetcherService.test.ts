@@ -48,6 +48,7 @@ describe('ConfigFetcherService', () => {
     it('should set default cache TTL to 60000ms', async () => {
       const service = new ConfigFetcherService({
         configFilePath: tempConfigPath,
+        useCache: false, // Disable cache for predictable test behavior
       });
 
       await writeFile(tempConfigPath, JSON.stringify({
@@ -101,6 +102,7 @@ describe('ConfigFetcherService', () => {
 
       const service = new ConfigFetcherService({
         configFilePath: tempConfigPath,
+        useCache: false, // Disable cache for predictable test behavior
       });
 
       const result = await service.fetchConfiguration();
@@ -146,6 +148,7 @@ mcpServers:
 
       const service = new ConfigFetcherService({
         configFilePath: tempConfigPath,
+        useCache: false, // Disable cache for predictable test behavior
       });
 
       await expect(service.fetchConfiguration()).rejects.toThrow(
@@ -158,6 +161,7 @@ mcpServers:
 
       const service = new ConfigFetcherService({
         configFilePath: tempConfigPath,
+        useCache: false, // Disable cache for predictable test behavior
       });
 
       await expect(service.fetchConfiguration()).rejects.toThrow();
@@ -241,6 +245,7 @@ mcpServers:
 
       const service = new ConfigFetcherService({
         configFilePath: tempConfigPath,
+        useCache: false, // Disable cache for predictable test behavior
       });
 
       await service.fetchConfiguration();
@@ -258,6 +263,7 @@ mcpServers:
 
       const service = new ConfigFetcherService({
         configFilePath: tempConfigPath,
+        useCache: false, // Disable cache for predictable test behavior
       });
 
       await expect(service.fetchConfiguration()).rejects.toThrow();
@@ -270,9 +276,603 @@ mcpServers:
 
       const service = new ConfigFetcherService({
         configFilePath: tempConfigPath,
+        useCache: false, // Disable cache for predictable test behavior
       });
 
       await expect(service.fetchConfiguration()).rejects.toThrow();
+    });
+  });
+
+  describe('remote config fetching', () => {
+    beforeEach(() => {
+      vi.stubGlobal('fetch', vi.fn());
+    });
+
+    afterEach(async () => {
+      vi.unstubAllGlobals();
+      // Clean up cache between tests
+      const { RemoteConfigCacheService } = await import('../../src/services/RemoteConfigCacheService');
+      const cacheService = new RemoteConfigCacheService();
+      await cacheService.clearAll();
+    });
+
+    it('should fetch and merge remote config with local config', async () => {
+      const localConfig = {
+        mcpServers: {
+          'local-server': {
+            command: 'node',
+            args: ['local.js'],
+          },
+        },
+        remoteConfigs: [
+          {
+            url: 'https://example.com/mcp-config.json',
+            mergeStrategy: 'local-priority',
+          },
+        ],
+      };
+
+      const remoteConfig = {
+        mcpServers: {
+          'remote-server': {
+            command: 'node',
+            args: ['remote.js'],
+          },
+        },
+      };
+
+      await writeFile(tempConfigPath, JSON.stringify(localConfig));
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => remoteConfig,
+      });
+
+      const service = new ConfigFetcherService({
+        configFilePath: tempConfigPath,
+        useCache: false, // Disable cache for this test
+      });
+
+      const result = await service.fetchConfiguration();
+
+      expect(result.mcpServers['local-server']).toBeDefined();
+      expect(result.mcpServers['remote-server']).toBeDefined();
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://example.com/mcp-config.json',
+        { headers: {} }
+      );
+    });
+
+    it('should use local-priority merge strategy by default', async () => {
+      const localConfig = {
+        mcpServers: {
+          'shared-server': {
+            command: 'node',
+            args: ['local.js'],
+          },
+        },
+        remoteConfigs: [
+          {
+            url: 'https://example.com/mcp-config.json',
+          },
+        ],
+      };
+
+      const remoteConfig = {
+        mcpServers: {
+          'shared-server': {
+            command: 'python',
+            args: ['remote.py'],
+          },
+        },
+      };
+
+      await writeFile(tempConfigPath, JSON.stringify(localConfig));
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => remoteConfig,
+      });
+
+      const service = new ConfigFetcherService({
+        configFilePath: tempConfigPath,
+        useCache: false, // Disable cache for predictable test behavior
+      });
+
+      const result = await service.fetchConfiguration();
+
+      // Local should override remote
+      expect(result.mcpServers['shared-server'].config.command).toBe('node');
+      expect(result.mcpServers['shared-server'].config.args).toEqual(['local.js']);
+    });
+
+    it('should use remote-priority merge strategy when specified', async () => {
+      const localConfig = {
+        mcpServers: {
+          'shared-server': {
+            command: 'node',
+            args: ['local.js'],
+          },
+        },
+        remoteConfigs: [
+          {
+            url: 'https://example.com/mcp-config.json',
+            mergeStrategy: 'remote-priority',
+          },
+        ],
+      };
+
+      const remoteConfig = {
+        mcpServers: {
+          'shared-server': {
+            command: 'python',
+            args: ['remote.py'],
+          },
+        },
+      };
+
+      await writeFile(tempConfigPath, JSON.stringify(localConfig));
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => remoteConfig,
+      });
+
+      const service = new ConfigFetcherService({
+        configFilePath: tempConfigPath,
+        useCache: false, // Disable cache for predictable test behavior
+      });
+
+      const result = await service.fetchConfiguration();
+
+      // Remote should override local
+      expect(result.mcpServers['shared-server'].config.command).toBe('python');
+      expect(result.mcpServers['shared-server'].config.args).toEqual(['remote.py']);
+    });
+
+    it('should interpolate environment variables in remote URL and headers', async () => {
+      process.env.TEST_API_URL = 'https://example.com';
+      process.env.TEST_API_KEY = 'secret-key';
+
+      const localConfig = {
+        mcpServers: {},
+        remoteConfigs: [
+          {
+            url: '${TEST_API_URL}/mcp-config.json',
+            headers: {
+              Authorization: 'Bearer ${TEST_API_KEY}',
+            },
+          },
+        ],
+      };
+
+      const remoteConfig = {
+        mcpServers: {
+          'remote-server': {
+            command: 'node',
+            args: ['remote.js'],
+          },
+        },
+      };
+
+      await writeFile(tempConfigPath, JSON.stringify(localConfig));
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => remoteConfig,
+      });
+
+      const service = new ConfigFetcherService({
+        configFilePath: tempConfigPath,
+        useCache: false, // Disable cache for predictable test behavior
+      });
+
+      await service.fetchConfiguration();
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://example.com/mcp-config.json',
+        {
+          headers: {
+            Authorization: 'Bearer secret-key',
+          },
+        }
+      );
+
+      delete process.env.TEST_API_URL;
+      delete process.env.TEST_API_KEY;
+    });
+
+    it('should continue processing if remote config fetch fails', async () => {
+      const localConfig = {
+        mcpServers: {
+          'local-server': {
+            command: 'node',
+            args: ['local.js'],
+          },
+        },
+        remoteConfigs: [
+          {
+            url: 'https://example.com/mcp-config.json',
+          },
+        ],
+      };
+
+      await writeFile(tempConfigPath, JSON.stringify(localConfig));
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+      });
+
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const service = new ConfigFetcherService({
+        configFilePath: tempConfigPath,
+        useCache: false, // Disable cache for predictable test behavior
+      });
+
+      const result = await service.fetchConfiguration();
+
+      // Should still have local server even though remote fetch failed
+      expect(result.mcpServers['local-server']).toBeDefined();
+      expect(consoleErrorSpy).toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should handle multiple remote config sources', async () => {
+      const localConfig = {
+        mcpServers: {
+          'local-server': {
+            command: 'node',
+            args: ['local.js'],
+          },
+        },
+        remoteConfigs: [
+          {
+            url: 'https://example.com/config1.json',
+          },
+          {
+            url: 'https://example.com/config2.json',
+          },
+        ],
+      };
+
+      const remoteConfig1 = {
+        mcpServers: {
+          'remote-server-1': {
+            command: 'node',
+            args: ['remote1.js'],
+          },
+        },
+      };
+
+      const remoteConfig2 = {
+        mcpServers: {
+          'remote-server-2': {
+            command: 'node',
+            args: ['remote2.js'],
+          },
+        },
+      };
+
+      await writeFile(tempConfigPath, JSON.stringify(localConfig));
+
+      (global.fetch as any)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => remoteConfig1,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => remoteConfig2,
+        });
+
+      const service = new ConfigFetcherService({
+        configFilePath: tempConfigPath,
+        useCache: false, // Disable cache for predictable test behavior
+      });
+
+      const result = await service.fetchConfiguration();
+
+      expect(result.mcpServers['local-server']).toBeDefined();
+      expect(result.mcpServers['remote-server-1']).toBeDefined();
+      expect(result.mcpServers['remote-server-2']).toBeDefined();
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should fetch multiple remote configs in parallel', async () => {
+      const localConfig = {
+        mcpServers: {},
+        remoteConfigs: [
+          {
+            url: 'https://example.com/config1.json',
+          },
+          {
+            url: 'https://example.com/config2.json',
+          },
+          {
+            url: 'https://example.com/config3.json',
+          },
+        ],
+      };
+
+      const remoteConfig1 = {
+        mcpServers: {
+          'remote-1': { command: 'node', args: ['1.js'] },
+        },
+      };
+
+      const remoteConfig2 = {
+        mcpServers: {
+          'remote-2': { command: 'node', args: ['2.js'] },
+        },
+      };
+
+      const remoteConfig3 = {
+        mcpServers: {
+          'remote-3': { command: 'node', args: ['3.js'] },
+        },
+      };
+
+      await writeFile(tempConfigPath, JSON.stringify(localConfig));
+
+      // Track the order of fetch calls to verify they happen in parallel
+      const fetchOrder: number[] = [];
+      let fetchCount = 0;
+
+      (global.fetch as any).mockImplementation(async (url: string) => {
+        const currentFetch = ++fetchCount;
+        fetchOrder.push(currentFetch);
+
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        if (url.includes('config1.json')) {
+          return { ok: true, json: async () => remoteConfig1 };
+        }
+        if (url.includes('config2.json')) {
+          return { ok: true, json: async () => remoteConfig2 };
+        }
+        if (url.includes('config3.json')) {
+          return { ok: true, json: async () => remoteConfig3 };
+        }
+      });
+
+      const service = new ConfigFetcherService({
+        configFilePath: tempConfigPath,
+        useCache: false, // Disable cache for predictable test behavior
+      });
+
+      const startTime = Date.now();
+      const result = await service.fetchConfiguration();
+      const endTime = Date.now();
+
+      // Verify all configs were fetched
+      expect(result.mcpServers['remote-1']).toBeDefined();
+      expect(result.mcpServers['remote-2']).toBeDefined();
+      expect(result.mcpServers['remote-3']).toBeDefined();
+      expect(global.fetch).toHaveBeenCalledTimes(3);
+
+      // If sequential, would take ~30ms (3 * 10ms)
+      // If parallel, should take ~10ms (max of all)
+      // Allow some buffer for test execution
+      expect(endTime - startTime).toBeLessThan(50);
+    });
+  });
+
+  describe('remote config caching', () => {
+    beforeEach(() => {
+      vi.stubGlobal('fetch', vi.fn());
+    });
+
+    afterEach(async () => {
+      vi.unstubAllGlobals();
+      const { RemoteConfigCacheService } = await import('../../src/services/RemoteConfigCacheService');
+      const cacheService = new RemoteConfigCacheService();
+      await cacheService.clearAll();
+    });
+
+    it('should cache remote config and reuse it on subsequent calls', async () => {
+      const localConfig = {
+        mcpServers: {},
+        remoteConfigs: [
+          {
+            url: 'https://example.com/config.json',
+          },
+        ],
+      };
+
+      const remoteConfig = {
+        mcpServers: {
+          'remote-server': {
+            command: 'node',
+            args: ['remote.js'],
+          },
+        },
+      };
+
+      await writeFile(tempConfigPath, JSON.stringify(localConfig));
+
+      (global.fetch as any).mockResolvedValue({
+        ok: true,
+        json: async () => remoteConfig,
+      });
+
+      // With cache enabled
+      const service = new ConfigFetcherService({
+        configFilePath: tempConfigPath,
+        useCache: true,
+      });
+
+      // First call - should fetch from remote
+      await service.fetchConfiguration();
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      // Second call - should use cache
+      await service.fetchConfiguration();
+      expect(global.fetch).toHaveBeenCalledTimes(1); // Still 1, not 2
+    });
+
+    it('should skip cache when useCache is false but still write to cache', async () => {
+      const localConfig = {
+        mcpServers: {},
+        remoteConfigs: [
+          {
+            url: 'https://example.com/config.json',
+          },
+        ],
+      };
+
+      const remoteConfig = {
+        mcpServers: {
+          'remote-server': {
+            command: 'node',
+            args: ['remote.js'],
+          },
+        },
+      };
+
+      await writeFile(tempConfigPath, JSON.stringify(localConfig));
+
+      (global.fetch as any).mockResolvedValue({
+        ok: true,
+        json: async () => remoteConfig,
+      });
+
+      // First call with cache disabled
+      const service1 = new ConfigFetcherService({
+        configFilePath: tempConfigPath,
+        useCache: false,
+        cacheTtlMs: 0, // Disable in-memory cache
+      });
+
+      await service1.fetchConfiguration();
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      // Second call with new instance - should fetch again (cache read disabled)
+      const service2 = new ConfigFetcherService({
+        configFilePath: tempConfigPath,
+        useCache: false,
+        cacheTtlMs: 0, // Disable in-memory cache
+      });
+
+      await service2.fetchConfiguration();
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+
+      // Verify cache was still written
+      const { RemoteConfigCacheService } = await import('../../src/services/RemoteConfigCacheService');
+      const cacheService = new RemoteConfigCacheService();
+      const cachedConfig = await cacheService.get('https://example.com/config.json');
+      expect(cachedConfig).not.toBeNull();
+    });
+
+    it('should use different cache TTL when specified', async () => {
+      const localConfig = {
+        mcpServers: {},
+        remoteConfigs: [
+          {
+            url: 'https://example.com/config.json',
+          },
+        ],
+      };
+
+      const remoteConfig = {
+        mcpServers: {
+          'remote-server': {
+            command: 'node',
+            args: ['remote.js'],
+          },
+        },
+      };
+
+      await writeFile(tempConfigPath, JSON.stringify(localConfig));
+
+      (global.fetch as any).mockResolvedValue({
+        ok: true,
+        json: async () => remoteConfig,
+      });
+
+      // First call with custom cache TTL of 100ms
+      const service1 = new ConfigFetcherService({
+        configFilePath: tempConfigPath,
+        useCache: true,
+        remoteCacheTtlMs: 100,
+        cacheTtlMs: 0, // Disable in-memory cache
+      });
+
+      await service1.fetchConfiguration();
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+
+      // Wait for cache to expire
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // Second call with new instance - should fetch again (cache expired)
+      const service2 = new ConfigFetcherService({
+        configFilePath: tempConfigPath,
+        useCache: true,
+        remoteCacheTtlMs: 100,
+        cacheTtlMs: 0, // Disable in-memory cache
+      });
+
+      await service2.fetchConfiguration();
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should cache each remote URL separately', async () => {
+      const localConfig = {
+        mcpServers: {},
+        remoteConfigs: [
+          {
+            url: 'https://example.com/config1.json',
+          },
+          {
+            url: 'https://example.com/config2.json',
+          },
+        ],
+      };
+
+      const remoteConfig1 = {
+        mcpServers: {
+          'remote-1': { command: 'node', args: ['1.js'] },
+        },
+      };
+
+      const remoteConfig2 = {
+        mcpServers: {
+          'remote-2': { command: 'node', args: ['2.js'] },
+        },
+      };
+
+      await writeFile(tempConfigPath, JSON.stringify(localConfig));
+
+      (global.fetch as any)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => remoteConfig1,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => remoteConfig2,
+        });
+
+      const service = new ConfigFetcherService({
+        configFilePath: tempConfigPath,
+        useCache: true,
+      });
+
+      // First call - both URLs should be fetched
+      const result1 = await service.fetchConfiguration();
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(result1.mcpServers['remote-1']).toBeDefined();
+      expect(result1.mcpServers['remote-2']).toBeDefined();
+
+      // Second call - both should come from cache
+      const result2 = await service.fetchConfiguration();
+      expect(global.fetch).toHaveBeenCalledTimes(2); // Still 2, not 4
+      expect(result2.mcpServers['remote-1']).toBeDefined();
+      expect(result2.mcpServers['remote-2']).toBeDefined();
     });
   });
 });
