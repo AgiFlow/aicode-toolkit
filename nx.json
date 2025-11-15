@@ -16,6 +16,7 @@
   },
   "release": {
     "projects": ["packages/*", "apps/*"],
+    "projectsRelationship": "independent",
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {
