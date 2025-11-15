@@ -23,7 +23,6 @@
 import { Command } from 'commander';
 import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { existsSync } from 'node:fs';
 import { log } from '@agiflowai/aicode-utils';
 import yamlTemplate from '../templates/mcp-config.yaml?raw';
 import jsonTemplate from '../templates/mcp-config.json?raw';
@@ -41,18 +40,25 @@ export const initCommand = new Command('init')
       const outputPath = resolve(options.output);
       const isYaml = !options.json && (outputPath.endsWith('.yaml') || outputPath.endsWith('.yml'));
 
-      // Check if file exists
-      if (existsSync(outputPath) && !options.force) {
-        log.error(`Config file already exists: ${outputPath}`);
-        log.info('Use --force to overwrite');
-        process.exit(1);
-      }
-
       // Select template based on format
       const template = isYaml ? yamlTemplate : jsonTemplate;
 
-      // Write config file
-      await writeFile(outputPath, template, 'utf-8');
+      // Write config file atomically - use 'wx' flag to fail if file exists (unless force is set)
+      // This prevents race conditions by making the check-and-write atomic
+      try {
+        await writeFile(outputPath, template, {
+          encoding: 'utf-8',
+          flag: options.force ? 'w' : 'wx'
+        });
+      } catch (error) {
+        // If file exists and we're not forcing, provide helpful error
+        if (error.code === 'EEXIST') {
+          log.error(`Config file already exists: ${outputPath}`);
+          log.info('Use --force to overwrite');
+          process.exit(1);
+        }
+        throw error;
+      }
 
       log.info(`MCP configuration file created: ${outputPath}`);
       log.info('Next steps:');
@@ -60,7 +66,7 @@ export const initCommand = new Command('init')
       log.info(`2. Run: one-mcp mcp-serve --config ${outputPath}`);
 
     } catch (error) {
-      log.error('Error executing init:', error);
+      log.error('Error executing init:', error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
   });
