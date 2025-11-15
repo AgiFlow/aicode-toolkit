@@ -25,6 +25,7 @@ import { UseToolTool } from '../tools/UseToolTool';
 export interface ServerOptions {
   configFilePath?: string;
   configUrl?: string;
+  noCache?: boolean;
 }
 
 export async function createServer(options?: ServerOptions): Promise<Server> {
@@ -51,7 +52,8 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
         configUrl: options.configUrl,
       });
 
-      const config = await configFetcher.fetchConfiguration();
+      // Force refresh if noCache option is enabled
+      const config = await configFetcher.fetchConfiguration(options.noCache || false);
 
       // Connect to all configured MCP servers
       const connectionPromises = Object.entries(config.mcpServers).map(

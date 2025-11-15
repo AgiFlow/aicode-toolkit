@@ -67,12 +67,13 @@ export class ConfigFetcherService {
   /**
    * Fetch MCP configuration from remote URL or local file with caching
    * Supports merging both remote and local configurations based on mergeStrategy
+   * @param forceRefresh - Force reload from source, bypassing cache
    */
-  async fetchConfiguration(): Promise<RemoteMcpConfiguration> {
+  async fetchConfiguration(forceRefresh = false): Promise<RemoteMcpConfiguration> {
     const now = Date.now();
 
-    // Return cached config if still valid
-    if (this.cachedConfig && now - this.lastFetchTime < this.cacheTtlMs) {
+    // Return cached config if still valid and not forcing refresh
+    if (!forceRefresh && this.cachedConfig && now - this.lastFetchTime < this.cacheTtlMs) {
       return this.cachedConfig;
     }
 

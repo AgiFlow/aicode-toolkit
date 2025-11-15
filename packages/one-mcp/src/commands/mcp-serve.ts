@@ -63,12 +63,14 @@ export const mcpServeCommand = new Command('mcp-serve')
   .option('--host <host>', 'Host to bind to (http/sse only)', 'localhost')
   .option('-c, --config <path>', 'Path to MCP server configuration file')
   .option('--config-url <url>', 'URL to fetch MCP server configuration from')
+  .option('--no-cache', 'Force reload configuration from source, bypassing cache')
   .action(async (options) => {
     try {
       const transportType = options.type.toLowerCase();
       const serverOptions = {
         configFilePath: options.config,
         configUrl: options.configUrl,
+        noCache: options.cache === false, // Commander transforms --no-cache to cache: false
       };
 
       if (transportType === 'stdio') {
