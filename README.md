@@ -439,6 +439,20 @@ Unified CLI for initializing projects, managing templates, and configuring MCP s
 
 [View full documentation →](./apps/aicode-toolkit/README.md)
 
+### [@agiflowai/one-mcp](./packages/one-mcp)
+
+Unified MCP proxy server that enables progressive tool discovery to dramatically reduce token usage. Instead of loading all tools from all servers upfront (40,000+ tokens), agents load only 2 meta-tools initially (~400 tokens) and discover tools on-demand.
+
+**Key Features:**
+- Progressive tool discovery (90%+ token reduction)
+- Smart proxy for multiple MCP servers
+- On-demand tool loading and routing
+- Flexible configuration (local/remote YAML/JSON)
+- Environment variable interpolation
+- Support for stdio, HTTP, and SSE transports
+
+[View full documentation →](./packages/one-mcp/README.md)
+
 ### [@agiflowai/scaffold-mcp](./packages/scaffold-mcp)
 
 MCP server for scaffolding applications with boilerplate templates and feature generators. Works with any MCP-compatible coding agent.
