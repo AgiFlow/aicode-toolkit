@@ -130,6 +130,44 @@ Or combine versioning and publishing in one command:
 pnpm exec nx release 0.2.0 --projects=@agiflowai/aicode-utils
 ```
 
+### 5. Advanced Publishing Options
+
+The `nx release publish` command supports additional options:
+
+```bash
+# Publish to a specific registry
+pnpm exec nx release publish --registry=https://custom-registry.com
+
+# Publish with a specific distribution tag (e.g., 'beta', 'next')
+pnpm exec nx release publish --tag=beta
+
+# Override access level (public/restricted)
+pnpm exec nx release publish --access=public
+
+# Publish with 2FA one-time password
+pnpm exec nx release publish --otp=123456
+
+# Dry run to preview what will be published
+pnpm exec nx release publish --dry-run
+
+# Publish specific packages only
+pnpm exec nx release publish --projects=@agiflowai/aicode-utils,@agiflowai/scaffold-mcp
+```
+
+**Common use cases:**
+
+```bash
+# Beta release with beta tag
+pnpm exec nx release version prerelease --preid=beta
+pnpm exec nx release publish --tag=beta
+
+# Publish to a private registry
+pnpm exec nx release publish --registry=https://npm.mycompany.com
+
+# First time publishing (skip existence check)
+pnpm exec nx release publish --first-release
+```
+
 ## Nx Release Configuration
 
 The release process is configured in `nx.json`:
