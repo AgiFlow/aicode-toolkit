@@ -68,7 +68,7 @@ pnpm release
 
 ### 3. Version Bumping Options
 
-Nx Release supports conventional commits for automatic version bumping:
+Nx Release supports both semver keywords and exact version numbers. The version is passed as a **positional argument** (not a flag):
 
 ```bash
 # Patch release (0.0.1 -> 0.0.2)
@@ -80,23 +80,54 @@ pnpm exec nx release minor
 # Major release (0.0.1 -> 1.0.0)
 pnpm exec nx release major
 
-# Specific version
-pnpm exec nx release --version=0.1.0
+# Specific exact version (recommended for precise control)
+pnpm exec nx release 0.1.0
+pnpm exec nx release 1.2.3
+
+# Using the version subcommand (equivalent)
+pnpm exec nx release version 0.1.0
+
+# Prerelease versions
+pnpm exec nx release prerelease --preid=alpha
+# Creates version like 1.0.1-alpha.0
+
+# Always preview first
+pnpm exec nx release 0.2.0 --dry-run
 ```
+
+**Important**: The version specifier is a positional argument, so use `nx release 1.2.3`, NOT `nx release --version=1.2.3`.
 
 ### 4. Publishing Individual Packages
 
-To publish only specific packages:
+You can version and publish packages independently:
 
 ```bash
-# Publish only aicode-utils
-pnpm exec nx release --projects=@agiflowai/aicode-utils
+# Version and publish a specific package with exact version
+pnpm exec nx release 0.2.0 --projects=@agiflowai/aicode-utils
 
-# Publish only scaffold-mcp
-pnpm exec nx release --projects=@agiflowai/scaffold-mcp
+# Bump specific package with semver keyword
+pnpm exec nx release patch --projects=@agiflowai/scaffold-mcp
 
-# Publish only architect-mcp
-pnpm exec nx release --projects=@agiflowai/architect-mcp
+# Preview first (always recommended)
+pnpm exec nx release 1.0.0 --projects=@agiflowai/one-mcp --dry-run
+
+# Version only (without publishing)
+pnpm exec nx release version 0.3.0 --projects=@agiflowai/architect-mcp
+
+# Publish only (after versioning)
+pnpm exec nx release publish --projects=@agiflowai/architect-mcp
+```
+
+**Workflow for independent package releases:**
+
+1. **Version the package**: `pnpm exec nx release version 0.2.0 --projects=@agiflowai/aicode-utils --dry-run`
+2. **Review changes**: Check the version updates and changelog
+3. **Apply version**: `pnpm exec nx release version 0.2.0 --projects=@agiflowai/aicode-utils`
+4. **Publish**: `pnpm exec nx release publish --projects=@agiflowai/aicode-utils`
+
+Or combine versioning and publishing in one command:
+```bash
+pnpm exec nx release 0.2.0 --projects=@agiflowai/aicode-utils
 ```
 
 ## Nx Release Configuration
@@ -182,7 +213,7 @@ jobs:
           if [ -z "${{ github.event.inputs.version }}" ]; then
             pnpm exec nx release --yes
           else
-            pnpm exec nx release --version=${{ github.event.inputs.version }} --yes
+            pnpm exec nx release ${{ github.event.inputs.version }} --yes
           fi
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
