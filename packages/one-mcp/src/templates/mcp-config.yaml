@@ -1,0 +1,51 @@
+# MCP Server Configuration
+# This file configures the MCP servers that one-mcp will connect to
+#
+# Environment Variable Interpolation:
+# Use ${VAR_NAME} syntax to reference environment variables
+# Example: ${HOME}, ${API_KEY}, ${DATABASE_URL}
+#
+# Instructions:
+# - config.instruction: Server's default instruction (from server documentation)
+# - instruction: User override (optional, takes precedence over config.instruction)
+# - config.toolBlacklist: Array of tool names to hide/block from this server
+# - config.omitToolDescription: Boolean to show only tool names without descriptions (saves tokens)
+
+mcpServers:
+  # Example MCP server using stdio transport
+  example-server:
+    command: node
+    args:
+      - /path/to/mcp-server/build/index.js
+    env:
+      # Environment variables for the MCP server
+      LOG_LEVEL: info
+      # You can use environment variable interpolation:
+      # DATABASE_URL: ${DATABASE_URL}
+      # API_KEY: ${MY_API_KEY}
+    config:
+      # Server's default instruction (from server documentation)
+      instruction: Use this server for...
+      # Optional: Block specific tools from being listed or executed
+      # toolBlacklist:
+      #   - dangerous_tool_name
+      #   - another_blocked_tool
+      # Optional: Omit tool descriptions to save tokens (default: false)
+      # omitToolDescription: true
+    # instruction: Optional user override - takes precedence over config.instruction
+
+  # Example MCP server using SSE transport with environment variables
+  # remote-server:
+  #   url: https://example.com/mcp
+  #   type: sse
+  #   headers:
+  #     # Use ${VAR_NAME} to interpolate environment variables
+  #     Authorization: Bearer ${API_KEY}
+  #   config:
+  #     instruction: This server provides tools for...
+  #     # Optional: Block specific tools from being listed or executed
+  #     # toolBlacklist:
+  #     #   - tool_to_block
+  #     # Optional: Omit tool descriptions to save tokens (default: false)
+  #     # omitToolDescription: true
+  #   # instruction: Optional user override

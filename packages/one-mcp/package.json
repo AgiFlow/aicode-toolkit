@@ -1,7 +1,7 @@
 {
-  "name": "@agiflowai/architect-mcp",
-  "description": "MCP server for software architecture design and planning",
-  "version": "1.0.3",
+  "name": "@agiflowai/one-mcp",
+  "description": "One MCP server package",
+  "version": "0.1.0",
   "license": "AGPL-3.0",
   "keywords": [
     "mcp",
@@ -9,7 +9,7 @@
     "typescript"
   ],
   "bin": {
-    "architect-mcp": "./dist/cli.cjs"
+    "one-mcp": "./dist/cli.cjs"
   },
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.cts",
@@ -25,23 +25,21 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@agiflowai/aicode-utils": "workspace:^",
-    "@agiflowai/coding-agent-bridge": "workspace:^",
+    "@agiflowai/aicode-utils": "workspace:*",
     "@modelcontextprotocol/sdk": "1.19.1",
-    "@types/express": "^5.0.3",
     "chalk": "5.6.2",
     "commander": "14.0.1",
-    "execa": "^9.5.2",
     "express": "^4.21.2",
-    "js-yaml": "4.1.0",
-    "minimatch": "^10.0.3",
-    "uuid": "^11.0.5"
+    "js-yaml": "^4.1.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.0.0",
     "tsdown": "^0.16.4",
     "typescript": "5.9.3",
+    "unplugin-raw": "^0.6.3",
     "vitest": "^2.1.8"
   },
   "type": "module",

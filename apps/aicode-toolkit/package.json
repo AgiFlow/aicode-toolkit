@@ -29,7 +29,7 @@
   },
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.cts",
-  "module": "./dist/index.js",
+  "module": "./dist/index.mjs",
   "files": [
     "dist",
     "README.md"
@@ -65,7 +65,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.0.0",
-    "tsdown": "^0.15.6",
+    "tsdown": "^0.16.4",
     "typescript": "5.9.3",
     "unplugin-raw": "^0.6.3"
   },
@@ -75,11 +75,11 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
+      "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
     "./cli": {
-      "import": "./dist/cli.js",
+      "import": "./dist/cli.mjs",
       "require": "./dist/cli.cjs"
     },
     "./package.json": "./package.json"

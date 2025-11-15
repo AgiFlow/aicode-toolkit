@@ -26,15 +26,15 @@ import { Command } from 'commander';
  * {{ commandDescription }}
  */
 export const {{ commandName | camelCase }}Command = new Command('{{ commandName }}')
-  .description('{{ commandDescription }}'){% if withOptions %}
-  .option('-v, --verbose', 'Enable verbose output', false)
+  .description('{{ commandDescription }}')
+  {% if withOptions %}.option('-v, --verbose', 'Enable verbose output', false)
   .option('-o, --output <path>', 'Output file path'){% endif %}
   .action(async (options) => {
-    try {{% if withOptions %}
-      if (options.verbose) {
+    try {
+      {% if withOptions %}if (options.verbose) {
         console.log('Running {{ commandName }} with options:', options);
       }
-{% endif %}
+      {% endif %}
       // TODO: Implement command logic here
       console.log('{{ commandName | pascalCase }} command executed successfully');
       

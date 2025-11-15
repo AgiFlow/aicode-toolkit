@@ -10,6 +10,7 @@ module.exports = {
         'coding-agent-bridge',
         'scaffold-mcp',
         'architect-mcp',
+        'one-mcp',
         'release', // Allow 'release' scope for nx release commits
       ],
     ],

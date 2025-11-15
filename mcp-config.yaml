@@ -1,0 +1,60 @@
+# MCP Server Configuration
+# This file configures the MCP servers for the aicode-toolkit monorepo
+
+mcpServers:
+  # Scaffold MCP - Code generation and boilerplate scaffolding
+  scaffold-mcp:
+    command: bun
+    args:
+      - run
+      - packages/scaffold-mcp/src/cli.ts
+      - mcp-serve
+      - --admin-enable
+    env: {}
+    config:
+      instruction: >
+        Use this server for generating boilerplate code, scaffolding new projects,
+        and adding features to existing projects. Supports multiple templates and
+        custom code generation patterns.
+
+  # Architect MCP - Design patterns and code review
+  architect-mcp:
+    command: bun
+    args:
+      - run
+      - packages/architect-mcp/src/cli.ts
+      - mcp-serve
+      - --admin-enable
+      - --design-pattern-tool
+      - claude-code
+      - --review-tool
+      - claude-code
+    env: {}
+    config:
+      instruction: >
+        Use this server for design pattern guidance and code review.
+        Provides tools for getting file design patterns and reviewing code changes
+        against established coding standards.
+
+  # Nx MCP - Nx workspace management
+  nx-mcp:
+    command: pnpx
+    args:
+      - nx-mcp@latest
+    env: {}
+    config:
+      instruction: >
+        Use this server for Nx workspace operations, including running tasks,
+        managing projects, and querying the project graph.
+
+  # Playwright - Browser automation and testing
+  playwright:
+    command: sh
+    args:
+      - -c
+      - pnpx @playwright/mcp@latest
+    env: {}
+    config:
+      instruction: >
+        Use this server for browser automation, web scraping, and end-to-end testing
+        with Playwright.

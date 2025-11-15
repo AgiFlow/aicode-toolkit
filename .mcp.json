@@ -1,41 +1,9 @@
 {
   "mcpServers": {
-    "scaffold-mcp": {
+    "one-mcp": {
       "type": "stdio",
       "command": "bun",
-      "args": ["run", "packages/scaffold-mcp/src/cli.ts", "mcp-serve", "--admin-enable"],
-      "disabled": false
-    },
-    "architect-mcp": {
-      "type": "stdio",
-      "command": "bun",
-      "args": [
-        "run",
-        "packages/architect-mcp/src/cli.ts",
-        "mcp-serve",
-        "--admin-enable",
-        "--design-pattern-tool",
-        "claude-code",
-        "--review-tool",
-        "claude-code"
-      ],
-      "disabled": false
-    },
-    "nx-mcp": {
-      "type": "stdio",
-      "command": "pnpx",
-      "args": ["nx-mcp@latest"]
-    },
-    "context7": {
-      "type": "http",
-      "url": "https://mcp.context7.com/mcp",
-      "disabled": false
-    },
-    "playwright": {
-      "type": "stdio",
-      "command": "sh",
-      "args": ["-c", "pnpx @playwright/mcp@latest"],
-      "env": {},
+      "args": ["run", "packages/one-mcp/src/cli.ts", "mcp-serve", "--config", "mcp-config.yaml"],
       "disabled": false
     }
   }
