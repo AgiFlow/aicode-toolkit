@@ -24,7 +24,6 @@ import { UseToolTool } from '../tools/UseToolTool';
 
 export interface ServerOptions {
   configFilePath?: string;
-  configUrl?: string;
   noCache?: boolean;
 }
 
@@ -45,11 +44,10 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
   const clientManager = new McpClientManagerService();
 
   // Load and connect to MCP servers if config is provided
-  if (options?.configFilePath || options?.configUrl) {
+  if (options?.configFilePath) {
     try {
       const configFetcher = new ConfigFetcherService({
         configFilePath: options.configFilePath,
-        configUrl: options.configUrl,
       });
 
       // Force refresh if noCache option is enabled

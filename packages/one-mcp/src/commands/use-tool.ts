@@ -31,14 +31,13 @@ export const useToolCommand = new Command('use-tool')
   .description('Execute an MCP tool with arguments')
   .argument('<toolName>', 'Tool name to execute')
   .option('-c, --config <path>', 'Path to MCP server configuration file')
-  .option('--config-url <url>', 'URL to fetch MCP server configuration from')
   .option('-s, --server <name>', 'Server name (required if tool exists on multiple servers)')
   .option('-a, --args <json>', 'Tool arguments as JSON string', '{}')
   .option('-j, --json', 'Output as JSON', false)
   .action(async (toolName: string, options) => {
     try {
-      if (!options.config && !options.configUrl) {
-        console.error('Error: Either --config or --config-url is required');
+      if (!options.config) {
+        console.error('Error: --config is required');
         process.exit(1);
       }
 
@@ -54,7 +53,6 @@ export const useToolCommand = new Command('use-tool')
       // Initialize services
       const configFetcher = new ConfigFetcherService({
         configFilePath: options.config,
-        configUrl: options.configUrl,
       });
 
       const config = await configFetcher.fetchConfiguration();

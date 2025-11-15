@@ -30,20 +30,18 @@ import { McpClientManagerService } from '../services/McpClientManagerService';
 export const listToolsCommand = new Command('list-tools')
   .description('List all available tools from connected MCP servers')
   .option('-c, --config <path>', 'Path to MCP server configuration file')
-  .option('--config-url <url>', 'URL to fetch MCP server configuration from')
   .option('-s, --server <name>', 'Filter by server name')
   .option('-j, --json', 'Output as JSON', false)
   .action(async (options) => {
     try {
-      if (!options.config && !options.configUrl) {
-        console.error('Error: Either --config or --config-url is required');
+      if (!options.config) {
+        console.error('Error: --config is required');
         process.exit(1);
       }
 
       // Initialize services
       const configFetcher = new ConfigFetcherService({
         configFilePath: options.config,
-        configUrl: options.configUrl,
       });
 
       const config = await configFetcher.fetchConfiguration();
