@@ -1,3 +1,25 @@
+## 1.0.4 (2025-11-15)
+
+### 🚀 Features
+
+- integrate OpenSpec and enhance init workflow UX ([a90481f](https://github.com/AgiFlow/aicode-toolkit/commit/a90481f))
+- **coding-agent-bridge:** add Codex and Gemini CLI service support ([15835b7](https://github.com/AgiFlow/aicode-toolkit/commit/15835b7))
+- **coding-agent-bridge:** implement Claude Code auto-detection and standardized MCP configuration ([a3c96c4](https://github.com/AgiFlow/aicode-toolkit/commit/a3c96c4))
+- ⚠️  **coding-agent-bridge:** implement coding agent abstraction layer with ClaudeCodeService ([b9f2ff9](https://github.com/AgiFlow/aicode-toolkit/commit/b9f2ff9))
+- **coding-agent-bridge:** scaffold new TypeScript library package ([a565aed](https://github.com/AgiFlow/aicode-toolkit/commit/a565aed))
+
+### 🩹 Fixes
+
+- linting Fix error in linting and typechecking ([2c8a782](https://github.com/AgiFlow/aicode-toolkit/commit/2c8a782))
+
+### ⚠️  Breaking Changes
+
+- **coding-agent-bridge:** architect-mcp now depends on coding-agent-bridge package
+
+### ❤️ Thank You
+
+- Vuong Ngo @AgiFlow
+
 ## 1.0.3 (2025-11-09)
 
 This was a version bump only for @agiflowai/coding-agent-bridge to align it with other projects, there were no code changes.
