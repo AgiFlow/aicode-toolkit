@@ -54,7 +54,10 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
       clients.map(async (client) => {
         try {
           const tools = await client.listTools();
-          const toolList = tools.map((t) => `${t.name}`).join(',');
+          // Filter out blacklisted tools
+          const blacklist = new Set(client.toolBlacklist || []);
+          const filteredTools = tools.filter((t) => !blacklist.has(t.name));
+          const toolList = filteredTools.map((t) => `${t.name}`).join(',');
 
           const instructionLine = client.serverInstruction
             ? `\n- Description: ${client.serverInstruction}`
@@ -138,11 +141,21 @@ This tool is optimized for batch queries - you can request multiple tools at onc
         }
 
         const tools = await client.listTools();
+        // Filter out blacklisted tools
+        const blacklist = new Set(client.toolBlacklist || []);
+        const filteredTools = tools.filter((t) => !blacklist.has(t.name));
+
         const foundTools: ToolDescription[] = [];
         const notFoundTools: string[] = [];
 
         for (const toolName of toolNames) {
-          const tool = tools.find((t) => t.name === toolName);
+          // Check if tool is blacklisted
+          if (blacklist.has(toolName)) {
+            notFoundTools.push(toolName);
+            continue;
+          }
+
+          const tool = filteredTools.find((t) => t.name === toolName);
           if (tool) {
             foundTools.push({
               server: serverName,
@@ -199,10 +212,19 @@ This tool is optimized for batch queries - you can request multiple tools at onc
         clients.map(async (client) => {
           try {
             const tools = await client.listTools();
+            // Filter out blacklisted tools
+            const blacklist = new Set(client.toolBlacklist || []);
+            const filteredTools = tools.filter((t) => !blacklist.has(t.name));
+
             const matches: Array<{ toolName: string; server: string; tool: any }> = [];
 
             for (const toolName of toolNames) {
-              const tool = tools.find((t) => t.name === toolName);
+              // Skip if tool is blacklisted
+              if (blacklist.has(toolName)) {
+                continue;
+              }
+
+              const tool = filteredTools.find((t) => t.name === toolName);
               if (tool) {
                 matches.push({ toolName, server: client.serverName, tool });
               }

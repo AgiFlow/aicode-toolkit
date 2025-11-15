@@ -81,7 +81,10 @@ export const listToolsCommand = new Command('list-tools')
       for (const client of clients) {
         try {
           const tools = await client.listTools();
-          toolsByServer[client.serverName] = tools;
+          // Filter out blacklisted tools
+          const blacklist = new Set(client.toolBlacklist || []);
+          const filteredTools = tools.filter((t) => !blacklist.has(t.name));
+          toolsByServer[client.serverName] = filteredTools;
         } catch (error) {
           if (!options.json) {
             console.error(`Failed to list tools from ${client.serverName}:`, error);

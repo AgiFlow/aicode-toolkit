@@ -163,6 +163,10 @@ mcpServers:
       API_KEY: "${MY_API_KEY}"
     config:
       instruction: "Custom instruction for this server"
+      # Optional: Block specific tools from being listed or executed
+      toolBlacklist:
+        - dangerous_tool
+        - another_blocked_tool
 
   # HTTP/SSE server (remote)
   remote-server:
@@ -172,6 +176,8 @@ mcpServers:
       Authorization: "Bearer ${TOKEN}"
     config:
       instruction: "Remote server instruction"
+      toolBlacklist:
+        - risky_operation
 
   # Disabled server (will be skipped)
   disabled-server:
@@ -195,27 +201,39 @@ mcpServers:
       API_KEY: "${MY_API_KEY}"  # Reads from environment
 ```
 
-### Remote Configuration
+### Tool Blacklisting
 
-Load configuration from a remote URL:
+Control which tools from an MCP server are accessible by using the `toolBlacklist` configuration. Blacklisted tools will:
+- Not appear in `list-tools` output
+- Not be shown in `describe_tools` responses
+- Raise an error if attempted to be executed via `use_tool`
 
-```bash
-npx @agiflowai/one-mcp mcp-serve --config-url https://example.com/mcp-config.yaml
+This is useful for:
+- **Security**: Block dangerous operations (e.g., `write_file`, `delete_file`)
+- **Compliance**: Restrict tools that don't meet your policies
+- **Simplification**: Hide tools you don't want agents to use
+
+**Example:**
+
+```yaml
+mcpServers:
+  filesystem:
+    command: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-filesystem"
+      - "/workspace"
+    config:
+      instruction: "File system access (read-only)"
+      toolBlacklist:
+        - write_file
+        - create_directory
+        - move_file
 ```
 
-Merge local and remote configs:
-
-```bash
-npx @agiflowai/one-mcp mcp-serve \
-  --config ./local-config.yaml \
-  --config-url https://example.com/remote-config.yaml \
-  --merge-strategy local-priority
-```
-
-**Merge Strategies:**
-- `local-priority` (default) - Local servers override remote servers
-- `remote-priority` - Remote servers override local servers
-- `merge-deep` - Deep merge both configs (local values take precedence)
+**Behavior:**
+- Agents will only see read-only tools like `read_file`, `list_directory`
+- Attempting to call `write_file` will return an error: `Tool "write_file" is blacklisted on server "filesystem" and cannot be executed.`
 
 ## CLI Commands
 
@@ -227,12 +245,11 @@ Start the MCP server:
 npx @agiflowai/one-mcp mcp-serve [options]
 
 Options:
-  --config <path>              Path to local config file (YAML or JSON)
-  --config-url <url>           URL to remote config file
-  --merge-strategy <strategy>  How to merge configs (local-priority|remote-priority|merge-deep)
-  --cache-ttl <ms>             Cache TTL for remote config in milliseconds (default: 60000)
-  --transport <type>           Transport mode: stdio (default), http, sse
-  --port <number>              Port for HTTP/SSE transport (default: 3000)
+  -c, --config <path>  Path to local config file (YAML or JSON)
+  --no-cache           Force reload configuration from source, bypassing cache
+  -t, --type <type>    Transport mode: stdio (default), http, sse
+  -p, --port <number>  Port for HTTP/SSE transport (default: 3000)
+  --host <host>        Host to bind to (HTTP/SSE only, default: localhost)
 ```
 
 ### `init`

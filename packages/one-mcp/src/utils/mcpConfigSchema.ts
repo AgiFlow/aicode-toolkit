@@ -85,6 +85,7 @@ function interpolateEnvVarsInObject<T>(obj: T): T {
 // Additional config options (nested under 'config' key)
 const AdditionalConfigSchema = z.object({
   instruction: z.string().optional(),
+  toolBlacklist: z.array(z.string()).optional(),
 }).optional();
 
 // Stdio server config (standard Claude Code format)
@@ -151,18 +152,21 @@ const McpServerConfigSchema = z.discriminatedUnion('transport', [
   z.object({
     name: z.string(),
     instruction: z.string().optional(),
+    toolBlacklist: z.array(z.string()).optional(),
     transport: z.literal('stdio'),
     config: McpStdioConfigSchema,
   }),
   z.object({
     name: z.string(),
     instruction: z.string().optional(),
+    toolBlacklist: z.array(z.string()).optional(),
     transport: z.literal('http'),
     config: McpHttpConfigSchema,
   }),
   z.object({
     name: z.string(),
     instruction: z.string().optional(),
+    toolBlacklist: z.array(z.string()).optional(),
     transport: z.literal('sse'),
     config: McpSseConfigSchema,
   }),
@@ -207,10 +211,12 @@ export function transformClaudeCodeConfig(claudeConfig: ClaudeCodeMcpConfig): In
 
       // Instruction priority: top-level instruction (user override) > config.instruction (server default)
       const finalInstruction = stdioConfig.instruction || stdioConfig.config?.instruction;
+      const toolBlacklist = stdioConfig.config?.toolBlacklist;
 
       transformedServers[serverName] = {
         name: serverName,
         instruction: finalInstruction,
+        toolBlacklist,
         transport: 'stdio' as const,
         config: {
           command: interpolatedCommand,
@@ -231,10 +237,12 @@ export function transformClaudeCodeConfig(claudeConfig: ClaudeCodeMcpConfig): In
 
       // Instruction priority: top-level instruction (user override) > config.instruction (server default)
       const finalInstruction = httpConfig.instruction || httpConfig.config?.instruction;
+      const toolBlacklist = httpConfig.config?.toolBlacklist;
 
       transformedServers[serverName] = {
         name: serverName,
         instruction: finalInstruction,
+        toolBlacklist,
         transport,
         config: {
           url: interpolatedUrl,

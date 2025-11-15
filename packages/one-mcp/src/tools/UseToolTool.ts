@@ -87,6 +87,19 @@ export class UseToolTool implements Tool<UseToolToolInput> {
           };
         }
 
+        // Check if tool is blacklisted
+        if (client.toolBlacklist && client.toolBlacklist.includes(toolName)) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Tool "${toolName}" is blacklisted on server "${serverName}" and cannot be executed.`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
         try {
           const result = await client.callTool(toolName, toolArgs);
           return result;
@@ -109,6 +122,11 @@ export class UseToolTool implements Tool<UseToolToolInput> {
       const results = await Promise.all(
         clients.map(async (client) => {
           try {
+            // Skip if tool is blacklisted on this server
+            if (client.toolBlacklist && client.toolBlacklist.includes(toolName)) {
+              return null;
+            }
+
             const tools = await client.listTools();
             const hasTool = tools.some((t) => t.name === toolName);
 

@@ -36,6 +36,7 @@ import type {
 class McpClient implements McpClientConnection {
   serverName: string;
   serverInstruction?: string;
+  toolBlacklist?: string[];
   transport: McpServerTransportType;
   private client: Client;
   private childProcess?: ChildProcess;
@@ -45,10 +46,14 @@ class McpClient implements McpClientConnection {
     serverName: string,
     transport: McpServerTransportType,
     client: Client,
-    instruction?: string,
+    config: {
+      instruction?: string;
+      toolBlacklist?: string[];
+    },
   ) {
     this.serverName = serverName;
-    this.serverInstruction = instruction;
+    this.serverInstruction = config.instruction;
+    this.toolBlacklist = config.toolBlacklist;
     this.transport = transport;
     this.client = client;
   }
@@ -185,7 +190,10 @@ export class McpClientManagerService {
       },
     );
 
-    const mcpClient = new McpClient(serverName, config.transport, client, config.instruction);
+    const mcpClient = new McpClient(serverName, config.transport, client, {
+      instruction: config.instruction,
+      toolBlacklist: config.toolBlacklist,
+    });
 
     try {
       // Wrap connection with timeout
