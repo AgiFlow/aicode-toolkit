@@ -235,6 +235,49 @@ mcpServers:
 - Agents will only see read-only tools like `read_file`, `list_directory`
 - Attempting to call `write_file` will return an error: `Tool "write_file" is blacklisted on server "filesystem" and cannot be executed.`
 
+### Tool Description Formatting
+
+Control how tool information is displayed by using the `omitToolDescription` configuration flag. This helps reduce token usage when full descriptions aren't needed.
+
+**Default behavior (omitToolDescription: false or not set):**
+```
+server-name:
+  - tool_name1: Full description of what this tool does...
+  - tool_name2: Another detailed description...
+```
+
+**Compact mode (omitToolDescription: true):**
+```
+server-name:
+  tool_name1, tool_name2, tool_name3
+```
+
+**Example:**
+
+```yaml
+mcpServers:
+  filesystem:
+    command: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-filesystem"
+      - "/workspace"
+    config:
+      instruction: "File system access"
+      omitToolDescription: true  # Show only tool names, not descriptions
+```
+
+**Benefits:**
+- **Reduced Token Usage**: Save context window space by omitting verbose descriptions
+- **Faster Discovery**: Quickly scan available tool names without reading full descriptions
+- **Cleaner Output**: More compact tool listings for familiar servers
+
+**When to use:**
+- You're already familiar with the server's tools
+- Working with servers that have many tools with long descriptions
+- Trying to conserve context window tokens
+- Need a quick overview of available tool names
+
 ## CLI Commands
 
 ### `mcp-serve`

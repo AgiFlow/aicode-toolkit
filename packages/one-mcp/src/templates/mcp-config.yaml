@@ -9,6 +9,7 @@
 # - config.instruction: Server's default instruction (from server documentation)
 # - instruction: User override (optional, takes precedence over config.instruction)
 # - config.toolBlacklist: Array of tool names to hide/block from this server
+# - config.omitToolDescription: Boolean to show only tool names without descriptions (saves tokens)
 
 mcpServers:
   # Example MCP server using stdio transport
@@ -29,6 +30,8 @@ mcpServers:
       # toolBlacklist:
       #   - dangerous_tool_name
       #   - another_blocked_tool
+      # Optional: Omit tool descriptions to save tokens (default: false)
+      # omitToolDescription: true
     # instruction: Optional user override - takes precedence over config.instruction
 
   # Example MCP server using SSE transport with environment variables
@@ -43,4 +46,6 @@ mcpServers:
   #     # Optional: Block specific tools from being listed or executed
   #     # toolBlacklist:
   #     #   - tool_to_block
+  #     # Optional: Omit tool descriptions to save tokens (default: false)
+  #     # omitToolDescription: true
   #   # instruction: Optional user override

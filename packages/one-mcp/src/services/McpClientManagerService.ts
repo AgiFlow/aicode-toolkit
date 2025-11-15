@@ -37,6 +37,7 @@ class McpClient implements McpClientConnection {
   serverName: string;
   serverInstruction?: string;
   toolBlacklist?: string[];
+  omitToolDescription?: boolean;
   transport: McpServerTransportType;
   private client: Client;
   private childProcess?: ChildProcess;
@@ -49,11 +50,13 @@ class McpClient implements McpClientConnection {
     config: {
       instruction?: string;
       toolBlacklist?: string[];
+      omitToolDescription?: boolean;
     },
   ) {
     this.serverName = serverName;
     this.serverInstruction = config.instruction;
     this.toolBlacklist = config.toolBlacklist;
+    this.omitToolDescription = config.omitToolDescription;
     this.transport = transport;
     this.client = client;
   }
@@ -193,6 +196,7 @@ export class McpClientManagerService {
     const mcpClient = new McpClient(serverName, config.transport, client, {
       instruction: config.instruction,
       toolBlacklist: config.toolBlacklist,
+      omitToolDescription: config.omitToolDescription,
     });
 
     try {

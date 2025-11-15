@@ -57,7 +57,11 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
           // Filter out blacklisted tools
           const blacklist = new Set(client.toolBlacklist || []);
           const filteredTools = tools.filter((t) => !blacklist.has(t.name));
-          const toolList = filteredTools.map((t) => `${t.name}`).join(',');
+
+          // Format tool list based on omitToolDescription flag
+          const toolList = client.omitToolDescription
+            ? filteredTools.map((t) => t.name).join(', ')
+            : filteredTools.map((t) => `${t.name}: ${t.description || 'No description'}`).join('\n');
 
           const instructionLine = client.serverInstruction
             ? `\n- Description: ${client.serverInstruction}`

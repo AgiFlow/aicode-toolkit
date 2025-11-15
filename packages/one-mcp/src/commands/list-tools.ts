@@ -98,12 +98,22 @@ export const listToolsCommand = new Command('list-tools')
         console.log(JSON.stringify(toolsByServer, null, 2));
       } else {
         for (const [serverName, tools] of Object.entries(toolsByServer)) {
+          const client = clients.find(c => c.serverName === serverName);
+          const omitDescription = client?.omitToolDescription || false;
+
           console.log(`\n${serverName}:`);
           if (tools.length === 0) {
             console.log('  No tools available');
           } else {
-            for (const tool of tools) {
-              console.log(`  - ${tool.name}: ${tool.description || 'No description'}`);
+            if (omitDescription) {
+              // Show tools as comma-separated list without descriptions
+              const toolNames = tools.map(t => t.name).join(', ');
+              console.log(`  ${toolNames}`);
+            } else {
+              // Show tools with descriptions (default)
+              for (const tool of tools) {
+                console.log(`  - ${tool.name}: ${tool.description || 'No description'}`);
+              }
             }
           }
         }

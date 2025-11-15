@@ -95,6 +95,7 @@ export interface McpServerConfig {
   name: string;
   instruction?: string;
   toolBlacklist?: string[];
+  omitToolDescription?: boolean;
   transport: McpServerTransportType;
   config: McpServerTransportConfig;
 }
@@ -113,6 +114,7 @@ export interface McpClientConnection {
   serverName: string;
   serverInstruction?: string;
   toolBlacklist?: string[];
+  omitToolDescription?: boolean;
   transport: McpServerTransportType;
   listTools(): Promise<any[]>;
   listResources(): Promise<any[]>;

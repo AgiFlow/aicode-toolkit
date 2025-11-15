@@ -86,6 +86,7 @@ function interpolateEnvVarsInObject<T>(obj: T): T {
 const AdditionalConfigSchema = z.object({
   instruction: z.string().optional(),
   toolBlacklist: z.array(z.string()).optional(),
+  omitToolDescription: z.boolean().optional(),
 }).optional();
 
 // Stdio server config (standard Claude Code format)
@@ -153,6 +154,7 @@ const McpServerConfigSchema = z.discriminatedUnion('transport', [
     name: z.string(),
     instruction: z.string().optional(),
     toolBlacklist: z.array(z.string()).optional(),
+    omitToolDescription: z.boolean().optional(),
     transport: z.literal('stdio'),
     config: McpStdioConfigSchema,
   }),
@@ -160,6 +162,7 @@ const McpServerConfigSchema = z.discriminatedUnion('transport', [
     name: z.string(),
     instruction: z.string().optional(),
     toolBlacklist: z.array(z.string()).optional(),
+    omitToolDescription: z.boolean().optional(),
     transport: z.literal('http'),
     config: McpHttpConfigSchema,
   }),
@@ -167,6 +170,7 @@ const McpServerConfigSchema = z.discriminatedUnion('transport', [
     name: z.string(),
     instruction: z.string().optional(),
     toolBlacklist: z.array(z.string()).optional(),
+    omitToolDescription: z.boolean().optional(),
     transport: z.literal('sse'),
     config: McpSseConfigSchema,
   }),
@@ -212,11 +216,13 @@ export function transformClaudeCodeConfig(claudeConfig: ClaudeCodeMcpConfig): In
       // Instruction priority: top-level instruction (user override) > config.instruction (server default)
       const finalInstruction = stdioConfig.instruction || stdioConfig.config?.instruction;
       const toolBlacklist = stdioConfig.config?.toolBlacklist;
+      const omitToolDescription = stdioConfig.config?.omitToolDescription;
 
       transformedServers[serverName] = {
         name: serverName,
         instruction: finalInstruction,
         toolBlacklist,
+        omitToolDescription,
         transport: 'stdio' as const,
         config: {
           command: interpolatedCommand,
@@ -238,11 +244,13 @@ export function transformClaudeCodeConfig(claudeConfig: ClaudeCodeMcpConfig): In
       // Instruction priority: top-level instruction (user override) > config.instruction (server default)
       const finalInstruction = httpConfig.instruction || httpConfig.config?.instruction;
       const toolBlacklist = httpConfig.config?.toolBlacklist;
+      const omitToolDescription = httpConfig.config?.omitToolDescription;
 
       transformedServers[serverName] = {
         name: serverName,
         instruction: finalInstruction,
         toolBlacklist,
+        omitToolDescription,
         transport,
         config: {
           url: interpolatedUrl,
