@@ -52,7 +52,7 @@ export const initCommand = new Command('init')
         });
       } catch (error) {
         // If file exists and we're not forcing, provide helpful error
-        if (error.code === 'EEXIST') {
+        if (error && typeof error === 'object' && 'code' in error && error.code === 'EEXIST') {
           log.error(`Config file already exists: ${outputPath}`);
           log.info('Use --force to overwrite');
           process.exit(1);
