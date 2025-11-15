@@ -1,0 +1,17 @@
+## 0.2.0 (2025-11-15)
+
+### 🚀 Features
+
+- **one-mcp:** add omitToolDescription flag ([b429e1e](https://github.com/AgiFlow/aicode-toolkit/commit/b429e1e))
+- **scaffold-mcp:** add toolBlacklist support to one-mcp ([7a277d4](https://github.com/AgiFlow/aicode-toolkit/commit/7a277d4))
+- **scaffold-mcp:** remove configUrl support from one-mcp, keep only local file config ([cf55e4d](https://github.com/AgiFlow/aicode-toolkit/commit/cf55e4d))
+- **scaffold-mcp:** add --no-cache option to one-mcp mcp-serve command ([c099559](https://github.com/AgiFlow/aicode-toolkit/commit/c099559))
+
+### 🩹 Fixes
+
+- **one-mcp:** add proper type checking for error in init command ([6119cb8](https://github.com/AgiFlow/aicode-toolkit/commit/6119cb8))
+- **one-mcp:** resolve file system race condition in init command ([ae402c9](https://github.com/AgiFlow/aicode-toolkit/commit/ae402c9))
+
+### ❤️ Thank You
+
+- Vuong Ngo
