@@ -1,0 +1,22 @@
+{
+  "_comment": "MCP Server Configuration - Use ${VAR_NAME} syntax for environment variable interpolation",
+  "_instructions": "config.instruction: Server's default instruction | instruction: User override (takes precedence)",
+  "mcpServers": {
+    "example-server": {
+      "command": "node",
+      "args": [
+        "/path/to/mcp-server/build/index.js"
+      ],
+      "env": {
+        "LOG_LEVEL": "info",
+        "_comment": "You can use environment variable interpolation:",
+        "_example_DATABASE_URL": "${DATABASE_URL}",
+        "_example_API_KEY": "${MY_API_KEY}"
+      },
+      "config": {
+        "instruction": "Use this server for..."
+      },
+      "_instruction_override": "Optional user override - takes precedence over config.instruction"
+    }
+  }
+}
