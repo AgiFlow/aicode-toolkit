@@ -78,6 +78,169 @@ function interpolateEnvVarsInObject<T>(obj: T): T {
 }
 
 /**
+ * Private IP range patterns for SSRF protection
+ * Covers both IPv4 and IPv6 loopback, private, and link-local ranges
+ */
+const PRIVATE_IP_PATTERNS = [
+  // IPv4 ranges
+  /^127\./,                          // Loopback (127.0.0.0/8)
+  /^10\./,                           // Private Class A (10.0.0.0/8)
+  /^172\.(1[6-9]|2\d|3[01])\./,     // Private Class B (172.16.0.0/12)
+  /^192\.168\./,                     // Private Class C (192.168.0.0/16)
+  /^169\.254\./,                     // Link-local (169.254.0.0/16)
+  /^0\./,                            // Invalid (0.0.0.0/8)
+  /^224\./,                          // Multicast (224.0.0.0/4)
+  /^240\./,                          // Reserved (240.0.0.0/4)
+
+  // Localhost
+  /^localhost$/i,                    // Localhost
+  /^.*\.localhost$/i,                // *.localhost
+
+  // IPv6 loopback (multiple notations)
+  /^\[::\]/,                         // IPv6 loopback compressed (::)
+  /^\[::1\]/,                        // IPv6 loopback (::1)
+  /^\[0:0:0:0:0:0:0:1\]/,           // IPv6 loopback full notation
+  /^\[0{1,4}:0{1,4}:0{1,4}:0{1,4}:0{1,4}:0{1,4}:0{1,4}:1\]/i, // IPv6 loopback with leading zeros
+
+  // IPv6 link-local
+  /^\[fe80:/i,                       // IPv6 link-local (fe80::/10)
+
+  // IPv6 unique local
+  /^\[fc00:/i,                       // IPv6 unique local (fc00::/7)
+  /^\[fd00:/i,                       // IPv6 unique local (fd00::/8)
+
+  // IPv4-mapped IPv6 addresses (::ffff:x.x.x.x)
+  // Note: URL parser converts these to hex notation, e.g., ::ffff:127.0.0.1 → ::ffff:7f00:1
+  /^\[::ffff:127\./i,               // IPv4-mapped IPv6 loopback (dotted notation)
+  /^\[::ffff:7f[0-9a-f]{2}:/i,      // IPv4-mapped IPv6 loopback (hex: 127.x.x.x → 7fxx:xxxx)
+  /^\[::ffff:10\./i,                // IPv4-mapped IPv6 private Class A (dotted notation)
+  /^\[::ffff:a[0-9a-f]{2}:/i,       // IPv4-mapped IPv6 private Class A (hex: 10.x.x.x → 0axx:xxxx)
+  /^\[::ffff:172\.(1[6-9]|2\d|3[01])\./i, // IPv4-mapped IPv6 private Class B (dotted)
+  /^\[::ffff:ac1[0-9a-f]:/i,        // IPv4-mapped IPv6 private Class B (hex: 172.16-31.x.x → ac1x:xxxx)
+  /^\[::ffff:192\.168\./i,          // IPv4-mapped IPv6 private Class C (dotted notation)
+  /^\[::ffff:c0a8:/i,               // IPv4-mapped IPv6 private Class C (hex: 192.168.x.x → c0a8:xxxx)
+  /^\[::ffff:169\.254\./i,          // IPv4-mapped IPv6 link-local (dotted notation)
+  /^\[::ffff:a9fe:/i,               // IPv4-mapped IPv6 link-local (hex: 169.254.x.x → a9fe:xxxx)
+  /^\[::ffff:0\./i,                 // IPv4-mapped IPv6 invalid
+
+  // IPv4-compatible IPv6 (deprecated but should still block)
+  /^\[::127\./i,                    // IPv4-compatible IPv6 loopback (dotted notation)
+  /^\[::7f[0-9a-f]{2}:/i,           // IPv4-compatible IPv6 loopback (hex notation)
+  /^\[::10\./i,                     // IPv4-compatible IPv6 private Class A (dotted notation)
+  /^\[::a[0-9a-f]{2}:/i,            // IPv4-compatible IPv6 private Class A (hex notation)
+  /^\[::192\.168\./i,               // IPv4-compatible IPv6 private Class C (dotted notation)
+  /^\[::c0a8:/i,                    // IPv4-compatible IPv6 private Class C (hex notation)
+];
+
+/**
+ * Validate URL for SSRF protection
+ *
+ * @param url - The URL to validate (after env var interpolation)
+ * @param security - Security settings
+ * @throws Error if URL is unsafe
+ */
+function validateUrlSecurity(url: string, security?: RemoteConfigSource['security']): void {
+  // Apply secure defaults
+  const allowPrivateIPs = security?.allowPrivateIPs ?? false;
+  const enforceHttps = security?.enforceHttps ?? true;
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch (error) {
+    throw new Error(`Invalid URL format: ${url}`);
+  }
+
+  // Check protocol
+  const protocol = parsedUrl.protocol.replace(':', '');
+  if (enforceHttps && protocol !== 'https') {
+    throw new Error(
+      `HTTPS is required for security. URL uses '${protocol}://'. Set security.enforceHttps: false to allow HTTP.`
+    );
+  }
+
+  if (protocol !== 'http' && protocol !== 'https') {
+    throw new Error(
+      `Invalid URL protocol '${protocol}://'. Only http:// and https:// are allowed.`
+    );
+  }
+
+  // Check for private IPs and localhost (unless explicitly allowed)
+  if (!allowPrivateIPs) {
+    const hostname = parsedUrl.hostname.toLowerCase();
+    const isPrivateOrLocal = PRIVATE_IP_PATTERNS.some((pattern) => pattern.test(hostname));
+
+    if (isPrivateOrLocal) {
+      throw new Error(
+        `Private IP addresses and localhost are blocked for security (${hostname}). Set security.allowPrivateIPs: true to allow internal networks.`
+      );
+    }
+  }
+}
+
+/**
+ * Validate a remote config source against its validation rules
+ *
+ * @param source - Remote config source with validation rules
+ * @throws Error if validation fails
+ */
+export function validateRemoteConfigSource(source: RemoteConfigSource): void {
+  // Interpolate environment variables in URL first
+  const interpolatedUrl = interpolateEnvVars(source.url);
+
+  // SSRF protection - validate URL security
+  validateUrlSecurity(interpolatedUrl, source.security);
+
+  // Custom regex validation (if provided)
+  if (!source.validation) {
+    return;
+  }
+
+  // Validate URL format if pattern is provided
+  if (source.validation.url) {
+    const urlPattern = new RegExp(source.validation.url);
+
+    if (!urlPattern.test(interpolatedUrl)) {
+      throw new Error(
+        `Remote config URL "${interpolatedUrl}" does not match validation pattern: ${source.validation.url}`
+      );
+    }
+  }
+
+  // Validate header values against regex patterns
+  if (source.validation.headers && Object.keys(source.validation.headers).length > 0) {
+    // Check if headers are provided in the source
+    if (!source.headers) {
+      const requiredHeaders = Object.keys(source.validation.headers);
+      throw new Error(
+        `Remote config is missing required headers: ${requiredHeaders.join(', ')}`
+      );
+    }
+
+    // Validate each header value against its regex pattern
+    for (const [headerName, pattern] of Object.entries(source.validation.headers)) {
+      // Check if header exists
+      if (!(headerName in source.headers)) {
+        throw new Error(
+          `Remote config is missing required header: ${headerName}`
+        );
+      }
+
+      // Interpolate environment variables in the header value
+      const interpolatedHeaderValue = interpolateEnvVars(source.headers[headerName]);
+
+      // Validate header value against regex pattern
+      const headerPattern = new RegExp(pattern);
+      if (!headerPattern.test(interpolatedHeaderValue)) {
+        throw new Error(
+          `Remote config header "${headerName}" value "${interpolatedHeaderValue}" does not match validation pattern: ${pattern}`
+        );
+      }
+    }
+  }
+}
+
+/**
  * Claude Code / Claude Desktop standard MCP config format
  * This is the format users write in their config files
  */
@@ -115,11 +278,35 @@ const ClaudeCodeServerConfigSchema = z.union([
   ClaudeCodeHttpServerSchema,
 ]);
 
+// Remote config validation schema
+const RemoteConfigValidationSchema = z.object({
+  url: z.string().optional(), // Regex pattern to validate URL
+  headers: z.record(z.string(), z.string()).optional(), // Header name to regex pattern mapping for validating header values
+}).optional();
+
+// Remote config security schema for SSRF protection
+const RemoteConfigSecuritySchema = z.object({
+  allowPrivateIPs: z.boolean().optional(), // Allow private IP ranges (default: false)
+  enforceHttps: z.boolean().optional(), // Enforce HTTPS only (default: true)
+}).optional();
+
+// Remote config source schema
+const RemoteConfigSourceSchema = z.object({
+  url: z.string(), // URL to fetch remote config from (supports env var interpolation)
+  headers: z.record(z.string(), z.string()).optional(), // Headers for the request (supports env var interpolation)
+  validation: RemoteConfigValidationSchema, // Optional validation rules
+  security: RemoteConfigSecuritySchema, // Optional security settings for SSRF protection
+  mergeStrategy: z.enum(['local-priority', 'remote-priority', 'merge-deep']).optional(), // Merge strategy (default: local-priority)
+});
+
+export type RemoteConfigSource = z.infer<typeof RemoteConfigSourceSchema>;
+
 /**
  * Full Claude Code MCP configuration schema
  */
 export const ClaudeCodeMcpConfigSchema = z.object({
   mcpServers: z.record(z.string(), ClaudeCodeServerConfigSchema),
+  remoteConfigs: z.array(RemoteConfigSourceSchema).optional(), // Optional remote config sources
 });
 
 export type ClaudeCodeMcpConfig = z.infer<typeof ClaudeCodeMcpConfigSchema>;

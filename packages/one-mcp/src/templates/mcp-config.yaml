@@ -11,6 +11,45 @@
 # - config.toolBlacklist: Array of tool names to hide/block from this server
 # - config.omitToolDescription: Boolean to show only tool names without descriptions (saves tokens)
 
+# Remote Configuration Sources (OPTIONAL)
+# Fetch and merge configurations from remote URLs
+# Remote configs are merged with local configs based on merge strategy
+#
+# SECURITY: SSRF Protection is ENABLED by default
+# - Only HTTPS URLs are allowed (set security.enforceHttps: false to allow HTTP)
+# - Private IPs and localhost are blocked (set security.allowPrivateIPs: true for internal networks)
+# - Blocked ranges: 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16
+remoteConfigs:
+  # Example 1: Basic remote config with default security
+  # - url: ${AGIFLOW_URL}/api/v1/mcp-configs
+  #   headers:
+  #     Authorization: Bearer ${AGIFLOW_API_KEY}
+  #   mergeStrategy: local-priority  # Options: local-priority (default), remote-priority, merge-deep
+  #
+  # Example 2: Remote config with custom security settings (for internal networks)
+  # - url: ${INTERNAL_URL}/mcp-configs
+  #   headers:
+  #     Authorization: Bearer ${INTERNAL_TOKEN}
+  #   security:
+  #     allowPrivateIPs: true   # Allow internal IPs (default: false)
+  #     enforceHttps: false     # Allow HTTP (default: true, HTTPS only)
+  #   mergeStrategy: local-priority
+  #
+  # Example 3: Remote config with additional validation (OPTIONAL)
+  # - url: ${AGIFLOW_URL}/api/v1/mcp-configs
+  #   headers:
+  #     Authorization: Bearer ${AGIFLOW_API_KEY}
+  #     X-API-Key: ${AGIFLOW_API_KEY}
+  #   security:
+  #     enforceHttps: true      # Require HTTPS (default: true)
+  #     allowPrivateIPs: false  # Block private IPs (default: false)
+  #   validation:  # OPTIONAL: Additional regex validation on top of security checks
+  #     url: ^https://.*\.agiflow\.io/.*  # OPTIONAL: Regex pattern to validate URL format
+  #     headers:  # OPTIONAL: Regex patterns to validate header values
+  #       Authorization: ^Bearer [A-Za-z0-9_-]+$
+  #       X-API-Key: ^[A-Za-z0-9_-]{32,}$
+  #   mergeStrategy: local-priority
+
 mcpServers:
   # Example MCP server using stdio transport
   example-server:
