@@ -70,10 +70,17 @@ export class RemoteConfigCacheService {
 
   /**
    * Initialize cache directory
+   * Uses mkdir with recursive option which handles existing directories gracefully
+   * (no TOCTOU race condition from existsSync check)
    */
   private async ensureCacheDir(): Promise<void> {
-    if (!existsSync(this.cacheDir)) {
+    try {
       await mkdir(this.cacheDir, { recursive: true });
+    } catch (error: any) {
+      // mkdir with recursive: true normally doesn't throw EEXIST, but handle it just in case
+      if (error?.code !== 'EEXIST') {
+        throw error;
+      }
     }
   }
 

@@ -845,6 +845,137 @@ describe('mcpConfigSchema', () => {
       });
     });
 
+    describe('IPv6 SSRF protection', () => {
+      it('should block IPv6 loopback (::1)', () => {
+        const source = {
+          url: 'https://[::1]/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block IPv6 loopback compressed (::)', () => {
+        const source = {
+          url: 'https://[::]/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block IPv6 loopback full notation', () => {
+        const source = {
+          url: 'https://[0:0:0:0:0:0:0:1]/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block IPv4-mapped IPv6 loopback (::ffff:127.0.0.1)', () => {
+        const source = {
+          url: 'https://[::ffff:127.0.0.1]/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block IPv4-mapped IPv6 private IP (::ffff:10.0.0.1)', () => {
+        const source = {
+          url: 'https://[::ffff:10.0.0.1]/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block IPv4-mapped IPv6 private IP (::ffff:192.168.1.1)', () => {
+        const source = {
+          url: 'https://[::ffff:192.168.1.1]/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block IPv4-mapped IPv6 link-local (::ffff:169.254.169.254)', () => {
+        const source = {
+          url: 'https://[::ffff:169.254.169.254]/latest/meta-data/',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block IPv4-compatible IPv6 loopback (::127.0.0.1)', () => {
+        const source = {
+          url: 'https://[::127.0.0.1]/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block IPv6 link-local (fe80::1)', () => {
+        const source = {
+          url: 'https://[fe80::1]/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block IPv6 unique local (fc00::1)', () => {
+        const source = {
+          url: 'https://[fc00::1]/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block IPv6 unique local (fd00::1)', () => {
+        const source = {
+          url: 'https://[fd00::1]/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should allow IPv6 when allowPrivateIPs is true', () => {
+        const source = {
+          url: 'https://[::1]/config.json',
+          security: {
+            allowPrivateIPs: true,
+          },
+        };
+
+        expect(() => validateRemoteConfigSource(source)).not.toThrow();
+      });
+
+      it('should allow public IPv6 addresses', () => {
+        const source = {
+          url: 'https://[2001:4860:4860::8888]/config.json', // Google DNS
+        };
+
+        expect(() => validateRemoteConfigSource(source)).not.toThrow();
+      });
+    });
+
     describe('protocol validation', () => {
       it('should block non-HTTP/HTTPS protocols', () => {
         const source = {

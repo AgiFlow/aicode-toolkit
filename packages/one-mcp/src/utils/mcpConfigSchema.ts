@@ -79,8 +79,10 @@ function interpolateEnvVarsInObject<T>(obj: T): T {
 
 /**
  * Private IP range patterns for SSRF protection
+ * Covers both IPv4 and IPv6 loopback, private, and link-local ranges
  */
 const PRIVATE_IP_PATTERNS = [
+  // IPv4 ranges
   /^127\./,                          // Loopback (127.0.0.0/8)
   /^10\./,                           // Private Class A (10.0.0.0/8)
   /^172\.(1[6-9]|2\d|3[01])\./,     // Private Class B (172.16.0.0/12)
@@ -89,13 +91,45 @@ const PRIVATE_IP_PATTERNS = [
   /^0\./,                            // Invalid (0.0.0.0/8)
   /^224\./,                          // Multicast (224.0.0.0/4)
   /^240\./,                          // Reserved (240.0.0.0/4)
+
+  // Localhost
   /^localhost$/i,                    // Localhost
   /^.*\.localhost$/i,                // *.localhost
-  /^\[::\]/,                         // IPv6 loopback
-  /^\[::1\]/,                        // IPv6 loopback
-  /^\[fe80:/i,                       // IPv6 link-local
-  /^\[fc00:/i,                       // IPv6 unique local
-  /^\[fd00:/i,                       // IPv6 unique local
+
+  // IPv6 loopback (multiple notations)
+  /^\[::\]/,                         // IPv6 loopback compressed (::)
+  /^\[::1\]/,                        // IPv6 loopback (::1)
+  /^\[0:0:0:0:0:0:0:1\]/,           // IPv6 loopback full notation
+  /^\[0{1,4}:0{1,4}:0{1,4}:0{1,4}:0{1,4}:0{1,4}:0{1,4}:1\]/i, // IPv6 loopback with leading zeros
+
+  // IPv6 link-local
+  /^\[fe80:/i,                       // IPv6 link-local (fe80::/10)
+
+  // IPv6 unique local
+  /^\[fc00:/i,                       // IPv6 unique local (fc00::/7)
+  /^\[fd00:/i,                       // IPv6 unique local (fd00::/8)
+
+  // IPv4-mapped IPv6 addresses (::ffff:x.x.x.x)
+  // Note: URL parser converts these to hex notation, e.g., ::ffff:127.0.0.1 → ::ffff:7f00:1
+  /^\[::ffff:127\./i,               // IPv4-mapped IPv6 loopback (dotted notation)
+  /^\[::ffff:7f[0-9a-f]{2}:/i,      // IPv4-mapped IPv6 loopback (hex: 127.x.x.x → 7fxx:xxxx)
+  /^\[::ffff:10\./i,                // IPv4-mapped IPv6 private Class A (dotted notation)
+  /^\[::ffff:a[0-9a-f]{2}:/i,       // IPv4-mapped IPv6 private Class A (hex: 10.x.x.x → 0axx:xxxx)
+  /^\[::ffff:172\.(1[6-9]|2\d|3[01])\./i, // IPv4-mapped IPv6 private Class B (dotted)
+  /^\[::ffff:ac1[0-9a-f]:/i,        // IPv4-mapped IPv6 private Class B (hex: 172.16-31.x.x → ac1x:xxxx)
+  /^\[::ffff:192\.168\./i,          // IPv4-mapped IPv6 private Class C (dotted notation)
+  /^\[::ffff:c0a8:/i,               // IPv4-mapped IPv6 private Class C (hex: 192.168.x.x → c0a8:xxxx)
+  /^\[::ffff:169\.254\./i,          // IPv4-mapped IPv6 link-local (dotted notation)
+  /^\[::ffff:a9fe:/i,               // IPv4-mapped IPv6 link-local (hex: 169.254.x.x → a9fe:xxxx)
+  /^\[::ffff:0\./i,                 // IPv4-mapped IPv6 invalid
+
+  // IPv4-compatible IPv6 (deprecated but should still block)
+  /^\[::127\./i,                    // IPv4-compatible IPv6 loopback (dotted notation)
+  /^\[::7f[0-9a-f]{2}:/i,           // IPv4-compatible IPv6 loopback (hex notation)
+  /^\[::10\./i,                     // IPv4-compatible IPv6 private Class A (dotted notation)
+  /^\[::a[0-9a-f]{2}:/i,            // IPv4-compatible IPv6 private Class A (hex notation)
+  /^\[::192\.168\./i,               // IPv4-compatible IPv6 private Class C (dotted notation)
+  /^\[::c0a8:/i,                    // IPv4-compatible IPv6 private Class C (hex notation)
 ];
 
 /**
