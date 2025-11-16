@@ -1,3 +1,17 @@
+## 0.2.1 (2025-11-16)
+
+### 🚀 Features
+
+- **one-mcp:** add remote config support with caching and merge strategies ([0d657ad](https://github.com/AgiFlow/aicode-toolkit/commit/0d657ad))
+
+### 🩹 Fixes
+
+- **one-mcp:** address critical security issues in remote config ([4dd0f69](https://github.com/AgiFlow/aicode-toolkit/commit/4dd0f69))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.2.0 (2025-11-15)
 
 ### 🚀 Features
