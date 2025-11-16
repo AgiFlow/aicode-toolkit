@@ -78,12 +78,86 @@ function interpolateEnvVarsInObject<T>(obj: T): T {
 }
 
 /**
+ * Private IP range patterns for SSRF protection
+ */
+const PRIVATE_IP_PATTERNS = [
+  /^127\./,                          // Loopback (127.0.0.0/8)
+  /^10\./,                           // Private Class A (10.0.0.0/8)
+  /^172\.(1[6-9]|2\d|3[01])\./,     // Private Class B (172.16.0.0/12)
+  /^192\.168\./,                     // Private Class C (192.168.0.0/16)
+  /^169\.254\./,                     // Link-local (169.254.0.0/16)
+  /^0\./,                            // Invalid (0.0.0.0/8)
+  /^224\./,                          // Multicast (224.0.0.0/4)
+  /^240\./,                          // Reserved (240.0.0.0/4)
+  /^localhost$/i,                    // Localhost
+  /^.*\.localhost$/i,                // *.localhost
+  /^\[::\]/,                         // IPv6 loopback
+  /^\[::1\]/,                        // IPv6 loopback
+  /^\[fe80:/i,                       // IPv6 link-local
+  /^\[fc00:/i,                       // IPv6 unique local
+  /^\[fd00:/i,                       // IPv6 unique local
+];
+
+/**
+ * Validate URL for SSRF protection
+ *
+ * @param url - The URL to validate (after env var interpolation)
+ * @param security - Security settings
+ * @throws Error if URL is unsafe
+ */
+function validateUrlSecurity(url: string, security?: RemoteConfigSource['security']): void {
+  // Apply secure defaults
+  const allowPrivateIPs = security?.allowPrivateIPs ?? false;
+  const enforceHttps = security?.enforceHttps ?? true;
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch (error) {
+    throw new Error(`Invalid URL format: ${url}`);
+  }
+
+  // Check protocol
+  const protocol = parsedUrl.protocol.replace(':', '');
+  if (enforceHttps && protocol !== 'https') {
+    throw new Error(
+      `HTTPS is required for security. URL uses '${protocol}://'. Set security.enforceHttps: false to allow HTTP.`
+    );
+  }
+
+  if (protocol !== 'http' && protocol !== 'https') {
+    throw new Error(
+      `Invalid URL protocol '${protocol}://'. Only http:// and https:// are allowed.`
+    );
+  }
+
+  // Check for private IPs and localhost (unless explicitly allowed)
+  if (!allowPrivateIPs) {
+    const hostname = parsedUrl.hostname.toLowerCase();
+    const isPrivateOrLocal = PRIVATE_IP_PATTERNS.some((pattern) => pattern.test(hostname));
+
+    if (isPrivateOrLocal) {
+      throw new Error(
+        `Private IP addresses and localhost are blocked for security (${hostname}). Set security.allowPrivateIPs: true to allow internal networks.`
+      );
+    }
+  }
+}
+
+/**
  * Validate a remote config source against its validation rules
  *
  * @param source - Remote config source with validation rules
  * @throws Error if validation fails
  */
 export function validateRemoteConfigSource(source: RemoteConfigSource): void {
+  // Interpolate environment variables in URL first
+  const interpolatedUrl = interpolateEnvVars(source.url);
+
+  // SSRF protection - validate URL security
+  validateUrlSecurity(interpolatedUrl, source.security);
+
+  // Custom regex validation (if provided)
   if (!source.validation) {
     return;
   }
@@ -91,7 +165,6 @@ export function validateRemoteConfigSource(source: RemoteConfigSource): void {
   // Validate URL format if pattern is provided
   if (source.validation.url) {
     const urlPattern = new RegExp(source.validation.url);
-    const interpolatedUrl = interpolateEnvVars(source.url);
 
     if (!urlPattern.test(interpolatedUrl)) {
       throw new Error(
@@ -177,11 +250,18 @@ const RemoteConfigValidationSchema = z.object({
   headers: z.record(z.string(), z.string()).optional(), // Header name to regex pattern mapping for validating header values
 }).optional();
 
+// Remote config security schema for SSRF protection
+const RemoteConfigSecuritySchema = z.object({
+  allowPrivateIPs: z.boolean().optional(), // Allow private IP ranges (default: false)
+  enforceHttps: z.boolean().optional(), // Enforce HTTPS only (default: true)
+}).optional();
+
 // Remote config source schema
 const RemoteConfigSourceSchema = z.object({
   url: z.string(), // URL to fetch remote config from (supports env var interpolation)
   headers: z.record(z.string(), z.string()).optional(), // Headers for the request (supports env var interpolation)
   validation: RemoteConfigValidationSchema, // Optional validation rules
+  security: RemoteConfigSecuritySchema, // Optional security settings for SSRF protection
   mergeStrategy: z.enum(['local-priority', 'remote-priority', 'merge-deep']).optional(), // Merge strategy (default: local-priority)
 });
 

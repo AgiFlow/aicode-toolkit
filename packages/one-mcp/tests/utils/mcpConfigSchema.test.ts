@@ -558,6 +558,9 @@ describe('mcpConfigSchema', () => {
     it('should throw error when URL does not match pattern', () => {
       const source = {
         url: 'http://example.com/mcp-config.json',
+        security: {
+          enforceHttps: false, // Allow HTTP to test validation pattern
+        },
         validation: {
           url: '^https://.*',
         },
@@ -699,6 +702,9 @@ describe('mcpConfigSchema', () => {
         headers: {
           Authorization: 'Bearer token',
         },
+        security: {
+          enforceHttps: false, // Allow HTTP to test validation pattern
+        },
         validation: {
           url: '^https://.*',
           headers: {
@@ -710,6 +716,250 @@ describe('mcpConfigSchema', () => {
       expect(() => validateRemoteConfigSource(source)).toThrow(
         'does not match validation pattern'
       );
+    });
+  });
+
+  describe('SSRF Protection', () => {
+    describe('default security (HTTPS enforcement)', () => {
+      it('should allow HTTPS URLs by default', () => {
+        const source = {
+          url: 'https://example.com/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).not.toThrow();
+      });
+
+      it('should block HTTP URLs by default', () => {
+        const source = {
+          url: 'http://example.com/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'HTTPS is required for security'
+        );
+      });
+
+      it('should allow HTTP when enforceHttps is false', () => {
+        const source = {
+          url: 'http://example.com/config.json',
+          security: {
+            enforceHttps: false,
+          },
+        };
+
+        expect(() => validateRemoteConfigSource(source)).not.toThrow();
+      });
+    });
+
+    describe('private IP blocking', () => {
+      it('should block localhost by default', () => {
+        const source = {
+          url: 'https://localhost/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block 127.0.0.1 (loopback)', () => {
+        const source = {
+          url: 'https://127.0.0.1/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block 10.x.x.x (private Class A)', () => {
+        const source = {
+          url: 'https://10.0.0.1/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block 192.168.x.x (private Class C)', () => {
+        const source = {
+          url: 'https://192.168.1.1/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block 172.16-31.x.x (private Class B)', () => {
+        const source = {
+          url: 'https://172.16.0.1/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block 169.254.x.x (link-local)', () => {
+        const source = {
+          url: 'https://169.254.169.254/latest/meta-data/',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should block *.localhost domains', () => {
+        const source = {
+          url: 'https://api.localhost/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should allow private IPs when allowPrivateIPs is true', () => {
+        const source = {
+          url: 'https://192.168.1.1/config.json',
+          security: {
+            allowPrivateIPs: true,
+          },
+        };
+
+        expect(() => validateRemoteConfigSource(source)).not.toThrow();
+      });
+
+      it('should allow localhost when allowPrivateIPs is true', () => {
+        const source = {
+          url: 'https://localhost/config.json',
+          security: {
+            allowPrivateIPs: true,
+          },
+        };
+
+        expect(() => validateRemoteConfigSource(source)).not.toThrow();
+      });
+    });
+
+    describe('protocol validation', () => {
+      it('should block non-HTTP/HTTPS protocols', () => {
+        const source = {
+          url: 'file:///etc/passwd',
+          security: {
+            enforceHttps: false,
+          },
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Invalid URL protocol'
+        );
+      });
+
+      it('should block FTP protocol', () => {
+        const source = {
+          url: 'ftp://example.com/config.json',
+          security: {
+            enforceHttps: false,
+          },
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Invalid URL protocol'
+        );
+      });
+    });
+
+    describe('environment variable interpolation with security', () => {
+      it('should validate URL after env var interpolation', () => {
+        process.env.TEST_HOST = '127.0.0.1';
+
+        const source = {
+          url: 'https://${TEST_HOST}/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+
+        delete process.env.TEST_HOST;
+      });
+
+      it('should allow safe URLs after env var interpolation', () => {
+        process.env.TEST_HOST = 'api.example.com';
+
+        const source = {
+          url: 'https://${TEST_HOST}/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).not.toThrow();
+
+        delete process.env.TEST_HOST;
+      });
+    });
+
+    describe('combined security and validation', () => {
+      it('should enforce both SSRF protection and custom validation', () => {
+        const source = {
+          url: 'https://example.com/config.json',
+          validation: {
+            url: '^https://example\\.com/.*',
+          },
+        };
+
+        expect(() => validateRemoteConfigSource(source)).not.toThrow();
+      });
+
+      it('should fail SSRF check before custom validation', () => {
+        const source = {
+          url: 'https://127.0.0.1/config.json',
+          validation: {
+            url: '.*', // This would pass but SSRF check should fail first
+          },
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Private IP addresses and localhost are blocked for security'
+        );
+      });
+
+      it('should pass SSRF but fail custom validation', () => {
+        const source = {
+          url: 'https://evil.com/config.json',
+          validation: {
+            url: '^https://example\\.com/.*',
+          },
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'does not match validation pattern'
+        );
+      });
+    });
+
+    describe('error messages', () => {
+      it('should provide helpful error message for HTTP block', () => {
+        const source = {
+          url: 'http://example.com/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Set security.enforceHttps: false to allow HTTP'
+        );
+      });
+
+      it('should provide helpful error message for private IP block', () => {
+        const source = {
+          url: 'https://192.168.1.1/config.json',
+        };
+
+        expect(() => validateRemoteConfigSource(source)).toThrow(
+          'Set security.allowPrivateIPs: true to allow internal networks'
+        );
+      });
     });
   });
 
