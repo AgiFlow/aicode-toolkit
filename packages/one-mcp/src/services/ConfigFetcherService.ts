@@ -183,6 +183,16 @@ export class ConfigFetcherService {
 
   /**
    * Load configuration from a remote URL with caching
+   *
+   * SECURITY NOTE: This method fetches remote configs based on URLs from the local config file.
+   * This is intentional and safe because:
+   * 1. URLs are user-controlled via their local config file (not external input)
+   * 2. SSRF protection validates URLs before fetching (blocks private IPs, enforces HTTPS)
+   * 3. Users explicitly opt-in to remote configs in their local configuration
+   * 4. This enables centralized config management (intended feature, not a vulnerability)
+   *
+   * CodeQL alert "file-access-to-http" is a false positive here - we're not leaking
+   * file contents to arbitrary URLs, we're fetching configs from user-specified sources.
    */
   private async loadFromUrl(source: RemoteConfigSource): Promise<RemoteMcpConfiguration> {
     try {
@@ -205,6 +215,7 @@ export class ConfigFetcherService {
           )
         : {};
 
+      // SSRF protection is enforced in validateRemoteConfigSource() before this is called
       const response = await fetch(interpolatedUrl, {
         headers: interpolatedHeaders,
       });
