@@ -6,3 +6,4 @@
  */
 
 export * from './mcpConfigSchema';
+export * from './findConfigFile';

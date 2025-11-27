@@ -25,6 +25,7 @@ import { StdioTransportHandler } from '../transports/stdio';
 import { HttpTransportHandler } from '../transports/http';
 import { SseTransportHandler } from '../transports/sse';
 import { type TransportConfig, TransportMode } from '../types';
+import { findConfigFile } from '../utils';
 
 /**
  * Start MCP server with given transport handler
@@ -66,8 +67,12 @@ export const mcpServeCommand = new Command('mcp-serve')
   .action(async (options) => {
     try {
       const transportType = options.type.toLowerCase();
+
+      // Find config file: use provided path, or search PROJECT_PATH then cwd
+      const configFilePath = options.config || findConfigFile();
+
       const serverOptions = {
-        configFilePath: options.config,
+        configFilePath,
         noCache: options.cache === false, // Commander transforms --no-cache to cache: false
       };
 
