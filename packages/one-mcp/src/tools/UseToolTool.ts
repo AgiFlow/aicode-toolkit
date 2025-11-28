@@ -22,11 +22,11 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Tool, ToolDefinition } from '../types';
 import type { McpClientManagerService } from '../services/McpClientManagerService';
+import { parseToolName } from '../utils';
 
 interface UseToolToolInput {
   toolName: string;
   toolArgs?: Record<string, any>;
-  serverName?: string;
 }
 
 export class UseToolTool implements Tool<UseToolToolInput> {
@@ -55,11 +55,6 @@ export class UseToolTool implements Tool<UseToolToolInput> {
             type: 'object',
             description: 'Arguments to pass to the tool, as discovered from describe_tools',
           },
-          serverName: {
-            type: 'string',
-            description:
-              'Optional server name to disambiguate when multiple servers have the same tool',
-          },
         },
         required: ['toolName'],
         additionalProperties: false,
@@ -69,10 +64,13 @@ export class UseToolTool implements Tool<UseToolToolInput> {
 
   async execute(input: UseToolToolInput): Promise<CallToolResult> {
     try {
-      const { toolName, toolArgs = {}, serverName } = input;
+      const { toolName: inputToolName, toolArgs = {} } = input;
       const clients = this.clientManager.getAllClients();
 
-      // If server name is specified, use that server
+      // Parse tool name to check for server prefix
+      const { serverName, actualToolName } = parseToolName(inputToolName);
+
+      // If server name is specified (via prefix), use that server directly
       if (serverName) {
         const client = this.clientManager.getClient(serverName);
         if (!client) {
@@ -88,12 +86,12 @@ export class UseToolTool implements Tool<UseToolToolInput> {
         }
 
         // Check if tool is blacklisted
-        if (client.toolBlacklist && client.toolBlacklist.includes(toolName)) {
+        if (client.toolBlacklist && client.toolBlacklist.includes(actualToolName)) {
           return {
             content: [
               {
                 type: 'text',
-                text: `Tool "${toolName}" is blacklisted on server "${serverName}" and cannot be executed.`,
+                text: `Tool "${actualToolName}" is blacklisted on server "${serverName}" and cannot be executed.`,
               },
             ],
             isError: true,
@@ -101,14 +99,14 @@ export class UseToolTool implements Tool<UseToolToolInput> {
         }
 
         try {
-          const result = await client.callTool(toolName, toolArgs);
+          const result = await client.callTool(actualToolName, toolArgs);
           return result;
         } catch (error) {
           return {
             content: [
               {
                 type: 'text',
-                text: `Failed to call tool "${toolName}" on server "${serverName}": ${error instanceof Error ? error.message : 'Unknown error'}`,
+                text: `Failed to call tool "${actualToolName}" on server "${serverName}": ${error instanceof Error ? error.message : 'Unknown error'}`,
               },
             ],
             isError: true,
@@ -116,19 +114,19 @@ export class UseToolTool implements Tool<UseToolToolInput> {
         }
       }
 
-      // Search all servers for the tool
+      // No server prefix - search all servers for the tool
       const matchingServers: string[] = [];
 
       const results = await Promise.all(
         clients.map(async (client) => {
           try {
             // Skip if tool is blacklisted on this server
-            if (client.toolBlacklist && client.toolBlacklist.includes(toolName)) {
+            if (client.toolBlacklist && client.toolBlacklist.includes(actualToolName)) {
               return null;
             }
 
             const tools = await client.listTools();
-            const hasTool = tools.some((t) => t.name === toolName);
+            const hasTool = tools.some((t) => t.name === actualToolName);
 
             if (hasTool) {
               return client.serverName;
@@ -147,7 +145,7 @@ export class UseToolTool implements Tool<UseToolToolInput> {
           content: [
             {
               type: 'text',
-              text: `Tool "${toolName}" not found on any connected server. Use describe_tools to see available tools.`,
+              text: `Tool "${actualToolName}" not found on any connected server. Use describe_tools to see available tools.`,
             },
           ],
           isError: true,
@@ -155,11 +153,13 @@ export class UseToolTool implements Tool<UseToolToolInput> {
       }
 
       if (matchingServers.length > 1) {
+        // Tool exists on multiple servers - suggest using prefixed format
+        const prefixedNames = matchingServers.map((s) => `${s}__${actualToolName}`);
         return {
           content: [
             {
               type: 'text',
-              text: `Multiple servers provide tool "${toolName}". Please specify serverName. Available servers: ${matchingServers.join(', ')}`,
+              text: `Tool "${actualToolName}" found on multiple servers. Use prefixed format to specify: ${prefixedNames.join(', ')}`,
             },
           ],
           isError: true,
@@ -183,14 +183,14 @@ export class UseToolTool implements Tool<UseToolToolInput> {
       }
 
       try {
-        const result = await client.callTool(toolName, toolArgs);
+        const result = await client.callTool(actualToolName, toolArgs);
         return result;
       } catch (error) {
         return {
           content: [
             {
               type: 'text',
-              text: `Failed to call tool "${toolName}": ${error instanceof Error ? error.message : 'Unknown error'}`,
+              text: `Failed to call tool "${actualToolName}": ${error instanceof Error ? error.message : 'Unknown error'}`,
             },
           ],
           isError: true,
