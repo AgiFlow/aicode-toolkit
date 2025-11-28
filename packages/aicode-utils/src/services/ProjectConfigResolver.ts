@@ -22,25 +22,9 @@
  */
 
 import path from 'node:path';
-import * as fs from 'node:fs/promises';
 import { ConfigSource, ProjectType } from '../constants/projectType';
-
-// Helper to check if file exists
-async function pathExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// Helper to read JSON file
-async function readJson<T = unknown>(filePath: string): Promise<T> {
-  const content = await fs.readFile(filePath, 'utf-8');
-  return JSON.parse(content) as T;
-}
 import type { NxProjectJson, ProjectConfigResult, ToolkitConfig } from '../types';
+import { pathExists, readJson, writeJson } from '../utils/fsHelpers';
 import { log } from '../utils/logger';
 import { TemplatesManagerService } from './TemplatesManagerService';
 
@@ -247,8 +231,7 @@ Run 'scaffold-mcp scaffold list --help' for more info.`;
       projectJson.sourceTemplate = sourceTemplate;
 
       // Write back to file
-      const content = JSON.stringify(projectJson, null, 2);
-      await fs.writeFile(projectJsonPath, `${content}\n`);
+      await writeJson(projectJsonPath, projectJson);
       log.info(`Created/updated project.json with sourceTemplate: ${sourceTemplate}`);
     } catch (error) {
       throw new Error(
