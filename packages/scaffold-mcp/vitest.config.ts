@@ -12,12 +12,11 @@ export default defineConfig({
       exclude: ['node_modules/', 'tests/', 'dist/', '**/*.d.ts', '**/*.config.*', '**/index.ts'],
     },
     include: ['tests/**/*.test.ts'],
-    alias: {
-    },
+    alias: {},
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src'),
     },
   },
 });

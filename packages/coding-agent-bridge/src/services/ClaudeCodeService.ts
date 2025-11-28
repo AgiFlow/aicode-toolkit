@@ -374,7 +374,11 @@ export class ClaudeCodeService implements CodingAgentService {
           for (const content of message.message.content || []) {
             if (content.type === 'text' && content.text) {
               responseContent += content.text;
-            } else if (content.type === 'tool_use' && content.name === 'StructuredOutput' && content.input) {
+            } else if (
+              content.type === 'tool_use' &&
+              content.name === 'StructuredOutput' &&
+              content.input
+            ) {
               // Extract structured output from StructuredOutput tool use
               structuredOutput = content.input;
             }
@@ -406,9 +410,7 @@ export class ClaudeCodeService implements CodingAgentService {
 
       // Return standard LLM response
       // If structured output was requested and received, return it as JSON string
-      const content = structuredOutput
-        ? JSON.stringify(structuredOutput)
-        : responseContent.trim();
+      const content = structuredOutput ? JSON.stringify(structuredOutput) : responseContent.trim();
 
       return {
         content,
