@@ -30,7 +30,12 @@ import type {
 import { TemplateFinder } from '../services/TemplateFinder.js';
 import { ArchitectParser } from '../services/ArchitectParser.js';
 import { PatternMatcher } from '../services/PatternMatcher.js';
-import { ClaudeCodeService } from '@agiflowai/coding-agent-bridge';
+import {
+  LlmProxyService,
+  type LlmToolId,
+  isValidLlmTool,
+  SUPPORTED_LLM_TOOLS,
+} from '@agiflowai/coding-agent-bridge';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
@@ -44,16 +49,16 @@ export class GetFileDesignPatternTool implements Tool<GetFileDesignPatternToolIn
   private templateFinder: TemplateFinder;
   private architectParser: ArchitectParser;
   private patternMatcher: PatternMatcher;
-  private llmService?: ClaudeCodeService;
+  private llmService?: LlmProxyService;
 
-  constructor(options?: { llmTool?: 'claude-code' }) {
+  constructor(options?: { llmTool?: LlmToolId }) {
     this.templateFinder = new TemplateFinder();
     this.architectParser = new ArchitectParser();
     this.patternMatcher = new PatternMatcher();
 
-    // Only initialize LLM service if llm_tool is specified
-    if (options?.llmTool === 'claude-code') {
-      this.llmService = new ClaudeCodeService();
+    // Initialize LLM service if a valid llm_tool is specified
+    if (options?.llmTool && isValidLlmTool(options.llmTool)) {
+      this.llmService = new LlmProxyService({ llmTool: options.llmTool });
     }
   }
 

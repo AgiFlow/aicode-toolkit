@@ -21,24 +21,21 @@
  */
 
 import path from 'node:path';
-import * as fs from 'fs-extra';
+import * as fs from 'node:fs/promises';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TemplatesManagerService } from '../../src/services/TemplatesManagerService';
+import * as fsHelpers from '../../src/utils/fsHelpers';
 
-// Mock fs-extra
-vi.mock('fs-extra', () => ({
-  default: {
-    pathExists: vi.fn(),
-    pathExistsSync: vi.fn(),
-    readFile: vi.fn(),
-    readFileSync: vi.fn(),
-    stat: vi.fn(),
-  },
+// Mock fsHelpers
+vi.mock('../../src/utils/fsHelpers', () => ({
   pathExists: vi.fn(),
   pathExistsSync: vi.fn(),
-  readFile: vi.fn(),
-  readFileSync: vi.fn(),
+}));
+
+// Mock node:fs/promises for stat
+vi.mock('node:fs/promises', () => ({
   stat: vi.fn(),
+  readFile: vi.fn(),
 }));
 
 describe('TemplatesManagerService', () => {
@@ -60,7 +57,7 @@ describe('TemplatesManagerService', () => {
 
   describe('isInitialized', () => {
     it('should return true when templates directory exists and is a directory', async () => {
-      vi.mocked(fs.pathExists).mockResolvedValue(true);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
       vi.mocked(fs.stat).mockResolvedValue({ isDirectory: () => true } as any);
 
       const result = await TemplatesManagerService.isInitialized('/path/to/templates');
@@ -68,14 +65,14 @@ describe('TemplatesManagerService', () => {
     });
 
     it('should return false when templates directory does not exist', async () => {
-      vi.mocked(fs.pathExists).mockResolvedValue(false);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
 
       const result = await TemplatesManagerService.isInitialized('/path/to/templates');
       expect(result).toBe(false);
     });
 
     it('should return false when path exists but is not a directory', async () => {
-      vi.mocked(fs.pathExists).mockResolvedValue(true);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
       vi.mocked(fs.stat).mockResolvedValue({ isDirectory: () => false } as any);
 
       const result = await TemplatesManagerService.isInitialized('/path/to/templates');
@@ -89,7 +86,7 @@ describe('TemplatesManagerService', () => {
       const gitPath = path.join(mockCwd, '.git');
       const templatesPath = path.join(mockCwd, 'templates');
 
-      vi.mocked(fs.pathExistsSync).mockImplementation((p: string) => {
+      vi.mocked(fsHelpers.pathExistsSync).mockImplementation((p: string) => {
         if (p === gitPath) return true;
         if (p === templatesPath) return true;
         if (p === path.join(mockCwd, 'toolkit.yaml')) return false;
@@ -101,7 +98,7 @@ describe('TemplatesManagerService', () => {
     });
 
     it('should throw error when templates folder not found', () => {
-      vi.mocked(fs.pathExistsSync).mockReturnValue(false);
+      vi.mocked(fsHelpers.pathExistsSync).mockReturnValue(false);
 
       expect(() => {
         TemplatesManagerService.findTemplatesPathSync();
@@ -115,7 +112,7 @@ describe('TemplatesManagerService', () => {
       const gitPath = path.join(mockCwd, '.git');
       const templatesPath = path.join(mockCwd, 'templates');
 
-      vi.mocked(fs.pathExists).mockImplementation(async (p: string) => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (p: string) => {
         if (p === gitPath) return true;
         if (p === templatesPath) return true;
         if (p === path.join(mockCwd, 'toolkit.yaml')) return false;
@@ -127,7 +124,7 @@ describe('TemplatesManagerService', () => {
     });
 
     it('should throw error when templates folder not found', async () => {
-      vi.mocked(fs.pathExists).mockResolvedValue(false);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
 
       await expect(TemplatesManagerService.findTemplatesPath()).rejects.toThrow(
         'Templates folder not found',

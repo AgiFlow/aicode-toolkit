@@ -23,9 +23,10 @@
  */
 
 import { execa } from 'execa';
-import * as fs from 'fs-extra';
+import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { pathExists, ensureDir } from '@agiflowai/aicode-utils';
 import * as readline from 'node:readline';
 import type {
   CodingAgentService,
@@ -34,6 +35,7 @@ import type {
   McpSettings,
   PromptConfig,
 } from '../types';
+import { CODEX_ENDPOINT } from '../constants/api';
 import { appendUniqueToFile, appendUniqueWithMarkers, writeFileEnsureDir } from '../utils/file';
 
 /**
@@ -47,20 +49,17 @@ interface CodexStreamEvent {
     | 'item.started'
     | 'item.updated'
     | 'item.completed';
-  data?: {
-    item?: {
-      type?: 'agent_message' | 'reasoning' | 'command_execution';
-      content?: string;
-      message?: {
-        content?: string;
-      };
-    };
-    turn?: {
-      usage?: {
-        input_tokens?: number;
-        output_tokens?: number;
-      };
-    };
+  /** Item data (for item.completed events) */
+  item?: {
+    id?: string;
+    type?: 'agent_message' | 'reasoning' | 'command_execution';
+    text?: string;
+  };
+  /** Usage data (for turn.completed events) */
+  usage?: {
+    input_tokens?: number;
+    cached_input_tokens?: number;
+    output_tokens?: number;
   };
 }
 
@@ -87,7 +86,7 @@ export class CodexService implements CodingAgentService {
     this.workspaceRoot = options?.workspaceRoot || process.cwd();
     this.codexPath = options?.codexPath || 'codex';
     this.defaultTimeout = options?.defaultTimeout || 60000; // 1 minute default
-    this.defaultModel = options?.defaultModel || 'gpt-5-codex';
+    this.defaultModel = options?.defaultModel || 'gpt-5-1-codex';
     this.defaultEnv = options?.defaultEnv || {
       CODEX_API_KEY: process.env.CODEX_API_KEY || '',
     };
@@ -99,7 +98,7 @@ export class CodexService implements CodingAgentService {
    */
   async isEnabled(): Promise<boolean> {
     const codexWorkspaceFile = path.join(this.workspaceRoot, '.codex');
-    return fs.pathExists(codexWorkspaceFile);
+    return pathExists(codexWorkspaceFile);
   }
 
   /**
@@ -115,11 +114,11 @@ export class CodexService implements CodingAgentService {
     const configPath = path.join(configDir, 'config.toml');
 
     // Ensure config directory exists
-    await fs.ensureDir(configDir);
+    await ensureDir(configDir);
 
     // Read existing config or create new
     let configContent = '';
-    if (await fs.pathExists(configPath)) {
+    if (await pathExists(configPath)) {
       configContent = await fs.readFile(configPath, 'utf-8');
     }
 
@@ -251,6 +250,15 @@ export class CodexService implements CodingAgentService {
    * Executes Codex CLI with exec mode and JSON output format
    */
   async invokeAsLlm(params: LlmInvocationParams): Promise<LlmInvocationResponse> {
+    // Check if CLI exists
+    try {
+      await execa(this.codexPath, ['--version'], { timeout: 5000 });
+    } catch {
+      throw new Error(
+        `Codex CLI not found at path: ${this.codexPath}. Install it with: npm install -g @openai/codex`,
+      );
+    }
+
     // Build the prompt with optional system prompt
     let fullPrompt = params.prompt;
     const systemPrompt = this.promptConfig.systemPrompt;
@@ -268,6 +276,14 @@ export class CodexService implements CodingAgentService {
 
     if (params.model) {
       args.push('--model', params.model);
+    }
+
+    // Write JSON schema to temp file if provided
+    let schemaFilePath: string | null = null;
+    if (params.jsonSchema) {
+      schemaFilePath = path.join(os.tmpdir(), `codex-schema-${Date.now()}.json`);
+      await fs.writeFile(schemaFilePath, JSON.stringify(params.jsonSchema, null, 2));
+      args.push('--output-schema', schemaFilePath);
     }
 
     // Build environment with API key and custom env vars
@@ -321,21 +337,17 @@ export class CodexService implements CodingAgentService {
         }
 
         // Process different event types
-        if (event.type === 'item.completed' && event.data?.item) {
-          const item = event.data.item;
+        if (event.type === 'item.completed' && event.item) {
+          const item = event.item;
 
           // Extract text content from agent messages
-          if (item.type === 'agent_message') {
-            const content = item.content || item.message?.content || '';
-            if (content) {
-              responseContent += content;
-            }
+          if (item.type === 'agent_message' && item.text) {
+            responseContent += item.text;
           }
-        } else if (event.type === 'turn.completed' && event.data?.turn?.usage) {
+        } else if (event.type === 'turn.completed' && event.usage) {
           // Extract usage statistics
-          const turnUsage = event.data.turn.usage;
-          usage.inputTokens = turnUsage.input_tokens || 0;
-          usage.outputTokens = turnUsage.output_tokens || 0;
+          usage.inputTokens = event.usage.input_tokens || 0;
+          usage.outputTokens = event.usage.output_tokens || 0;
         }
       }
 
@@ -345,9 +357,15 @@ export class CodexService implements CodingAgentService {
         throw new Error(`Codex process exited with code ${exitCode}`);
       }
 
+      // If JSON schema was requested, extract and validate JSON from response
+      let finalContent = responseContent.trim();
+      if (params.jsonSchema && finalContent) {
+        finalContent = this.extractJsonFromResponse(finalContent);
+      }
+
       // Return standard LLM response
       return {
-        content: responseContent.trim(),
+        content: finalContent,
         model,
         usage: {
           inputTokens: usage.inputTokens,
@@ -381,6 +399,43 @@ export class CodexService implements CodingAgentService {
       throw new Error(`Failed to invoke Codex: ${String(error)}`);
     } finally {
       rl.close();
+      // Clean up temp schema file if created
+      if (schemaFilePath) {
+        try {
+          await fs.unlink(schemaFilePath);
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
     }
+  }
+
+  /**
+   * Extract JSON from LLM response that may contain markdown code fences or extra text
+   * @private
+   */
+  private extractJsonFromResponse(content: string): string {
+    let cleanedContent = content.trim();
+
+    // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+    const codeBlockMatch = cleanedContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) {
+      cleanedContent = codeBlockMatch[1].trim();
+    }
+
+    // Try to extract JSON object from the response
+    const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        // Validate it's valid JSON
+        JSON.parse(jsonMatch[0]);
+        return jsonMatch[0];
+      } catch {
+        // If parsing fails, return the original content
+        return content;
+      }
+    }
+
+    return content;
   }
 }

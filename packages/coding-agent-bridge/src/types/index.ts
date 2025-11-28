@@ -137,6 +137,13 @@ export interface LlmInvocationParams {
   temperature?: number;
   /** Optional maximum tokens to generate, default varies by service */
   maxTokens?: number;
+  /**
+   * Optional JSON schema for structured output validation
+   * When provided, the LLM will be constrained to output valid JSON matching the schema
+   * Supported by: Claude Code (--json-schema), Codex (--output-schema)
+   * For services without native support, schema is included in the prompt
+   */
+  jsonSchema?: Record<string, unknown>;
   /** Additional invocation properties for future extensibility */
   [key: string]: unknown;
 }

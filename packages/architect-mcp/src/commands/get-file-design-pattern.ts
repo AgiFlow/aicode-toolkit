@@ -23,6 +23,11 @@ import { print } from '@agiflowai/aicode-utils';
 
 import { Command } from 'commander';
 import { GetFileDesignPatternTool } from '../tools/GetFileDesignPatternTool';
+import {
+  type LlmToolId,
+  isValidLlmTool,
+  SUPPORTED_LLM_TOOLS,
+} from '@agiflowai/coding-agent-bridge';
 
 interface GetFileDesignPatternOptions {
   verbose?: boolean;
@@ -38,7 +43,11 @@ export const getFileDesignPatternCommand = new Command('get-file-design-pattern'
   .argument('<file-path>', 'Path to the file to analyze')
   .option('-v, --verbose', 'Enable verbose output', false)
   .option('-j, --json', 'Output as JSON', false)
-  .option('--llm-tool <tool>', 'Use LLM to filter relevant patterns (claude-code)', undefined)
+  .option(
+    '--llm-tool <tool>',
+    `Use LLM to filter relevant patterns. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
+    undefined,
+  )
   .action(async (filePath: string, options: GetFileDesignPatternOptions) => {
     try {
       if (options.verbose) {
@@ -49,11 +58,14 @@ export const getFileDesignPatternCommand = new Command('get-file-design-pattern'
       }
 
       // Validate llm-tool option
-      const llmTool = options.llmTool as 'claude-code' | undefined;
-      if (llmTool && llmTool !== 'claude-code') {
-        print.error(`Invalid LLM tool: ${llmTool}. Currently only "claude-code" is supported.`);
+      if (options.llmTool && !isValidLlmTool(options.llmTool)) {
+        print.error(
+          `Invalid LLM tool: ${options.llmTool}. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
+        );
         process.exit(1);
       }
+
+      const llmTool = options.llmTool as LlmToolId | undefined;
 
       // Create tool instance with optional LLM support
       const tool = new GetFileDesignPatternTool({ llmTool });

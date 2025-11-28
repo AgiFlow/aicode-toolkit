@@ -15,6 +15,7 @@
  * - Re-exporting types (types should come from '../types')
  */
 
+export * from './fsHelpers';
 export * from './logger';
 export * from './print';
 export * from './projectTypeDetector';

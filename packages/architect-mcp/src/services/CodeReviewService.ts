@@ -1,26 +1,33 @@
 import { log } from '@agiflowai/aicode-utils';
-import { ClaudeCodeService } from '@agiflowai/coding-agent-bridge';
+import {
+  LlmProxyService,
+  type LlmToolId,
+  isValidLlmTool,
+  SUPPORTED_LLM_TOOLS,
+} from '@agiflowai/coding-agent-bridge';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { execa } from 'execa';
 import { RuleFinder } from './RuleFinder.js';
 import type { CodeReviewResult, RuleSection, RulesYamlConfig } from '../types';
 
 interface CodeReviewServiceOptions {
-  llmTool?: string;
+  llmTool?: LlmToolId;
 }
 
 export class CodeReviewService {
-  private claudeService?: ClaudeCodeService;
+  private llmService?: LlmProxyService;
   private ruleFinder: RuleFinder;
-  private llmTool?: string;
+  private llmTool?: LlmToolId;
 
   constructor(options?: CodeReviewServiceOptions) {
     this.llmTool = options?.llmTool;
 
-    // Only initialize Claude service if llmTool is 'claude-code'
-    if (this.llmTool === 'claude-code') {
-      this.claudeService = new ClaudeCodeService({
-        defaultTimeout: 120000, // 2 minutes for code review
+    // Initialize LLM service if a valid llmTool is specified
+    if (this.llmTool && isValidLlmTool(this.llmTool)) {
+      this.llmService = new LlmProxyService({
+        llmTool: this.llmTool,
+        defaultTimeout: 180000, // 2 minutes for code review
       });
     }
     this.ruleFinder = new RuleFinder();
@@ -37,9 +44,9 @@ export class CodeReviewService {
     if (!project) {
       return {
         file_path: filePath,
-        review_feedback: 'No project found for this file. Cannot determine coding standards.',
+        feedback: 'No project found for this file. Cannot determine coding standards.',
         severity: 'LOW',
-        issues_found: [],
+        identified_issues: [],
       };
     }
 
@@ -48,9 +55,9 @@ export class CodeReviewService {
         file_path: filePath,
         project_name: project.name,
         source_template: project.sourceTemplate,
-        review_feedback: 'No RULES.yaml found for this template. Generic code review applied.',
+        feedback: 'No RULES.yaml found for this template. Generic code review applied.',
         severity: 'LOW',
-        issues_found: [],
+        identified_issues: [],
       };
     }
 
@@ -59,39 +66,36 @@ export class CodeReviewService {
         file_path: filePath,
         project_name: project.name,
         source_template: project.sourceTemplate,
-        review_feedback: 'No specific rules found for this file pattern.',
+        feedback: 'No specific rules found for this file pattern.',
         severity: 'LOW',
-        issues_found: [],
+        identified_issues: [],
       };
     }
 
-    // If llmTool is not 'claude-code', return rules for agent to review
-    if (this.llmTool !== 'claude-code') {
+    // If no LLM service is configured, return rules for agent to review
+    if (!this.llmService) {
       return {
         file_path: filePath,
         project_name: project.name,
         source_template: project.sourceTemplate,
-        review_feedback: 'Rules provided for agent review. LLM-based review not enabled.',
+        feedback: `Rules provided for agent review. LLM-based review not enabled. Supported tools: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
         severity: 'LOW',
-        issues_found: [],
+        identified_issues: [],
         rules: matchedRule, // Include the rules for the agent to use
       };
     }
 
-    // Read the file content
+    // Normalize path
     const normalizedPath = path.isAbsolute(filePath)
       ? filePath
       : path.join(process.cwd(), filePath);
-    let fileContent: string;
-    try {
-      fileContent = await fs.readFile(normalizedPath, 'utf-8');
-    } catch (_error) {
-      throw new Error(`Failed to read file: ${normalizedPath}`);
-    }
+
+    // Get file content with diff annotations
+    const fileWithDiff = await this.getFileWithDiff(normalizedPath);
 
     // Perform the code review using Claude
     const reviewResult = await this.performCodeReview(
-      fileContent,
+      fileWithDiff,
       normalizedPath,
       matchedRule,
       rulesConfig,
@@ -106,61 +110,22 @@ export class CodeReviewService {
   }
 
   /**
-   * Perform code review using Claude
+   * Get the JSON schema for code review responses
    */
-  private async performCodeReview(
-    fileContent: string,
-    filePath: string,
-    rules: RuleSection,
-    rulesConfig: RulesYamlConfig,
-  ): Promise<Pick<CodeReviewResult, 'review_feedback' | 'severity' | 'issues_found'>> {
-    if (!this.claudeService) {
-      throw new Error(
-        'Claude service not initialized. Use llmTool="claude-code" to enable LLM-based review.',
-      );
-    }
-
-    // Build the review prompt
-    const systemPrompt = this.buildSystemPrompt(rulesConfig);
-    const userPrompt = this.buildUserPrompt(fileContent, filePath, rules);
-
-    try {
-      // Pass system prompt directly to invokeAsLlm (don't write to CLAUDE.md)
-      const response = await this.claudeService.invokeAsLlm({
-        prompt: userPrompt,
-        systemPrompt,
-        maxTokens: 4000,
-      });
-
-      // Parse the response
-      return this.parseReviewResponse(response.content);
-    } catch (error) {
-      log.error('Code review failed:', error);
-      return {
-        review_feedback: 'Code review failed due to an error.',
-        severity: 'LOW',
-        issues_found: [],
-      };
-    }
-  }
-
-  /**
-   * Build system prompt for code review
-   */
-  private buildSystemPrompt(rulesConfig: RulesYamlConfig): string {
-    const responseSchema = {
+  private getResponseSchema(): Record<string, unknown> {
+    return {
       type: 'object',
       properties: {
-        review_feedback: {
+        feedback: {
           type: 'string',
-          description: 'Detailed feedback about the code quality and compliance with rules',
+          description: 'Short feedback about the code quality and compliance with rules (TEXT only)',
         },
         severity: {
           type: 'string',
           enum: ['LOW', 'MEDIUM', 'HIGH'],
           description: 'Severity level of the issues found',
         },
-        issues_found: {
+        identified_issues: {
           type: 'array',
           items: {
             type: 'object',
@@ -178,29 +143,78 @@ export class CodeReviewService {
                 type: 'string',
                 description: "Description of how the code violates or doesn't follow the rule",
               },
+              suggestion: {
+                type: 'string',
+                description: 'Suggestion for improvement',
+              },
             },
-            required: ['type', 'rule'],
+            required: ['type', 'rule', 'violation', 'suggestion'],
             additionalProperties: false,
           },
         },
       },
-      required: ['review_feedback', 'severity', 'issues_found'],
+      required: ['feedback', 'severity', 'identified_issues'],
       additionalProperties: false,
     };
+  }
 
+  /**
+   * Perform code review using configured LLM service
+   */
+  private async performCodeReview(
+    fileContent: string,
+    filePath: string,
+    rules: RuleSection,
+    rulesConfig: RulesYamlConfig,
+  ): Promise<Pick<CodeReviewResult, 'feedback' | 'severity' | 'identified_issues'>> {
+    if (!this.llmService) {
+      throw new Error(
+        `LLM service not initialized. Use llmTool with one of: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
+      );
+    }
+
+    // Build the review prompt
+    const jsonSchema = this.getResponseSchema();
+    const systemPrompt = this.buildSystemPrompt(rulesConfig, jsonSchema);
+    const userPrompt = this.buildUserPrompt(fileContent, filePath, rules);
+
+    try {
+      const response = await this.llmService.invokeAsLlm({
+        prompt: userPrompt,
+        systemPrompt,
+        maxTokens: 4000,
+        jsonSchema, // Pass schema for native enforcement (Claude, Codex)
+      });
+
+      // Parse the response
+      return this.parseReviewResponse(response.content);
+    } catch (error) {
+      log.error('Code review failed:', error);
+      return {
+        feedback: 'Code review failed due to an error.',
+        severity: 'LOW',
+        identified_issues: [],
+      };
+    }
+  }
+
+  /**
+   * Build system prompt for code review
+   */
+  private buildSystemPrompt(rulesConfig: RulesYamlConfig, jsonSchema: Record<string, unknown>): string {
     return `You are a code reviewer for a ${rulesConfig.template} template project.
 
 ${rulesConfig.description}
 
 Your task is to review code changes against specific rules and provide actionable feedback.
 
-You must respond with valid JSON that follows this exact schema:
-${JSON.stringify(responseSchema, null, 2)}
-
 Severity levels:
 - HIGH: Critical violations that will cause bugs or serious issues
 - MEDIUM: Violations of important should_do rules or minor must_do violations
 - LOW: Minor style or convention issues that don't affect functionality
+
+You must respond with valid JSON that follows this exact JSON Schema:
+${JSON.stringify(jsonSchema, null, 2)}
 
 Be constructive and specific in your feedback. Focus on actual issues rather than preferences.`;
   }
@@ -287,23 +301,175 @@ Provide your review in the specified JSON format.`;
   }
 
   /**
-   * Parse the review response from Claude
+   * Get file content with inline diff annotations showing what changed
+   */
+  private async getFileWithDiff(filePath: string): Promise<string> {
+    const dir = path.dirname(filePath);
+
+    // Read current file content
+    let currentContent: string;
+    try {
+      currentContent = await fs.readFile(filePath, 'utf-8');
+    } catch (_error) {
+      throw new Error(`Failed to read file: ${filePath}`);
+    }
+
+    try {
+      // Get unified diff (staged + unstaged)
+      const { stdout: unstagedDiff } = await execa('git', ['diff', '--', filePath], { cwd: dir });
+      const { stdout: stagedDiff } = await execa('git', ['diff', '--cached', '--', filePath], {
+        cwd: dir,
+      });
+
+      const diff = [stagedDiff, unstagedDiff].filter(Boolean).join('\n').trim();
+
+      if (!diff) {
+        // No changes, return current content as-is
+        return currentContent;
+      }
+
+      // Return file with diff context - show diff first, then full file
+      return `=== CHANGES (diff) ===
+${diff}
+
+=== CURRENT FILE ===
+${currentContent}`;
+    } catch (_error) {
+      // Not a git repo, return current content
+      return currentContent;
+    }
+  }
+
+  /**
+   * Parse the review response from LLM (supports Claude, Gemini, and other formats)
    */
   private parseReviewResponse(
     content: string,
-  ): Pick<CodeReviewResult, 'review_feedback' | 'severity' | 'issues_found'> {
+  ): Pick<CodeReviewResult, 'feedback' | 'severity' | 'identified_issues'> {
     try {
+      // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+      let cleanedContent = content.trim();
+      const codeBlockMatch = cleanedContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        cleanedContent = codeBlockMatch[1].trim();
+      }
+
       // Try to extract JSON from the response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
 
-        // Validate the response structure
-        if (parsed.review_feedback && parsed.severity && Array.isArray(parsed.issues_found)) {
+        // Standard format: { feedback, severity, identified_issues }
+        if (parsed.feedback && parsed.severity && Array.isArray(parsed.identified_issues)) {
           return {
-            review_feedback: parsed.review_feedback,
+            feedback: parsed.feedback,
             severity: parsed.severity as 'LOW' | 'MEDIUM' | 'HIGH',
-            issues_found: parsed.issues_found,
+            identified_issues: parsed.identified_issues,
+          };
+        }
+
+        // Alternative format from some LLMs: { reviews: [...] }
+        if (Array.isArray(parsed.reviews)) {
+          const issues = parsed.reviews.map(
+            (review: Record<string, unknown>) => {
+              // Handle various field names from different LLMs
+              const ruleField = review.rule || review.rule_id || review.ruleId;
+              const descField = review.description || review.comment || review.content || review.message || review.suggestion;
+              const locField = review.location || review.line_number || review.lineNumber || review.line;
+
+              return {
+                type: this.normalizeIssueType(review.type as string),
+                rule: (ruleField as string) || this.extractRuleFromContent(descField as string),
+                violation: [descField, locField ? `Line ${locField}` : null]
+                  .filter(Boolean)
+                  .join('. '),
+              };
+            },
+          );
+
+          // Determine severity based on issue types
+          const hasMustNotDo = issues.some((i: { type: string }) => i.type === 'must_not_do');
+          const hasMustDo = issues.some((i: { type: string }) => i.type === 'must_do');
+          const severity = hasMustNotDo ? 'HIGH' : hasMustDo ? 'MEDIUM' : 'LOW';
+
+          return {
+            feedback: this.generateFeedbackFromIssues(issues),
+            severity: severity as 'LOW' | 'MEDIUM' | 'HIGH',
+            identified_issues: issues,
+          };
+        }
+
+        // Codex format: { status, issues: [...] }
+        if (parsed.issues && Array.isArray(parsed.issues)) {
+          const issues = parsed.issues.map(
+            (issue: Record<string, unknown>) => {
+              const ruleField = issue.rule || issue.rule_id;
+              const descField = issue.details || issue.description || issue.message || issue.comment;
+              const locField = issue.location || issue.line || issue.line_number;
+              const severityField = issue.severity;
+
+              // Map Codex severity (error/warning) to our type
+              let issueType = 'should_do';
+              if (severityField === 'error') issueType = 'must_not_do';
+              else if (severityField === 'warning') issueType = 'must_do';
+
+              return {
+                type: issueType,
+                rule: (ruleField as string) || this.extractRuleFromContent(descField as string),
+                violation: [descField, locField ? `Location: ${locField}` : null]
+                  .filter(Boolean)
+                  .join('. '),
+              };
+            },
+          );
+
+          // Determine severity based on status or issue types
+          const hasMustNotDo = issues.some((i: { type: string }) => i.type === 'must_not_do');
+          const hasMustDo = issues.some((i: { type: string }) => i.type === 'must_do');
+          let severity: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+          if (parsed.status === 'fail' || hasMustNotDo) severity = 'HIGH';
+          else if (hasMustDo) severity = 'MEDIUM';
+
+          return {
+            feedback: this.generateFeedbackFromIssues(issues),
+            severity,
+            identified_issues: issues,
+          };
+        }
+
+        // Alternative format: { review: { comments: [...] } }
+        if (parsed.review && Array.isArray(parsed.review.comments)) {
+          const issues = parsed.review.comments.map(
+            (comment: Record<string, unknown>) => {
+              // Handle various field names
+              const ruleField = comment.rule || comment.rule_id || comment.ruleId;
+              const descField = comment.content || comment.comment || comment.description || comment.message;
+              const locField = comment.line || comment.line_number || comment.lineNumber;
+
+              return {
+                type: this.normalizeIssueType((ruleField || comment.type) as string),
+                rule: (ruleField as string) || this.extractRuleFromContent(descField as string),
+                violation: [descField, locField ? `Line ${locField}` : null]
+                  .filter(Boolean)
+                  .join('. '),
+              };
+            },
+          );
+
+          // Determine severity based on status or issue count
+          const status = parsed.review.status?.toUpperCase();
+          let severity: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+          if (status === 'REQUEST_CHANGES' || issues.length > 2) {
+            severity = 'MEDIUM';
+          }
+          if (issues.some((i: { type: string }) => i.type === 'must_not_do')) {
+            severity = 'HIGH';
+          }
+
+          return {
+            feedback: this.generateFeedbackFromIssues(issues),
+            severity,
+            identified_issues: issues,
           };
         }
       }
@@ -313,9 +479,85 @@ Provide your review in the specified JSON format.`;
 
     // Fallback if parsing fails
     return {
-      review_feedback: content,
+      feedback: content,
       severity: 'MEDIUM',
-      issues_found: [],
+      identified_issues: [],
     };
+  }
+
+  /**
+   * Normalize issue type from various LLM response formats
+   */
+  private normalizeIssueType(type?: string): 'must_do' | 'should_do' | 'must_not_do' {
+    if (!type) return 'should_do';
+    const normalized = type.toLowerCase().replace(/\s+/g, '_');
+    if (normalized.includes('must_not') || normalized.includes('mustnot')) return 'must_not_do';
+    if (normalized.includes('must')) return 'must_do';
+    if (normalized.includes('should')) return 'should_do';
+    return 'should_do';
+  }
+
+  /**
+   * Extract a rule name from content when rule field is missing
+   */
+  private extractRuleFromContent(content?: string): string {
+    if (!content) return 'Code review issue';
+
+    // Try to extract a concise rule from the content
+    // Look for common patterns like "Avoid...", "Use...", "Add...", "Don't..."
+    const patterns = [
+      /^(Avoid\s+[^.]+)/i,
+      /^(Use\s+[^.]+)/i,
+      /^(Add\s+[^.]+)/i,
+      /^(Don't\s+[^.]+)/i,
+      /^(Do not\s+[^.]+)/i,
+      /^(Never\s+[^.]+)/i,
+      /^(Always\s+[^.]+)/i,
+      /^(Prefer\s+[^.]+)/i,
+      /^(Consider\s+[^.]+)/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = content.match(pattern);
+      if (match) {
+        // Truncate to reasonable length
+        const rule = match[1].trim();
+        return rule.length > 80 ? `${rule.substring(0, 77)}...` : rule;
+      }
+    }
+
+    // Fallback: use first sentence, truncated
+    const firstSentence = content.split(/[.!?]/)[0].trim();
+    if (firstSentence.length > 80) {
+      return `${firstSentence.substring(0, 77)}...`;
+    }
+    return firstSentence || 'Code review issue';
+  }
+
+  /**
+   * Generate feedback text from issues array
+   */
+  private generateFeedbackFromIssues(issues: Array<{ type: string; rule: string; violation?: string }>): string {
+    if (issues.length === 0) return 'No issues found.';
+
+    const grouped = {
+      must_not_do: issues.filter(i => i.type === 'must_not_do'),
+      must_do: issues.filter(i => i.type === 'must_do'),
+      should_do: issues.filter(i => i.type === 'should_do'),
+    };
+
+    const parts: string[] = [];
+
+    if (grouped.must_not_do.length > 0) {
+      parts.push(`Found ${grouped.must_not_do.length} "Must Not Do" violation(s) that need immediate attention.`);
+    }
+    if (grouped.must_do.length > 0) {
+      parts.push(`Found ${grouped.must_do.length} "Must Do" requirement(s) that are missing.`);
+    }
+    if (grouped.should_do.length > 0) {
+      parts.push(`Found ${grouped.should_do.length} "Should Do" suggestion(s) for improvement.`);
+    }
+
+    return parts.join(' ');
   }
 }

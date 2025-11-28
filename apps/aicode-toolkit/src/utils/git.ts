@@ -1,6 +1,6 @@
 import path from 'node:path';
+import { pathExists, writeFile, move, remove } from '@agiflowai/aicode-utils';
 import { execa } from 'execa';
-import * as fs from 'fs-extra';
 
 /**
  * Execute a git command safely using execa to prevent command injection
@@ -37,7 +37,7 @@ export async function findWorkspaceRoot(startPath: string = process.cwd()): Prom
   while (true) {
     // Check if .git folder exists (repository root)
     const gitPath = path.join(currentPath, '.git');
-    if (await fs.pathExists(gitPath)) {
+    if (await pathExists(gitPath)) {
       return currentPath;
     }
 
@@ -123,32 +123,32 @@ export async function cloneSubdirectory(
 
     // Configure sparse checkout to only include the subdirectory
     const sparseCheckoutFile = path.join(tempFolder, '.git', 'info', 'sparse-checkout');
-    await fs.writeFile(sparseCheckoutFile, `${subdirectory}\n`);
+    await writeFile(sparseCheckoutFile, `${subdirectory}\n`);
 
     // Pull the specific branch
     await execGit(['pull', '--depth=1', 'origin', branch], tempFolder);
 
     // Move the subdirectory content to target folder
     const sourceDir = path.join(tempFolder, subdirectory);
-    if (!(await fs.pathExists(sourceDir))) {
+    if (!(await pathExists(sourceDir))) {
       throw new Error(
         `Subdirectory '${subdirectory}' not found in repository at branch '${branch}'`,
       );
     }
 
     // Check if target folder already exists
-    if (await fs.pathExists(targetFolder)) {
+    if (await pathExists(targetFolder)) {
       throw new Error(`Target folder already exists: ${targetFolder}`);
     }
 
-    await fs.move(sourceDir, targetFolder);
+    await move(sourceDir, targetFolder);
 
     // Clean up temp folder
-    await fs.remove(tempFolder);
+    await remove(tempFolder);
   } catch (error) {
     // Clean up temp folder on error
-    if (await fs.pathExists(tempFolder)) {
-      await fs.remove(tempFolder);
+    if (await pathExists(tempFolder)) {
+      await remove(tempFolder);
     }
     throw error;
   }
@@ -162,8 +162,8 @@ export async function cloneRepository(repoUrl: string, targetFolder: string): Pr
 
   // Remove .git folder
   const gitFolder = path.join(targetFolder, '.git');
-  if (await fs.pathExists(gitFolder)) {
-    await fs.remove(gitFolder);
+  if (await pathExists(gitFolder)) {
+    await remove(gitFolder);
   }
 }
 

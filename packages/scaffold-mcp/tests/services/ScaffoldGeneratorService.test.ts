@@ -1,22 +1,19 @@
-import * as fs from 'fs-extra';
+import * as fsHelpers from '@agiflowai/aicode-utils';
 import * as yaml from 'js-yaml';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ScaffoldGeneratorService } from '../../src/services/ScaffoldGeneratorService';
 
-vi.mock('fs-extra', () => ({
-  default: {
+vi.mock('@agiflowai/aicode-utils', async () => {
+  const actual = await vi.importActual('@agiflowai/aicode-utils');
+  return {
+    ...actual,
     ensureDir: vi.fn(),
     pathExists: vi.fn(),
     readFile: vi.fn(),
     writeFile: vi.fn(),
     readdir: vi.fn(),
-  },
-  ensureDir: vi.fn(),
-  pathExists: vi.fn(),
-  readFile: vi.fn(),
-  writeFile: vi.fn(),
-  readdir: vi.fn(),
-}));
+  };
+});
 
 vi.mock('js-yaml', () => ({
   default: {
@@ -46,10 +43,10 @@ describe('ScaffoldGeneratorService', () => {
     vi.clearAllMocks();
 
     // Reset mocks
-    (fs.pathExists as any).mockResolvedValue(true);
-    (fs.readFile as any).mockResolvedValue('');
-    (fs.writeFile as any).mockResolvedValue(undefined);
-    (fs.ensureDir as any).mockResolvedValue(undefined);
+    vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
+    vi.mocked(fsHelpers.readFile).mockResolvedValue('');
+    vi.mocked(fsHelpers.writeFile).mockResolvedValue(undefined);
+    vi.mocked(fsHelpers.ensureDir).mockResolvedValue(undefined);
     (yaml.dump as any).mockReturnValue('yaml content');
   });
 
@@ -70,16 +67,16 @@ describe('ScaffoldGeneratorService', () => {
         includes: ['src/app/page/page.tsx'],
       };
 
-      (fs.pathExists as any).mockResolvedValue(false);
-      (fs.readFile as any).mockResolvedValue('');
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
+      vi.mocked(fsHelpers.readFile).mockResolvedValue('');
       (yaml.load as any).mockReturnValue({ features: [] });
 
       const result = await service.generateFeatureScaffold(options);
 
       expect(result.success).toBe(true);
       expect(result.message).toContain('scaffold-nextjs-page');
-      expect(fs.ensureDir).toHaveBeenCalled();
-      expect(fs.writeFile).toHaveBeenCalled();
+      expect(fsHelpers.ensureDir).toHaveBeenCalled();
+      expect(fsHelpers.writeFile).toHaveBeenCalled();
     });
 
     it('should reject duplicate feature names', async () => {
@@ -90,8 +87,8 @@ describe('ScaffoldGeneratorService', () => {
         variables: [],
       };
 
-      (fs.pathExists as any).mockResolvedValue(true);
-      (fs.readFile as any).mockResolvedValue('');
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
+      vi.mocked(fsHelpers.readFile).mockResolvedValue('');
       (yaml.load as any).mockReturnValue({
         features: [{ name: 'existing-feature' }],
       });
@@ -112,8 +109,8 @@ describe('ScaffoldGeneratorService', () => {
         patterns: ['src/**/*.tsx'],
       };
 
-      (fs.pathExists as any).mockResolvedValue(false);
-      (fs.readFile as any).mockResolvedValue('');
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
+      vi.mocked(fsHelpers.readFile).mockResolvedValue('');
       (yaml.load as any).mockReturnValue({ features: [] });
 
       const result = await service.generateFeatureScaffold(options);
@@ -129,8 +126,8 @@ describe('ScaffoldGeneratorService', () => {
         variables: [],
       };
 
-      (fs.pathExists as any).mockResolvedValue(true);
-      vi.mocked(fs.readFile).mockResolvedValue('');
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
+      vi.mocked(fsHelpers.readFile).mockResolvedValue('');
       vi.mocked(yaml.load).mockReturnValue({}); // No features array
 
       const result = await service.generateFeatureScaffold(options);
@@ -141,16 +138,16 @@ describe('ScaffoldGeneratorService', () => {
 
   describe('templateExists', () => {
     it('should return true for existing templates', async () => {
-      (fs.pathExists as any).mockResolvedValue(true);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
 
       const exists = await service.templateExists('nextjs-15');
 
       expect(exists).toBe(true);
-      expect(fs.pathExists).toHaveBeenCalledWith(expect.stringContaining('nextjs-15'));
+      expect(fsHelpers.pathExists).toHaveBeenCalledWith(expect.stringContaining('nextjs-15'));
     });
 
     it('should return false for non-existent templates', async () => {
-      (fs.pathExists as any).mockResolvedValue(false);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
 
       const exists = await service.templateExists('nonexistent');
 
@@ -166,7 +163,7 @@ describe('ScaffoldGeneratorService', () => {
         { name: 'scaffold.yaml', isDirectory: () => false },
       ];
 
-      (fs.readdir as any).mockResolvedValue(mockDirents as any);
+      vi.mocked(fsHelpers.readdir).mockResolvedValue(mockDirents as any);
 
       const templates = await service.listTemplates();
 

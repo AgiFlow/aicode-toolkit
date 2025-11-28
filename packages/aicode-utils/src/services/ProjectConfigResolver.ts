@@ -22,8 +22,24 @@
  */
 
 import path from 'node:path';
-import * as fs from 'fs-extra';
+import * as fs from 'node:fs/promises';
 import { ConfigSource, ProjectType } from '../constants/projectType';
+
+// Helper to check if file exists
+async function pathExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Helper to read JSON file
+async function readJson<T = unknown>(filePath: string): Promise<T> {
+  const content = await fs.readFile(filePath, 'utf-8');
+  return JSON.parse(content) as T;
+}
 import type { NxProjectJson, ProjectConfigResult, ToolkitConfig } from '../types';
 import { log } from '../utils/logger';
 import { TemplatesManagerService } from './TemplatesManagerService';
@@ -67,8 +83,8 @@ export class ProjectConfigResolver {
 
       // 1. Check for project.json (monorepo)
       const projectJsonPath = path.join(absolutePath, 'project.json');
-      if (await fs.pathExists(projectJsonPath)) {
-        const projectJson = await fs.readJson(projectJsonPath);
+      if (await pathExists(projectJsonPath)) {
+        const projectJson = await readJson<NxProjectJson>(projectJsonPath);
 
         // Validate sourceTemplate is a non-empty string
         if (
@@ -208,9 +224,9 @@ Run 'scaffold-mcp scaffold list --help' for more info.`;
     try {
       let projectJson: NxProjectJson;
 
-      if (await fs.pathExists(projectJsonPath)) {
+      if (await pathExists(projectJsonPath)) {
         // Read existing project.json
-        projectJson = await fs.readJson(projectJsonPath);
+        projectJson = await readJson<NxProjectJson>(projectJsonPath);
       } else {
         // Create minimal project.json
         // Calculate relative path to node_modules for $schema

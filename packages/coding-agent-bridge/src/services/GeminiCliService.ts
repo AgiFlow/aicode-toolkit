@@ -23,9 +23,10 @@
  */
 
 import { execa } from 'execa';
-import * as fs from 'fs-extra';
+import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { pathExists, ensureDir } from '@agiflowai/aicode-utils';
 import type {
   CodingAgentService,
   LlmInvocationParams,
@@ -152,7 +153,7 @@ export class GeminiCliService implements CodingAgentService {
   async isEnabled(): Promise<boolean> {
     try {
       const geminiWorkspaceFile = path.join(this.workspaceRoot, '.gemini');
-      return await fs.pathExists(geminiWorkspaceFile);
+      return await pathExists(geminiWorkspaceFile);
     } catch (_error) {
       // Return false if unable to check file existence
       return false;
@@ -220,7 +221,7 @@ export class GeminiCliService implements CodingAgentService {
       const extensionConfigPath = path.join(extensionDir, 'gemini-extension.json');
 
       // Ensure extension directory exists
-      await fs.ensureDir(extensionDir);
+      await ensureDir(extensionDir);
 
       // Build extension configuration
       const extensionConfig: GeminiExtensionConfig = {
@@ -295,11 +296,11 @@ export class GeminiCliService implements CodingAgentService {
       const configPath = path.join(configDir, 'settings.json');
 
       // Ensure config directory exists
-      await fs.ensureDir(configDir);
+      await ensureDir(configDir);
 
       // Read existing config or create new
       let config: GeminiSettingsConfig = {};
-      if (await fs.pathExists(configPath)) {
+      if (await pathExists(configPath)) {
         const content = await fs.readFile(configPath, 'utf-8');
         config = JSON.parse(content);
       }
@@ -374,7 +375,7 @@ export class GeminiCliService implements CodingAgentService {
         const contextPath = path.join(extensionDir, 'GEMINI.md');
 
         // Ensure extension directory exists
-        await fs.ensureDir(extensionDir);
+        await ensureDir(extensionDir);
 
         // Read or create extension config
         let extensionConfig: GeminiExtensionConfig = {
@@ -383,7 +384,7 @@ export class GeminiCliService implements CodingAgentService {
           mcpServers: {},
         };
 
-        if (await fs.pathExists(extensionConfigPath)) {
+        if (await pathExists(extensionConfigPath)) {
           const content = await fs.readFile(extensionConfigPath, 'utf-8');
           extensionConfig = JSON.parse(content);
         }
@@ -410,25 +411,39 @@ export class GeminiCliService implements CodingAgentService {
    * Executes Gemini CLI with headless mode and JSON output format
    */
   async invokeAsLlm(params: LlmInvocationParams): Promise<LlmInvocationResponse> {
-    // Build the prompt with optional system prompt
+    // Check if CLI exists
+    try {
+      await execa(this.geminiPath, ['--version'], { timeout: 5000 });
+    } catch {
+      throw new Error(
+        `Gemini CLI not found at path: ${this.geminiPath}. Install it with: npm install -g @google/gemini-cli`,
+      );
+    }
+
+    // Build the prompt with optional system prompt and JSON schema
     let fullPrompt = params.prompt;
     const systemPrompt = this.promptConfig.systemPrompt;
     if (systemPrompt) {
       fullPrompt = `${systemPrompt}\n\n${params.prompt}`;
     }
 
-    // Build command arguments for non-interactive LLM invocation
+    // For Gemini, include JSON schema in prompt since CLI doesn't support native schema validation
+    if (params.jsonSchema) {
+      const schemaInstructions = `\n\nIMPORTANT: You MUST respond with valid JSON that exactly matches this JSON Schema. Do NOT wrap the JSON in markdown code fences. Output ONLY the JSON object, nothing else.\n\nJSON Schema:\n${JSON.stringify(params.jsonSchema, null, 2)}`;
+      fullPrompt = `${fullPrompt}${schemaInstructions}`;
+    }
+
+    // Build command arguments for non-interactive LLM invocation (no tools)
     const args = [
-      '--prompt',
-      fullPrompt,
+      fullPrompt, // Positional argument for prompt
       '--output-format',
       'json',
-      '--yolo', // Auto-approve tool calls to avoid interactive prompts
+      '--sandbox', // Run in sandbox mode to prevent tool usage
     ];
 
-    if (params.model) {
-      args.push('--model', params.model);
-    }
+    // Use provided model or default to gemini-3-pro-preview for better JSON adherence
+    const model = params.model || 'gemini-3-pro-preview';
+    args.push(`--model=${model}`);
 
     // Execute Gemini CLI
     try {
@@ -458,12 +473,17 @@ export class GeminiCliService implements CodingAgentService {
       }
 
       // Extract response content
-      const responseContent = jsonResponse.response || '';
+      let responseContent = jsonResponse.response || '';
+
+      // If JSON schema was requested, extract and validate JSON from response
+      if (params.jsonSchema && responseContent) {
+        responseContent = this.extractJsonFromResponse(responseContent);
+      }
 
       // Determine which model was used from stats (first model in the list)
       const usedModel = jsonResponse.stats?.models
         ? Object.keys(jsonResponse.stats.models)[0]
-        : params.model || 'gemini-2.0-flash-exp';
+        : params.model || 'gemini-3-pro-preview';
 
       // Extract token usage from stats.models
       // Sum up tokens from all models used in the request
@@ -513,5 +533,34 @@ export class GeminiCliService implements CodingAgentService {
       }
       throw new Error(`Failed to invoke Gemini CLI: ${String(error)}`);
     }
+  }
+
+  /**
+   * Extract JSON from LLM response that may contain markdown code fences or extra text
+   * @private
+   */
+  private extractJsonFromResponse(content: string): string {
+    let cleanedContent = content.trim();
+
+    // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+    const codeBlockMatch = cleanedContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) {
+      cleanedContent = codeBlockMatch[1].trim();
+    }
+
+    // Try to extract JSON object from the response
+    const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        // Validate it's valid JSON
+        JSON.parse(jsonMatch[0]);
+        return jsonMatch[0];
+      } catch {
+        // If parsing fails, return the original content
+        return content;
+      }
+    }
+
+    return content;
   }
 }

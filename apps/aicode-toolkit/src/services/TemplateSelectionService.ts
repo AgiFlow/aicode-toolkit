@@ -17,8 +17,17 @@
 
 import os from 'node:os';
 import path from 'node:path';
-import { ProjectType, print } from '@agiflowai/aicode-utils';
-import * as fs from 'fs-extra';
+import {
+  ProjectType,
+  print,
+  pathExists,
+  ensureDir,
+  copy,
+  remove,
+  readdir,
+  readFile,
+  writeFile,
+} from '@agiflowai/aicode-utils';
 import { cloneSubdirectory, fetchGitHubDirectoryContents } from '../utils/git';
 import type { TemplateRepoConfig } from './TemplatesService';
 
@@ -44,7 +53,7 @@ export class TemplateSelectionService {
   async downloadTemplatesToTmp(repoConfig: TemplateRepoConfig): Promise<string> {
     try {
       // Ensure tmp directory exists
-      await fs.ensureDir(this.tmpDir);
+      await ensureDir(this.tmpDir);
 
       // Fetch directory listing from GitHub
       const contents = await fetchGitHubDirectoryContents(
@@ -88,7 +97,7 @@ export class TemplateSelectionService {
         const response = await fetch(rulesUrl);
         if (response.ok) {
           const content = await response.text();
-          await fs.writeFile(targetFile, content, 'utf-8');
+          await writeFile(targetFile, content, 'utf-8');
           print.success('Downloaded global RULES.yaml');
         }
       }
@@ -108,7 +117,7 @@ export class TemplateSelectionService {
    */
   async listTemplates(): Promise<TemplateInfo[]> {
     try {
-      const entries = await fs.readdir(this.tmpDir, { withFileTypes: true });
+      const entries = await readdir(this.tmpDir, { withFileTypes: true });
 
       const templates: TemplateInfo[] = [];
 
@@ -151,7 +160,7 @@ export class TemplateSelectionService {
       }
 
       // Ensure destination exists
-      await fs.ensureDir(destinationPath);
+      await ensureDir(destinationPath);
 
       print.info(`\nCopying templates to ${destinationPath}...`);
 
@@ -160,12 +169,12 @@ export class TemplateSelectionService {
         const targetPath = path.join(destinationPath, templateName);
 
         // Check if template exists in tmp
-        if (!(await fs.pathExists(sourcePath))) {
+        if (!(await pathExists(sourcePath))) {
           throw new Error(`Template '${templateName}' not found in downloaded templates`);
         }
 
         // Check if already exists at destination
-        if (await fs.pathExists(targetPath)) {
+        if (await pathExists(targetPath)) {
           print.info(`Skipping ${templateName} (already exists)`);
           continue;
         }
@@ -177,7 +186,7 @@ export class TemplateSelectionService {
           await this.copyTemplateWithMcpFilter(sourcePath, targetPath, selectedMcpServers);
         } else {
           // Copy everything
-          await fs.copy(sourcePath, targetPath);
+          await copy(sourcePath, targetPath);
         }
 
         print.success(`Copied ${templateName}`);
@@ -187,10 +196,10 @@ export class TemplateSelectionService {
       const globalRulesSource = path.join(this.tmpDir, 'RULES.yaml');
       const globalRulesTarget = path.join(destinationPath, 'RULES.yaml');
 
-      if (await fs.pathExists(globalRulesSource)) {
-        if (!(await fs.pathExists(globalRulesTarget))) {
+      if (await pathExists(globalRulesSource)) {
+        if (!(await pathExists(globalRulesTarget))) {
           print.info('Copying global RULES.yaml...');
-          await fs.copy(globalRulesSource, globalRulesTarget);
+          await copy(globalRulesSource, globalRulesTarget);
           print.success('Copied global RULES.yaml');
         }
       }
@@ -220,10 +229,10 @@ export class TemplateSelectionService {
     const hasScaffold = selectedMcpServers.includes(MCPServer.SCAFFOLD);
 
     // Ensure target directory exists
-    await fs.ensureDir(targetPath);
+    await ensureDir(targetPath);
 
     // Read all files in source
-    const entries = await fs.readdir(sourcePath, { withFileTypes: true });
+    const entries = await readdir(sourcePath, { withFileTypes: true });
 
     for (const entry of entries) {
       const entrySourcePath = path.join(sourcePath, entry.name);
@@ -235,22 +244,22 @@ export class TemplateSelectionService {
       if (hasArchitect && hasScaffold) {
         // Copy everything
         if (entry.isDirectory()) {
-          await fs.copy(entrySourcePath, entryTargetPath);
+          await copy(entrySourcePath, entryTargetPath);
         } else {
-          await fs.copy(entrySourcePath, entryTargetPath);
+          await copy(entrySourcePath, entryTargetPath);
         }
       } else if (hasArchitect && !hasScaffold) {
         // Only copy architect files
         if (isArchitectFile) {
-          await fs.copy(entrySourcePath, entryTargetPath);
+          await copy(entrySourcePath, entryTargetPath);
         }
       } else if (!hasArchitect && hasScaffold) {
         // Copy everything except architect files
         if (!isArchitectFile) {
           if (entry.isDirectory()) {
-            await fs.copy(entrySourcePath, entryTargetPath);
+            await copy(entrySourcePath, entryTargetPath);
           } else {
-            await fs.copy(entrySourcePath, entryTargetPath);
+            await copy(entrySourcePath, entryTargetPath);
           }
         }
       }
@@ -266,9 +275,9 @@ export class TemplateSelectionService {
     try {
       // Try reading from scaffold.yaml first
       const scaffoldYamlPath = path.join(templatePath, 'scaffold.yaml');
-      if (await fs.pathExists(scaffoldYamlPath)) {
+      if (await pathExists(scaffoldYamlPath)) {
         const yaml = await import('js-yaml');
-        const content = await fs.readFile(scaffoldYamlPath, 'utf-8');
+        const content = await readFile(scaffoldYamlPath, 'utf-8');
         const scaffoldConfig = yaml.load(content) as {
           description?: string;
           boilerplate?: Array<{ description?: string }>;
@@ -286,8 +295,8 @@ export class TemplateSelectionService {
 
       // Fallback to README.md
       const readmePath = path.join(templatePath, 'README.md');
-      if (await fs.pathExists(readmePath)) {
-        const content = await fs.readFile(readmePath, 'utf-8');
+      if (await pathExists(readmePath)) {
+        const content = await readFile(readmePath, 'utf-8');
         // Get first paragraph (up to first empty line or 200 chars)
         const firstParagraph = content.split('\n\n')[0].substring(0, 200);
         return firstParagraph.trim();
@@ -311,8 +320,8 @@ export class TemplateSelectionService {
    */
   async cleanup(): Promise<void> {
     try {
-      if (await fs.pathExists(this.tmpDir)) {
-        await fs.remove(this.tmpDir);
+      if (await pathExists(this.tmpDir)) {
+        await remove(this.tmpDir);
       }
     } catch (error) {
       // Log but don't throw - cleanup failures shouldn't stop the process

@@ -19,16 +19,21 @@
  * - Shared state between tests
  */
 
-import * as fs from 'fs-extra';
+import * as fs from 'node:fs/promises';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectType } from '../../src/constants';
 import { detectProjectType, isMonolith, isMonorepo } from '../../src/utils/projectTypeDetector';
+import * as fsHelpers from '../../src/utils/fsHelpers';
 
-// Mock fs-extra
-vi.mock('fs-extra', () => ({
-  pathExists: vi.fn(),
+// Mock node:fs/promises
+vi.mock('node:fs/promises', () => ({
   readFile: vi.fn(),
+}));
+
+// Mock fsHelpers
+vi.mock('../../src/utils/fsHelpers', () => ({
+  pathExists: vi.fn(),
   readJson: vi.fn(),
 }));
 
@@ -41,7 +46,7 @@ describe('projectTypeDetector', () => {
 
   describe('detectProjectType', () => {
     it('should detect monorepo from nx.json', async () => {
-      vi.mocked(fs.pathExists).mockImplementation(async (filePath: string) => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (filePath: string) => {
         return filePath === path.join(mockWorkspaceRoot, 'nx.json');
       });
 
@@ -52,7 +57,7 @@ describe('projectTypeDetector', () => {
     });
 
     it('should detect monorepo from lerna.json', async () => {
-      vi.mocked(fs.pathExists).mockImplementation(async (filePath: string) => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (filePath: string) => {
         return filePath === path.join(mockWorkspaceRoot, 'lerna.json');
       });
 
@@ -63,7 +68,7 @@ describe('projectTypeDetector', () => {
     });
 
     it('should detect monorepo from pnpm-workspace.yaml', async () => {
-      vi.mocked(fs.pathExists).mockImplementation(async (filePath: string) => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (filePath: string) => {
         return filePath === path.join(mockWorkspaceRoot, 'pnpm-workspace.yaml');
       });
 
@@ -74,7 +79,7 @@ describe('projectTypeDetector', () => {
     });
 
     it('should detect monorepo from turbo.json', async () => {
-      vi.mocked(fs.pathExists).mockImplementation(async (filePath: string) => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (filePath: string) => {
         return filePath === path.join(mockWorkspaceRoot, 'turbo.json');
       });
 
@@ -85,7 +90,7 @@ describe('projectTypeDetector', () => {
     });
 
     it('should detect monorepo from rush.json', async () => {
-      vi.mocked(fs.pathExists).mockImplementation(async (filePath: string) => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (filePath: string) => {
         return filePath === path.join(mockWorkspaceRoot, 'rush.json');
       });
 
@@ -96,10 +101,10 @@ describe('projectTypeDetector', () => {
     });
 
     it('should detect monorepo from package.json with workspaces', async () => {
-      vi.mocked(fs.pathExists).mockImplementation(async (filePath: string) => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (filePath: string) => {
         return filePath === path.join(mockWorkspaceRoot, 'package.json');
       });
-      vi.mocked(fs.readJson).mockResolvedValue({
+      vi.mocked(fsHelpers.readJson).mockResolvedValue({
         workspaces: ['packages/*', 'apps/*'],
       });
 
@@ -110,7 +115,7 @@ describe('projectTypeDetector', () => {
     });
 
     it('should return undefined when no indicators found', async () => {
-      vi.mocked(fs.pathExists).mockResolvedValue(false);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
 
       const result = await detectProjectType(mockWorkspaceRoot);
 
@@ -119,7 +124,7 @@ describe('projectTypeDetector', () => {
     });
 
     it('should prioritize toolkit.yaml over other indicators', async () => {
-      vi.mocked(fs.pathExists).mockImplementation(async (filePath: string) => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (filePath: string) => {
         return (
           filePath === path.join(mockWorkspaceRoot, 'toolkit.yaml') ||
           filePath === path.join(mockWorkspaceRoot, 'nx.json')
@@ -134,7 +139,7 @@ describe('projectTypeDetector', () => {
     });
 
     it('should handle toolkit.yaml read errors gracefully', async () => {
-      vi.mocked(fs.pathExists).mockImplementation(async (filePath: string) => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (filePath: string) => {
         return (
           filePath === path.join(mockWorkspaceRoot, 'toolkit.yaml') ||
           filePath === path.join(mockWorkspaceRoot, 'nx.json')
@@ -149,10 +154,10 @@ describe('projectTypeDetector', () => {
     });
 
     it('should handle package.json read errors gracefully', async () => {
-      vi.mocked(fs.pathExists).mockImplementation(async (filePath: string) => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (filePath: string) => {
         return filePath === path.join(mockWorkspaceRoot, 'package.json');
       });
-      vi.mocked(fs.readJson).mockRejectedValue(new Error('Parse error'));
+      vi.mocked(fsHelpers.readJson).mockRejectedValue(new Error('Parse error'));
 
       const result = await detectProjectType(mockWorkspaceRoot);
 
@@ -161,7 +166,7 @@ describe('projectTypeDetector', () => {
     });
 
     it('should parse toolkit.yaml as YAML (not JSON)', async () => {
-      vi.mocked(fs.pathExists).mockImplementation(async (filePath: string) => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (filePath: string) => {
         return filePath === path.join(mockWorkspaceRoot, 'toolkit.yaml');
       });
       // Provide actual YAML content with YAML-specific syntax (comments, no quotes on keys)
@@ -180,7 +185,7 @@ sourceTemplate: nextjs-15
 
   describe('isMonorepo', () => {
     it('should return true when monorepo detected', async () => {
-      vi.mocked(fs.pathExists).mockImplementation(async (filePath: string) => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (filePath: string) => {
         return filePath === path.join(mockWorkspaceRoot, 'nx.json');
       });
 
@@ -190,7 +195,7 @@ sourceTemplate: nextjs-15
     });
 
     it('should return false when no monorepo indicators', async () => {
-      vi.mocked(fs.pathExists).mockResolvedValue(false);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
 
       const result = await isMonorepo(mockWorkspaceRoot);
 
@@ -200,7 +205,7 @@ sourceTemplate: nextjs-15
 
   describe('isMonolith', () => {
     it('should return true when toolkit.yaml specifies monolith', async () => {
-      vi.mocked(fs.pathExists).mockImplementation(async (filePath: string) => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (filePath: string) => {
         return filePath === path.join(mockWorkspaceRoot, 'toolkit.yaml');
       });
       vi.mocked(fs.readFile).mockResolvedValue(`projectType: ${ProjectType.MONOLITH}`);
@@ -211,7 +216,7 @@ sourceTemplate: nextjs-15
     });
 
     it('should return false when monorepo detected', async () => {
-      vi.mocked(fs.pathExists).mockImplementation(async (filePath: string) => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (filePath: string) => {
         return filePath === path.join(mockWorkspaceRoot, 'nx.json');
       });
 

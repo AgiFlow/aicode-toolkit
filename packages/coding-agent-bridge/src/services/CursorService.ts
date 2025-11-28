@@ -22,9 +22,10 @@
  * - Exposing internal implementation details
  */
 
-import * as fs from 'fs-extra';
+import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { pathExists, ensureDir } from '@agiflowai/aicode-utils';
 import type {
   CodingAgentService,
   LlmInvocationParams,
@@ -102,8 +103,8 @@ export class CursorService implements CodingAgentService {
       const cursorDir = path.join(this.workspaceRoot, '.cursor');
       const cursorRulesDir = path.join(this.workspaceRoot, '.cursor', 'rules');
 
-      const hasCursorDir = await fs.pathExists(cursorDir);
-      const hasCursorRulesDir = await fs.pathExists(cursorRulesDir);
+      const hasCursorDir = await pathExists(cursorDir);
+      const hasCursorRulesDir = await pathExists(cursorRulesDir);
 
       return hasCursorDir || hasCursorRulesDir;
     } catch (error) {
@@ -154,11 +155,11 @@ export class CursorService implements CodingAgentService {
       const configPath = path.join(configDir, 'mcp.json');
 
       // Ensure config directory exists
-      await fs.ensureDir(configDir);
+      await ensureDir(configDir);
 
       // Read existing config or create new
       let config: CursorMcpConfig = { mcpServers: {} };
-      if (await fs.pathExists(configPath)) {
+      if (await pathExists(configPath)) {
         const content = await fs.readFile(configPath, 'utf-8');
         config = JSON.parse(content);
       }
@@ -251,7 +252,7 @@ export class CursorService implements CodingAgentService {
       const rulesPath = path.join(rulesDir, filename);
 
       // Ensure .cursor/rules directory exists
-      await fs.ensureDir(rulesDir);
+      await ensureDir(rulesDir);
 
       // Build frontmatter
       const applyTo = options?.applyTo || '**';

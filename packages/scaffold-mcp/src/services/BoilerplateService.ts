@@ -1,7 +1,7 @@
+import { readdirSync } from 'node:fs';
 import * as path from 'node:path';
-import { log, ProjectConfigResolver } from '@agiflowai/aicode-utils';
+import { log, ProjectConfigResolver, pathExistsSync, readFileSync, statSync } from '@agiflowai/aicode-utils';
 import { jsonSchemaToZod } from '@composio/json-schema-to-zod';
-import * as fs from 'fs-extra';
 import * as yaml from 'js-yaml';
 import { z } from 'zod';
 import type {
@@ -57,9 +57,9 @@ export class BoilerplateService {
     for (const templatePath of templateDirs) {
       const scaffoldYamlPath = path.join(this.templatesPath, templatePath, 'scaffold.yaml');
 
-      if (fs.existsSync(scaffoldYamlPath)) {
+      if (pathExistsSync(scaffoldYamlPath)) {
         try {
-          const scaffoldContent = fs.readFileSync(scaffoldYamlPath, 'utf8');
+          const scaffoldContent = readFileSync(scaffoldYamlPath, 'utf8');
           const scaffoldConfig = yaml.load(scaffoldContent) as ScaffoldYamlConfig;
 
           // Extract boilerplate configurations
@@ -110,11 +110,11 @@ export class BoilerplateService {
 
     // Recursively find all directories with package.json
     const findTemplates = (dir: string, baseDir: string = ''): void => {
-      if (!fs.existsSync(dir)) {
+      if (!pathExistsSync(dir)) {
         return;
       }
 
-      const items = fs.readdirSync(dir);
+      const items = readdirSync(dir);
 
       // Check if current directory has both package.json (or package.json.liquid) and scaffold.yaml
       const hasPackageJson =
@@ -128,7 +128,7 @@ export class BoilerplateService {
       // Recursively search subdirectories
       for (const item of items) {
         const itemPath = path.join(dir, item);
-        const stat = fs.statSync(itemPath);
+        const stat = statSync(itemPath);
 
         if (stat.isDirectory() && !item.startsWith('.') && item !== 'node_modules') {
           const newBaseDir = baseDir ? path.join(baseDir, item) : item;

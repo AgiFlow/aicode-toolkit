@@ -23,9 +23,10 @@
  */
 
 import { execa } from 'execa';
-import * as fs from 'fs-extra';
+import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { pathExists, ensureDir } from '@agiflowai/aicode-utils';
 import type {
   CodingAgentService,
   LlmInvocationParams,
@@ -126,8 +127,8 @@ export class GitHubCopilotService implements CodingAgentService {
       );
       const agentsMd = path.join(this.workspaceRoot, 'AGENTS.md');
 
-      const hasCopilotInstructions = await fs.pathExists(copilotInstructions);
-      const hasAgentsMd = await fs.pathExists(agentsMd);
+      const hasCopilotInstructions = await pathExists(copilotInstructions);
+      const hasAgentsMd = await pathExists(agentsMd);
 
       return hasCopilotInstructions || hasAgentsMd;
     } catch (error) {
@@ -282,11 +283,11 @@ export class GitHubCopilotService implements CodingAgentService {
     const configPath = path.join(configDir, 'config.json');
 
     // Ensure config directory exists
-    await fs.ensureDir(configDir);
+    await ensureDir(configDir);
 
     // Read existing config or create new
     let config: any = {};
-    if (await fs.pathExists(configPath)) {
+    if (await pathExists(configPath)) {
       const content = await fs.readFile(configPath, 'utf-8');
       config = JSON.parse(content);
     }
@@ -435,26 +436,30 @@ export class GitHubCopilotService implements CodingAgentService {
   }
 
   /**
-   * Invoke GitHub Copilot as an LLM via the gh copilot CLI
+   * Invoke GitHub Copilot as an LLM via the copilot CLI
    *
-   * Uses programmatic mode: copilot -p "prompt" --allow-tool 'write'
+   * Uses programmatic mode: copilot -p "prompt" -s
    *
    * Note: This method uses the CLI's programmatic mode which:
    * - Counts against your monthly premium requests quota
-   * - Uses Claude Sonnet 4 by default (can be changed with /model in CLI)
-   * - Automatically approves write operations (--allow-tool 'write')
+   * - Uses Claude Sonnet 4 by default (can be changed with --model)
+   * - No tools are enabled (LLM-only mode)
    * - Requires the 'copilot' CLI to be installed and authenticated
-   *
-   * Security considerations:
-   * - Files can be read and written within the workspace directory
-   * - No shell commands are executed (--allow-tool only permits 'write')
-   * - Review the CLI's trusted_folders in ~/.copilot/config.json
    *
    * @param params - LLM invocation parameters
    * @returns LLM response with content and usage information
    * @throws Error if CLI is not installed, not authenticated, or invocation fails
    */
   async invokeAsLlm(params: LlmInvocationParams): Promise<LlmInvocationResponse> {
+    // Check if CLI exists
+    try {
+      await execa(this.copilotPath, ['--version'], { timeout: 5000 });
+    } catch {
+      throw new Error(
+        `GitHub Copilot CLI not found at path: ${this.copilotPath}. Install it with: npm install -g @github/copilot`,
+      );
+    }
+
     try {
       // Build the full prompt with system prompt if available
       let fullPrompt = params.prompt;
@@ -463,9 +468,22 @@ export class GitHubCopilotService implements CodingAgentService {
         fullPrompt = `${systemPrompt}\n\n${params.prompt}`;
       }
 
-      // Build command arguments for programmatic mode
-      // Use --allow-tool 'write' to enable file operations but not shell commands
-      const args = ['-p', fullPrompt, '--allow-tool', 'write'];
+      // Add JSON schema instructions to prompt if provided
+      // GitHub Copilot CLI doesn't have native JSON schema support
+      if (params.jsonSchema) {
+        const schemaInstructions = `
+
+IMPORTANT: You MUST respond with valid JSON that exactly matches this schema:
+${JSON.stringify(params.jsonSchema, null, 2)}
+
+Do NOT include any text before or after the JSON. Do NOT wrap the JSON in markdown code blocks.
+Respond with ONLY the raw JSON object.`;
+        fullPrompt = `${fullPrompt}${schemaInstructions}`;
+      }
+
+      // Build command arguments for programmatic mode (LLM-only, no tools)
+      // -s for silent output (response only, no stats)
+      const args = ['-p', fullPrompt, '-s'];
 
       // Execute GitHub Copilot CLI
       const timeout = (params.timeout as number | undefined) || this.defaultTimeout;
@@ -484,13 +502,18 @@ export class GitHubCopilotService implements CodingAgentService {
       }
 
       // The CLI outputs the response directly to stdout in programmatic mode
-      const responseContent = stdout.trim();
+      let responseContent = stdout.trim();
+
+      // If JSON schema was requested, extract and validate JSON from response
+      if (params.jsonSchema && responseContent) {
+        responseContent = this.extractJsonFromResponse(responseContent);
+      }
 
       // GitHub Copilot CLI doesn't provide token usage in programmatic mode
       // Return with estimated usage (not accurate, just for interface compatibility)
       return {
         content: responseContent,
-        model: params.model || 'claude-sonnet-4', // Default model
+        model: params.model || 'claude-sonnet-4.5', // Default model
         usage: {
           inputTokens: 0, // Not provided by CLI
           outputTokens: 0, // Not provided by CLI
@@ -519,5 +542,34 @@ export class GitHubCopilotService implements CodingAgentService {
       }
       throw new Error(`Failed to invoke GitHub Copilot CLI: ${String(error)}`);
     }
+  }
+
+  /**
+   * Extract JSON from LLM response that may contain markdown code fences or extra text
+   * @private
+   */
+  private extractJsonFromResponse(content: string): string {
+    let cleanedContent = content.trim();
+
+    // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+    const codeBlockMatch = cleanedContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) {
+      cleanedContent = codeBlockMatch[1].trim();
+    }
+
+    // Try to extract JSON object from the response
+    const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        // Validate it's valid JSON
+        JSON.parse(jsonMatch[0]);
+        return jsonMatch[0];
+      } catch {
+        // If parsing fails, return the original content
+        return content;
+      }
+    }
+
+    return content;
   }
 }

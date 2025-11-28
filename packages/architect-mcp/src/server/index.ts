@@ -17,10 +17,11 @@ import { GetFileDesignPatternTool } from '../tools/GetFileDesignPatternTool';
 import { ReviewCodeChangeTool } from '../tools/ReviewCodeChangeTool';
 import { AddDesignPatternTool } from '../tools/AddDesignPatternTool';
 import { AddRuleTool } from '../tools/AddRuleTool';
+import type { LlmToolId } from '@agiflowai/coding-agent-bridge';
 
 export function createServer(options?: {
-  designPatternTool?: 'claude-code';
-  reviewTool?: 'claude-code';
+  designPatternTool?: LlmToolId;
+  reviewTool?: LlmToolId;
   adminEnabled?: boolean;
 }): Server {
   const adminEnabled = options?.adminEnabled ?? false;
