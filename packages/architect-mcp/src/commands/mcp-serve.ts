@@ -26,6 +26,11 @@ import { HttpTransportHandler } from '../transports/http';
 import { SseTransportHandler } from '../transports/sse';
 import { StdioTransportHandler } from '../transports/stdio';
 import { type TransportConfig, type TransportHandler, TransportMode } from '../transports/types';
+import {
+  type LlmToolId,
+  isValidLlmTool,
+  SUPPORTED_LLM_TOOLS,
+} from '@agiflowai/coding-agent-bridge';
 
 /**
  * Start MCP server with given transport handler
@@ -64,36 +69,42 @@ export const mcpServeCommand = new Command('mcp-serve')
   .option('--host <host>', 'Host to bind to (http/sse only)', 'localhost')
   .option(
     '--design-pattern-tool <tool>',
-    'LLM tool for design pattern analysis (currently only "claude-code" is supported)',
+    `LLM tool for design pattern analysis. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
     undefined,
   )
   .option(
     '--review-tool <tool>',
-    'LLM tool for code review (currently only "claude-code" is supported)',
+    `LLM tool for code review. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
     undefined,
   )
   .option('--admin-enable', 'Enable admin tools (add_design_pattern, add_rule)', false)
   .action(async (options) => {
     try {
       const transportType = options.type.toLowerCase();
-      const designPatternTool = options.designPatternTool as 'claude-code' | undefined;
-      const reviewTool = options.reviewTool as 'claude-code' | undefined;
       const adminEnabled = options.adminEnable as boolean;
 
       // Validate design-pattern-tool option
-      if (designPatternTool && designPatternTool !== 'claude-code') {
-        print.error(
-          `Invalid design pattern tool: ${designPatternTool}. Currently only "claude-code" is supported.`,
-        );
-        process.exit(1);
+      let designPatternTool: LlmToolId | undefined;
+      if (options.designPatternTool) {
+        if (!isValidLlmTool(options.designPatternTool)) {
+          print.error(
+            `Invalid design pattern tool: ${options.designPatternTool}. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
+          );
+          process.exit(1);
+        }
+        designPatternTool = options.designPatternTool as LlmToolId;
       }
 
       // Validate review-tool option
-      if (reviewTool && reviewTool !== 'claude-code') {
-        print.error(
-          `Invalid review tool: ${reviewTool}. Currently only "claude-code" is supported.`,
-        );
-        process.exit(1);
+      let reviewTool: LlmToolId | undefined;
+      if (options.reviewTool) {
+        if (!isValidLlmTool(options.reviewTool)) {
+          print.error(
+            `Invalid review tool: ${options.reviewTool}. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
+          );
+          process.exit(1);
+        }
+        reviewTool = options.reviewTool as LlmToolId;
       }
 
       const serverOptions = {

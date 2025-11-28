@@ -21,14 +21,20 @@ import {
   GITHUB_COPILOT,
   NONE,
 } from '@agiflowai/coding-agent-bridge';
-import * as fs from 'fs-extra';
+import * as fsHelpers from '@agiflowai/aicode-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CodingAgentService } from '../../src/services/CodingAgentService';
 
 // Mock dependencies
-vi.mock('fs-extra', async () => {
-  const mockFs = await import('../__mocks__/fs-extra');
-  return mockFs;
+vi.mock('@agiflowai/aicode-utils', async () => {
+  const actual = await vi.importActual('@agiflowai/aicode-utils');
+  return {
+    ...actual,
+    pathExists: vi.fn(),
+    ensureDir: vi.fn(),
+    writeFile: vi.fn(),
+    readFile: vi.fn(),
+  };
 });
 
 vi.mock('@agiflowai/coding-agent-bridge', () => ({
@@ -97,27 +103,27 @@ describe('CodingAgentService', () => {
     it('should skip setup for NONE agent', async () => {
       await service.setupMCP(NONE);
 
-      expect(fs.ensureDir).not.toHaveBeenCalled();
-      expect(fs.writeFile).not.toHaveBeenCalled();
+      expect(fsHelpers.ensureDir).not.toHaveBeenCalled();
+      expect(fsHelpers.writeFile).not.toHaveBeenCalled();
     });
 
     it('should setup MCP for Claude Code', async () => {
-      vi.mocked(fs.pathExists).mockResolvedValue(false);
-      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
+      vi.mocked(fsHelpers.writeFile).mockResolvedValue(undefined);
 
       await expect(service.setupMCP(CLAUDE_CODE)).resolves.not.toThrow();
     });
 
     it('should setup MCP for Codex', async () => {
-      vi.mocked(fs.pathExists).mockResolvedValue(false);
-      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
+      vi.mocked(fsHelpers.writeFile).mockResolvedValue(undefined);
 
       await expect(service.setupMCP(CODEX)).resolves.not.toThrow();
     });
 
     it('should setup MCP for Gemini CLI', async () => {
-      vi.mocked(fs.pathExists).mockResolvedValue(false);
-      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
+      vi.mocked(fsHelpers.writeFile).mockResolvedValue(undefined);
 
       await expect(service.setupMCP(GEMINI_CLI)).resolves.not.toThrow();
     });

@@ -20,7 +20,8 @@
  */
 
 import path from 'node:path';
-import * as fs from 'fs-extra';
+import * as fs from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import type { ProjectConfig } from '../types';
 
 export class ProjectFinderService {
@@ -136,7 +137,7 @@ export class ProjectFinderService {
     }
 
     try {
-      const content = fs.readFileSync(projectJsonPath, 'utf-8');
+      const content = readFileSync(projectJsonPath, 'utf-8');
       const config = JSON.parse(content);
 
       const projectConfig: ProjectConfig = {

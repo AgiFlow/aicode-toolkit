@@ -1,36 +1,45 @@
-import fs from 'fs-extra';
+import {
+  pathExists as fsPathExists,
+  readFile as fsReadFile,
+  readJson as fsReadJson,
+  writeFile as fsWriteFile,
+  ensureDir as fsEnsureDir,
+  copy as fsCopy,
+  readdir as fsReaddir,
+  stat as fsStat,
+} from '@agiflowai/aicode-utils';
 import type { IFileSystemService } from '../types/interfaces';
 
 export class FileSystemService implements IFileSystemService {
   async pathExists(path: string): Promise<boolean> {
-    return fs.pathExists(path);
+    return fsPathExists(path);
   }
 
   async readFile(path: string, encoding: BufferEncoding = 'utf8'): Promise<string> {
-    return fs.readFile(path, encoding);
+    return fsReadFile(path, encoding);
   }
 
   async readJson(path: string): Promise<any> {
-    return fs.readJson(path);
+    return fsReadJson(path);
   }
 
   async writeFile(path: string, content: string, encoding: BufferEncoding = 'utf8'): Promise<void> {
-    return fs.writeFile(path, content, encoding);
+    return fsWriteFile(path, content, encoding);
   }
 
   async ensureDir(path: string): Promise<void> {
-    return fs.ensureDir(path);
+    return fsEnsureDir(path);
   }
 
   async copy(src: string, dest: string): Promise<void> {
-    return fs.copy(src, dest);
+    return fsCopy(src, dest);
   }
 
   async readdir(path: string): Promise<string[]> {
-    return fs.readdir(path);
+    return fsReaddir(path);
   }
 
   async stat(path: string): Promise<{ isDirectory(): boolean; isFile(): boolean }> {
-    return fs.stat(path);
+    return fsStat(path);
   }
 }

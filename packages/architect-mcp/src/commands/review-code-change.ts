@@ -23,6 +23,11 @@
 import { log, print } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 import { ReviewCodeChangeTool } from '../tools/ReviewCodeChangeTool';
+import {
+  type LlmToolId,
+  isValidLlmTool,
+  SUPPORTED_LLM_TOOLS,
+} from '@agiflowai/coding-agent-bridge';
 
 interface ReviewCodeChangeOptions {
   verbose?: boolean;
@@ -42,7 +47,7 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
   .option('-j, --json', 'Output as JSON', false)
   .option(
     '--llm-tool <tool>',
-    'LLM tool to use for code review (currently only "claude-code" is supported)',
+    `LLM tool to use for code review. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
     'claude-code',
   )
   .action(async (filePath: string, options: ReviewCodeChangeOptions) => {
@@ -53,14 +58,16 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
       }
 
       // Validate llm-tool option
-      if (options.llmTool && options.llmTool !== 'claude-code') {
-        print.error('❌ Error: Only "claude-code" is currently supported for --llm-tool');
+      if (options.llmTool && !isValidLlmTool(options.llmTool)) {
+        print.error(
+          `❌ Error: Invalid LLM tool "${options.llmTool}". Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
+        );
         process.exit(1);
       }
 
       // Create tool instance
       const tool = new ReviewCodeChangeTool({
-        llmTool: options.llmTool,
+        llmTool: options.llmTool as LlmToolId | undefined,
       });
 
       // Execute the tool

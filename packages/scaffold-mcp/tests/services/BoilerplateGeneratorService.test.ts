@@ -1,22 +1,19 @@
-import * as fs from 'fs-extra';
+import * as fsHelpers from '@agiflowai/aicode-utils';
 import * as yaml from 'js-yaml';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BoilerplateGeneratorService } from '../../src/services/BoilerplateGeneratorService';
 
-vi.mock('fs-extra', () => ({
-  default: {
+vi.mock('@agiflowai/aicode-utils', async () => {
+  const actual = await vi.importActual('@agiflowai/aicode-utils');
+  return {
+    ...actual,
     ensureDir: vi.fn(),
     pathExists: vi.fn(),
     readFile: vi.fn(),
     writeFile: vi.fn(),
     readdir: vi.fn(),
-  },
-  ensureDir: vi.fn(),
-  pathExists: vi.fn(),
-  readFile: vi.fn(),
-  writeFile: vi.fn(),
-  readdir: vi.fn(),
-}));
+  };
+});
 
 vi.mock('js-yaml', () => ({
   default: {
@@ -46,10 +43,10 @@ describe('BoilerplateGeneratorService', () => {
     vi.clearAllMocks();
 
     // Reset mocks
-    (fs.pathExists as any).mockResolvedValue(true);
-    (fs.readFile as any).mockResolvedValue('');
-    (fs.writeFile as any).mockResolvedValue(undefined);
-    (fs.ensureDir as any).mockResolvedValue(undefined);
+    vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
+    vi.mocked(fsHelpers.readFile).mockResolvedValue('');
+    vi.mocked(fsHelpers.writeFile).mockResolvedValue(undefined);
+    vi.mocked(fsHelpers.ensureDir).mockResolvedValue(undefined);
     (yaml.dump as any).mockReturnValue('yaml content');
   });
 
@@ -71,16 +68,16 @@ describe('BoilerplateGeneratorService', () => {
         includes: ['package.json', 'src/index.ts'],
       };
 
-      (fs.pathExists as any).mockResolvedValue(false);
-      (fs.readFile as any).mockResolvedValue('boilerplate: []');
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
+      vi.mocked(fsHelpers.readFile).mockResolvedValue('boilerplate: []');
       (yaml.load as any).mockReturnValue({ boilerplate: [] });
 
       const result = await service.generateBoilerplate(options);
 
       expect(result.success).toBe(true);
       expect(result.message).toContain('scaffold-test-app');
-      expect(fs.ensureDir).toHaveBeenCalledWith(expect.stringContaining('test-template'));
-      expect(fs.writeFile).toHaveBeenCalled();
+      expect(fsHelpers.ensureDir).toHaveBeenCalledWith(expect.stringContaining('test-template'));
+      expect(fsHelpers.writeFile).toHaveBeenCalled();
     });
 
     it('should reject duplicate boilerplate names', async () => {
@@ -92,8 +89,8 @@ describe('BoilerplateGeneratorService', () => {
         variables: [],
       };
 
-      (fs.pathExists as any).mockResolvedValue(true);
-      (fs.readFile as any).mockResolvedValue('');
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
+      vi.mocked(fsHelpers.readFile).mockResolvedValue('');
       (yaml.load as any).mockReturnValue({
         boilerplate: [{ name: 'existing-boilerplate' }],
       });
@@ -114,8 +111,8 @@ describe('BoilerplateGeneratorService', () => {
         variables: [],
       };
 
-      (fs.pathExists as any).mockResolvedValue(false);
-      (fs.readFile as any).mockResolvedValue('');
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
+      vi.mocked(fsHelpers.readFile).mockResolvedValue('');
       (yaml.load as any).mockReturnValue({ boilerplate: [] });
 
       const result = await service.generateBoilerplate(options);
@@ -132,13 +129,13 @@ describe('BoilerplateGeneratorService', () => {
         content: '{"name": "{{ appName }}"}',
       };
 
-      (fs.pathExists as any).mockResolvedValue(true);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
 
       const result = await service.createTemplateFile(options);
 
       expect(result.success).toBe(true);
-      expect(fs.ensureDir).toHaveBeenCalled();
-      expect(fs.writeFile).toHaveBeenCalledWith(
+      expect(fsHelpers.ensureDir).toHaveBeenCalled();
+      expect(fsHelpers.writeFile).toHaveBeenCalledWith(
         expect.stringContaining('.liquid'),
         expect.any(String),
         'utf-8',
@@ -152,7 +149,7 @@ describe('BoilerplateGeneratorService', () => {
         content: 'console.log("test");',
       };
 
-      (fs.pathExists as any).mockResolvedValue(true);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
 
       const result = await service.createTemplateFile(options);
 
@@ -170,11 +167,11 @@ describe('BoilerplateGeneratorService', () => {
         header,
       };
 
-      (fs.pathExists as any).mockResolvedValue(true);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
 
       await service.createTemplateFile(options);
 
-      expect(fs.writeFile).toHaveBeenCalledWith(
+      expect(fsHelpers.writeFile).toHaveBeenCalledWith(
         expect.any(String),
         expect.stringContaining(header),
         'utf-8',
@@ -189,13 +186,13 @@ describe('BoilerplateGeneratorService', () => {
         sourceFile: '/path/to/source.ts',
       };
 
-      (fs.pathExists as any).mockResolvedValue(true);
-      (fs.readFile as any).mockResolvedValue(sourceContent);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
+      vi.mocked(fsHelpers.readFile).mockResolvedValue(sourceContent);
 
       const result = await service.createTemplateFile(options);
 
       expect(result.success).toBe(true);
-      expect(fs.readFile).toHaveBeenCalledWith('/path/to/source.ts', 'utf-8');
+      expect(fsHelpers.readFile).toHaveBeenCalledWith('/path/to/source.ts', 'utf-8');
     });
 
     it('should fail if template directory does not exist', async () => {
@@ -205,7 +202,7 @@ describe('BoilerplateGeneratorService', () => {
         content: 'test',
       };
 
-      (fs.pathExists as any).mockResolvedValue(false);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
 
       const result = await service.createTemplateFile(options);
 
@@ -216,7 +213,7 @@ describe('BoilerplateGeneratorService', () => {
 
   describe('templateExists', () => {
     it('should return true when template exists', async () => {
-      (fs.pathExists as any).mockResolvedValue(true);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
 
       const exists = await service.templateExists('test-template');
 
@@ -224,7 +221,7 @@ describe('BoilerplateGeneratorService', () => {
     });
 
     it('should return false when template does not exist', async () => {
-      (fs.pathExists as any).mockResolvedValue(false);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
 
       const exists = await service.templateExists('nonexistent');
 
@@ -240,7 +237,7 @@ describe('BoilerplateGeneratorService', () => {
         { name: 'README.md', isDirectory: () => false },
       ];
 
-      (fs.readdir as any).mockResolvedValue(mockDirents as any);
+      vi.mocked(fsHelpers.readdir).mockResolvedValue(mockDirents as any);
 
       const templates = await service.listTemplates();
 

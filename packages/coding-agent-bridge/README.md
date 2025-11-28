@@ -266,7 +266,6 @@ pnpm typecheck
 
 **Dependencies**:
 - `execa` - Process execution for CLI invocation
-- `fs-extra` - File system operations
 - `uuid` - Session ID generation
 
 ## Related Packages

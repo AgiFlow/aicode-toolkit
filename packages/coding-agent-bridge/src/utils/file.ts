@@ -11,8 +11,9 @@
  * - Document all public functions
  */
 
-import * as fs from 'fs-extra';
+import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { pathExists, ensureDir } from '@agiflowai/aicode-utils';
 
 /**
  * Append content to a file if it exists, or create it with initial content if it doesn't
@@ -27,13 +28,13 @@ export async function appendToFileIfExists(
   content: string,
   initialContent?: string,
 ): Promise<void> {
-  const exists = await fs.pathExists(filePath);
+  const exists = await pathExists(filePath);
 
   if (exists) {
     await fs.appendFile(filePath, content, 'utf-8');
   } else {
     // Ensure directory exists
-    await fs.ensureDir(path.dirname(filePath));
+    await ensureDir(path.dirname(filePath));
     // Write initial content or the content itself
     await fs.writeFile(filePath, initialContent ?? content, 'utf-8');
   }
@@ -54,7 +55,7 @@ export async function appendUniqueToFile(
   searchString?: string,
   initialContent?: string,
 ): Promise<boolean> {
-  const exists = await fs.pathExists(filePath);
+  const exists = await pathExists(filePath);
   const searchStr = searchString ?? content;
 
   if (exists) {
@@ -67,7 +68,7 @@ export async function appendUniqueToFile(
   }
 
   // File doesn't exist, create it
-  await fs.ensureDir(path.dirname(filePath));
+  await ensureDir(path.dirname(filePath));
   await fs.writeFile(filePath, initialContent ?? content, 'utf-8');
   return true;
 }
@@ -80,7 +81,7 @@ export async function appendUniqueToFile(
  * @returns Promise that resolves when operation is complete
  */
 export async function writeFileEnsureDir(filePath: string, content: string): Promise<void> {
-  await fs.ensureDir(path.dirname(filePath));
+  await ensureDir(path.dirname(filePath));
   await fs.writeFile(filePath, content, 'utf-8');
 }
 
@@ -99,7 +100,7 @@ export async function appendUniqueWithMarkers(
   searchString?: string,
   initialContent?: string,
 ): Promise<boolean> {
-  const exists = await fs.pathExists(filePath);
+  const exists = await pathExists(filePath);
   const startMarker = '<!-- AICODE:START -->';
   const endMarker = '<!-- AICODE:END -->';
   const searchStr = searchString ?? startMarker;
@@ -117,7 +118,7 @@ export async function appendUniqueWithMarkers(
   }
 
   // File doesn't exist, create it
-  await fs.ensureDir(path.dirname(filePath));
+  await ensureDir(path.dirname(filePath));
   const wrappedContent = `${startMarker}\n${content}\n${endMarker}\n`;
   await fs.writeFile(filePath, initialContent ?? wrappedContent, 'utf-8');
   return true;

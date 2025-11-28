@@ -23,7 +23,9 @@
  */
 
 import path from 'node:path';
-import * as fs from 'fs-extra';
+import * as fs from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
+import { pathExists, pathExistsSync } from '../utils/fsHelpers';
 import type { ToolkitConfig } from '../types';
 
 export class TemplatesManagerService {
@@ -53,7 +55,7 @@ export class TemplatesManagerService {
     // Check if toolkit.yaml exists
     const toolkitConfigPath = path.join(workspaceRoot, TemplatesManagerService.TOOLKIT_CONFIG_FILE);
 
-    if (await fs.pathExists(toolkitConfigPath)) {
+    if (await pathExists(toolkitConfigPath)) {
       // Read toolkit.yaml to get templatesPath
       const yaml = await import('js-yaml');
       const content = await fs.readFile(toolkitConfigPath, 'utf-8');
@@ -64,7 +66,7 @@ export class TemplatesManagerService {
           ? config.templatesPath
           : path.join(workspaceRoot, config.templatesPath);
 
-        if (await fs.pathExists(templatesPath)) {
+        if (await pathExists(templatesPath)) {
           return templatesPath;
         } else {
           throw new Error(
@@ -77,7 +79,7 @@ export class TemplatesManagerService {
     // Default to templates folder in workspace root
     const templatesPath = path.join(workspaceRoot, TemplatesManagerService.TEMPLATES_FOLDER);
 
-    if (await fs.pathExists(templatesPath)) {
+    if (await pathExists(templatesPath)) {
       return templatesPath;
     }
 
@@ -97,7 +99,7 @@ export class TemplatesManagerService {
     while (true) {
       // Check if .git folder exists (repository root)
       const gitPath = path.join(currentPath, '.git');
-      if (await fs.pathExists(gitPath)) {
+      if (await pathExists(gitPath)) {
         return currentPath;
       }
 
@@ -127,10 +129,10 @@ export class TemplatesManagerService {
     // Check if toolkit.yaml exists
     const toolkitConfigPath = path.join(workspaceRoot, TemplatesManagerService.TOOLKIT_CONFIG_FILE);
 
-    if (fs.pathExistsSync(toolkitConfigPath)) {
+    if (pathExistsSync(toolkitConfigPath)) {
       // Read toolkit.yaml to get templatesPath
       const yaml = require('js-yaml');
-      const content = fs.readFileSync(toolkitConfigPath, 'utf-8');
+      const content = readFileSync(toolkitConfigPath, 'utf-8');
       const config = yaml.load(content) as any;
 
       if (config?.templatesPath) {
@@ -138,7 +140,7 @@ export class TemplatesManagerService {
           ? config.templatesPath
           : path.join(workspaceRoot, config.templatesPath);
 
-        if (fs.pathExistsSync(templatesPath)) {
+        if (pathExistsSync(templatesPath)) {
           return templatesPath;
         } else {
           throw new Error(
@@ -151,7 +153,7 @@ export class TemplatesManagerService {
     // Default to templates folder in workspace root
     const templatesPath = path.join(workspaceRoot, TemplatesManagerService.TEMPLATES_FOLDER);
 
-    if (fs.pathExistsSync(templatesPath)) {
+    if (pathExistsSync(templatesPath)) {
       return templatesPath;
     }
 
@@ -171,7 +173,7 @@ export class TemplatesManagerService {
     while (true) {
       // Check if .git folder exists (repository root)
       const gitPath = path.join(currentPath, '.git');
-      if (fs.pathExistsSync(gitPath)) {
+      if (pathExistsSync(gitPath)) {
         return currentPath;
       }
 
@@ -193,7 +195,7 @@ export class TemplatesManagerService {
    * @returns true if templates folder exists and is a directory
    */
   static async isInitialized(templatesPath: string): Promise<boolean> {
-    if (!(await fs.pathExists(templatesPath))) {
+    if (!(await pathExists(templatesPath))) {
       return false;
     }
     const stat = await fs.stat(templatesPath);
@@ -224,7 +226,7 @@ export class TemplatesManagerService {
     const workspaceRoot = await TemplatesManagerService.findWorkspaceRoot(startPath);
     const toolkitConfigPath = path.join(workspaceRoot, TemplatesManagerService.TOOLKIT_CONFIG_FILE);
 
-    if (!(await fs.pathExists(toolkitConfigPath))) {
+    if (!(await pathExists(toolkitConfigPath))) {
       return null;
     }
 
@@ -245,12 +247,12 @@ export class TemplatesManagerService {
     const workspaceRoot = TemplatesManagerService.findWorkspaceRootSync(startPath);
     const toolkitConfigPath = path.join(workspaceRoot, TemplatesManagerService.TOOLKIT_CONFIG_FILE);
 
-    if (!fs.pathExistsSync(toolkitConfigPath)) {
+    if (!pathExistsSync(toolkitConfigPath)) {
       return null;
     }
 
     const yaml = require('js-yaml');
-    const content = fs.readFileSync(toolkitConfigPath, 'utf-8');
+    const content = readFileSync(toolkitConfigPath, 'utf-8');
     const config = yaml.load(content) as ToolkitConfig;
 
     return config;

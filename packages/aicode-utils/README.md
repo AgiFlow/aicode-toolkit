@@ -360,7 +360,6 @@ await TemplatesManagerService.writeToolkitConfig({
 
 **Dependencies**:
 - `chalk` - Terminal colors and styling
-- `fs-extra` - Enhanced file system operations
 - `js-yaml` - YAML parsing for toolkit.yaml
 - `pino` - Structured logging
 

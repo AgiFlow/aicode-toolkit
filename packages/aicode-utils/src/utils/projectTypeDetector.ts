@@ -21,8 +21,9 @@
  */
 
 import path from 'node:path';
-import * as fs from 'fs-extra';
+import * as fs from 'node:fs/promises';
 import * as yaml from 'js-yaml';
+import { pathExists, readJson } from './fsHelpers';
 import { ProjectType } from '../constants';
 import type { ToolkitConfig } from '../types';
 
@@ -67,7 +68,7 @@ export async function detectProjectType(
 
   // Check toolkit.yaml first (highest priority)
   const toolkitYamlPath = path.join(workspaceRoot, 'toolkit.yaml');
-  if (await fs.pathExists(toolkitYamlPath)) {
+  if (await pathExists(toolkitYamlPath)) {
     try {
       const content = await fs.readFile(toolkitYamlPath, 'utf-8');
       const config = yaml.load(content) as ToolkitConfig;
@@ -86,7 +87,7 @@ export async function detectProjectType(
   // Check deterministic monorepo indicators
   for (const filename of MONOREPO_INDICATOR_FILES) {
     const filePath = path.join(workspaceRoot, filename);
-    if (await fs.pathExists(filePath)) {
+    if (await pathExists(filePath)) {
       indicators.push(`${filename} found`);
       return {
         projectType: ProjectType.MONOREPO,
@@ -97,9 +98,9 @@ export async function detectProjectType(
 
   // Check package.json for workspaces (npm/yarn workspaces)
   const packageJsonPath = path.join(workspaceRoot, 'package.json');
-  if (await fs.pathExists(packageJsonPath)) {
+  if (await pathExists(packageJsonPath)) {
     try {
-      const packageJson = await fs.readJson(packageJsonPath);
+      const packageJson = await readJson<{ workspaces?: unknown }>(packageJsonPath);
       if (packageJson.workspaces) {
         indicators.push('package.json with workspaces found');
         return {

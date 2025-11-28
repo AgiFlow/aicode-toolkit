@@ -28,7 +28,7 @@ mcpServers:
       - --design-pattern-tool
       - claude-code
       - --review-tool
-      - claude-code
+      - gemini-cli
     env: {}
     config:
       instruction: >

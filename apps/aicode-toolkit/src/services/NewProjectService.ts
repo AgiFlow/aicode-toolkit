@@ -18,8 +18,7 @@
  * - Direct tool implementation (services should be tool-agnostic)
  */
 
-import { messages, ProjectType } from '@agiflowai/aicode-utils';
-import * as fs from 'fs-extra';
+import { messages, ProjectType, mkdir, remove } from '@agiflowai/aicode-utils';
 import { cloneRepository, cloneSubdirectory, gitInit, parseGitHubUrl } from '../utils';
 
 // Reserved Windows/system names that should not be used
@@ -118,7 +117,7 @@ export class NewProjectService {
    */
   async createProjectDirectory(projectPath: string, projectName: string): Promise<void> {
     try {
-      await fs.mkdir(projectPath, { recursive: false });
+      await mkdir(projectPath, { recursive: false });
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
         throw new Error(
@@ -148,7 +147,7 @@ export class NewProjectService {
       }
     } catch (error) {
       // Clean up on error
-      await fs.remove(projectPath);
+      await remove(projectPath);
       throw new Error(`Failed to clone repository: ${(error as Error).message}`);
     }
   }

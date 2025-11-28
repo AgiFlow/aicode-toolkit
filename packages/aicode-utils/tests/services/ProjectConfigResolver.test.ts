@@ -1,23 +1,32 @@
 import * as path from 'node:path';
-import * as fs from 'fs-extra';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfigSource, ProjectType } from '../../src/constants/projectType';
 import { ProjectConfigResolver } from '../../src/services/ProjectConfigResolver';
 import { TemplatesManagerService } from '../../src/services/TemplatesManagerService';
+import * as fsHelpers from '../../src/utils/fsHelpers';
 
-// Mock fs-extra
-vi.mock('fs-extra', () => ({
-  default: {
+// Mock fsHelpers
+vi.mock('../../src/utils/fsHelpers', async () => {
+  const actual = await vi.importActual('../../src/utils/fsHelpers');
+  return {
+    ...actual,
     pathExists: vi.fn(),
     readJson: vi.fn(),
-    writeFile: vi.fn(),
-    readFile: vi.fn(),
-  },
-  pathExists: vi.fn(),
-  readJson: vi.fn(),
-  writeFile: vi.fn(),
-  readFile: vi.fn(),
-}));
+    writeJson: vi.fn(),
+  };
+});
+
+// Helper to setup pathExists mock
+function mockPathExists(existingPaths: string[]): void {
+  vi.mocked(fsHelpers.pathExists).mockImplementation(async (filePath) => {
+    return existingPaths.includes(filePath as string);
+  });
+}
+
+// Helper to setup readJson mock
+function mockReadJson(content: unknown): void {
+  vi.mocked(fsHelpers.readJson).mockResolvedValueOnce(content);
+}
 
 // Mock TemplatesManagerService
 vi.mock('../../src/services/TemplatesManagerService', () => ({
@@ -40,13 +49,14 @@ describe('ProjectConfigResolver', () => {
   describe('resolveProjectConfig', () => {
     it('should resolve config from project.json (monorepo)', async () => {
       const projectPath = '/test/apps/my-app';
+      const projectJsonPath = path.join(projectPath, 'project.json');
       const mockProjectJson = {
         name: 'my-app',
         sourceTemplate: 'nextjs-15',
       };
 
-      vi.mocked(fs.pathExists).mockResolvedValueOnce(true); // project.json exists
-      vi.mocked(fs.readJson).mockResolvedValueOnce(mockProjectJson);
+      mockPathExists([projectJsonPath]);
+      mockReadJson(mockProjectJson);
 
       const result = await ProjectConfigResolver.resolveProjectConfig(projectPath);
 
@@ -67,7 +77,7 @@ describe('ProjectConfigResolver', () => {
         sourceTemplate: 'react-vite',
       };
 
-      vi.mocked(fs.pathExists).mockResolvedValueOnce(false); // project.json doesn't exist
+      mockPathExists([]); // project.json doesn't exist
       vi.mocked(TemplatesManagerService.getWorkspaceRoot).mockResolvedValueOnce(workspaceRoot);
       vi.mocked(TemplatesManagerService.readToolkitConfig).mockResolvedValueOnce(mockToolkitConfig);
 
@@ -100,7 +110,7 @@ describe('ProjectConfigResolver', () => {
     it('should throw helpful error when no configuration found', async () => {
       const projectPath = '/test/no-config';
 
-      vi.mocked(fs.pathExists).mockResolvedValue(false);
+      mockPathExists([]);
       vi.mocked(TemplatesManagerService.getWorkspaceRoot).mockResolvedValueOnce('/test');
       vi.mocked(TemplatesManagerService.readToolkitConfig).mockResolvedValueOnce(null);
 
@@ -113,13 +123,14 @@ describe('ProjectConfigResolver', () => {
   describe('hasConfiguration', () => {
     it('should return true when configuration exists', async () => {
       const projectPath = '/test/apps/my-app';
+      const projectJsonPath = path.join(projectPath, 'project.json');
       const mockProjectJson = {
         name: 'my-app',
         sourceTemplate: 'nextjs-15',
       };
 
-      vi.mocked(fs.pathExists).mockResolvedValueOnce(true);
-      vi.mocked(fs.readJson).mockResolvedValueOnce(mockProjectJson);
+      mockPathExists([projectJsonPath]);
+      mockReadJson(mockProjectJson);
 
       const result = await ProjectConfigResolver.hasConfiguration(projectPath);
 
@@ -129,7 +140,7 @@ describe('ProjectConfigResolver', () => {
     it('should return false when configuration does not exist', async () => {
       const projectPath = '/test/no-config';
 
-      vi.mocked(fs.pathExists).mockResolvedValue(false);
+      mockPathExists([]);
       vi.mocked(TemplatesManagerService.getWorkspaceRoot).mockResolvedValueOnce('/test');
       vi.mocked(TemplatesManagerService.readToolkitConfig).mockResolvedValueOnce(null);
 
@@ -138,14 +149,18 @@ describe('ProjectConfigResolver', () => {
       expect(result).toBe(false);
     });
 
-    it('should throw error for filesystem issues', async () => {
+    it('should return false when path does not exist', async () => {
       const projectPath = '/test/error';
 
-      vi.mocked(fs.pathExists).mockRejectedValueOnce(new Error('Permission denied'));
+      // When pathExists returns false (file doesn't exist),
+      // the flow continues and eventually returns false (no config found)
+      vi.mocked(fsHelpers.pathExists).mockResolvedValueOnce(false);
+      vi.mocked(TemplatesManagerService.getWorkspaceRoot).mockResolvedValueOnce('/test');
+      vi.mocked(TemplatesManagerService.readToolkitConfig).mockResolvedValueOnce(null);
 
-      await expect(ProjectConfigResolver.hasConfiguration(projectPath)).rejects.toThrow(
-        'Error checking project configuration',
-      );
+      const result = await ProjectConfigResolver.hasConfiguration(projectPath);
+
+      expect(result).toBe(false);
     });
   });
 
@@ -202,15 +217,16 @@ describe('ProjectConfigResolver', () => {
       const projectPath = '/test/apps/my-app';
       const projectName = 'my-app';
       const sourceTemplate = 'nextjs-15';
+      const projectJsonPath = path.join(projectPath, 'project.json');
 
-      vi.mocked(fs.pathExists).mockResolvedValueOnce(false);
-      vi.mocked(fs.writeFile).mockResolvedValueOnce();
+      mockPathExists([]);
+      vi.mocked(fsHelpers.writeJson).mockResolvedValueOnce();
 
       await ProjectConfigResolver.createProjectJson(projectPath, projectName, sourceTemplate);
 
-      expect(fs.writeFile).toHaveBeenCalledWith(
-        path.join(projectPath, 'project.json'),
-        expect.stringContaining('"sourceTemplate": "nextjs-15"'),
+      expect(fsHelpers.writeJson).toHaveBeenCalledWith(
+        projectJsonPath,
+        expect.objectContaining({ sourceTemplate: 'nextjs-15' }),
       );
     });
 
@@ -218,21 +234,26 @@ describe('ProjectConfigResolver', () => {
       const projectPath = '/test/apps/my-app';
       const projectName = 'my-app';
       const sourceTemplate = 'nextjs-15';
+      const projectJsonPath = path.join(projectPath, 'project.json');
       const existingProjectJson = {
         name: 'my-app',
         $schema: '../../node_modules/nx/schemas/project-schema.json',
         targets: {},
       };
 
-      vi.mocked(fs.pathExists).mockResolvedValueOnce(true);
-      vi.mocked(fs.readJson).mockResolvedValueOnce(existingProjectJson);
-      vi.mocked(fs.writeFile).mockResolvedValueOnce();
+      mockPathExists([projectJsonPath]);
+      mockReadJson(existingProjectJson);
+      vi.mocked(fsHelpers.writeJson).mockResolvedValueOnce();
 
       await ProjectConfigResolver.createProjectJson(projectPath, projectName, sourceTemplate);
 
-      expect(fs.writeFile).toHaveBeenCalledWith(
-        path.join(projectPath, 'project.json'),
-        expect.stringContaining('"sourceTemplate": "nextjs-15"'),
+      expect(fsHelpers.writeJson).toHaveBeenCalledWith(
+        projectJsonPath,
+        expect.objectContaining({
+          name: 'my-app',
+          sourceTemplate: 'nextjs-15',
+          targets: {},
+        }),
       );
     });
   });

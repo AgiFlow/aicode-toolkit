@@ -1,5 +1,5 @@
 import * as path from 'node:path';
-import * as fs from 'fs-extra';
+import { pathExists, ensureDir, readFile, writeFile, readdir } from '@agiflowai/aicode-utils';
 import * as yaml from 'js-yaml';
 
 interface BoilerplateDefinition {
@@ -149,15 +149,15 @@ export class BoilerplateGeneratorService {
 
     // Create template directory
     const templatePath = path.join(this.templatesPath, templateName);
-    await fs.ensureDir(templatePath);
+    await ensureDir(templatePath);
 
     // Path to scaffold.yaml
     const scaffoldYamlPath = path.join(templatePath, 'scaffold.yaml');
 
     // Read existing scaffold.yaml if it exists
     let scaffoldConfig: ScaffoldConfig = {};
-    if (await fs.pathExists(scaffoldYamlPath)) {
-      const yamlContent = await fs.readFile(scaffoldYamlPath, 'utf-8');
+    if (await pathExists(scaffoldYamlPath)) {
+      const yamlContent = await readFile(scaffoldYamlPath, 'utf-8');
       scaffoldConfig = yaml.load(yamlContent) as ScaffoldConfig;
     }
 
@@ -216,7 +216,7 @@ export class BoilerplateGeneratorService {
     // Custom replacer to force literal block style for description and instruction
     const yamlContent = this.dumpYamlWithLiteralBlocks(scaffoldConfig);
 
-    await fs.writeFile(scaffoldYamlPath, yamlContent, 'utf-8');
+    await writeFile(scaffoldYamlPath, yamlContent, 'utf-8');
 
     return {
       success: true,
@@ -230,7 +230,7 @@ export class BoilerplateGeneratorService {
    * List all templates (directories in templates folder)
    */
   async listTemplates(): Promise<string[]> {
-    const entries = await fs.readdir(this.templatesPath, { withFileTypes: true });
+    const entries = await readdir(this.templatesPath, { withFileTypes: true });
     return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
   }
 
@@ -239,7 +239,7 @@ export class BoilerplateGeneratorService {
    */
   async templateExists(templateName: string): Promise<boolean> {
     const templatePath = path.join(this.templatesPath, templateName);
-    return fs.pathExists(templatePath);
+    return pathExists(templatePath);
   }
 
   /**
@@ -261,7 +261,7 @@ export class BoilerplateGeneratorService {
 
     // Validate template exists
     const templatePath = path.join(this.templatesPath, templateName);
-    if (!(await fs.pathExists(templatePath))) {
+    if (!(await pathExists(templatePath))) {
       return {
         success: false,
         message: `Template directory '${templateName}' does not exist at ${templatePath}`,
@@ -273,13 +273,13 @@ export class BoilerplateGeneratorService {
 
     if (sourceFile) {
       // Copy from source file
-      if (!(await fs.pathExists(sourceFile))) {
+      if (!(await pathExists(sourceFile))) {
         return {
           success: false,
           message: `Source file '${sourceFile}' does not exist`,
         };
       }
-      fileContent = await fs.readFile(sourceFile, 'utf-8');
+      fileContent = await readFile(sourceFile, 'utf-8');
     }
 
     if (!fileContent && !sourceFile) {
@@ -296,7 +296,7 @@ export class BoilerplateGeneratorService {
     const fullPath = path.join(templatePath, templateFilePath);
 
     // Ensure directory exists
-    await fs.ensureDir(path.dirname(fullPath));
+    await ensureDir(path.dirname(fullPath));
 
     // Prepend header if provided
     let finalContent = fileContent;
@@ -305,7 +305,7 @@ export class BoilerplateGeneratorService {
     }
 
     // Write the file
-    await fs.writeFile(fullPath, finalContent, 'utf-8');
+    await writeFile(fullPath, finalContent, 'utf-8');
 
     return {
       success: true,

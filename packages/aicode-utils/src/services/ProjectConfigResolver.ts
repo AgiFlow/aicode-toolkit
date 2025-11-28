@@ -22,9 +22,9 @@
  */
 
 import path from 'node:path';
-import * as fs from 'fs-extra';
 import { ConfigSource, ProjectType } from '../constants/projectType';
 import type { NxProjectJson, ProjectConfigResult, ToolkitConfig } from '../types';
+import { pathExists, readJson, writeJson } from '../utils/fsHelpers';
 import { log } from '../utils/logger';
 import { TemplatesManagerService } from './TemplatesManagerService';
 
@@ -67,8 +67,8 @@ export class ProjectConfigResolver {
 
       // 1. Check for project.json (monorepo)
       const projectJsonPath = path.join(absolutePath, 'project.json');
-      if (await fs.pathExists(projectJsonPath)) {
-        const projectJson = await fs.readJson(projectJsonPath);
+      if (await pathExists(projectJsonPath)) {
+        const projectJson = await readJson<NxProjectJson>(projectJsonPath);
 
         // Validate sourceTemplate is a non-empty string
         if (
@@ -208,9 +208,9 @@ Run 'scaffold-mcp scaffold list --help' for more info.`;
     try {
       let projectJson: NxProjectJson;
 
-      if (await fs.pathExists(projectJsonPath)) {
+      if (await pathExists(projectJsonPath)) {
         // Read existing project.json
-        projectJson = await fs.readJson(projectJsonPath);
+        projectJson = await readJson<NxProjectJson>(projectJsonPath);
       } else {
         // Create minimal project.json
         // Calculate relative path to node_modules for $schema
@@ -231,8 +231,7 @@ Run 'scaffold-mcp scaffold list --help' for more info.`;
       projectJson.sourceTemplate = sourceTemplate;
 
       // Write back to file
-      const content = JSON.stringify(projectJson, null, 2);
-      await fs.writeFile(projectJsonPath, `${content}\n`);
+      await writeJson(projectJsonPath, projectJson);
       log.info(`Created/updated project.json with sourceTemplate: ${sourceTemplate}`);
     } catch (error) {
       throw new Error(

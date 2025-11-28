@@ -1,8 +1,5 @@
 import { beforeEach, vi } from 'vitest';
 
-// Note: fs-extra mock is in tests/__mocks__/fs-extra.ts
-// Vitest will automatically use it when vi.mock('fs-extra') is called
-
 // Mock @modelcontextprotocol/sdk
 vi.mock('@modelcontextprotocol/sdk/server/index.js', () => {
   class MockServer {

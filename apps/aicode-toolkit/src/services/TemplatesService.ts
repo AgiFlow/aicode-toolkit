@@ -17,8 +17,7 @@
  */
 
 import path from 'node:path';
-import { messages, print } from '@agiflowai/aicode-utils';
-import * as fs from 'fs-extra';
+import { messages, print, pathExists, ensureDir, writeFile } from '@agiflowai/aicode-utils';
 import { cloneSubdirectory, fetchGitHubDirectoryContents } from '../utils/git';
 
 export interface TemplateRepoConfig {
@@ -64,7 +63,7 @@ export class TemplatesService {
         const targetFolder = path.join(templatesPath, template.name);
 
         // Skip if already exists
-        if (await fs.pathExists(targetFolder)) {
+        if (await pathExists(targetFolder)) {
           print.info(`Skipping ${template.name} (already exists)`);
           _skipped++;
           continue;
@@ -91,7 +90,7 @@ export class TemplatesService {
    */
   async initializeTemplatesFolder(templatesPath: string): Promise<void> {
     // Create templates directory
-    await fs.ensureDir(templatesPath);
+    await ensureDir(templatesPath);
 
     // Create README.md
     const readme = `# Templates
@@ -129,6 +128,6 @@ Template files use Liquid syntax for variable placeholders: \`{{ variableName }}
 See existing templates for examples and documentation for more details.
 `;
 
-    await fs.writeFile(path.join(templatesPath, 'README.md'), readme);
+    await writeFile(path.join(templatesPath, 'README.md'), readme);
   }
 }

@@ -14,29 +14,25 @@
  */
 
 import path from 'node:path';
-import * as fs from 'fs-extra';
+import * as fsHelpers from '@agiflowai/aicode-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TemplateRepoConfig } from '../../src/services/TemplatesService';
 import { TemplatesService } from '../../src/services/TemplatesService';
 
 // Mock dependencies
-vi.mock('fs-extra', () => ({
-  ensureDir: vi.fn(),
-  writeFile: vi.fn(),
-  pathExists: vi.fn(),
-  remove: vi.fn(),
-  mkdir: vi.fn(),
-}));
 vi.mock('../../src/utils/git', () => ({
   cloneSubdirectory: vi.fn(),
   fetchGitHubDirectoryContents: vi.fn(),
 }));
 
-// Mock print utilities (to avoid console output during tests)
+// Mock @agiflowai/aicode-utils including fs functions and print utilities
 vi.mock('@agiflowai/aicode-utils', async () => {
   const actual = await vi.importActual('@agiflowai/aicode-utils');
   return {
     ...actual,
+    pathExists: vi.fn(),
+    ensureDir: vi.fn(),
+    writeFile: vi.fn(),
     print: {
       info: vi.fn(),
       success: vi.fn(),
@@ -65,13 +61,13 @@ describe('TemplatesService', () => {
   describe('initializeTemplatesFolder', () => {
     it('should create templates directory and README', async () => {
       const templatesPath = '/path/to/templates';
-      vi.mocked(fs.ensureDir).mockResolvedValue(undefined);
-      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fsHelpers.ensureDir).mockResolvedValue(undefined);
+      vi.mocked(fsHelpers.writeFile).mockResolvedValue(undefined);
 
       await service.initializeTemplatesFolder(templatesPath);
 
-      expect(fs.ensureDir).toHaveBeenCalledWith(templatesPath);
-      expect(fs.writeFile).toHaveBeenCalledWith(
+      expect(fsHelpers.ensureDir).toHaveBeenCalledWith(templatesPath);
+      expect(fsHelpers.writeFile).toHaveBeenCalledWith(
         path.join(templatesPath, 'README.md'),
         expect.stringContaining('# Templates'),
       );
@@ -79,12 +75,12 @@ describe('TemplatesService', () => {
 
     it('should create README with proper content', async () => {
       const templatesPath = '/path/to/templates';
-      vi.mocked(fs.ensureDir).mockResolvedValue(undefined);
-      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fsHelpers.ensureDir).mockResolvedValue(undefined);
+      vi.mocked(fsHelpers.writeFile).mockResolvedValue(undefined);
 
       await service.initializeTemplatesFolder(templatesPath);
 
-      const writeFileCall = vi.mocked(fs.writeFile).mock.calls[0];
+      const writeFileCall = vi.mocked(fsHelpers.writeFile).mock.calls[0];
       const readmeContent = writeFileCall[1] as string;
 
       expect(readmeContent).toContain('# Templates');
@@ -131,7 +127,7 @@ describe('TemplatesService', () => {
       ];
 
       vi.mocked(fetchGitHubDirectoryContents).mockResolvedValue(mockTemplates);
-      vi.mocked(fs.pathExists).mockResolvedValue(false);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
       vi.mocked(cloneSubdirectory).mockResolvedValue(undefined);
 
       await service.downloadTemplates(templatesPath, mockRepoConfig);
@@ -158,7 +154,7 @@ describe('TemplatesService', () => {
 
       vi.mocked(fetchGitHubDirectoryContents).mockResolvedValue(mockTemplates);
       // First template exists, second doesn't
-      vi.mocked(fs.pathExists).mockImplementation((pathToCheck) =>
+      vi.mocked(fsHelpers.pathExists).mockImplementation((pathToCheck) =>
         Promise.resolve(pathToCheck === path.join(templatesPath, 'nextjs-15')),
       );
       vi.mocked(cloneSubdirectory).mockResolvedValue(undefined);
@@ -188,7 +184,7 @@ describe('TemplatesService', () => {
       ];
 
       vi.mocked(fetchGitHubDirectoryContents).mockResolvedValue(mockContents);
-      vi.mocked(fs.pathExists).mockResolvedValue(false);
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
       vi.mocked(cloneSubdirectory).mockResolvedValue(undefined);
 
       await service.downloadTemplates(templatesPath, mockRepoConfig);

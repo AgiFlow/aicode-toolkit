@@ -1,7 +1,14 @@
 import path from 'node:path';
-import { icons, messages, print, sections, TemplatesManagerService } from '@agiflowai/aicode-utils';
+import {
+  icons,
+  messages,
+  print,
+  sections,
+  TemplatesManagerService,
+  pathExists,
+  ensureDir,
+} from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
-import * as fs from 'fs-extra';
 import { cloneRepository, cloneSubdirectory, parseGitHubUrl } from '../utils';
 
 /**
@@ -33,14 +40,14 @@ export const addCommand = new Command('add')
       // Ensure templates folder exists
       const targetFolder = path.join(templatesPath, `${templateType}s`, templateName);
 
-      if (await fs.pathExists(targetFolder)) {
+      if (await pathExists(targetFolder)) {
         messages.error(`Template '${templateName}' already exists at ${targetFolder}`);
         process.exit(1);
       }
 
       print.info(`${icons.download} Downloading template '${templateName}' from ${templateUrl}...`);
 
-      await fs.ensureDir(path.dirname(targetFolder));
+      await ensureDir(path.dirname(targetFolder));
 
       // Parse URL to detect if it's a subdirectory
       const parsedUrl = parseGitHubUrl(templateUrl);
@@ -75,7 +82,7 @@ export const addCommand = new Command('add')
 
         let hasConfig = false;
         for (const configFile of configFiles) {
-          if (await fs.pathExists(configFile)) {
+          if (await pathExists(configFile)) {
             print.header(`\n${icons.config} Configuration file found:`);
             print.indent(path.basename(configFile));
             hasConfig = true;

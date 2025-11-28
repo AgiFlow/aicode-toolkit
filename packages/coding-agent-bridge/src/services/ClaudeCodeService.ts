@@ -23,8 +23,9 @@
  */
 
 import { execa } from 'execa';
-import * as fs from 'fs-extra';
+import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { pathExists } from '@agiflowai/aicode-utils';
 import * as readline from 'node:readline';
 import { v4 as uuidv4 } from 'uuid';
 import type {
@@ -47,6 +48,9 @@ interface ClaudeStreamMessage {
     content?: Array<{
       type: 'text' | 'tool_use';
       text?: string;
+      /** Tool use fields for structured output */
+      name?: string;
+      input?: Record<string, unknown>;
     }>;
     stop_reason?: string | null;
     usage?: {
@@ -61,6 +65,8 @@ interface ClaudeStreamMessage {
   duration_ms?: number;
   total_cost_usd?: number;
   usage?: any;
+  /** Structured output from JSON schema (in result message) */
+  structured_output?: Record<string, unknown>;
 }
 
 /**
@@ -108,7 +114,7 @@ export class ClaudeCodeService implements CodingAgentService {
     this.workspaceRoot = options?.workspaceRoot || process.cwd();
     this.claudePath = options?.claudePath || 'claude';
     this.defaultTimeout = options?.defaultTimeout || 60000; // 1 minute default
-    this.defaultModel = options?.defaultModel || 'claude-sonnet-4-20250514';
+    this.defaultModel = options?.defaultModel || 'claude-sonnet-4-5';
     this.defaultEnv = options?.defaultEnv || {
       DISABLE_TELEMETRY: '1',
       DISABLE_AUTOUPDATER: '1',
@@ -125,8 +131,8 @@ export class ClaudeCodeService implements CodingAgentService {
     const claudeFolder = path.join(this.workspaceRoot, '.claude');
     const claudeMdFile = path.join(this.workspaceRoot, 'CLAUDE.md');
 
-    const hasClaude = await fs.pathExists(claudeFolder);
-    const hasClaudeMd = await fs.pathExists(claudeMdFile);
+    const hasClaude = await pathExists(claudeFolder);
+    const hasClaudeMd = await pathExists(claudeMdFile);
 
     return hasClaude || hasClaudeMd;
   }
@@ -144,7 +150,7 @@ export class ClaudeCodeService implements CodingAgentService {
 
     // Read or create config
     let config: any = {};
-    if (await fs.pathExists(configPath)) {
+    if (await pathExists(configPath)) {
       const content = await fs.readFile(configPath, 'utf-8');
       config = JSON.parse(content);
     }
@@ -267,6 +273,15 @@ export class ClaudeCodeService implements CodingAgentService {
    * Executes Claude Code CLI with stream-json output format
    */
   async invokeAsLlm(params: LlmInvocationParams): Promise<LlmInvocationResponse> {
+    // Check if CLI exists
+    try {
+      await execa(this.claudePath, ['--version'], { timeout: 5000 });
+    } catch {
+      throw new Error(
+        `Claude Code CLI not found at path: ${this.claudePath}. Install it with: npm install -g @anthropic-ai/claude-code`,
+      );
+    }
+
     const sessionId = uuidv4();
 
     // Build command arguments for single-turn LLM invocation
@@ -290,6 +305,11 @@ export class ClaudeCodeService implements CodingAgentService {
     const systemPrompt = params.systemPrompt ?? this.promptConfig.systemPrompt;
     if (systemPrompt) {
       args.push('--system-prompt', systemPrompt);
+    }
+
+    // Apply JSON schema for structured output validation
+    if (params.jsonSchema) {
+      args.push('--json-schema', JSON.stringify(params.jsonSchema));
     }
 
     // Execute Claude CLI
@@ -319,6 +339,7 @@ export class ClaudeCodeService implements CodingAgentService {
 
     // Collect response data
     let responseContent = '';
+    let structuredOutput: Record<string, unknown> | null = null;
     let model = params.model || this.defaultModel;
     const usage = {
       inputTokens: 0,
@@ -349,15 +370,19 @@ export class ClaudeCodeService implements CodingAgentService {
         if (message.type === 'system' && message.model) {
           model = message.model;
         } else if (message.type === 'assistant' && message.message) {
-          // Extract text content from assistant messages
-          const textContent =
-            message.message.content
-              ?.filter((c) => c.type === 'text')
-              .map((c) => c.text)
-              .filter(Boolean)
-              .join('') || '';
-
-          responseContent += textContent;
+          // Extract text content and structured output from assistant messages
+          for (const content of message.message.content || []) {
+            if (content.type === 'text' && content.text) {
+              responseContent += content.text;
+            } else if (
+              content.type === 'tool_use' &&
+              content.name === 'StructuredOutput' &&
+              content.input
+            ) {
+              // Extract structured output from StructuredOutput tool use
+              structuredOutput = content.input;
+            }
+          }
 
           // Update usage stats
           if (message.message.usage) {
@@ -365,10 +390,14 @@ export class ClaudeCodeService implements CodingAgentService {
             usage.outputTokens = message.message.usage.output_tokens || 0;
           }
         } else if (message.type === 'result') {
-          // Final result with usage info
+          // Final result with usage info and structured output
           if (message.usage) {
             usage.inputTokens = message.usage.input_tokens || usage.inputTokens;
             usage.outputTokens = message.usage.output_tokens || usage.outputTokens;
+          }
+          // Extract structured output from result (most reliable source)
+          if (message.structured_output) {
+            structuredOutput = message.structured_output;
           }
         }
       }
@@ -380,8 +409,11 @@ export class ClaudeCodeService implements CodingAgentService {
       }
 
       // Return standard LLM response
+      // If structured output was requested and received, return it as JSON string
+      const content = structuredOutput ? JSON.stringify(structuredOutput) : responseContent.trim();
+
       return {
-        content: responseContent.trim(),
+        content,
         model,
         usage: {
           inputTokens: usage.inputTokens,

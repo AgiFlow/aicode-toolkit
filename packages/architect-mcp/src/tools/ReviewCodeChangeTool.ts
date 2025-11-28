@@ -22,13 +22,14 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Tool, ToolDefinition } from '../types/index.js';
 import { CodeReviewService } from '../services/CodeReviewService.js';
+import type { LlmToolId } from '@agiflowai/coding-agent-bridge';
 
 interface ReviewCodeChangeToolInput {
   file_path: string;
 }
 
 interface ReviewCodeChangeToolOptions {
-  llmTool?: string;
+  llmTool?: LlmToolId;
 }
 
 export class ReviewCodeChangeTool implements Tool<ReviewCodeChangeToolInput> {
