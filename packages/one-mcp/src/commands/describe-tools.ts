@@ -23,6 +23,7 @@
 import { Command } from 'commander';
 import { ConfigFetcherService } from '../services/ConfigFetcherService';
 import { McpClientManagerService } from '../services/McpClientManagerService';
+import { findConfigFile } from '../utils';
 
 /**
  * Describe specific MCP tools
@@ -35,14 +36,17 @@ export const describeToolsCommand = new Command('describe-tools')
   .option('-j, --json', 'Output as JSON', false)
   .action(async (toolNames: string[], options) => {
     try {
-      if (!options.config) {
-        console.error('Error: --config is required');
+      // Find config file: use provided path, or search PROJECT_PATH then cwd
+      const configFilePath = options.config || findConfigFile();
+
+      if (!configFilePath) {
+        console.error('Error: No config file found. Use --config or create mcp-config.yaml');
         process.exit(1);
       }
 
       // Initialize services
       const configFetcher = new ConfigFetcherService({
-        configFilePath: options.config,
+        configFilePath,
       });
 
       const config = await configFetcher.fetchConfiguration();
