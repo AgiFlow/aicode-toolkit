@@ -1,3 +1,27 @@
+## 1.0.4 (2025-11-28)
+
+### 🚀 Features
+
+- integrate OpenSpec and enhance init workflow UX ([a90481f](https://github.com/AgiFlow/aicode-toolkit/commit/a90481f))
+- **coding-agent-bridge:** scaffold new TypeScript library package ([a565aed](https://github.com/AgiFlow/aicode-toolkit/commit/a565aed))
+- **scaffold-mcp:** repo-type Support monolith vs mono-repo init ([e7b7ad8](https://github.com/AgiFlow/aicode-toolkit/commit/e7b7ad8))
+- **architect-mcp:** rules Add AddRuleTool to add global or template RULES.yaml. And ReviewCodeChangeTool to use RULES.yaml to identify code smell. ([232a3cc](https://github.com/AgiFlow/aicode-toolkit/commit/232a3cc))
+- **architect-mcp:** file-design-pattern Add cli and tools to add file design pattern to architect.yaml and retrieve file design  pattern. ([f0fae91](https://github.com/AgiFlow/aicode-toolkit/commit/f0fae91))
+- **aicode-utils:** shared-utils Add a new packages for shared utilities for toolkit. ([2f90e51](https://github.com/AgiFlow/aicode-toolkit/commit/2f90e51))
+
+### 🩹 Fixes
+
+- **aicode-toolkit:** remove remaining fs-extra references ([acf8205](https://github.com/AgiFlow/aicode-toolkit/commit/acf8205))
+- linting Fix error in linting and typechecking ([2c8a782](https://github.com/AgiFlow/aicode-toolkit/commit/2c8a782))
+- **aicode-utils:** replace JSON.parse with yaml.load for toolkit.yaml parsing ([8d4b751](https://github.com/AgiFlow/aicode-toolkit/commit/8d4b751))
+- correct README monolith documentation and improve terminal color visibility ([91d0a20](https://github.com/AgiFlow/aicode-toolkit/commit/91d0a20))
+- lint Fix lint errors ([c4ceffb](https://github.com/AgiFlow/aicode-toolkit/commit/c4ceffb))
+- Address code review feedback - type safety, validation, and error handling ([f75a451](https://github.com/AgiFlow/aicode-toolkit/commit/f75a451))
+
+### ❤️ Thank You
+
+- Vuong Ngo @AgiFlow
+
 ## 1.0.3 (2025-11-09)
 
 This was a version bump only for @agiflowai/aicode-utils to align it with other projects, there were no code changes.

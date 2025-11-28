@@ -1,3 +1,18 @@
+## 1.0.5 (2025-11-28)
+
+### 🩹 Fixes
+
+- **coding-agent-bridge:** use secure temporary file creation in CodexService ([22fe373](https://github.com/AgiFlow/aicode-toolkit/commit/22fe373))
+- resolve lint formatting issues ([ea43109](https://github.com/AgiFlow/aicode-toolkit/commit/ea43109))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.4
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.4 (2025-11-15)
 
 ### 🚀 Features

@@ -1,3 +1,18 @@
+## 0.2.2 (2025-11-28)
+
+### 🚀 Features
+
+- **one-mcp:** use prefixed tool names for clashing tools ([a8bca23](https://github.com/AgiFlow/aicode-toolkit/commit/a8bca23))
+- **one-mcp:** add PROJECT_PATH support for config file discovery ([0669b13](https://github.com/AgiFlow/aicode-toolkit/commit/0669b13))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.4
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.2.1 (2025-11-16)
 
 ### 🚀 Features
