@@ -35,7 +35,6 @@ import type {
   McpSettings,
   PromptConfig,
 } from '../types';
-import { CODEX_ENDPOINT } from '../constants/api';
 import { appendUniqueToFile, appendUniqueWithMarkers, writeFileEnsureDir } from '../utils/file';
 
 /**
@@ -279,10 +278,15 @@ export class CodexService implements CodingAgentService {
     }
 
     // Write JSON schema to temp file if provided
+    // Use fs.mkdtemp for secure temporary directory creation (atomic, random suffix)
+    let schemaTempDir: string | null = null;
     let schemaFilePath: string | null = null;
     if (params.jsonSchema) {
-      schemaFilePath = path.join(os.tmpdir(), `codex-schema-${Date.now()}.json`);
-      await fs.writeFile(schemaFilePath, JSON.stringify(params.jsonSchema, null, 2));
+      schemaTempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'codex-schema-'));
+      schemaFilePath = path.join(schemaTempDir, 'schema.json');
+      await fs.writeFile(schemaFilePath, JSON.stringify(params.jsonSchema, null, 2), {
+        mode: 0o600,
+      });
       args.push('--output-schema', schemaFilePath);
     }
 
@@ -399,10 +403,10 @@ export class CodexService implements CodingAgentService {
       throw new Error(`Failed to invoke Codex: ${String(error)}`);
     } finally {
       rl.close();
-      // Clean up temp schema file if created
-      if (schemaFilePath) {
+      // Clean up temp schema directory and file if created
+      if (schemaTempDir) {
         try {
-          await fs.unlink(schemaFilePath);
+          await fs.rm(schemaTempDir, { recursive: true, force: true });
         } catch {
           // Ignore cleanup errors
         }
