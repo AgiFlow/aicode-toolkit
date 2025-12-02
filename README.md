@@ -6,7 +6,7 @@
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg?style=flat-square)](https://opensource.org/licenses/AGPL-3.0)
 [![Discord](https://dcbadge.limes.pink/api/server/https://discord.gg/NsB6q9Vas9?style=flat-square)](https://discord.gg/NsB6q9Vas9)
 
-![AI Code Toolkit Banner](./docs/banner.png)
+![AI Code Toolkit Banner](./docs/workflow.jpg)
 
 A collection of [Model Context Protocol (MCP)](https://modelcontextprotocol.io) servers and tools that help AI coding agents maintain consistency, follow conventions, and scale with your codebase.
 
@@ -441,7 +441,7 @@ Unified CLI for initializing projects, managing templates, and configuring MCP s
 
 ### [@agiflowai/one-mcp](./packages/one-mcp)
 
-Unified MCP proxy server that enables progressive tool discovery to dramatically reduce token usage. Instead of loading all tools from all servers upfront (40,000+ tokens), agents load only 2 meta-tools initially (~400 tokens) and discover tools on-demand.
+MCP proxy server that enables progressive tool discovery to dramatically reduce token usage. Instead of loading all tools from all servers upfront, agents load only 2 meta-tools initially and discover tools on-demand.
 
 **Key Features:**
 - Progressive tool discovery (90%+ token reduction)
@@ -480,24 +480,6 @@ MCP server for architecture design, code quality enforcement, and design pattern
 - Multiple transport modes: stdio, HTTP, SSE
 
 [View full documentation →](./packages/architect-mcp/README.md)
-
-### [@agiflowai/coding-agent-bridge](./packages/coding-agent-bridge)
-
-Service layer for integrating with AI coding agents. Provides a unified interface for detecting, configuring, and invoking different coding assistants programmatically.
-
-**Key Features:**
-- Automatic coding agent detection (Claude Code, Cursor, Gemini CLI, etc.)
-- Unified interface for MCP configuration and custom instructions
-- LLM invocation API for using coding agents as pure LLMs
-- Agent-specific adapters with consistent API
-- Support for stdio, HTTP, and SSE transports
-
-**Currently Supported Coding Agents:**
-- **Claude Code** - Full support with `.mcp.json` configuration and CLAUDE.md/AGENTS.md instructions
-- **Cursor** - MCP configuration and .cursorrules instructions
-- **Gemini CLI** - .gemini workspace detection and configuration
-- **Codex CLI** - .codex workspace detection and configuration
-- **GitHub Copilot** - MCP support and .github/copilot-instructions.md
 
 **Coming Soon:**
 - Windsurf
