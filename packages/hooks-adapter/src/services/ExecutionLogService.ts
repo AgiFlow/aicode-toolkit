@@ -220,12 +220,13 @@ export class ExecutionLogService {
     filePath: string,
   ): Promise<{ mtime: number; checksum: string } | null> {
     try {
-      const [stats, content] = await Promise.all([
-        fs.stat(filePath),
-        fs.readFile(filePath, 'utf-8'),
-      ]);
-
+      // Read file content first to compute checksum - this is the authoritative value
+      // for detecting changes. We get mtime after for optimization purposes.
+      // Note: There's a theoretical race between read and stat, but the checksum
+      // (computed from actual content read) is what we use for change detection.
+      const content = await fs.readFile(filePath, 'utf-8');
       const checksum = crypto.createHash('md5').update(content).digest('hex');
+      const stats = await fs.stat(filePath);
 
       return {
         mtime: stats.mtimeMs,
