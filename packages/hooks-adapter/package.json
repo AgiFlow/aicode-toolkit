@@ -1,0 +1,47 @@
+{
+  "name": "@agiflowai/hooks-adapter",
+  "description": "Hook adapters for normalizing AI agent hook formats (Claude Code, Gemini, etc.)",
+  "version": "0.1.0",
+  "license": "AGPL-3.0",
+  "author": "AgiflowIO",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AgiFlow/aicode-toolkit.git",
+    "directory": "packages/hooks-adapter"
+  },
+  "homepage": "https://github.com/AgiFlow/aicode-toolkit#readme",
+  "bugs": {
+    "url": "https://github.com/AgiFlow/aicode-toolkit/issues"
+  },
+  "keywords": [
+    "typescript",
+    "library"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.cts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest --run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "tsdown": "^0.16.4",
+    "typescript": "5.9.3",
+    "vitest": "^3.0.0"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  }
+}

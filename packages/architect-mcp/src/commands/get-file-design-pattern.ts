@@ -28,11 +28,14 @@ import {
   isValidLlmTool,
   SUPPORTED_LLM_TOOLS,
 } from '@agiflowai/coding-agent-bridge';
+import { AdapterProxyService } from '@agiflowai/hooks-adapter';
+import { hookRegistry } from '../hooks/registry';
 
 interface GetFileDesignPatternOptions {
   verbose?: boolean;
   json?: boolean;
   llmTool?: string;
+  hook?: string;
 }
 
 /**
@@ -40,7 +43,7 @@ interface GetFileDesignPatternOptions {
  */
 export const getFileDesignPatternCommand = new Command('get-file-design-pattern')
   .description('Analyze a file against template-specific and global design patterns')
-  .argument('<file-path>', 'Path to the file to analyze')
+  .argument('[file-path]', 'Path to the file to analyze (optional if using --hook)')
   .option('-v, --verbose', 'Enable verbose output', false)
   .option('-j, --json', 'Output as JSON', false)
   .option(
@@ -48,8 +51,24 @@ export const getFileDesignPatternCommand = new Command('get-file-design-pattern'
     `Use LLM to filter relevant patterns. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
     undefined,
   )
-  .action(async (filePath: string, options: GetFileDesignPatternOptions) => {
+  .option(
+    '--hook <format>',
+    'Run in hook mode (format: AgentName.HookName, e.g., ClaudeCode.PreToolUse)',
+  )
+  .action(async (filePath: string | undefined, options: GetFileDesignPatternOptions) => {
     try {
+      // HOOK MODE: Delegate to AdapterProxy
+      if (options.hook) {
+        await AdapterProxyService.execute(options.hook, hookRegistry);
+        return;
+      }
+
+      // NORMAL CLI MODE: Use file-path argument
+      if (!filePath) {
+        print.error('file-path is required when not using --hook mode');
+        process.exit(1);
+      }
+
       if (options.verbose) {
         print.info(`Analyzing file: ${filePath}`);
         if (options.llmTool) {

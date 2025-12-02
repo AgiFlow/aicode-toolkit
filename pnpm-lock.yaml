@@ -164,6 +164,9 @@ importers:
       '@agiflowai/coding-agent-bridge':
         specifier: workspace:^
         version: link:../coding-agent-bridge
+      '@agiflowai/hooks-adapter':
+        specifier: workspace:^
+        version: link:../hooks-adapter
       '@modelcontextprotocol/sdk':
         specifier: 1.19.1
         version: 1.19.1
@@ -226,6 +229,24 @@ importers:
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
+      '@vitest/coverage-v8':
+        specifier: ^3.0.0
+        version: 3.2.4(vitest@3.2.4(@types/node@22.18.8)(jsdom@16.7.0)(lightningcss@1.30.1)(terser@5.44.0))
+      tsdown:
+        specifier: ^0.16.4
+        version: 0.16.4(ms@2.1.3)(oxc-resolver@11.9.0)(typescript@5.9.3)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.18.8)(jsdom@16.7.0)(lightningcss@1.30.1)(terser@5.44.0)
+
+  packages/hooks-adapter:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.18.8
       '@vitest/coverage-v8':
         specifier: ^3.0.0
         version: 3.2.4(vitest@3.2.4(@types/node@22.18.8)(jsdom@16.7.0)(lightningcss@1.30.1)(terser@5.44.0))

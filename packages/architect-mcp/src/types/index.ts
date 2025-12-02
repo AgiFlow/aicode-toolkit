@@ -144,7 +144,7 @@ export interface CodeReviewResult {
   source_template?: string;
   matched_rules?: RuleSection;
   review_feedback: string;
-  severity: 'LOW' | 'MEDIUM' | 'HIGH';
+  fix_required: boolean;
   issues_found: Array<{
     type: 'must_do' | 'should_do' | 'must_not_do';
     rule: string;

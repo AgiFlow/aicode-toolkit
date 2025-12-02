@@ -28,11 +28,14 @@ import {
   isValidLlmTool,
   SUPPORTED_LLM_TOOLS,
 } from '@agiflowai/coding-agent-bridge';
+import { AdapterProxyService } from '@agiflowai/hooks-adapter';
+import { hookRegistry } from '../hooks/registry';
 
 interface ReviewCodeChangeOptions {
   verbose?: boolean;
   json?: boolean;
   llmTool?: string;
+  hook?: string;
 }
 
 /**
@@ -42,7 +45,7 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
   .description(
     'Review code changes against template-specific and global rules to identify violations',
   )
-  .argument('<file-path>', 'Path to the file to review')
+  .argument('[file-path]', 'Path to the file to review (optional if using --hook)')
   .option('-v, --verbose', 'Enable verbose output', false)
   .option('-j, --json', 'Output as JSON', false)
   .option(
@@ -50,8 +53,24 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
     `LLM tool to use for code review. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
     'claude-code',
   )
-  .action(async (filePath: string, options: ReviewCodeChangeOptions) => {
+  .option(
+    '--hook <format>',
+    'Run in hook mode (format: AgentName.HookName, e.g., ClaudeCode.PostToolUse)',
+  )
+  .action(async (filePath: string | undefined, options: ReviewCodeChangeOptions) => {
     try {
+      // HOOK MODE: Delegate to AdapterProxy
+      if (options.hook) {
+        await AdapterProxyService.execute(options.hook, hookRegistry);
+        return;
+      }
+
+      // NORMAL CLI MODE: Use file-path argument
+      if (!filePath) {
+        print.error('file-path is required when not using --hook mode');
+        process.exit(1);
+      }
+
       if (options.verbose) {
         log.info('Reviewing file:', filePath);
         log.info('Using LLM tool:', options.llmTool);
@@ -106,13 +125,11 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
           print.info('');
         }
 
-        // Display severity
-        const severityEmoji: Record<string, string> = {
-          LOW: '🟢',
-          MEDIUM: '🟡',
-          HIGH: '🔴',
-        };
-        print.info(`### Review Result: ${severityEmoji[data.severity] || '⚪'} ${data.severity}\n`);
+        // Display fix required status
+        const fixRequiredStatus = data.fix_required
+          ? '🔴 Fix Required'
+          : '🟢 No Fixes Required';
+        print.info(`### Review Result: ${fixRequiredStatus}\n`);
 
         // Display feedback
         if (data.review_feedback) {

@@ -45,7 +45,7 @@ export class CodeReviewService {
       return {
         file_path: filePath,
         feedback: 'No project found for this file. Cannot determine coding standards.',
-        severity: 'LOW',
+        fix_required: false,
         identified_issues: [],
       };
     }
@@ -56,7 +56,7 @@ export class CodeReviewService {
         project_name: project.name,
         source_template: project.sourceTemplate,
         feedback: 'No RULES.yaml found for this template. Generic code review applied.',
-        severity: 'LOW',
+        fix_required: false,
         identified_issues: [],
       };
     }
@@ -67,7 +67,7 @@ export class CodeReviewService {
         project_name: project.name,
         source_template: project.sourceTemplate,
         feedback: 'No specific rules found for this file pattern.',
-        severity: 'LOW',
+        fix_required: false,
         identified_issues: [],
       };
     }
@@ -79,7 +79,7 @@ export class CodeReviewService {
         project_name: project.name,
         source_template: project.sourceTemplate,
         feedback: `Rules provided for agent review. LLM-based review not enabled. Supported tools: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
-        severity: 'LOW',
+        fix_required: false,
         identified_issues: [],
         rules: matchedRule, // Include the rules for the agent to use
       };
@@ -120,11 +120,6 @@ export class CodeReviewService {
           type: 'string',
           description: 'Short feedback about the code quality and compliance with rules (TEXT only)',
         },
-        severity: {
-          type: 'string',
-          enum: ['LOW', 'MEDIUM', 'HIGH'],
-          description: 'Severity level of the issues found',
-        },
         identified_issues: {
           type: 'array',
           items: {
@@ -153,7 +148,7 @@ export class CodeReviewService {
           },
         },
       },
-      required: ['feedback', 'severity', 'identified_issues'],
+      required: ['feedback', 'identified_issues'],
       additionalProperties: false,
     };
   }
@@ -166,7 +161,7 @@ export class CodeReviewService {
     filePath: string,
     rules: RuleSection,
     rulesConfig: RulesYamlConfig,
-  ): Promise<Pick<CodeReviewResult, 'feedback' | 'severity' | 'identified_issues'>> {
+  ): Promise<Pick<CodeReviewResult, 'feedback' | 'fix_required' | 'identified_issues'>> {
     if (!this.llmService) {
       throw new Error(
         `LLM service not initialized. Use llmTool with one of: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
@@ -192,7 +187,7 @@ export class CodeReviewService {
       log.error('Code review failed:', error);
       return {
         feedback: 'Code review failed due to an error.',
-        severity: 'LOW',
+        fix_required: false,
         identified_issues: [],
       };
     }
@@ -208,10 +203,10 @@ ${rulesConfig.description}
 
 Your task is to review code changes against specific rules and provide actionable feedback.
 
-Severity levels:
-- HIGH: Critical violations that will cause bugs or serious issues
-- MEDIUM: Violations of important should_do rules or minor must_do violations
-- LOW: Minor style or convention issues that don't affect functionality
+Issue types:
+- must_not_do: Critical violations that must be fixed (will cause bugs or serious issues)
+- must_do: Required patterns that are missing
+- should_do: Suggestions for improvement (best practices)
 
 You must respond with valid JSON that follows this exact JSON Schema:
 ${JSON.stringify(jsonSchema, null, 2)}
@@ -341,11 +336,19 @@ ${currentContent}`;
   }
 
   /**
+   * Compute fix_required from identified_issues
+   * Returns true if must_do or must_not_do violations exist, false otherwise
+   */
+  private computeFixRequired(issues: Array<{ type: string }>): boolean {
+    return issues.some((i) => i.type === 'must_do' || i.type === 'must_not_do');
+  }
+
+  /**
    * Parse the review response from LLM (supports Claude, Gemini, and other formats)
    */
   private parseReviewResponse(
     content: string,
-  ): Pick<CodeReviewResult, 'feedback' | 'severity' | 'identified_issues'> {
+  ): Pick<CodeReviewResult, 'feedback' | 'fix_required' | 'identified_issues'> {
     try {
       // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
       let cleanedContent = content.trim();
@@ -359,11 +362,11 @@ ${currentContent}`;
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
 
-        // Standard format: { feedback, severity, identified_issues }
-        if (parsed.feedback && parsed.severity && Array.isArray(parsed.identified_issues)) {
+        // Standard format: { feedback, identified_issues }
+        if (parsed.feedback && Array.isArray(parsed.identified_issues)) {
           return {
             feedback: parsed.feedback,
-            severity: parsed.severity as 'LOW' | 'MEDIUM' | 'HIGH',
+            fix_required: this.computeFixRequired(parsed.identified_issues),
             identified_issues: parsed.identified_issues,
           };
         }
@@ -387,14 +390,9 @@ ${currentContent}`;
             },
           );
 
-          // Determine severity based on issue types
-          const hasMustNotDo = issues.some((i: { type: string }) => i.type === 'must_not_do');
-          const hasMustDo = issues.some((i: { type: string }) => i.type === 'must_do');
-          const severity = hasMustNotDo ? 'HIGH' : hasMustDo ? 'MEDIUM' : 'LOW';
-
           return {
             feedback: this.generateFeedbackFromIssues(issues),
-            severity: severity as 'LOW' | 'MEDIUM' | 'HIGH',
+            fix_required: this.computeFixRequired(issues),
             identified_issues: issues,
           };
         }
@@ -423,16 +421,9 @@ ${currentContent}`;
             },
           );
 
-          // Determine severity based on status or issue types
-          const hasMustNotDo = issues.some((i: { type: string }) => i.type === 'must_not_do');
-          const hasMustDo = issues.some((i: { type: string }) => i.type === 'must_do');
-          let severity: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
-          if (parsed.status === 'fail' || hasMustNotDo) severity = 'HIGH';
-          else if (hasMustDo) severity = 'MEDIUM';
-
           return {
             feedback: this.generateFeedbackFromIssues(issues),
-            severity,
+            fix_required: this.computeFixRequired(issues),
             identified_issues: issues,
           };
         }
@@ -456,19 +447,9 @@ ${currentContent}`;
             },
           );
 
-          // Determine severity based on status or issue count
-          const status = parsed.review.status?.toUpperCase();
-          let severity: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
-          if (status === 'REQUEST_CHANGES' || issues.length > 2) {
-            severity = 'MEDIUM';
-          }
-          if (issues.some((i: { type: string }) => i.type === 'must_not_do')) {
-            severity = 'HIGH';
-          }
-
           return {
             feedback: this.generateFeedbackFromIssues(issues),
-            severity,
+            fix_required: this.computeFixRequired(issues),
             identified_issues: issues,
           };
         }
@@ -480,7 +461,7 @@ ${currentContent}`;
     // Fallback if parsing fails
     return {
       feedback: content,
-      severity: 'MEDIUM',
+      fix_required: false,
       identified_issues: [],
     };
   }
