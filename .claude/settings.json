@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ./packages/architect-mcp/src/cli.ts get-file-design-pattern --hook claude-code"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ./packages/architect-mcp/src/cli.ts review-code-change --hook claude-code"
+          }
+        ]
+      }
+    ]
+  }
+}

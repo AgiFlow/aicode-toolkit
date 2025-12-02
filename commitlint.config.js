@@ -7,6 +7,7 @@ module.exports = {
       [
         'aicode-toolkit',
         'aicode-utils',
+        'hooks-adapter',
         'coding-agent-bridge',
         'scaffold-mcp',
         'architect-mcp',

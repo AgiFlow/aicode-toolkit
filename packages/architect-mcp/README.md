@@ -125,6 +125,56 @@ Or if installed globally:
 }
 ```
 
+#### Claude Code Hooks Integration
+
+You can integrate architect-mcp with Claude Code's hook system to automatically provide design patterns before file edits and review code after changes. This provides real-time guidance without requiring manual MCP tool calls.
+
+**Add to your Claude Code settings (`.claude/settings.json` or `.claude/settings.local.json`):**
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx @agiflowai/architect-mcp get-file-design-pattern --hook claude-code"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx @agiflowai/architect-mcp review-code-change --hook claude-code"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**How hooks work:**
+
+- **PreToolUse (Edit|Write)**: Before Claude edits or writes a file, the hook provides relevant design patterns and coding standards. This helps Claude follow your project's architectural guidelines.
+
+- **PostToolUse (Edit|Write)**: After Claude edits or writes a file, the hook reviews the changes against your RULES.yaml. If violations are found, Claude receives feedback to fix them.
+
+**Hook decisions:**
+
+- `allow` - Proceed with the operation, optionally with guidance message
+- `deny` - Block the operation with an error message
+- `ask` - Prompt the user for confirmation
+- `skip` - Silently allow (no output to Claude)
+
+**Note:** The hooks use `@agiflowai/hooks-adapter` internally for normalized hook handling across different AI coding agents.
+
 #### Available MCP Tools
 
 **Standard Tools** (always available):

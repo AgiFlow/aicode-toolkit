@@ -9,6 +9,61 @@ import type {
 
 export class PatternMatcher {
   /**
+   * Quickly find matched file patterns (includes) for a file
+   * Returns the glob patterns that matched, useful for logging
+   *
+   * @param filePath - File path to check
+   * @param templateConfig - Template-specific architect config
+   * @param globalConfig - Global architect config
+   * @param projectRoot - Project root path for relative path calculation
+   * @returns Comma-separated string of matched file patterns
+   */
+  getMatchedFilePatterns(
+    filePath: string,
+    templateConfig: ArchitectConfig | null,
+    globalConfig: ArchitectConfig | null,
+    projectRoot?: string,
+  ): string {
+    const normalizedPath = this.normalizeFilePath(filePath, projectRoot);
+    const matchedPatterns: string[] = [];
+
+    // Check template-specific patterns first
+    if (templateConfig?.features) {
+      for (const feature of templateConfig.features) {
+        const matched = this.getMatchingIncludes(normalizedPath, feature.includes);
+        matchedPatterns.push(...matched);
+      }
+    }
+
+    // Check global patterns if no template matches found
+    if (matchedPatterns.length === 0 && globalConfig?.features) {
+      for (const feature of globalConfig.features) {
+        const matched = this.getMatchingIncludes(normalizedPath, feature.includes);
+        matchedPatterns.push(...matched);
+      }
+    }
+
+    return [...new Set(matchedPatterns)].join(',');
+  }
+
+  /**
+   * Get includes patterns that match a file path
+   */
+  private getMatchingIncludes(filePath: string, includes: string[]): string[] {
+    if (!includes || includes.length === 0) {
+      return [];
+    }
+
+    const matched: string[] = [];
+    for (const pattern of includes) {
+      if (minimatch(filePath, pattern)) {
+        matched.push(pattern);
+      }
+    }
+    return matched;
+  }
+
+  /**
    * Match a file against architect patterns
    */
   matchFileToPatterns(
