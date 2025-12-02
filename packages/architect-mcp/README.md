@@ -54,13 +54,13 @@ npx @agiflowai/architect-mcp mcp-serve --type http --port 3000 --admin-enable --
 - `-t, --type <type>`: Transport type: `stdio`, `http`, or `sse` (default: `stdio`)
 - `-p, --port <port>`: Port for HTTP/SSE servers (default: `3000`)
 - `--host <host>`: Host to bind to for HTTP/SSE (default: `localhost`)
-- `--design-pattern-tool <tool>`: LLM tool for design pattern analysis (currently only `claude-code` is supported)
-- `--review-tool <tool>`: LLM tool for code review (currently only `claude-code` is supported)
+- `--design-pattern-tool <tool>`: LLM tool for design pattern analysis (currently only `claude-code`, `gemini-cli` and `codex` is supported)
+- `--review-tool <tool>`: LLM tool for code review (currently only `claude-code`, `gemini-cli` and `codex` is supported)
 - `--admin-enable`: Enable admin tools for pattern and rule management
 
 **Note about LLM tools:**
 - When LLM tools are **not enabled**, the server returns design patterns and rules for the AI agent to analyze itself
-- When LLM tools are **enabled** (e.g., `--review-tool claude-code`), the server uses Claude Code CLI to perform the analysis
+- When LLM tools are **enabled** (e.g., `--review-tool claude-code`), the server uses Claude Code, Gemini CLI or Codex CLI to perform the analysis
 - This allows flexibility: let the AI agent do its own analysis, or use specialized LLM tools for deeper insights
 
 #### Claude Code Configuration
