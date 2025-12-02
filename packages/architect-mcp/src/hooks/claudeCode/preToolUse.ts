@@ -20,6 +20,9 @@
 import type { HookCallback, HookContext, HookResponse } from '@agiflowai/hooks-adapter';
 import { ExecutionLogService } from '@agiflowai/hooks-adapter';
 import { GetFileDesignPatternTool } from '../../tools/GetFileDesignPatternTool';
+import { TemplateFinder } from '../../services/TemplateFinder';
+import { ArchitectParser } from '../../services/ArchitectParser';
+import { PatternMatcher } from '../../services/PatternMatcher';
 
 /**
  * PreToolUse hook callback for Claude Code
@@ -39,15 +42,33 @@ export const preToolUseHook: HookCallback = async (
     };
   }
 
-  // Only process Edit/Write operations
-  if (!['edit', 'write'].includes(context.operation || '')) {
-    return {
-      decision: 'skip',
-      message: 'Not an edit operation',
-    };
-  }
-
   try {
+    // Get matched file patterns early for logging
+    const templateFinder = new TemplateFinder();
+    const architectParser = new ArchitectParser();
+    const patternMatcher = new PatternMatcher();
+
+    const templateMapping = await templateFinder.findTemplateForFile(context.filePath);
+    const templateConfig = templateMapping
+      ? await architectParser.parseArchitectFile(templateMapping.templatePath)
+      : null;
+    const globalConfig = await architectParser.parseGlobalArchitectFile();
+
+    const filePatterns = patternMatcher.getMatchedFilePatterns(
+      context.filePath,
+      templateConfig,
+      globalConfig,
+      templateMapping?.projectPath,
+    );
+
+    // If no patterns match, skip early
+    if (!filePatterns) {
+      return {
+        decision: 'skip',
+        message: 'No design patterns configured for this file',
+      };
+    }
+
     // Check if we already showed patterns for this file in this session
     const alreadyShown = await ExecutionLogService.hasExecuted(
       context.sessionId,
@@ -57,12 +78,13 @@ export const preToolUseHook: HookCallback = async (
 
     if (alreadyShown) {
       // Already showed patterns - skip hook and let Claude continue normally
-      await ExecutionLogService.logExecution(
-        context.sessionId,
-        context.filePath,
-        context.operation || 'unknown',
-        'skip',
-      );
+      await ExecutionLogService.logExecution({
+        sessionId: context.sessionId,
+        filePath: context.filePath,
+        operation: context.operation || 'unknown',
+        decision: 'skip',
+        filePattern: filePatterns,
+      });
 
       return {
         decision: 'skip',
@@ -81,12 +103,13 @@ export const preToolUseHook: HookCallback = async (
 
     if (result.isError) {
       // Error getting patterns - skip and let Claude continue
-      await ExecutionLogService.logExecution(
-        context.sessionId,
-        context.filePath,
-        context.operation || 'unknown',
-        'skip',
-      );
+      await ExecutionLogService.logExecution({
+        sessionId: context.sessionId,
+        filePath: context.filePath,
+        operation: context.operation || 'unknown',
+        decision: 'skip',
+        filePattern: filePatterns,
+      });
 
       return {
         decision: 'skip',
@@ -94,24 +117,30 @@ export const preToolUseHook: HookCallback = async (
       };
     }
 
+    // If no patterns matched, skip and let Claude continue normally
+    if (!data.matched_patterns || data.matched_patterns.length === 0) {
+      return {
+        decision: 'skip',
+        message: 'No specific patterns matched for this file',
+      };
+    }
+
     // Format patterns for LLM
     let message = 'You must follow these design patterns when editing/writing this file:\n\n';
+    message += `**Matched file patterns:** ${filePatterns}\n\n`;
 
-    if (data.matched_patterns && data.matched_patterns.length > 0) {
-      for (const pattern of data.matched_patterns) {
-        message += `**${pattern.design_pattern}**\n${pattern.description}\n\n`;
-      }
-    } else {
-      message += 'No specific patterns matched for this file.\n';
+    for (const pattern of data.matched_patterns) {
+      message += `**${pattern.design_pattern}**\n${pattern.description}\n\n`;
     }
 
     // Log that we showed patterns (decision: deny)
-    await ExecutionLogService.logExecution(
-      context.sessionId,
-      context.filePath,
-      context.operation || 'unknown',
-      'deny',
-    );
+    await ExecutionLogService.logExecution({
+      sessionId: context.sessionId,
+      filePath: context.filePath,
+      operation: context.operation || 'unknown',
+      decision: 'deny',
+      filePattern: filePatterns,
+    });
 
     // Return DENY so Claude sees the patterns
     // permissionDecisionReason is shown to Claude when decision is "deny"

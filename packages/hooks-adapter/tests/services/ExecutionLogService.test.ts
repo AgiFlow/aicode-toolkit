@@ -22,11 +22,7 @@ describe('ExecutionLogService', () => {
     test('returns false when log file does not exist', async () => {
       vi.mocked(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
 
-      const result = await ExecutionLogService.hasExecuted(
-        'session-123',
-        '/test/file.ts',
-        'deny'
-      );
+      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
 
       expect(result).toBe(false);
     });
@@ -42,11 +38,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await ExecutionLogService.hasExecuted(
-        'session-123',
-        '/test/file.ts',
-        'deny'
-      );
+      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
 
       expect(result).toBe(true);
     });
@@ -66,11 +58,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await ExecutionLogService.hasExecuted(
-        sessionId,
-        filePath,
-        decision
-      );
+      const result = await ExecutionLogService.hasExecuted(sessionId, filePath, decision);
 
       expect(result).toBe(false);
     });
@@ -84,11 +72,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
 
-      const result = await ExecutionLogService.hasExecuted(
-        'session-123',
-        '/test/file.ts',
-        'deny'
-      );
+      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
 
       expect(result).toBe(true);
     });
@@ -97,11 +81,7 @@ describe('ExecutionLogService', () => {
       const logContent = 'invalid json\n{"valid": "entry"}';
       vi.mocked(fs.readFile).mockResolvedValue(logContent);
 
-      const result = await ExecutionLogService.hasExecuted(
-        'session-123',
-        '/test/file.ts',
-        'deny'
-      );
+      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
 
       expect(result).toBe(false);
     });
@@ -110,11 +90,7 @@ describe('ExecutionLogService', () => {
       vi.mocked(fs.readFile).mockRejectedValue(new Error('Permission denied'));
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = await ExecutionLogService.hasExecuted(
-        'session-123',
-        '/test/file.ts',
-        'deny'
-      );
+      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
 
       expect(result).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalled();
@@ -125,12 +101,12 @@ describe('ExecutionLogService', () => {
     test('appends execution to log file', async () => {
       vi.mocked(fs.appendFile).mockResolvedValue(undefined);
 
-      await ExecutionLogService.logExecution(
-        'session-123',
-        '/test/file.ts',
-        'edit',
-        'deny'
-      );
+      await ExecutionLogService.logExecution({
+        sessionId: 'session-123',
+        filePath: '/test/file.ts',
+        operation: 'edit',
+        decision: 'deny',
+      });
 
       expect(fs.appendFile).toHaveBeenCalled();
       const callArgs = vi.mocked(fs.appendFile).mock.calls[0];
@@ -143,20 +119,43 @@ describe('ExecutionLogService', () => {
       expect(logData.timestamp).toBeDefined();
     });
 
+    test('appends execution with filePattern to log file', async () => {
+      vi.mocked(fs.appendFile).mockResolvedValue(undefined);
+
+      await ExecutionLogService.logExecution({
+        sessionId: 'session-123',
+        filePath: '/test/file.ts',
+        operation: 'edit',
+        decision: 'deny',
+        filePattern: 'service-class-pattern,barrel-export-pattern',
+      });
+
+      expect(fs.appendFile).toHaveBeenCalled();
+      const callArgs = vi.mocked(fs.appendFile).mock.calls[0];
+      const logData = JSON.parse(callArgs[1] as string);
+
+      expect(logData.sessionId).toBe('session-123');
+      expect(logData.filePath).toBe('/test/file.ts');
+      expect(logData.operation).toBe('edit');
+      expect(logData.decision).toBe('deny');
+      expect(logData.filePattern).toBe('service-class-pattern,barrel-export-pattern');
+      expect(logData.timestamp).toBeDefined();
+    });
+
     test('handles append errors gracefully', async () => {
       vi.mocked(fs.appendFile).mockRejectedValue(new Error('Disk full'));
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      await ExecutionLogService.logExecution(
-        'session-123',
-        '/test/file.ts',
-        'edit',
-        'deny'
-      );
+      await ExecutionLogService.logExecution({
+        sessionId: 'session-123',
+        filePath: '/test/file.ts',
+        operation: 'edit',
+        decision: 'deny',
+      });
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         'Failed to log hook execution:',
-        expect.any(Error)
+        expect.any(Error),
       );
     });
   });

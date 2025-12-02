@@ -1,10 +1,9 @@
 /**
- * AdapterProxyService - Routes hook execution to appropriate adapter and callback
+ * AdapterProxyService - Routes hook execution to appropriate adapter
  *
  * DESIGN PATTERNS:
  * - Proxy pattern: Routes requests to appropriate handlers
  * - Factory pattern: Creates adapter instances based on agent name
- * - Registry pattern: Accepts callback registry for extensibility
  *
  * CODING STANDARDS:
  * - Use static methods for stateless operations
@@ -17,16 +16,12 @@
  * - Complex conditional logic (use lookup tables)
  */
 
+import { CLAUDE_CODE } from '@agiflowai/coding-agent-bridge';
+import { POST_TOOL_USE, type HookType } from '../constants';
 import { ClaudeCodeAdapter } from '../adapters/ClaudeCodeAdapter';
 import { ClaudeCodePostToolUseAdapter } from '../adapters/ClaudeCodePostToolUseAdapter';
 import type { BaseAdapter } from '../adapters/BaseAdapter';
 import type { HookCallback } from '../types';
-
-/**
- * Hook callback registry
- * Maps "AgentName.HookName" to callback function
- */
-export type HookCallbackRegistry = Record<string, HookCallback>;
 
 /**
  * Proxy service for routing hook execution
@@ -34,52 +29,37 @@ export type HookCallbackRegistry = Record<string, HookCallback>;
  */
 export class AdapterProxyService {
   /**
-   * Execute hook mode: parse format, select adapter, select callback, execute
+   * Execute hook with the appropriate adapter for the agent
    *
-   * @param hookFormat - Format: "AgentName.HookName" (e.g., "ClaudeCode.PreToolUse")
-   * @param callbackRegistry - Registry of hook callbacks
+   * @param agentName - Agent identifier (e.g., "claude-code")
+   * @param hookType - Type of hook ("PreToolUse" or "PostToolUse")
+   * @param callback - Hook callback function to execute
    */
-  static async execute(hookFormat: string, callbackRegistry: HookCallbackRegistry): Promise<void> {
-    const [agentName, hookName] = hookFormat.split('.');
-
-    if (!agentName || !hookName) {
-      throw new Error('Invalid hook format. Use: AgentName.HookName (e.g., ClaudeCode.PreToolUse)');
-    }
-
-    // Select adapter based on agent name and hook type
-    const adapter = AdapterProxyService.getAdapter(agentName, hookName);
-
-    // Select hook callback from registry
-    const callback = callbackRegistry[hookFormat];
-    if (!callback) {
-      throw new Error(
-        `No callback registered for ${hookFormat}. Available: ${Object.keys(callbackRegistry).join(', ')}`,
-      );
-    }
-
-    // Execute (reads stdin, calls callback, writes stdout)
+  static async execute(
+    agentName: string,
+    hookType: HookType,
+    callback: HookCallback,
+  ): Promise<void> {
+    const adapter = AdapterProxyService.getAdapter(agentName, hookType);
     await adapter.execute(callback);
   }
 
   /**
-   * Get adapter instance for agent and hook
+   * Get adapter instance for agent and hook type
    *
-   * @param agentName - Name of the AI agent (e.g., "ClaudeCode")
-   * @param hookName - Name of the hook (e.g., "PreToolUse", "PostToolUse")
+   * @param agentName - Name of the AI agent (e.g., "claude-code")
+   * @param hookType - Type of hook ("PreToolUse" or "PostToolUse")
    * @returns Adapter instance
    */
-  private static getAdapter(agentName: string, hookName: string): BaseAdapter {
-    const agentLower = agentName.toLowerCase();
-
-    switch (agentLower) {
-      case 'claudecode':
-        // Use different adapters for different hooks
-        if (hookName === 'PostToolUse') {
+  private static getAdapter(agentName: string, hookType: HookType): BaseAdapter {
+    switch (agentName) {
+      case CLAUDE_CODE:
+        if (hookType === POST_TOOL_USE) {
           return new ClaudeCodePostToolUseAdapter();
         }
         return new ClaudeCodeAdapter();
       default:
-        throw new Error(`Unknown agent: ${agentName}. Supported: ClaudeCode`);
+        throw new Error(`Unknown agent: ${agentName}. Supported: ${CLAUDE_CODE}`);
     }
   }
 }

@@ -143,9 +143,9 @@ export interface CodeReviewResult {
   project_name?: string;
   source_template?: string;
   matched_rules?: RuleSection;
-  review_feedback: string;
+  feedback: string;
   fix_required: boolean;
-  issues_found: Array<{
+  identified_issues: Array<{
     type: 'must_do' | 'should_do' | 'must_not_do';
     rule: string;
     violation?: string;

@@ -243,6 +243,10 @@ importers:
         version: 3.2.4(@types/node@22.18.8)(jsdom@16.7.0)(lightningcss@1.30.1)(terser@5.44.0)
 
   packages/hooks-adapter:
+    dependencies:
+      '@agiflowai/coding-agent-bridge':
+        specifier: workspace:*
+        version: link:../coding-agent-bridge
     devDependencies:
       '@types/node':
         specifier: ^22.0.0

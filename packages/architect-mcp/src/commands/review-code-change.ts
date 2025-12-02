@@ -24,12 +24,13 @@ import { log, print } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 import { ReviewCodeChangeTool } from '../tools/ReviewCodeChangeTool';
 import {
+  CLAUDE_CODE,
   type LlmToolId,
   isValidLlmTool,
   SUPPORTED_LLM_TOOLS,
 } from '@agiflowai/coding-agent-bridge';
-import { AdapterProxyService } from '@agiflowai/hooks-adapter';
-import { hookRegistry } from '../hooks/registry';
+import { AdapterProxyService, POST_TOOL_USE } from '@agiflowai/hooks-adapter';
+import { postToolUseHook } from '../hooks/claudeCode/postToolUse';
 
 interface ReviewCodeChangeOptions {
   verbose?: boolean;
@@ -54,14 +55,14 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
     'claude-code',
   )
   .option(
-    '--hook <format>',
-    'Run in hook mode (format: AgentName.HookName, e.g., ClaudeCode.PostToolUse)',
+    '--hook <agent>',
+    'Run in hook mode for specified agent (e.g., claude-code)',
   )
   .action(async (filePath: string | undefined, options: ReviewCodeChangeOptions) => {
     try {
       // HOOK MODE: Delegate to AdapterProxy
       if (options.hook) {
-        await AdapterProxyService.execute(options.hook, hookRegistry);
+        await AdapterProxyService.execute(CLAUDE_CODE, POST_TOOL_USE, postToolUseHook);
         return;
       }
 

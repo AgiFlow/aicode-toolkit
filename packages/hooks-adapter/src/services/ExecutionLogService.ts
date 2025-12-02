@@ -20,6 +20,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import * as crypto from 'node:crypto';
 
 /**
  * Log entry structure for hook execution
@@ -30,6 +31,26 @@ interface HookLogEntry {
   filePath: string;
   operation: string;
   decision: string;
+  filePattern?: string;
+  /** File modification timestamp (mtime) at time of execution */
+  fileMtime?: number;
+  /** MD5 checksum of file content at time of execution */
+  fileChecksum?: string;
+}
+
+/**
+ * Input parameters for logging a hook execution
+ */
+export interface LogExecutionParams {
+  sessionId: string;
+  filePath: string;
+  operation: string;
+  decision: string;
+  filePattern?: string;
+  /** File modification timestamp (mtime) at time of execution */
+  fileMtime?: number;
+  /** MD5 checksum of file content at time of execution */
+  fileChecksum?: string;
 }
 
 /**
@@ -81,23 +102,18 @@ export class ExecutionLogService {
   /**
    * Log a hook execution
    *
-   * @param sessionId - Session identifier
-   * @param filePath - File path
-   * @param operation - Operation type (edit/write)
-   * @param decision - Hook decision (allow/deny/ask)
+   * @param params - Log execution parameters
    */
-  static async logExecution(
-    sessionId: string,
-    filePath: string,
-    operation: string,
-    decision: string,
-  ): Promise<void> {
+  static async logExecution(params: LogExecutionParams): Promise<void> {
     const entry: HookLogEntry = {
       timestamp: Date.now(),
-      sessionId,
-      filePath,
-      operation,
-      decision,
+      sessionId: params.sessionId,
+      filePath: params.filePath,
+      operation: params.operation,
+      decision: params.decision,
+      filePattern: params.filePattern,
+      fileMtime: params.fileMtime,
+      fileChecksum: params.fileChecksum,
     };
 
     // Append to log file (JSONL format - one JSON object per line)
@@ -192,5 +208,76 @@ export class ExecutionLogService {
       uniqueSessions: sessions.size,
       uniqueFiles: files.size,
     };
+  }
+
+  /**
+   * Get file metadata (mtime and checksum) for a file
+   *
+   * @param filePath - Path to the file
+   * @returns File metadata or null if file doesn't exist
+   */
+  static async getFileMetadata(
+    filePath: string,
+  ): Promise<{ mtime: number; checksum: string } | null> {
+    try {
+      const [stats, content] = await Promise.all([
+        fs.stat(filePath),
+        fs.readFile(filePath, 'utf-8'),
+      ]);
+
+      const checksum = crypto.createHash('md5').update(content).digest('hex');
+
+      return {
+        mtime: stats.mtimeMs,
+        checksum,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Check if a file has changed since the last execution for this session
+   * Returns true if the file should be reviewed (new file or content changed)
+   *
+   * @param sessionId - Session identifier
+   * @param filePath - File path to check
+   * @param decision - Decision type to check for
+   * @returns true if file has changed or no previous execution found
+   */
+  static async hasFileChanged(
+    sessionId: string,
+    filePath: string,
+    decision: string,
+  ): Promise<boolean> {
+    const entries = await ExecutionLogService.loadLog();
+
+    // Find the most recent execution for this session/file/decision
+    let lastExecution: HookLogEntry | null = null;
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const entry = entries[i];
+      if (
+        entry.sessionId === sessionId &&
+        entry.filePath === filePath &&
+        entry.decision === decision
+      ) {
+        lastExecution = entry;
+        break;
+      }
+    }
+
+    // No previous execution - file should be reviewed
+    if (!lastExecution || !lastExecution.fileChecksum) {
+      return true;
+    }
+
+    // Get current file metadata
+    const currentMetadata = await ExecutionLogService.getFileMetadata(filePath);
+    if (!currentMetadata) {
+      return true; // File doesn't exist, let hook handle it
+    }
+
+    // Compare checksum - if different, file has changed
+    return currentMetadata.checksum !== lastExecution.fileChecksum;
   }
 }

@@ -24,12 +24,13 @@ import { print } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 import { GetFileDesignPatternTool } from '../tools/GetFileDesignPatternTool';
 import {
+  CLAUDE_CODE,
   type LlmToolId,
   isValidLlmTool,
   SUPPORTED_LLM_TOOLS,
 } from '@agiflowai/coding-agent-bridge';
-import { AdapterProxyService } from '@agiflowai/hooks-adapter';
-import { hookRegistry } from '../hooks/registry';
+import { AdapterProxyService, PRE_TOOL_USE } from '@agiflowai/hooks-adapter';
+import { preToolUseHook } from '../hooks/claudeCode/preToolUse';
 
 interface GetFileDesignPatternOptions {
   verbose?: boolean;
@@ -52,14 +53,14 @@ export const getFileDesignPatternCommand = new Command('get-file-design-pattern'
     undefined,
   )
   .option(
-    '--hook <format>',
-    'Run in hook mode (format: AgentName.HookName, e.g., ClaudeCode.PreToolUse)',
+    '--hook <agent>',
+    'Run in hook mode for specified agent (e.g., claude-code)',
   )
   .action(async (filePath: string | undefined, options: GetFileDesignPatternOptions) => {
     try {
       // HOOK MODE: Delegate to AdapterProxy
       if (options.hook) {
-        await AdapterProxyService.execute(options.hook, hookRegistry);
+        await AdapterProxyService.execute(CLAUDE_CODE, PRE_TOOL_USE, preToolUseHook);
         return;
       }
 
