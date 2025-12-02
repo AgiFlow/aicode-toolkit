@@ -1,3 +1,9 @@
+## 1.0.6 (2025-12-02)
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.5
+
 ## 1.0.5 (2025-12-02)
 
 ### 🚀 Features

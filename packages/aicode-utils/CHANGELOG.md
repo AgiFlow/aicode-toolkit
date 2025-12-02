@@ -1,3 +1,7 @@
+## 1.0.5 (2025-12-02)
+
+This was a version bump only for @agiflowai/aicode-utils to align it with other projects, there were no code changes.
+
 ## 1.0.4 (2025-11-28)
 
 ### 🚀 Features
