@@ -1,10 +1,10 @@
 /**
- * PostToolUse Hook for Claude Code
+ * BeforeTool Hook for Gemini CLI
  *
  * DESIGN PATTERNS:
- * - Hook callback pattern: Executed after tool invocation
- * - Fail-open pattern: Errors don't block, just provide warnings
- * - Single responsibility: Only handles code review after edits
+ * - Hook callback pattern: Executed before tool invocation
+ * - Fail-open pattern: Errors allow operation to proceed with warning
+ * - Single responsibility: Only handles design pattern retrieval
  *
  * CODING STANDARDS:
  * - Export named callback function matching HookCallback signature
@@ -18,25 +18,20 @@
  */
 
 import type { HookCallback, HookContext, HookResponse } from '@agiflowai/hooks-adapter';
-import {
-  ExecutionLogService,
-  DECISION_SKIP,
-  DECISION_DENY,
-  DECISION_ALLOW,
-} from '@agiflowai/hooks-adapter';
-import { ReviewCodeChangeTool } from '../../tools/ReviewCodeChangeTool';
+import { ExecutionLogService, DECISION_SKIP, DECISION_DENY } from '@agiflowai/hooks-adapter';
+import { GetFileDesignPatternTool } from '../../tools/GetFileDesignPatternTool';
 import { TemplateFinder } from '../../services/TemplateFinder';
 import { ArchitectParser } from '../../services/ArchitectParser';
 import { PatternMatcher } from '../../services/PatternMatcher';
 
 /**
- * PostToolUse hook callback for Claude Code
- * Reviews code after file edit/write operations and provides feedback
+ * BeforeTool hook callback for Gemini CLI
+ * Provides design patterns before file edit/write operations
  *
  * @param context - Normalized hook context
- * @returns Hook response with code review feedback or skip
+ * @returns Hook response with design patterns or skip decision
  */
-export const postToolUseHook: HookCallback = async (
+export const beforeToolHook: HookCallback = async (
   context: HookContext,
 ): Promise<HookResponse> => {
   // Only process file operations
@@ -48,7 +43,7 @@ export const postToolUseHook: HookCallback = async (
   }
 
   try {
-    // Get matched file patterns for logging
+    // Get matched file patterns early for logging
     const templateFinder = new TemplateFinder();
     const architectParser = new ArchitectParser();
     const patternMatcher = new PatternMatcher();
@@ -66,25 +61,39 @@ export const postToolUseHook: HookCallback = async (
       templateMapping?.projectPath,
     );
 
-    // Get current file metadata for change detection
-    const fileMetadata = await ExecutionLogService.getFileMetadata(context.filePath);
-
-    // Check if file has changed since last review (skip if unchanged)
-    const fileChanged = await ExecutionLogService.hasFileChanged(
-      context.sessionId,
-      context.filePath,
-      DECISION_ALLOW, // Check against last successful review
-    );
-
-    if (!fileChanged) {
+    // If no patterns match, skip early
+    if (!filePatterns) {
       return {
         decision: DECISION_SKIP,
-        message: 'File unchanged since last review',
+        message: 'No design patterns configured for this file',
       };
     }
 
-    // Execute: Review the code change
-    const tool = new ReviewCodeChangeTool({
+    // Check if we already showed patterns for this file in this session
+    const alreadyShown = await ExecutionLogService.hasExecuted(
+      context.sessionId,
+      context.filePath,
+      DECISION_DENY, // 'deny' means we showed patterns
+    );
+
+    if (alreadyShown) {
+      // Already showed patterns - skip hook and let Gemini continue normally
+      await ExecutionLogService.logExecution({
+        sessionId: context.sessionId,
+        filePath: context.filePath,
+        operation: context.operation || 'unknown',
+        decision: DECISION_SKIP,
+        filePattern: filePatterns,
+      });
+
+      return {
+        decision: DECISION_SKIP,
+        message: 'Design patterns already provided for this file',
+      };
+    }
+
+    // First edit - get design patterns and deny to show them to Gemini
+    const tool = new GetFileDesignPatternTool({
       llmTool: context.llmTool as any, // Type will be validated by the tool
     });
     const result = await tool.execute({ file_path: context.filePath });
@@ -93,62 +102,54 @@ export const postToolUseHook: HookCallback = async (
     const data = JSON.parse(result.content[0].text as string);
 
     if (result.isError) {
-      // Error reviewing code - skip and let Claude continue
+      // Error getting patterns - skip and let Gemini continue
       await ExecutionLogService.logExecution({
         sessionId: context.sessionId,
         filePath: context.filePath,
         operation: context.operation || 'unknown',
         decision: DECISION_SKIP,
         filePattern: filePatterns,
-        fileMtime: fileMetadata?.mtime,
-        fileChecksum: fileMetadata?.checksum,
       });
 
       return {
         decision: DECISION_SKIP,
-        message: `⚠️ Could not review code: ${data.error}`,
+        message: `⚠️ Could not load design patterns: ${data.error}`,
       };
     }
 
-    // If fixes are required (must_do or must_not_do violations), block with full response
-    if (data.fix_required) {
-      await ExecutionLogService.logExecution({
-        sessionId: context.sessionId,
-        filePath: context.filePath,
-        operation: context.operation || 'unknown',
-        decision: DECISION_DENY,
-        filePattern: filePatterns,
-        fileMtime: fileMetadata?.mtime,
-        fileChecksum: fileMetadata?.checksum,
-      });
-
+    // If no patterns matched, skip and let Gemini continue normally
+    if (!data.matched_patterns || data.matched_patterns.length === 0) {
       return {
-        decision: DECISION_DENY, // Will map to 'block' in PostToolUse output
-        message: JSON.stringify(data, null, 2), // Full AI response
+        decision: DECISION_SKIP,
+        message: 'No specific patterns matched for this file',
       };
     }
 
-    // Otherwise (no fix required), provide feedback and issues without blocking
-    // decision: 'allow' means additionalContext is used, not blocking
+    // Format patterns for LLM
+    let message = 'You must follow these design patterns when editing/writing this file:\n\n';
+    message += `**Matched file patterns:** ${filePatterns}\n\n`;
+
+    for (const pattern of data.matched_patterns) {
+      message += `**${pattern.design_pattern}**\n${pattern.description}\n\n`;
+    }
+
+    // Log that we showed patterns (decision: deny)
     await ExecutionLogService.logExecution({
       sessionId: context.sessionId,
       filePath: context.filePath,
       operation: context.operation || 'unknown',
-      decision: DECISION_ALLOW,
+      decision: DECISION_DENY,
       filePattern: filePatterns,
-      fileMtime: fileMetadata?.mtime,
-      fileChecksum: fileMetadata?.checksum,
     });
 
+    // Return DENY so Gemini sees the patterns
+    // In Gemini CLI, this will block the tool and show the message to the LLM
     return {
-      decision: DECISION_ALLOW,
-      message: JSON.stringify({
-        feedback: data.feedback,
-        identified_issues: data.identified_issues,
-      }, null, 2),
+      decision: DECISION_DENY,
+      message,
     };
   } catch (error) {
-    // Fail open: skip hook and let Claude continue
+    // Fail open: skip hook and let Gemini continue
     return {
       decision: DECISION_SKIP,
       message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,

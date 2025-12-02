@@ -45,11 +45,16 @@ export interface HookContext {
 }
 
 /**
+ * Normalized decision types for hook responses
+ */
+export type Decision = 'allow' | 'deny' | 'ask' | 'skip';
+
+/**
  * Normalized response from hook callback function
  */
 export interface HookResponse {
   /** Permission decision for the tool execution */
-  decision: 'allow' | 'deny' | 'ask' | 'skip';
+  decision: Decision;
 
   /** Message shown to the LLM (e.g., design patterns, warnings) */
   message: string;

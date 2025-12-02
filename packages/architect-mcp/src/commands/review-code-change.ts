@@ -25,12 +25,14 @@ import { Command } from 'commander';
 import { ReviewCodeChangeTool } from '../tools/ReviewCodeChangeTool';
 import {
   CLAUDE_CODE,
+  GEMINI_CLI,
   type LlmToolId,
   isValidLlmTool,
   SUPPORTED_LLM_TOOLS,
 } from '@agiflowai/coding-agent-bridge';
-import { AdapterProxyService, POST_TOOL_USE } from '@agiflowai/hooks-adapter';
+import { ClaudeCodePostToolUseAdapter, GeminiCliAdapter } from '@agiflowai/hooks-adapter';
 import { postToolUseHook } from '../hooks/claudeCode/postToolUse';
+import { afterToolHook } from '../hooks/geminiCli/afterTool';
 
 interface ReviewCodeChangeOptions {
   verbose?: boolean;
@@ -56,13 +58,22 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
   )
   .option(
     '--hook <agent>',
-    'Run in hook mode for specified agent (e.g., claude-code)',
+    'Run in hook mode for specified agent (e.g., claude-code, gemini-cli)',
   )
   .action(async (filePath: string | undefined, options: ReviewCodeChangeOptions) => {
     try {
-      // HOOK MODE: Delegate to AdapterProxy
+      // HOOK MODE: Use adapter directly
       if (options.hook) {
-        await AdapterProxyService.execute(CLAUDE_CODE, POST_TOOL_USE, postToolUseHook);
+        if (options.hook === CLAUDE_CODE) {
+          const adapter = new ClaudeCodePostToolUseAdapter();
+          await adapter.execute(postToolUseHook);
+        } else if (options.hook === GEMINI_CLI) {
+          const adapter = new GeminiCliAdapter();
+          await adapter.execute(afterToolHook);
+        } else {
+          print.error(`Unsupported hook agent: ${options.hook}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);
+          process.exit(1);
+        }
         return;
       }
 

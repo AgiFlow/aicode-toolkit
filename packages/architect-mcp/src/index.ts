@@ -43,3 +43,7 @@ export {
   PatternMatcher,
   RuleFinder,
 } from './services/index';
+
+// Hooks - Gemini CLI integration
+export { beforeToolHook as geminiCliBeforeToolHook } from './hooks/geminiCli/beforeTool';
+export { afterToolHook as geminiCliAfterToolHook } from './hooks/geminiCli/afterTool';

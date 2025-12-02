@@ -244,6 +244,9 @@ importers:
 
   packages/hooks-adapter:
     dependencies:
+      '@agiflowai/aicode-utils':
+        specifier: workspace:*
+        version: link:../aicode-utils
       '@agiflowai/coding-agent-bridge':
         specifier: workspace:*
         version: link:../coding-agent-bridge

@@ -30,7 +30,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@agiflowai/coding-agent-bridge": "workspace:*"
+    "@agiflowai/coding-agent-bridge": "workspace:*",
+    "@agiflowai/aicode-utils": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

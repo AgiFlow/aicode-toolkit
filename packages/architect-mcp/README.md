@@ -175,6 +175,49 @@ You can integrate architect-mcp with Claude Code's hook system to automatically 
 
 **Note:** The hooks use `@agiflowai/hooks-adapter` internally for normalized hook handling across different AI coding agents.
 
+#### Gemini CLI Hooks Integration
+
+You can integrate architect-mcp with [Gemini CLI's hook system](https://geminicli.com/docs/get-started/configuration/) to automatically provide design patterns before file edits and review code after changes.
+
+**Prerequisites:**
+- Enable the [message bus integration](https://geminicli.com/docs/integrations/message-bus/) in Gemini CLI
+- Enable hooks in your Gemini CLI settings
+
+**Add to your Gemini CLI settings (`~/.config/gemini-cli/settings.json`):**
+
+```json
+{
+  "tools": {
+    "enableMessageBusIntegration": true,
+    "enableHooks": true
+  },
+  "hooks": {
+    "BeforeTool": {
+      "command": "npx @agiflowai/architect-mcp get-file-design-pattern --hook gemini-cli",
+      "matchers": ["write", "edit"]
+    },
+    "AfterTool": {
+      "command": "npx @agiflowai/architect-mcp review-code-change --hook gemini-cli",
+      "matchers": ["write", "edit"]
+    }
+  }
+}
+```
+
+**How Gemini CLI hooks work:**
+
+- **BeforeTool (write|edit)**: Before Gemini writes or edits a file, the hook provides relevant design patterns and coding standards. This helps Gemini follow your project's architectural guidelines.
+
+- **AfterTool (write|edit)**: After Gemini writes or edits a file, the hook reviews the changes against your RULES.yaml. If violations are found, Gemini receives feedback to fix them.
+
+**Hook decisions:**
+
+- `ALLOW` - Proceed with the operation, optionally with guidance message
+- `DENY` - Block the operation with an error message
+- `ASK_USER` - Prompt the user for confirmation
+
+**Note:** The hooks use `@agiflowai/hooks-adapter` internally for normalized hook handling across different AI coding agents.
+
 #### Available MCP Tools
 
 **Standard Tools** (always available):
@@ -243,6 +286,26 @@ architect-mcp review-code-change src/services/UserService.ts --llm-tool claude-c
 # Output as JSON
 architect-mcp review-code-change src/services/UserService.ts --json
 ```
+
+#### Hook Commands
+
+architect-mcp supports hook mode for integration with AI coding agents like Claude Code and Gemini CLI:
+
+```bash
+# Run in Claude Code hook mode (reads from stdin, writes to stdout)
+architect-mcp get-file-design-pattern --hook claude-code
+
+# Run in Gemini CLI hook mode (reads from stdin, writes to stdout)
+architect-mcp get-file-design-pattern --hook gemini-cli
+
+# Review code in Claude Code hook mode
+architect-mcp review-code-change --hook claude-code
+
+# Review code in Gemini CLI hook mode
+architect-mcp review-code-change --hook gemini-cli
+```
+
+**Note:** Hook commands are typically called by the AI agent's hook system, not directly by users. The commands read tool use context from stdin (JSON format) and write hook responses to stdout.
 
 #### Pattern Management Commands
 

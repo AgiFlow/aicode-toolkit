@@ -1,5 +1,5 @@
 /**
- * PostToolUse Hook for Claude Code
+ * AfterTool Hook for Gemini CLI
  *
  * DESIGN PATTERNS:
  * - Hook callback pattern: Executed after tool invocation
@@ -18,25 +18,20 @@
  */
 
 import type { HookCallback, HookContext, HookResponse } from '@agiflowai/hooks-adapter';
-import {
-  ExecutionLogService,
-  DECISION_SKIP,
-  DECISION_DENY,
-  DECISION_ALLOW,
-} from '@agiflowai/hooks-adapter';
+import { ExecutionLogService, DECISION_SKIP, DECISION_DENY, DECISION_ALLOW } from '@agiflowai/hooks-adapter';
 import { ReviewCodeChangeTool } from '../../tools/ReviewCodeChangeTool';
 import { TemplateFinder } from '../../services/TemplateFinder';
 import { ArchitectParser } from '../../services/ArchitectParser';
 import { PatternMatcher } from '../../services/PatternMatcher';
 
 /**
- * PostToolUse hook callback for Claude Code
+ * AfterTool hook callback for Gemini CLI
  * Reviews code after file edit/write operations and provides feedback
  *
  * @param context - Normalized hook context
  * @returns Hook response with code review feedback or skip
  */
-export const postToolUseHook: HookCallback = async (
+export const afterToolHook: HookCallback = async (
   context: HookContext,
 ): Promise<HookResponse> => {
   // Only process file operations
@@ -93,7 +88,7 @@ export const postToolUseHook: HookCallback = async (
     const data = JSON.parse(result.content[0].text as string);
 
     if (result.isError) {
-      // Error reviewing code - skip and let Claude continue
+      // Error reviewing code - skip and let Gemini continue
       await ExecutionLogService.logExecution({
         sessionId: context.sessionId,
         filePath: context.filePath,
@@ -122,14 +117,15 @@ export const postToolUseHook: HookCallback = async (
         fileChecksum: fileMetadata?.checksum,
       });
 
+      // For Gemini CLI AfterTool hooks, deny will block and show message
       return {
-        decision: DECISION_DENY, // Will map to 'block' in PostToolUse output
+        decision: DECISION_DENY,
         message: JSON.stringify(data, null, 2), // Full AI response
       };
     }
 
     // Otherwise (no fix required), provide feedback and issues without blocking
-    // decision: 'allow' means additionalContext is used, not blocking
+    // decision: 'allow' provides context to Gemini without blocking
     await ExecutionLogService.logExecution({
       sessionId: context.sessionId,
       filePath: context.filePath,
@@ -148,7 +144,7 @@ export const postToolUseHook: HookCallback = async (
       }, null, 2),
     };
   } catch (error) {
-    // Fail open: skip hook and let Claude continue
+    // Fail open: skip hook and let Gemini continue
     return {
       decision: DECISION_SKIP,
       message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,

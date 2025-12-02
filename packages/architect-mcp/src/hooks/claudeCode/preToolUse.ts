@@ -18,7 +18,11 @@
  */
 
 import type { HookCallback, HookContext, HookResponse } from '@agiflowai/hooks-adapter';
-import { ExecutionLogService } from '@agiflowai/hooks-adapter';
+import {
+  ExecutionLogService,
+  DECISION_SKIP,
+  DECISION_DENY,
+} from '@agiflowai/hooks-adapter';
 import { GetFileDesignPatternTool } from '../../tools/GetFileDesignPatternTool';
 import { TemplateFinder } from '../../services/TemplateFinder';
 import { ArchitectParser } from '../../services/ArchitectParser';
@@ -37,7 +41,7 @@ export const preToolUseHook: HookCallback = async (
   // Only process file operations
   if (!context.filePath) {
     return {
-      decision: 'skip',
+      decision: DECISION_SKIP,
       message: 'Not a file operation',
     };
   }
@@ -64,7 +68,7 @@ export const preToolUseHook: HookCallback = async (
     // If no patterns match, skip early
     if (!filePatterns) {
       return {
-        decision: 'skip',
+        decision: DECISION_SKIP,
         message: 'No design patterns configured for this file',
       };
     }
@@ -73,7 +77,7 @@ export const preToolUseHook: HookCallback = async (
     const alreadyShown = await ExecutionLogService.hasExecuted(
       context.sessionId,
       context.filePath,
-      'deny', // 'deny' means we showed patterns
+      DECISION_DENY, // 'deny' means we showed patterns
     );
 
     if (alreadyShown) {
@@ -82,12 +86,12 @@ export const preToolUseHook: HookCallback = async (
         sessionId: context.sessionId,
         filePath: context.filePath,
         operation: context.operation || 'unknown',
-        decision: 'skip',
+        decision: DECISION_SKIP,
         filePattern: filePatterns,
       });
 
       return {
-        decision: 'skip',
+        decision: DECISION_SKIP,
         message: 'Design patterns already provided for this file',
       };
     }
@@ -107,12 +111,12 @@ export const preToolUseHook: HookCallback = async (
         sessionId: context.sessionId,
         filePath: context.filePath,
         operation: context.operation || 'unknown',
-        decision: 'skip',
+        decision: DECISION_SKIP,
         filePattern: filePatterns,
       });
 
       return {
-        decision: 'skip',
+        decision: DECISION_SKIP,
         message: `⚠️ Could not load design patterns: ${data.error}`,
       };
     }
@@ -120,7 +124,7 @@ export const preToolUseHook: HookCallback = async (
     // If no patterns matched, skip and let Claude continue normally
     if (!data.matched_patterns || data.matched_patterns.length === 0) {
       return {
-        decision: 'skip',
+        decision: DECISION_SKIP,
         message: 'No specific patterns matched for this file',
       };
     }
@@ -138,20 +142,20 @@ export const preToolUseHook: HookCallback = async (
       sessionId: context.sessionId,
       filePath: context.filePath,
       operation: context.operation || 'unknown',
-      decision: 'deny',
+      decision: DECISION_DENY,
       filePattern: filePatterns,
     });
 
     // Return DENY so Claude sees the patterns
     // permissionDecisionReason is shown to Claude when decision is "deny"
     return {
-      decision: 'deny',
+      decision: DECISION_DENY,
       message,
     };
   } catch (error) {
     // Fail open: skip hook and let Claude continue
     return {
-      decision: 'skip',
+      decision: DECISION_SKIP,
       message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,
     };
   }

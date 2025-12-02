@@ -25,12 +25,14 @@ import { Command } from 'commander';
 import { GetFileDesignPatternTool } from '../tools/GetFileDesignPatternTool';
 import {
   CLAUDE_CODE,
+  GEMINI_CLI,
   type LlmToolId,
   isValidLlmTool,
   SUPPORTED_LLM_TOOLS,
 } from '@agiflowai/coding-agent-bridge';
-import { AdapterProxyService, PRE_TOOL_USE } from '@agiflowai/hooks-adapter';
+import { ClaudeCodeAdapter, GeminiCliAdapter } from '@agiflowai/hooks-adapter';
 import { preToolUseHook } from '../hooks/claudeCode/preToolUse';
+import { beforeToolHook } from '../hooks/geminiCli/beforeTool';
 
 interface GetFileDesignPatternOptions {
   verbose?: boolean;
@@ -54,13 +56,22 @@ export const getFileDesignPatternCommand = new Command('get-file-design-pattern'
   )
   .option(
     '--hook <agent>',
-    'Run in hook mode for specified agent (e.g., claude-code)',
+    'Run in hook mode for specified agent (e.g., claude-code, gemini-cli)',
   )
   .action(async (filePath: string | undefined, options: GetFileDesignPatternOptions) => {
     try {
-      // HOOK MODE: Delegate to AdapterProxy
+      // HOOK MODE: Use adapter directly
       if (options.hook) {
-        await AdapterProxyService.execute(CLAUDE_CODE, PRE_TOOL_USE, preToolUseHook);
+        if (options.hook === CLAUDE_CODE) {
+          const adapter = new ClaudeCodeAdapter();
+          await adapter.execute(preToolUseHook);
+        } else if (options.hook === GEMINI_CLI) {
+          const adapter = new GeminiCliAdapter();
+          await adapter.execute(beforeToolHook);
+        } else {
+          print.error(`Unsupported hook agent: ${options.hook}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);
+          process.exit(1);
+        }
         return;
       }
 

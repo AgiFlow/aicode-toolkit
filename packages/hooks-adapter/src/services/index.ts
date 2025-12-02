@@ -14,9 +14,8 @@
  * - Circular dependencies between modules
  */
 
+// Export execution logging service
 export {
   ExecutionLogService,
   type LogExecutionParams,
 } from './ExecutionLogService';
-
-export { AdapterProxyService } from './AdapterProxyService';
