@@ -24,6 +24,7 @@ import {
   DECISION_DENY,
   DECISION_ALLOW,
 } from '@agiflowai/hooks-adapter';
+import { CLAUDE_CODE } from '@agiflowai/coding-agent-bridge';
 import { ReviewCodeChangeTool } from '../../tools/ReviewCodeChangeTool';
 import { TemplateFinder } from '../../services/TemplateFinder';
 import { ArchitectParser } from '../../services/ArchitectParser';
@@ -109,8 +110,9 @@ export const postToolUseHook: HookCallback = async (
     }
 
     // Execute: Review the code change
+    // Use context.llmTool if provided, otherwise fallback to CLAUDE_CODE constant
     const tool = new ReviewCodeChangeTool({
-      llmTool: context.llmTool as any, // Type will be validated by the tool
+      llmTool: (context.llmTool || CLAUDE_CODE) as any, // Type will be validated by the tool
     });
     const result = await tool.execute({ file_path: context.filePath });
 

@@ -160,6 +160,15 @@ export const postToolUseHook: HookCallback = async (
   context: HookContext,
 ): Promise<HookResponse> => {
   try {
+    // Check if this is a use-scaffold-method tool execution
+    if (context.toolName === 'use-scaffold-method') {
+      await processPendingScaffoldLogs(context.sessionId);
+      return {
+        decision: DECISION_ALLOW,
+        message: 'Scaffold execution logged for progress tracking',
+      };
+    }
+
     // Only process file edit/write operations
     if (!context.filePath || (context.operation !== 'edit' && context.operation !== 'write')) {
       return {
@@ -320,4 +329,49 @@ async function getEditedScaffoldFiles(sessionId: string, scaffoldKey: string): P
   }
 
   return editedFiles;
+}
+
+/**
+ * Process pending scaffold logs from temp file and copy to ExecutionLogService
+ * Called when use-scaffold-method tool is executed
+ */
+async function processPendingScaffoldLogs(sessionId: string): Promise<void> {
+  const fs = await import('node:fs/promises');
+  const os = await import('node:os');
+  const path = await import('node:path');
+
+  const tempLogFile = path.join(os.tmpdir(), 'scaffold-mcp-pending.jsonl');
+
+  try {
+    // Read temp log file
+    const content = await fs.readFile(tempLogFile, 'utf-8');
+    const lines = content.trim().split('\n').filter(Boolean);
+
+    // Process each pending log entry
+    for (const line of lines) {
+      try {
+        const entry = JSON.parse(line);
+
+        // Log to ExecutionLogService with sessionId from hook context
+        await ExecutionLogService.logExecution({
+          sessionId,
+          filePath: entry.projectPath,
+          operation: 'scaffold',
+          decision: DECISION_ALLOW,
+          generatedFiles: entry.generatedFiles,
+        });
+      } catch (parseError) {
+        // Skip malformed entries
+        console.error('Failed to parse pending scaffold log entry:', parseError);
+      }
+    }
+
+    // Clear the temp log file after processing
+    await fs.unlink(tempLogFile);
+  } catch (error: any) {
+    // File doesn't exist or read error - this is fine, just means no pending logs
+    if (error.code !== 'ENOENT') {
+      console.error('Error processing pending scaffold logs:', error);
+    }
+  }
 }

@@ -156,9 +156,7 @@ export const beforeToolHook: HookCallback = async (context: HookContext): Promis
  * @param context - Normalized hook context
  * @returns Hook response with scaffold completion tracking
  */
-export const afterToolHook: HookCallback = async (
-  context: HookContext,
-): Promise<HookResponse> => {
+export const afterToolHook: HookCallback = async (context: HookContext): Promise<HookResponse> => {
   try {
     // Only process file edit/write operations
     if (!context.filePath || (context.operation !== 'edit' && context.operation !== 'write')) {

@@ -1,10 +1,14 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { FileSystemService } from '../services/FileSystemService';
 import { ScaffoldingMethodsService } from '../services/ScaffoldingMethodsService';
 import type { ToolDefinition } from './types';
 
 export class UseScaffoldMethodTool {
   static readonly TOOL_NAME = 'use-scaffold-method';
+  private static readonly TEMP_LOG_FILE = path.join(os.tmpdir(), 'scaffold-mcp-pending.jsonl');
 
   private fileSystemService: FileSystemService;
   private scaffoldingMethodsService: ScaffoldingMethodsService;
@@ -17,6 +21,34 @@ export class UseScaffoldMethodTool {
       templatesPath,
     );
     this.isMonolith = isMonolith;
+  }
+
+  /**
+   * Write scaffold execution info to temp log file for hook processing
+   */
+  private async writePendingScaffoldLog(
+    projectPath: string,
+    featureName: string,
+    generatedFiles: string[],
+  ): Promise<void> {
+    try {
+      const logEntry = {
+        timestamp: Date.now(),
+        projectPath,
+        featureName,
+        generatedFiles,
+        operation: 'scaffold',
+      };
+
+      await fs.appendFile(
+        UseScaffoldMethodTool.TEMP_LOG_FILE,
+        `${JSON.stringify(logEntry)}\n`,
+        'utf-8',
+      );
+    } catch (error) {
+      // Fail silently - logging should not break the tool
+      console.error('Failed to write pending scaffold log:', error);
+    }
   }
 
   /**
@@ -94,6 +126,15 @@ IMPORTANT:
         scaffold_feature_name,
         variables,
       });
+
+      // Write scaffold execution to temp log for hook processing
+      if (result.createdFiles && result.createdFiles.length > 0) {
+        await this.writePendingScaffoldLog(
+          resolvedProjectPath,
+          scaffold_feature_name,
+          result.createdFiles,
+        );
+      }
 
       // Append instructions for LLM to review and implement the scaffolded files
       const enhancedMessage = `${result.message}

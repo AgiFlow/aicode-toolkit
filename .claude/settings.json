@@ -26,6 +26,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bun ./packages/scaffold-mcp/src/cli.ts scaffold list --hook claude-code.postToolUse"
+          },
+          {
+            "type": "command",
             "command": "bun ./packages/architect-mcp/src/cli.ts review-code-change --hook claude-code.postToolUse"
           }
         ]
