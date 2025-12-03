@@ -281,4 +281,48 @@ export class ExecutionLogService {
     // Compare checksum - if different, file has changed
     return currentMetadata.checksum !== lastExecution.fileChecksum;
   }
+
+  /**
+   * Check if file was recently reviewed (within debounce window)
+   * Prevents noisy feedback during rapid successive edits
+   *
+   * @param sessionId - Session identifier
+   * @param filePath - File path to check
+   * @param debounceMs - Debounce window in milliseconds (default: 3000ms = 3 seconds)
+   * @returns true if file was reviewed within debounce window
+   */
+  static async wasRecentlyReviewed(
+    sessionId: string,
+    filePath: string,
+    debounceMs = 3000,
+  ): Promise<boolean> {
+    try {
+      const entries = await ExecutionLogService.loadLog();
+      const now = Date.now();
+
+      // Search from end (most recent) for efficiency
+      for (let i = entries.length - 1; i >= 0; i--) {
+        const entry = entries[i];
+
+        // Match session and file
+        if (entry.sessionId === sessionId && entry.filePath === filePath) {
+          // Check if this review was recent (within debounce window)
+          const timeSinceLastReview = now - entry.timestamp;
+          if (timeSinceLastReview < debounceMs) {
+            return true;
+          }
+
+          // Found an entry but it's old enough - allow review
+          return false;
+        }
+      }
+
+      // No previous review found - allow review
+      return false;
+    } catch (error) {
+      // On error, fail open - allow review
+      console.error('Error checking recent review:', error);
+      return false;
+    }
+  }
 }

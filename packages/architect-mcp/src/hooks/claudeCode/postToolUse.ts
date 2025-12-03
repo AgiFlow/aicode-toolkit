@@ -48,6 +48,20 @@ export const postToolUseHook: HookCallback = async (
   }
 
   try {
+    // Check if file was recently reviewed (debounce within 3 seconds)
+    const wasRecent = await ExecutionLogService.wasRecentlyReviewed(
+      context.sessionId,
+      context.filePath,
+      3000, // 3 seconds debounce
+    );
+
+    if (wasRecent) {
+      return {
+        decision: DECISION_SKIP,
+        message: 'File was recently reviewed (within 3 seconds), skipping to avoid noise',
+      };
+    }
+
     // Get matched file patterns for logging
     const templateFinder = new TemplateFinder();
     const architectParser = new ArchitectParser();

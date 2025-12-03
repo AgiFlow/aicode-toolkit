@@ -209,4 +209,212 @@ describe('ExecutionLogService', () => {
       await expect(ExecutionLogService.clearLog()).rejects.toThrow('Permission denied');
     });
   });
+
+  describe('wasRecentlyReviewed', () => {
+    test('returns false when no previous review exists', async () => {
+      vi.mocked(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
+
+      const result = await ExecutionLogService.wasRecentlyReviewed(
+        'session-123',
+        '/test/file.ts',
+        3000,
+      );
+
+      expect(result).toBe(false);
+    });
+
+    test('returns true when file was reviewed within debounce window', async () => {
+      const now = Date.now();
+      const recentTimestamp = now - 2000; // 2 seconds ago
+
+      const logEntry = JSON.stringify({
+        timestamp: recentTimestamp,
+        sessionId: 'session-123',
+        filePath: '/test/file.ts',
+        operation: 'edit',
+        decision: 'allow',
+      });
+
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+
+      const result = await ExecutionLogService.wasRecentlyReviewed(
+        'session-123',
+        '/test/file.ts',
+        3000,
+      );
+
+      expect(result).toBe(true);
+    });
+
+    test('returns false when file was reviewed outside debounce window', async () => {
+      const now = Date.now();
+      const oldTimestamp = now - 5000; // 5 seconds ago
+
+      const logEntry = JSON.stringify({
+        timestamp: oldTimestamp,
+        sessionId: 'session-123',
+        filePath: '/test/file.ts',
+        operation: 'edit',
+        decision: 'allow',
+      });
+
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+
+      const result = await ExecutionLogService.wasRecentlyReviewed(
+        'session-123',
+        '/test/file.ts',
+        3000,
+      );
+
+      expect(result).toBe(false);
+    });
+
+    test('returns false for different session', async () => {
+      const now = Date.now();
+      const recentTimestamp = now - 1000;
+
+      const logEntry = JSON.stringify({
+        timestamp: recentTimestamp,
+        sessionId: 'session-456',
+        filePath: '/test/file.ts',
+        operation: 'edit',
+        decision: 'allow',
+      });
+
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+
+      const result = await ExecutionLogService.wasRecentlyReviewed(
+        'session-123',
+        '/test/file.ts',
+        3000,
+      );
+
+      expect(result).toBe(false);
+    });
+
+    test('returns false for different file', async () => {
+      const now = Date.now();
+      const recentTimestamp = now - 1000;
+
+      const logEntry = JSON.stringify({
+        timestamp: recentTimestamp,
+        sessionId: 'session-123',
+        filePath: '/test/other.ts',
+        operation: 'edit',
+        decision: 'allow',
+      });
+
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+
+      const result = await ExecutionLogService.wasRecentlyReviewed(
+        'session-123',
+        '/test/file.ts',
+        3000,
+      );
+
+      expect(result).toBe(false);
+    });
+
+    test('uses most recent matching entry', async () => {
+      const now = Date.now();
+      const entries = [
+        {
+          timestamp: now - 5000,
+          sessionId: 'session-123',
+          filePath: '/test/file.ts',
+          decision: 'allow',
+        },
+        {
+          timestamp: now - 2000,
+          sessionId: 'session-123',
+          filePath: '/test/file.ts',
+          decision: 'deny',
+        },
+      ].map((e) => JSON.stringify({ ...e, operation: 'edit' }));
+
+      vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
+
+      const result = await ExecutionLogService.wasRecentlyReviewed(
+        'session-123',
+        '/test/file.ts',
+        3000,
+      );
+
+      expect(result).toBe(true);
+    });
+
+    test('uses custom debounce window', async () => {
+      const now = Date.now();
+      const recentTimestamp = now - 4000; // 4 seconds ago
+
+      const logEntry = JSON.stringify({
+        timestamp: recentTimestamp,
+        sessionId: 'session-123',
+        filePath: '/test/file.ts',
+        operation: 'edit',
+        decision: 'allow',
+      });
+
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+
+      // With 5000ms debounce, 4s ago should be recent
+      const result5s = await ExecutionLogService.wasRecentlyReviewed(
+        'session-123',
+        '/test/file.ts',
+        5000,
+      );
+      expect(result5s).toBe(true);
+
+      // Reset cache for second test
+      (ExecutionLogService as any).cache = null;
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+
+      // With 3000ms debounce, 4s ago should NOT be recent
+      const result3s = await ExecutionLogService.wasRecentlyReviewed(
+        'session-123',
+        '/test/file.ts',
+        3000,
+      );
+      expect(result3s).toBe(false);
+    });
+
+    test('handles errors gracefully and returns false', async () => {
+      vi.mocked(fs.readFile).mockRejectedValue(new Error('Read error'));
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const result = await ExecutionLogService.wasRecentlyReviewed(
+        'session-123',
+        '/test/file.ts',
+        3000,
+      );
+
+      expect(result).toBe(false);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to load execution log:',
+        expect.any(Error),
+      );
+    });
+
+    test('uses default debounce of 3000ms when not specified', async () => {
+      const now = Date.now();
+      const recentTimestamp = now - 2000;
+
+      const logEntry = JSON.stringify({
+        timestamp: recentTimestamp,
+        sessionId: 'session-123',
+        filePath: '/test/file.ts',
+        operation: 'edit',
+        decision: 'allow',
+      });
+
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+
+      const result = await ExecutionLogService.wasRecentlyReviewed(
+        'session-123',
+        '/test/file.ts',
+      );
+
+      expect(result).toBe(true);
+    });
+  });
 });
