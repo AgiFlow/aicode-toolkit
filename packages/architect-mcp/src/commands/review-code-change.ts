@@ -31,14 +31,26 @@ import {
   SUPPORTED_LLM_TOOLS,
 } from '@agiflowai/coding-agent-bridge';
 import { ClaudeCodePostToolUseAdapter, GeminiCliAdapter } from '@agiflowai/hooks-adapter';
-import { postToolUseHook } from '../hooks/claudeCode/postToolUse';
-import { afterToolHook } from '../hooks/geminiCli/afterTool';
 
 interface ReviewCodeChangeOptions {
   verbose?: boolean;
   json?: boolean;
   llmTool?: string;
   hook?: string;
+}
+
+/**
+ * Parse hook option in format: agent.hookMethod
+ * Examples: claude-code.postToolUse, gemini-cli.afterTool
+ */
+function parseHookOption(hookOption: string): { agent: string; hookMethod: string } {
+  const [agent, hookMethod] = hookOption.split('.');
+
+  if (!agent || !hookMethod) {
+    throw new Error(`Invalid hook format: ${hookOption}. Expected: <agent>.<hookMethod>`);
+  }
+
+  return { agent, hookMethod };
 }
 
 /**
@@ -57,21 +69,39 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
     'claude-code',
   )
   .option(
-    '--hook <agent>',
-    'Run in hook mode for specified agent (e.g., claude-code, gemini-cli)',
+    '--hook <agentAndMethod>',
+    'Hook mode: <agent>.<method> (e.g., claude-code.postToolUse, gemini-cli.afterTool)',
   )
   .action(async (filePath: string | undefined, options: ReviewCodeChangeOptions) => {
     try {
       // HOOK MODE: Use adapter directly
       if (options.hook) {
-        if (options.hook === CLAUDE_CODE) {
+        const { agent, hookMethod } = parseHookOption(options.hook);
+
+        if (agent === CLAUDE_CODE) {
+          const hooks = await import('../hooks/claudeCode/reviewCodeChange');
+          const callback = hooks[`${hookMethod}Hook`];
+
+          if (!callback) {
+            print.error(`Hook not found: ${hookMethod}Hook in claudeCode/reviewCodeChange`);
+            process.exit(1);
+          }
+
           const adapter = new ClaudeCodePostToolUseAdapter();
-          await adapter.execute(postToolUseHook);
-        } else if (options.hook === GEMINI_CLI) {
+          await adapter.execute(callback);
+        } else if (agent === GEMINI_CLI) {
+          const hooks = await import('../hooks/geminiCli/reviewCodeChange');
+          const callback = hooks[`${hookMethod}Hook`];
+
+          if (!callback) {
+            print.error(`Hook not found: ${hookMethod}Hook in geminiCli/reviewCodeChange`);
+            process.exit(1);
+          }
+
           const adapter = new GeminiCliAdapter();
-          await adapter.execute(afterToolHook);
+          await adapter.execute(callback);
         } else {
-          print.error(`Unsupported hook agent: ${options.hook}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);
+          print.error(`Unsupported agent: ${agent}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);
           process.exit(1);
         }
         return;

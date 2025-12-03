@@ -45,5 +45,5 @@ export {
 } from './services/index';
 
 // Hooks - Gemini CLI integration
-export { beforeToolHook as geminiCliBeforeToolHook } from './hooks/geminiCli/beforeTool';
-export { afterToolHook as geminiCliAfterToolHook } from './hooks/geminiCli/afterTool';
+export { beforeToolHook as geminiCliGetFileDesignPatternBeforeToolHook } from './hooks/geminiCli/getFileDesignPattern';
+export { afterToolHook as geminiCliReviewCodeChangeAfterToolHook } from './hooks/geminiCli/reviewCodeChange';

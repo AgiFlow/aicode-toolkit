@@ -1,13 +1,13 @@
 /**
- * PreToolUse Hook for Claude Code
+ * GetFileDesignPattern Hooks for Claude Code
  *
  * DESIGN PATTERNS:
- * - Hook callback pattern: Executed before tool invocation
+ * - Hook callback pattern: Multiple lifecycle hooks in single file
  * - Fail-open pattern: Errors allow operation to proceed with warning
- * - Single responsibility: Only handles design pattern retrieval
+ * - Single responsibility: Each hook handles specific lifecycle stage
  *
  * CODING STANDARDS:
- * - Export named callback function matching HookCallback signature
+ * - Export named callbacks: preToolUseHook, postToolUseHook
  * - Handle all errors gracefully with fail-open behavior
  * - Format messages clearly for LLM consumption
  *
@@ -159,4 +159,15 @@ export const preToolUseHook: HookCallback = async (
       message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
+};
+
+/**
+ * PostToolUse hook - not applicable for getFileDesignPattern
+ * This tool is only called before file operations
+ */
+export const postToolUseHook: HookCallback = async (): Promise<HookResponse> => {
+  return {
+    decision: DECISION_SKIP,
+    message: 'PostToolUse not applicable for getFileDesignPattern',
+  };
 };

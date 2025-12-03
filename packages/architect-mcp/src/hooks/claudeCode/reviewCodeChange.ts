@@ -1,13 +1,13 @@
 /**
- * AfterTool Hook for Gemini CLI
+ * ReviewCodeChange Hooks for Claude Code
  *
  * DESIGN PATTERNS:
- * - Hook callback pattern: Executed after tool invocation
+ * - Hook callback pattern: Multiple lifecycle hooks in single file
  * - Fail-open pattern: Errors don't block, just provide warnings
- * - Single responsibility: Only handles code review after edits
+ * - Single responsibility: Each hook handles specific lifecycle stage
  *
  * CODING STANDARDS:
- * - Export named callback function matching HookCallback signature
+ * - Export named callbacks: preToolUseHook, postToolUseHook
  * - Handle all errors gracefully with fail-open behavior
  * - Format messages clearly for LLM consumption
  *
@@ -18,20 +18,36 @@
  */
 
 import type { HookCallback, HookContext, HookResponse } from '@agiflowai/hooks-adapter';
-import { ExecutionLogService, DECISION_SKIP, DECISION_DENY, DECISION_ALLOW } from '@agiflowai/hooks-adapter';
+import {
+  ExecutionLogService,
+  DECISION_SKIP,
+  DECISION_DENY,
+  DECISION_ALLOW,
+} from '@agiflowai/hooks-adapter';
 import { ReviewCodeChangeTool } from '../../tools/ReviewCodeChangeTool';
 import { TemplateFinder } from '../../services/TemplateFinder';
 import { ArchitectParser } from '../../services/ArchitectParser';
 import { PatternMatcher } from '../../services/PatternMatcher';
 
 /**
- * AfterTool hook callback for Gemini CLI
+ * PreToolUse hook - not applicable for reviewCodeChange
+ * This tool is only called after file operations
+ */
+export const preToolUseHook: HookCallback = async (): Promise<HookResponse> => {
+  return {
+    decision: DECISION_SKIP,
+    message: 'PreToolUse not applicable for reviewCodeChange',
+  };
+};
+
+/**
+ * PostToolUse hook callback for Claude Code
  * Reviews code after file edit/write operations and provides feedback
  *
  * @param context - Normalized hook context
  * @returns Hook response with code review feedback or skip
  */
-export const afterToolHook: HookCallback = async (
+export const postToolUseHook: HookCallback = async (
   context: HookContext,
 ): Promise<HookResponse> => {
   // Only process file operations
@@ -102,7 +118,7 @@ export const afterToolHook: HookCallback = async (
     const data = JSON.parse(result.content[0].text as string);
 
     if (result.isError) {
-      // Error reviewing code - skip and let Gemini continue
+      // Error reviewing code - skip and let Claude continue
       await ExecutionLogService.logExecution({
         sessionId: context.sessionId,
         filePath: context.filePath,
@@ -131,15 +147,14 @@ export const afterToolHook: HookCallback = async (
         fileChecksum: fileMetadata?.checksum,
       });
 
-      // For Gemini CLI AfterTool hooks, deny will block and show message
       return {
-        decision: DECISION_DENY,
+        decision: DECISION_DENY, // Will map to 'block' in PostToolUse output
         message: JSON.stringify(data, null, 2), // Full AI response
       };
     }
 
     // Otherwise (no fix required), provide feedback and issues without blocking
-    // decision: 'allow' provides context to Gemini without blocking
+    // decision: 'allow' means additionalContext is used, not blocking
     await ExecutionLogService.logExecution({
       sessionId: context.sessionId,
       filePath: context.filePath,
@@ -152,13 +167,17 @@ export const afterToolHook: HookCallback = async (
 
     return {
       decision: DECISION_ALLOW,
-      message: JSON.stringify({
-        feedback: data.feedback,
-        identified_issues: data.identified_issues,
-      }, null, 2),
+      message: JSON.stringify(
+        {
+          feedback: data.feedback,
+          identified_issues: data.identified_issues,
+        },
+        null,
+        2,
+      ),
     };
   } catch (error) {
-    // Fail open: skip hook and let Gemini continue
+    // Fail open: skip hook and let Claude continue
     return {
       decision: DECISION_SKIP,
       message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,

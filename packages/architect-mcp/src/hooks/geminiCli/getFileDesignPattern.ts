@@ -1,13 +1,13 @@
 /**
- * BeforeTool Hook for Gemini CLI
+ * GetFileDesignPattern Hooks for Gemini CLI
  *
  * DESIGN PATTERNS:
- * - Hook callback pattern: Executed before tool invocation
+ * - Hook callback pattern: Multiple lifecycle hooks in single file
  * - Fail-open pattern: Errors allow operation to proceed with warning
- * - Single responsibility: Only handles design pattern retrieval
+ * - Single responsibility: Each hook handles specific lifecycle stage
  *
  * CODING STANDARDS:
- * - Export named callback function matching HookCallback signature
+ * - Export named callbacks: beforeToolHook, afterToolHook
  * - Handle all errors gracefully with fail-open behavior
  * - Format messages clearly for LLM consumption
  *
@@ -155,4 +155,15 @@ export const beforeToolHook: HookCallback = async (
       message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
+};
+
+/**
+ * AfterTool hook - not applicable for getFileDesignPattern
+ * This tool is only called before file operations
+ */
+export const afterToolHook: HookCallback = async (): Promise<HookResponse> => {
+  return {
+    decision: DECISION_SKIP,
+    message: 'AfterTool not applicable for getFileDesignPattern',
+  };
 };

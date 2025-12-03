@@ -13,6 +13,20 @@ import { FileSystemService } from '../services/FileSystemService';
 import { ScaffoldingMethodsService } from '../services/ScaffoldingMethodsService';
 
 /**
+ * Parse hook option in format: agent.hookMethod
+ * Examples: claude-code.preToolUse, gemini-cli.beforeTool
+ */
+function parseHookOption(hookOption: string): { agent: string; hookMethod: string } {
+  const [agent, hookMethod] = hookOption.split('.');
+
+  if (!agent || !hookMethod) {
+    throw new Error(`Invalid hook format: ${hookOption}. Expected: <agent>.<hookMethod>`);
+  }
+
+  return { agent, hookMethod };
+}
+
+/**
  * Scaffold CLI command
  */
 export const scaffoldCommand = new Command('scaffold').description(
@@ -25,22 +39,43 @@ scaffoldCommand
   .description('List available scaffolding methods for a project or template')
   .option('-t, --template <name>', 'Template name (e.g., nextjs-15, typescript-mcp-package)')
   .option('-c, --cursor <cursor>', 'Pagination cursor for next page')
-  .option('--hook <agent>', 'Run in hook mode for specified agent (e.g., claude-code, gemini-cli)')
+  .option(
+    '--hook <agentAndLifecycle>',
+    'Hook mode: <agent>.<lifecycle> (e.g., claude-code.preToolUse, gemini-cli.beforeTool)',
+  )
   .action(async (projectPath, options) => {
     // HOOK MODE: Delegate to adapter
     if (options.hook) {
-      const { preToolUseHook } = await import('../hooks/preToolUse');
+      try {
+        const { agent, hookMethod } = parseHookOption(options.hook);
 
-      if (options.hook === CLAUDE_CODE) {
-        const adapter = new ClaudeCodeAdapter();
-        await adapter.execute(preToolUseHook);
-      } else if (options.hook === GEMINI_CLI) {
-        const adapter = new GeminiCliAdapter();
-        await adapter.execute(preToolUseHook);
-      } else {
-        messages.error(
-          `Unsupported hook agent: ${options.hook}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`,
-        );
+        if (agent === CLAUDE_CODE) {
+          const hooks = await import('../hooks/claudeCode/listScaffoldMethods');
+          const hookName = `${hookMethod}Hook` as keyof typeof hooks;
+          const callback = hooks[hookName];
+
+          if (!callback) {
+            messages.error(`Hook not found: ${hookName} in claudeCode/listScaffoldMethods`);
+            process.exit(1);
+          }
+
+          const adapter = new ClaudeCodeAdapter();
+          await adapter.execute(callback);
+        } else if (agent === GEMINI_CLI) {
+          const hooks = await import('../hooks/geminiCli/listScaffoldMethods');
+          const hookName = `${hookMethod}Hook` as keyof typeof hooks;
+          const callback = hooks[hookName];
+
+          if (!callback) {
+            messages.error(`Hook not found: ${hookName} in geminiCli/listScaffoldMethods`);
+            process.exit(1);
+          }
+
+          const adapter = new GeminiCliAdapter();
+          await adapter.execute(callback);
+        }
+      } catch (error) {
+        messages.error(`Hook error: ${(error as Error).message}`);
         process.exit(1);
       }
       return;
