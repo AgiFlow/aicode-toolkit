@@ -16,5 +16,4 @@
 
 export { BaseAdapter } from './BaseAdapter';
 export { ClaudeCodeAdapter } from './ClaudeCodeAdapter';
-export { ClaudeCodePostToolUseAdapter } from './ClaudeCodePostToolUseAdapter';
 export { GeminiCliAdapter } from './GeminiCliAdapter';

@@ -78,11 +78,9 @@ interface HookResponse {
 
 ### ClaudeCodeAdapter
 
-Adapter for Claude Code PreToolUse hooks. Parses Claude Code's JSON stdin format and formats responses accordingly.
+Unified adapter for both Claude Code PreToolUse and PostToolUse hooks. Automatically detects the hook event type from the input and formats responses accordingly.
 
-### ClaudeCodePostToolUseAdapter
-
-Adapter for Claude Code PostToolUse hooks. Handles post-execution hook format with tool response data.
+The adapter stores the `hook_event_name` during parsing and morphs its output format based on whether it's handling a PreToolUse or PostToolUse event.
 
 ### BaseAdapter
 

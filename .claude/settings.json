@@ -26,11 +26,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/scaffold-mcp/src/cli.ts scaffold list --hook claude-code.postToolUse"
-          },
+            "command": "bun ./packages/architect-mcp/src/cli.ts review-code-change --hook claude-code.postToolUse"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__one-mcp__use-scaffold-method",
+        "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/architect-mcp/src/cli.ts review-code-change --hook claude-code.postToolUse"
+            "command": "bun ./packages/scaffold-mcp/src/cli.ts scaffold list --hook claude-code.postToolUse"
           }
         ]
       }

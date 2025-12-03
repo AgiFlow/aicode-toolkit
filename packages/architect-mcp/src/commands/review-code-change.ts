@@ -30,7 +30,7 @@ import {
   isValidLlmTool,
   SUPPORTED_LLM_TOOLS,
 } from '@agiflowai/coding-agent-bridge';
-import { ClaudeCodePostToolUseAdapter, GeminiCliAdapter } from '@agiflowai/hooks-adapter';
+import { ClaudeCodeAdapter, GeminiCliAdapter } from '@agiflowai/hooks-adapter';
 
 interface ReviewCodeChangeOptions {
   verbose?: boolean;
@@ -87,7 +87,7 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
             process.exit(1);
           }
 
-          const adapter = new ClaudeCodePostToolUseAdapter();
+          const adapter = new ClaudeCodeAdapter();
           await adapter.execute(callback);
         } else if (agent === GEMINI_CLI) {
           const hooks = await import('../hooks/geminiCli/reviewCodeChange');

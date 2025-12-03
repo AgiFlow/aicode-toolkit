@@ -1,15 +1,15 @@
 /**
- * Tests for ClaudeCodePostToolUseAdapter
+ * Tests for ClaudeCodeAdapter (PostToolUse mode)
  */
 
 import { describe, test, expect, beforeEach } from 'vitest';
-import { ClaudeCodePostToolUseAdapter } from '../../src/adapters/ClaudeCodePostToolUseAdapter';
+import { ClaudeCodeAdapter } from '../../src/adapters/ClaudeCodeAdapter';
 
-describe('ClaudeCodePostToolUseAdapter', () => {
-  let adapter: ClaudeCodePostToolUseAdapter;
+describe('ClaudeCodeAdapter (PostToolUse)', () => {
+  let adapter: ClaudeCodeAdapter;
 
   beforeEach(() => {
-    adapter = new ClaudeCodePostToolUseAdapter();
+    adapter = new ClaudeCodeAdapter();
   });
 
   describe('parseInput', () => {
@@ -144,6 +144,20 @@ describe('ClaudeCodePostToolUseAdapter', () => {
 
   describe('formatOutput', () => {
     test('formats deny decision as block', () => {
+      // First parse input to set hookEventName
+      const input = JSON.stringify({
+        session_id: 'session-123',
+        transcript_path: '/path/to/transcript.txt',
+        cwd: '/workspace',
+        permission_mode: 'ask',
+        hook_event_name: 'PostToolUse',
+        tool_name: 'Write',
+        tool_input: { file_path: '/test/file.ts' },
+        tool_response: {},
+        tool_use_id: 'tool-use-456',
+      });
+      adapter.parseInput(input);
+
       const response = {
         decision: 'deny' as const,
         message: 'Operation blocked',
@@ -158,6 +172,20 @@ describe('ClaudeCodePostToolUseAdapter', () => {
     });
 
     test('formats allow decision with message as additionalContext', () => {
+      // Set PostToolUse mode
+      const input = JSON.stringify({
+        session_id: 'session-123',
+        hook_event_name: 'PostToolUse',
+        tool_name: 'Write',
+        tool_input: {},
+        tool_response: {},
+        tool_use_id: 'tool-use-456',
+        cwd: '/workspace',
+        transcript_path: '/path',
+        permission_mode: 'ask',
+      });
+      adapter.parseInput(input);
+
       const response = {
         decision: 'allow' as const,
         message: 'Code review feedback',
@@ -173,6 +201,20 @@ describe('ClaudeCodePostToolUseAdapter', () => {
     });
 
     test('formats allow decision without message', () => {
+      // Set PostToolUse mode
+      const input = JSON.stringify({
+        session_id: 'session-123',
+        hook_event_name: 'PostToolUse',
+        tool_name: 'Write',
+        tool_input: {},
+        tool_response: {},
+        tool_use_id: 'tool-use-456',
+        cwd: '/workspace',
+        transcript_path: '/path',
+        permission_mode: 'ask',
+      });
+      adapter.parseInput(input);
+
       const response = {
         decision: 'allow' as const,
         message: '',
@@ -187,6 +229,20 @@ describe('ClaudeCodePostToolUseAdapter', () => {
     });
 
     test('formats skip decision without blocking', () => {
+      // Set PostToolUse mode
+      const input = JSON.stringify({
+        session_id: 'session-123',
+        hook_event_name: 'PostToolUse',
+        tool_name: 'Write',
+        tool_input: {},
+        tool_response: {},
+        tool_use_id: 'tool-use-456',
+        cwd: '/workspace',
+        transcript_path: '/path',
+        permission_mode: 'ask',
+      });
+      adapter.parseInput(input);
+
       const response = {
         decision: 'skip' as const,
         message: '',
@@ -195,12 +251,25 @@ describe('ClaudeCodePostToolUseAdapter', () => {
       const output = adapter.formatOutput(response);
       const parsed = JSON.parse(output);
 
-      expect(parsed.decision).toBeUndefined();
-      expect(parsed.reason).toBeUndefined();
-      expect(parsed.hookSpecificOutput.hookEventName).toBe('PostToolUse');
+      // Skip returns empty object
+      expect(Object.keys(parsed).length).toBe(0);
     });
 
     test('formats ask decision without blocking', () => {
+      // Set PostToolUse mode
+      const input = JSON.stringify({
+        session_id: 'session-123',
+        hook_event_name: 'PostToolUse',
+        tool_name: 'Write',
+        tool_input: {},
+        tool_response: {},
+        tool_use_id: 'tool-use-456',
+        cwd: '/workspace',
+        transcript_path: '/path',
+        permission_mode: 'ask',
+      });
+      adapter.parseInput(input);
+
       const response = {
         decision: 'ask' as const,
         message: 'Review needed',
