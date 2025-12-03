@@ -114,6 +114,14 @@ Do not skip the implementation step - the scaffolded files contain templates tha
             text: enhancedMessage,
           },
         ],
+        _meta: {
+          scaffold: {
+            featureName: scaffold_feature_name,
+            projectPath: resolvedProjectPath,
+            generatedFiles: result.createdFiles || [],
+            existingFiles: result.existingFiles || [],
+          },
+        },
       };
     } catch (error) {
       return {

@@ -35,6 +35,8 @@ export interface UseScaffoldMethodRequest {
   projectPath: string;
   scaffold_feature_name: string;
   variables: Record<string, any>;
+  /** Optional session ID for logging scaffold execution */
+  sessionId?: string;
 }
 
 interface ArchitectConfig {
@@ -256,7 +258,7 @@ export class ScaffoldingMethodsService {
   }
 
   async useScaffoldMethod(request: UseScaffoldMethodRequest): Promise<ScaffoldResult> {
-    const { projectPath, scaffold_feature_name, variables } = request;
+    const { projectPath, scaffold_feature_name, variables, sessionId } = request;
 
     // Resolve the actual project path (handle monolith vs monorepo)
     const absoluteProjectPath = await this.resolveProjectPath(projectPath);
@@ -303,6 +305,25 @@ export class ScaffoldingMethodsService {
 
     if (!result.success) {
       throw new Error(result.message);
+    }
+
+    // Log scaffold execution if sessionId provided
+    if (sessionId && result.createdFiles && result.createdFiles.length > 0) {
+      try {
+        const { ExecutionLogService, DECISION_ALLOW } = await import('@agiflowai/hooks-adapter');
+
+        // Log execution for the project path with list of generated files
+        await ExecutionLogService.logExecution({
+          sessionId,
+          filePath: absoluteProjectPath,
+          operation: 'scaffold',
+          decision: DECISION_ALLOW,
+          generatedFiles: result.createdFiles,
+        });
+      } catch (error) {
+        // Fail silently - logging should not break scaffold execution
+        log.warn('Failed to log scaffold execution:', error);
+      }
     }
 
     // Process instruction with template variables

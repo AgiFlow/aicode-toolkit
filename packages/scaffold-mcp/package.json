@@ -42,6 +42,9 @@
   },
   "dependencies": {
     "@agiflowai/aicode-utils": "workspace:*",
+    "@agiflowai/architect-mcp": "workspace:*",
+    "@agiflowai/coding-agent-bridge": "workspace:*",
+    "@agiflowai/hooks-adapter": "workspace:*",
     "@composio/json-schema-to-zod": "0.1.15",
     "@inquirer/prompts": "^7.8.6",
     "@modelcontextprotocol/sdk": "1.19.1",
@@ -51,6 +54,7 @@
     "express": "^4.21.2",
     "js-yaml": "4.1.0",
     "liquidjs": "10.21.1",
+    "minimatch": "^10.0.1",
     "pino": "^10.0.0",
     "pino-pretty": "^13.1.1",
     "zod": "3.25.76"

@@ -7,6 +7,8 @@ import {
   TemplatesManagerService,
 } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
+import { CLAUDE_CODE, GEMINI_CLI } from '@agiflowai/coding-agent-bridge';
+import { ClaudeCodeAdapter, GeminiCliAdapter } from '@agiflowai/hooks-adapter';
 import { FileSystemService } from '../services/FileSystemService';
 import { ScaffoldingMethodsService } from '../services/ScaffoldingMethodsService';
 
@@ -23,7 +25,26 @@ scaffoldCommand
   .description('List available scaffolding methods for a project or template')
   .option('-t, --template <name>', 'Template name (e.g., nextjs-15, typescript-mcp-package)')
   .option('-c, --cursor <cursor>', 'Pagination cursor for next page')
+  .option('--hook <agent>', 'Run in hook mode for specified agent (e.g., claude-code, gemini-cli)')
   .action(async (projectPath, options) => {
+    // HOOK MODE: Delegate to adapter
+    if (options.hook) {
+      const { preToolUseHook } = await import('../hooks/preToolUse');
+
+      if (options.hook === CLAUDE_CODE) {
+        const adapter = new ClaudeCodeAdapter();
+        await adapter.execute(preToolUseHook);
+      } else if (options.hook === GEMINI_CLI) {
+        const adapter = new GeminiCliAdapter();
+        await adapter.execute(preToolUseHook);
+      } else {
+        messages.error(
+          `Unsupported hook agent: ${options.hook}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`,
+        );
+        process.exit(1);
+      }
+      return;
+    }
     try {
       // Require either projectPath or template option
       if (!projectPath && !options.template) {
