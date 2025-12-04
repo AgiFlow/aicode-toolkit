@@ -24,33 +24,15 @@ import { log, print } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 import { ReviewCodeChangeTool } from '../tools/ReviewCodeChangeTool';
 import {
-  CLAUDE_CODE,
-  GEMINI_CLI,
   type LlmToolId,
   isValidLlmTool,
   SUPPORTED_LLM_TOOLS,
 } from '@agiflowai/coding-agent-bridge';
-import { ClaudeCodeAdapter, GeminiCliAdapter } from '@agiflowai/hooks-adapter';
 
 interface ReviewCodeChangeOptions {
   verbose?: boolean;
   json?: boolean;
   llmTool?: string;
-  hook?: string;
-}
-
-/**
- * Parse hook option in format: agent.hookMethod
- * Examples: claude-code.postToolUse, gemini-cli.afterTool
- */
-function parseHookOption(hookOption: string): { agent: string; hookMethod: string } {
-  const [agent, hookMethod] = hookOption.split('.');
-
-  if (!agent || !hookMethod) {
-    throw new Error(`Invalid hook format: ${hookOption}. Expected: <agent>.<hookMethod>`);
-  }
-
-  return { agent, hookMethod };
 }
 
 /**
@@ -60,7 +42,7 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
   .description(
     'Review code changes against template-specific and global rules to identify violations',
   )
-  .argument('[file-path]', 'Path to the file to review (optional if using --hook)')
+  .argument('<file-path>', 'Path to the file to review')
   .option('-v, --verbose', 'Enable verbose output', false)
   .option('-j, --json', 'Output as JSON', false)
   .option(
@@ -68,51 +50,8 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
     `LLM tool to use for code review. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
     'claude-code',
   )
-  .option(
-    '--hook <agentAndMethod>',
-    'Hook mode: <agent>.<method> (e.g., claude-code.postToolUse, gemini-cli.afterTool)',
-  )
-  .action(async (filePath: string | undefined, options: ReviewCodeChangeOptions) => {
+  .action(async (filePath: string, options: ReviewCodeChangeOptions): Promise<void> => {
     try {
-      // HOOK MODE: Use adapter directly
-      if (options.hook) {
-        const { agent, hookMethod } = parseHookOption(options.hook);
-
-        if (agent === CLAUDE_CODE) {
-          const hooks = await import('../hooks/claudeCode/reviewCodeChange');
-          const callback = hooks[`${hookMethod}Hook`];
-
-          if (!callback) {
-            print.error(`Hook not found: ${hookMethod}Hook in claudeCode/reviewCodeChange`);
-            process.exit(1);
-          }
-
-          const adapter = new ClaudeCodeAdapter();
-          await adapter.execute(callback);
-        } else if (agent === GEMINI_CLI) {
-          const hooks = await import('../hooks/geminiCli/reviewCodeChange');
-          const callback = hooks[`${hookMethod}Hook`];
-
-          if (!callback) {
-            print.error(`Hook not found: ${hookMethod}Hook in geminiCli/reviewCodeChange`);
-            process.exit(1);
-          }
-
-          const adapter = new GeminiCliAdapter();
-          await adapter.execute(callback);
-        } else {
-          print.error(`Unsupported agent: ${agent}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);
-          process.exit(1);
-        }
-        return;
-      }
-
-      // NORMAL CLI MODE: Use file-path argument
-      if (!filePath) {
-        print.error('file-path is required when not using --hook mode');
-        process.exit(1);
-      }
-
       if (options.verbose) {
         log.info('Reviewing file:', filePath);
         log.info('Using LLM tool:', options.llmTool);

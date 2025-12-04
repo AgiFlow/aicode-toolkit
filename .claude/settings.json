@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/architect-mcp/src/cli.ts get-file-design-pattern --hook claude-code.preToolUse"
+            "command": "bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.preToolUse"
           }
         ]
       }
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/architect-mcp/src/cli.ts review-code-change --hook claude-code.postToolUse"
+            "command": "bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.postToolUse"
           }
         ]
       },

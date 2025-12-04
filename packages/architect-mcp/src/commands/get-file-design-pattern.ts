@@ -24,33 +24,15 @@ import { print } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 import { GetFileDesignPatternTool } from '../tools/GetFileDesignPatternTool';
 import {
-  CLAUDE_CODE,
-  GEMINI_CLI,
   type LlmToolId,
   isValidLlmTool,
   SUPPORTED_LLM_TOOLS,
 } from '@agiflowai/coding-agent-bridge';
-import { ClaudeCodeAdapter, GeminiCliAdapter } from '@agiflowai/hooks-adapter';
 
 interface GetFileDesignPatternOptions {
   verbose?: boolean;
   json?: boolean;
   llmTool?: string;
-  hook?: string;
-}
-
-/**
- * Parse hook option in format: agent.hookMethod
- * Examples: claude-code.preToolUse, gemini-cli.beforeTool
- */
-function parseHookOption(hookOption: string): { agent: string; hookMethod: string } {
-  const [agent, hookMethod] = hookOption.split('.');
-
-  if (!agent || !hookMethod) {
-    throw new Error(`Invalid hook format: ${hookOption}. Expected: <agent>.<hookMethod>`);
-  }
-
-  return { agent, hookMethod };
 }
 
 /**
@@ -58,7 +40,7 @@ function parseHookOption(hookOption: string): { agent: string; hookMethod: strin
  */
 export const getFileDesignPatternCommand = new Command('get-file-design-pattern')
   .description('Analyze a file against template-specific and global design patterns')
-  .argument('[file-path]', 'Path to the file to analyze (optional if using --hook)')
+  .argument('<file-path>', 'Path to the file to analyze')
   .option('-v, --verbose', 'Enable verbose output', false)
   .option('-j, --json', 'Output as JSON', false)
   .option(
@@ -66,51 +48,8 @@ export const getFileDesignPatternCommand = new Command('get-file-design-pattern'
     `Use LLM to filter relevant patterns. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
     undefined,
   )
-  .option(
-    '--hook <agentAndMethod>',
-    'Hook mode: <agent>.<method> (e.g., claude-code.preToolUse, gemini-cli.beforeTool)',
-  )
-  .action(async (filePath: string | undefined, options: GetFileDesignPatternOptions) => {
+  .action(async (filePath: string, options: GetFileDesignPatternOptions): Promise<void> => {
     try {
-      // HOOK MODE: Use adapter directly
-      if (options.hook) {
-        const { agent, hookMethod } = parseHookOption(options.hook);
-
-        if (agent === CLAUDE_CODE) {
-          const hooks = await import('../hooks/claudeCode/getFileDesignPattern');
-          const callback = hooks[`${hookMethod}Hook`];
-
-          if (!callback) {
-            print.error(`Hook not found: ${hookMethod}Hook in claudeCode/getFileDesignPattern`);
-            process.exit(1);
-          }
-
-          const adapter = new ClaudeCodeAdapter();
-          await adapter.execute(callback);
-        } else if (agent === GEMINI_CLI) {
-          const hooks = await import('../hooks/geminiCli/getFileDesignPattern');
-          const callback = hooks[`${hookMethod}Hook`];
-
-          if (!callback) {
-            print.error(`Hook not found: ${hookMethod}Hook in geminiCli/getFileDesignPattern`);
-            process.exit(1);
-          }
-
-          const adapter = new GeminiCliAdapter();
-          await adapter.execute(callback);
-        } else {
-          print.error(`Unsupported agent: ${agent}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);
-          process.exit(1);
-        }
-        return;
-      }
-
-      // NORMAL CLI MODE: Use file-path argument
-      if (!filePath) {
-        print.error('file-path is required when not using --hook mode');
-        process.exit(1);
-      }
-
       if (options.verbose) {
         print.info(`Analyzing file: ${filePath}`);
         if (options.llmTool) {
