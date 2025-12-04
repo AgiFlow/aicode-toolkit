@@ -81,7 +81,10 @@ export class UseScaffoldMethodHook {
 
       // Check if we already showed scaffold methods in this session
       const sessionKey = `list-scaffold-methods-${context.session_id}`;
-      const alreadyShown = await executionLog.hasExecuted({ filePath: sessionKey, decision: DECISION_DENY });
+      const alreadyShown = await executionLog.hasExecuted({
+        filePath: sessionKey,
+        decision: DECISION_DENY,
+      });
 
       if (alreadyShown) {
         // Already showed methods - skip hook and let Gemini continue normally
@@ -249,7 +252,10 @@ export class UseScaffoldMethodHook {
 
       // Check if scaffold is already marked as fulfilled
       const fulfilledKey = `scaffold-fulfilled-${scaffoldId}`;
-      const alreadyFulfilled = await executionLog.hasExecuted({ filePath: fulfilledKey, decision: DECISION_ALLOW });
+      const alreadyFulfilled = await executionLog.hasExecuted({
+        filePath: fulfilledKey,
+        decision: DECISION_ALLOW,
+      });
 
       if (alreadyFulfilled) {
         // Scaffold already completed - skip
@@ -265,7 +271,10 @@ export class UseScaffoldMethodHook {
       if (isScaffoldedFile) {
         // Track this file as edited
         const editKey = `scaffold-edit-${scaffoldId}-${filePath}`;
-        const alreadyTracked = await executionLog.hasExecuted({ filePath: editKey, decision: DECISION_ALLOW });
+        const alreadyTracked = await executionLog.hasExecuted({
+          filePath: editKey,
+          decision: DECISION_ALLOW,
+        });
 
         if (!alreadyTracked) {
           // Log this file as edited

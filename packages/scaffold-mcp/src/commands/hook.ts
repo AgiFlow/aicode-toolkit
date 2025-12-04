@@ -108,7 +108,6 @@ export const hookCommand = new Command('hook')
 
         // Execute all hooks in serial with shared stdin
         await adapter.executeMultiple(claudeCallbacks);
-
       } else if (agent === GEMINI_CLI) {
         // Import hook module (dynamic import for conditional loading based on agent type)
         const useScaffoldMethodModule: GeminiCliHookModule = await import(
@@ -136,7 +135,6 @@ export const hookCommand = new Command('hook')
 
         // Execute all hooks in serial with shared stdin
         await adapter.executeMultiple(geminiCallbacks);
-
       } else {
         print.error(`Unsupported agent: ${agent}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);
         process.exit(1);

@@ -141,7 +141,7 @@ export class GetFileDesignPatternHook {
       }
 
       // Format patterns for LLM
-      let message = 'The hook is blocked only once once to provide guideline for this file patterns. You must follow these design patterns when editing/writing this file:\n\n';
+      let message = 'The hook is blocked only once to provide guidelines for this file. You must follow these design patterns when editing/writing this file:\n\n';
       message += `**Matched file patterns:** ${filePatterns}\n\n`;
 
       for (const pattern of data.matched_patterns) {

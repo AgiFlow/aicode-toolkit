@@ -77,7 +77,9 @@ export abstract class BaseAdapter<TContext = any> {
    * This is useful when multiple hooks need to process the same input
    * @param callbacks - Array of callback functions to execute
    */
-  async executeMultiple(callbacks: Array<(context: TContext) => Promise<HookResponse>>): Promise<void> {
+  async executeMultiple(
+    callbacks: Array<(context: TContext) => Promise<HookResponse>>,
+  ): Promise<void> {
     try {
       // Read stdin from AI agent once
       const stdin = await this.readStdin();
@@ -93,7 +95,7 @@ export abstract class BaseAdapter<TContext = any> {
       }
 
       // Find first non-skip response (priority order)
-      const finalResponse = responses.find(r => r.decision !== 'skip');
+      const finalResponse = responses.find((r) => r.decision !== 'skip');
 
       // If all responses are skip, exit without output
       if (!finalResponse) {
