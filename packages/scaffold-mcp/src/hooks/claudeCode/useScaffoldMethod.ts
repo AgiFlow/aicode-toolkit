@@ -25,7 +25,8 @@ import {
   DECISION_ALLOW,
 } from '@agiflowai/hooks-adapter';
 import { ListScaffoldingMethodsTool } from '../../tools/ListScaffoldingMethodsTool';
-import { TemplatesManagerService } from '@agiflowai/aicode-utils';
+import { TemplatesManagerService, ProjectFinderService } from '@agiflowai/aicode-utils';
+import path from 'node:path';
 
 /**
  * PreToolUse hook callback for Claude Code
@@ -64,8 +65,19 @@ export const preToolUseHook = async (context: ClaudeCodeHookInput): Promise<Hook
     const templatesPath = await TemplatesManagerService.findTemplatesPath();
     const tool = new ListScaffoldingMethodsTool(templatesPath, false);
 
+    // Derive project path from file path by finding the nearest project.json
+    const workspaceRoot = await TemplatesManagerService.getWorkspaceRoot(context.cwd);
+    const projectFinder = new ProjectFinderService(workspaceRoot);
+
+    // Resolve file path (could be relative or absolute)
+    const absoluteFilePath = path.isAbsolute(filePath) ? filePath : path.join(context.cwd, filePath);
+    const projectConfig = await projectFinder.findProjectForFile(absoluteFilePath);
+
+    // If project found, use its root; otherwise use cwd
+    const projectPath = projectConfig?.root || context.cwd;
+
     // Execute the tool to get scaffolding methods
-    const result = await tool.execute(context.tool_input || {});
+    const result = await tool.execute({ projectPath });
 
     if (result.isError) {
       // Error getting methods - skip and let Claude continue

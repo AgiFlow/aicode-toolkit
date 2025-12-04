@@ -63,9 +63,11 @@ export const postToolUseHook = async (
   }
 
   try {
+    // Create execution log service for this session
+    const executionLog = new ExecutionLogService(context.session_id);
+
     // Check if file was recently reviewed (debounce within 3 seconds)
-    const wasRecent = await ExecutionLogService.wasRecentlyReviewed(
-      context.session_id,
+    const wasRecent = await executionLog.wasRecentlyReviewed(
       filePath,
       3000, // 3 seconds debounce
     );
@@ -96,14 +98,13 @@ export const postToolUseHook = async (
     );
 
     // Get current file metadata for change detection
-    const fileMetadata = await ExecutionLogService.getFileMetadata(filePath);
+    const fileMetadata = await executionLog.getFileMetadata(filePath);
 
     // Derive operation from tool name
     const operation = extractOperation(context.tool_name);
 
     // Check if file has changed since last review (skip if unchanged)
-    const fileChanged = await ExecutionLogService.hasFileChanged(
-      context.session_id,
+    const fileChanged = await executionLog.hasFileChanged(
       filePath,
       DECISION_ALLOW, // Check against last successful review
     );
@@ -127,8 +128,7 @@ export const postToolUseHook = async (
 
     // If fixes are required (must_do or must_not_do violations), block with full response
     if (data.fix_required) {
-      await ExecutionLogService.logExecution({
-        sessionId: context.session_id,
+      await executionLog.logExecution({
         filePath: filePath,
         operation: operation,
         decision: DECISION_DENY,
@@ -145,8 +145,7 @@ export const postToolUseHook = async (
 
     // Otherwise (no fix required), provide feedback and issues without blocking
     // decision: 'allow' means additionalContext is used, not blocking
-    await ExecutionLogService.logExecution({
-      sessionId: context.session_id,
+    await executionLog.logExecution({
       filePath: filePath,
       operation: operation,
       decision: DECISION_ALLOW,
