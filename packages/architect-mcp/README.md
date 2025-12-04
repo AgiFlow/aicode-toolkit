@@ -1,110 +1,36 @@
 # @agiflowai/architect-mcp
 
-A Model Context Protocol (MCP) server for software architecture design, code quality enforcement, and design pattern guidance. Supports multiple transport modes: **stdio**, **HTTP**, **SSE**, and **CLI**.
+> MCP server for design pattern guidance and code review
 
-## Features
+Help AI coding agents write code that follows your team's architectural patterns and coding standards. architect-mcp provides context-aware guidance before editing files and validates code against rules after changes.
 
-- **Design pattern guidance**: Get design patterns and coding standards for specific files
-- **Code review**: Review code against template-specific rules (RULES.yaml)
-- **Rule management**: Add and manage coding rules for templates
-- **Pattern management**: Add and manage design patterns (architect.yaml)
-- **Template-aware**: Automatically detects project templates and applies relevant patterns
-- **LLM-powered analysis**: Optional integration with Claude Code CLI for AI-assisted reviews
-- **Multiple modes**: MCP server mode (stdio) and standalone CLI mode
-- **MCP integration**: Seamlessly works with Claude Code and other MCP-compatible clients
+## Why Use This?
 
-## Installation
+When AI agents edit code, they don't know your team's conventions:
+- Which patterns apply to service files vs. tool files?
+- What are the must-do and must-not-do rules?
+- How should errors be handled in this codebase?
 
-```bash
-pnpm install @agiflowai/architect-mcp
-```
+architect-mcp solves this by:
 
-## Usage
+1. **Providing patterns before editing** - Agent sees relevant design patterns for the file
+2. **Validating code after editing** - Agent gets feedback on rule violations
+3. **Enforcing standards automatically** - Rules from RULES.yaml are checked programmatically
 
-### 1. MCP Server
+---
 
-Run architect-mcp as an MCP server to integrate with Claude Code or other MCP clients.
+## Quick Start
 
-#### Starting the Server
+### 1. Install Templates
 
 ```bash
-# stdio transport (default) - for Claude Code
-npx @agiflowai/architect-mcp mcp-serve
-
-# HTTP transport - for web applications
-npx @agiflowai/architect-mcp mcp-serve --type http --port 3000
-
-# SSE transport - for legacy clients
-npx @agiflowai/architect-mcp mcp-serve --type sse --port 3000
-
-# Enable admin mode (add_design_pattern, add_rule tools)
-npx @agiflowai/architect-mcp mcp-serve --admin-enable
-
-# Enable LLM-powered design pattern analysis
-npx @agiflowai/architect-mcp mcp-serve --design-pattern-tool claude-code
-
-# Enable LLM-powered code review
-npx @agiflowai/architect-mcp mcp-serve --review-tool claude-code
-
-# Enable all features with HTTP transport
-npx @agiflowai/architect-mcp mcp-serve --type http --port 3000 --admin-enable --design-pattern-tool claude-code --review-tool claude-code
+# Downloads templates with architect.yaml and RULES.yaml
+npx @agiflowai/aicode-toolkit init
 ```
 
-**Server Options:**
-- `-t, --type <type>`: Transport type: `stdio`, `http`, or `sse` (default: `stdio`)
-- `-p, --port <port>`: Port for HTTP/SSE servers (default: `3000`)
-- `--host <host>`: Host to bind to for HTTP/SSE (default: `localhost`)
-- `--design-pattern-tool <tool>`: LLM tool for design pattern analysis (currently only `claude-code`, `gemini-cli` and `codex` is supported)
-- `--review-tool <tool>`: LLM tool for code review (currently only `claude-code`, `gemini-cli` and `codex` is supported)
-- `--admin-enable`: Enable admin tools for pattern and rule management
+### 2. Configure Your AI Agent
 
-**Note about LLM tools:**
-- When LLM tools are **not enabled**, the server returns design patterns and rules for the AI agent to analyze itself
-- When LLM tools are **enabled** (e.g., `--review-tool claude-code`), the server uses Claude Code, Gemini CLI or Codex CLI to perform the analysis
-- This allows flexibility: let the AI agent do its own analysis, or use specialized LLM tools for deeper insights
-
-#### Claude Code Configuration
-
-Add to your Claude Code config:
-
-```json
-{
-  "mcpServers": {
-    "architect-mcp": {
-      "command": "npx",
-      "args": ["-y", "@agiflowai/architect-mcp", "mcp-serve"]
-    }
-  }
-}
-```
-
-Or if installed globally:
-
-```json
-{
-  "mcpServers": {
-    "architect-mcp": {
-      "command": "architect-mcp",
-      "args": ["mcp-serve"]
-    }
-  }
-}
-```
-
-**To enable admin tools** (for pattern/rule creation), add the `--admin-enable` flag:
-
-```json
-{
-  "mcpServers": {
-    "architect-mcp": {
-      "command": "npx",
-      "args": ["-y", "@agiflowai/architect-mcp", "mcp-serve", "--admin-enable"]
-    }
-  }
-}
-```
-
-**To enable LLM-powered analysis:**
+Add to your MCP config (`.mcp.json`, `.cursor/mcp.json`, etc.):
 
 ```json
 {
@@ -112,26 +38,178 @@ Or if installed globally:
     "architect-mcp": {
       "command": "npx",
       "args": [
-        "-y",
-        "@agiflowai/architect-mcp",
-        "mcp-serve",
-        "--design-pattern-tool",
-        "claude-code",
-        "--review-tool",
-        "claude-code"
+        "-y", "@agiflowai/architect-mcp", "mcp-serve",
+        "--admin-enable",
+        "--design-pattern-tool", "claude-code",
+        "--review-tool", "gemini-cli"
       ]
     }
   }
 }
 ```
 
-### Hooks Integration (Experimental)
+**Flags:**
+- `--admin-enable`: Enables tools for adding new patterns/rules
+- `--design-pattern-tool claude-code`: Uses Claude to filter relevant patterns
+- `--review-tool claude-code`: Uses Claude for intelligent code review
 
-> **Experimental:** Hooks integration is currently experimental and the API may change in future releases.
+### 3. Start Using
 
-architect-mcp integrates with AI coding agents' hook systems to automatically provide design patterns before file edits and review code after changes.
+Your AI agent now has access to architecture tools:
 
-**Quick setup for Claude Code** (`.claude/settings.json`):
+```
+You: "Add error handling to the user service"
+
+Agent:
+1. Calls get-file-design-pattern for src/services/UserService.ts
+2. Sees: Service Layer Pattern, must use dependency injection, must handle errors
+3. Writes code following the patterns
+4. Calls review-code-change to validate
+5. Fixes any violations
+```
+
+---
+
+## Available Tools
+
+### Standard Tools
+
+| Tool | Purpose | When to Use |
+|------|---------|-------------|
+| `get-file-design-pattern` | Get patterns and rules for a file | Before editing any file |
+| `review-code-change` | Validate code against rules | After editing a file |
+
+### Admin Tools (with `--admin-enable`)
+
+| Tool | Purpose | When to Use |
+|------|---------|-------------|
+| `add-design-pattern` | Add pattern to architect.yaml | Documenting new patterns |
+| `add-rule` | Add rule to RULES.yaml | Adding coding standards |
+
+---
+
+## How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Your AI Agent                           │
+└─────────────────────────────────────────────────────────────┘
+                              │
+         ┌────────────────────┴────────────────────┐
+         ▼                                         ▼
+  ┌──────────────────┐                    ┌──────────────────┐
+  │ Before Editing   │                    │ After Editing    │
+  │                  │                    │                  │
+  │ get-file-design- │                    │ review-code-     │
+  │ pattern          │                    │ change           │
+  └──────────────────┘                    └──────────────────┘
+         │                                         │
+         ▼                                         ▼
+  ┌──────────────────┐                    ┌──────────────────┐
+  │ architect.yaml   │                    │ RULES.yaml       │
+  │                  │                    │                  │
+  │ • Design patterns│                    │ • must_do        │
+  │ • File roles     │                    │ • should_do      │
+  │ • Examples       │                    │ • must_not_do    │
+  └──────────────────┘                    └──────────────────┘
+```
+
+### architect.yaml - Design Patterns
+
+Defines what each file type should do:
+
+```yaml
+features:
+  - name: Service Layer
+    design_pattern: Service classes with dependency injection
+    includes:
+      - src/services/**/*.ts
+    description: |
+      Services contain business logic and are injected into tools.
+      They should be stateless and delegate to repositories.
+```
+
+### RULES.yaml - Coding Standards
+
+Defines how code should be written:
+
+```yaml
+rules:
+  - pattern: src/services/**/*.ts
+    description: Service implementation standards
+    must_do:
+      - rule: Use dependency injection
+        codeExample: |
+          // ✓ GOOD
+          constructor(private repo: UserRepository) {}
+    must_not_do:
+      - rule: Never use static-only utility classes
+        codeExample: |
+          // ✗ BAD
+          class Utils { static doStuff() {} }
+```
+
+---
+
+## LLM Modes
+
+architect-mcp works in two modes:
+
+### Mode 1: Agent-Driven (LLM flags disabled)
+
+```bash
+npx @agiflowai/architect-mcp mcp-serve
+```
+
+- Returns all applicable patterns and rules
+- AI agent does its own analysis
+- Fast, no external API calls
+
+### Mode 2: LLM-Enhanced (LLM flags enabled)
+
+```bash
+npx @agiflowai/architect-mcp mcp-serve \
+  --design-pattern-tool claude-code \
+  --review-tool claude-code
+```
+
+- Filters patterns based on file content
+- Reviews code and returns specific violations
+- Precise, context-aware feedback
+
+---
+
+## CLI Commands
+
+architect-mcp also works as a standalone CLI:
+
+```bash
+# Get design patterns for a file
+npx @agiflowai/architect-mcp get-file-design-pattern src/services/UserService.ts
+
+# Review code against rules
+npx @agiflowai/architect-mcp review-code-change src/services/UserService.ts
+
+# Add a design pattern
+npx @agiflowai/architect-mcp add-pattern "Service Layer" "DI pattern" \
+  "Services use dependency injection" \
+  --template-name typescript-mcp-package \
+  --includes "src/services/**/*.ts"
+
+# Add a coding rule
+npx @agiflowai/architect-mcp add-rule error-handling "Error handling standards" \
+  --template-name typescript-mcp-package \
+  --must-do "Use try-catch blocks" \
+  --must-not-do "Never use empty catch blocks"
+```
+
+---
+
+## Hooks Integration (Experimental)
+
+Hooks let architect-mcp provide guidance automatically when files are edited.
+
+**Claude Code setup** (`.claude/settings.json`):
 
 ```json
 {
@@ -162,218 +240,52 @@ architect-mcp integrates with AI coding agents' hook systems to automatically pr
 }
 ```
 
-For detailed configuration, supported agents, and troubleshooting, see **[Hooks Documentation](./docs/hooks.md)**.
+**What happens:**
+- **PreToolUse**: Before editing, shows relevant patterns from architect.yaml
+- **PostToolUse**: After editing, reviews code against RULES.yaml
 
-#### Available MCP Tools
+See [Hooks Documentation](./docs/hooks.md) for details.
 
-**Standard Tools** (always available):
+---
 
-1. **get_file_design_pattern**: Get design patterns and coding standards for a file
-   - Arguments:
-     - `file_path` (string): Path to the file to analyze
-   - Returns: Project info, matched design patterns, and applicable coding rules
-
-2. **review_code_change**: Review code changes against template rules
-   - Arguments:
-     - `file_path` (string): Path to the file to review
-   - Returns: Code review feedback with severity rating and identified violations
-
-**Admin Tools** (enabled with `--admin-enable` flag):
-
-3. **add_design_pattern**: Add a new design pattern to architect.yaml
-   - Arguments:
-     - `template_name` (string, optional): Template name (omit for global patterns)
-     - `is_global` (boolean): Add to global architect.yaml
-     - `name` (string): Feature name
-     - `design_pattern` (string): Design pattern name
-     - `description` (string): Description
-     - `includes` (array): File patterns this design applies to
-
-4. **add_rule**: Add a new coding rule to RULES.yaml
-   - Arguments:
-     - `template_name` (string, optional): Template name (omit for global rules)
-     - `is_global` (boolean): Add to global RULES.yaml
-     - `pattern` (string): Pattern identifier
-     - `description` (string): Rule description
-     - `inherits` (array, optional): Inherited patterns
-     - `must_do` (array, optional): Required rules
-     - `should_do` (array, optional): Recommended rules
-     - `must_not_do` (array, optional): Prohibited patterns
-
-### 2. CLI Commands
-
-Use architect-mcp as a standalone CLI tool for design pattern analysis and code review.
-
-#### Design Pattern Commands
+## Server Options
 
 ```bash
-# Get design patterns for a file
-architect-mcp get-file-design-pattern <file-path>
+# stdio transport (default)
+npx @agiflowai/architect-mcp mcp-serve
 
-# Get patterns with verbose output
-architect-mcp get-file-design-pattern src/services/UserService.ts --verbose
+# HTTP transport
+npx @agiflowai/architect-mcp mcp-serve --type http --port 3000
 
-# Get patterns as JSON
-architect-mcp get-file-design-pattern src/services/UserService.ts --json
+# SSE transport
+npx @agiflowai/architect-mcp mcp-serve --type sse --port 3000
+
+# All features enabled
+npx @agiflowai/architect-mcp mcp-serve \
+  --admin-enable \
+  --design-pattern-tool claude-code \
+  --review-tool claude-code
 ```
 
-#### Code Review Commands
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-t, --type` | Transport: `stdio`, `http`, `sse` | `stdio` |
+| `-p, --port` | Port for HTTP/SSE | `3000` |
+| `--admin-enable` | Enable pattern/rule creation tools | `false` |
+| `--design-pattern-tool` | LLM for pattern filtering (`claude-code`, `gemini-cli`, `codex`) | disabled |
+| `--review-tool` | LLM for code review (`claude-code`, `gemini-cli`, `codex`) | disabled |
 
-```bash
-# Review code changes against rules
-architect-mcp review-code-change <file-path>
-
-# Review with verbose output
-architect-mcp review-code-change src/services/UserService.ts --verbose
-
-# Review with specific LLM tool
-architect-mcp review-code-change src/services/UserService.ts --llm-tool claude-code
-
-# Output as JSON
-architect-mcp review-code-change src/services/UserService.ts --json
-```
-
-#### Hook Commands
-
-architect-mcp supports hook mode for integration with AI coding agents like Claude Code and Gemini CLI:
-
-```bash
-# Claude Code hooks (reads from stdin, writes to stdout)
-architect-mcp hook --type claude-code.preToolUse   # Design patterns before edit
-architect-mcp hook --type claude-code.postToolUse  # Code review after edit
-
-# Gemini CLI hooks (WIP)
-architect-mcp hook --type gemini-cli.beforeToolUse  # Design patterns before edit
-architect-mcp hook --type gemini-cli.afterToolUse   # Code review after edit
-```
-
-**Hook type format:** `<agent>.<event>`
-- **agent**: `claude-code` or `gemini-cli`
-- **event**: `preToolUse`/`postToolUse` (Claude Code) or `beforeToolUse`/`afterToolUse` (Gemini CLI)
-
-**Note:** Hook commands are called by the AI agent's hook system, not directly by users. See **[Hooks Documentation](./docs/hooks.md)** for details.
-
-#### Pattern Management Commands
-
-```bash
-# Add a new design pattern
-architect-mcp add-pattern <name> <design-pattern> <description> \
-  --template-name typescript-mcp-package \
-  --includes "src/services/**/*.ts"
-
-# Add a global design pattern
-architect-mcp add-pattern service-layer "Service Layer Pattern" \
-  "Business logic in service classes" \
-  --global \
-  --includes "src/services/**/*.ts,packages/*/src/services/**/*.ts"
-```
-
-#### Rule Management Commands
-
-```bash
-# Add a new coding rule
-architect-mcp add-rule <pattern> <description> \
-  --template-name typescript-mcp-package \
-  --must-do "Use async/await for asynchronous operations" \
-  --must-not-do "Never use callbacks"
-
-# Add a global coding rule
-architect-mcp add-rule error-handling "Error handling standards" \
-  --global \
-  --must-do "Always use try-catch blocks" \
-  --must-not-do "Never use empty catch blocks"
-
-# Add rule with inheritance
-architect-mcp add-rule my-pattern "My custom pattern" \
-  --inherits "export-standards,type-safety" \
-  --must-do "Follow parent rules"
-```
-
-#### Environment Variables
-
-- `MCP_PORT`: Port number for HTTP/SSE servers (default: 3000)
-- `MCP_HOST`: Host for HTTP/SSE servers (default: localhost)
-
-## Quick Start
-
-### 1. Get Design Patterns for a File
-
-```bash
-# Analyze a file to see what design patterns apply
-architect-mcp get-file-design-pattern packages/my-app/src/services/UserService.ts
-```
-
-This returns:
-- Project information (name, template)
-- Matched design patterns from architect.yaml
-- Applicable coding rules from RULES.yaml with examples
-
-### 2. Review Code Changes
-
-```bash
-# Review a file against coding standards
-architect-mcp review-code-change packages/my-app/src/services/UserService.ts
-```
-
-This checks:
-- Must not do violations (critical issues)
-- Must do missing (required patterns not followed)
-- Should do suggestions (best practices)
-
-### 3. Add Custom Rules
-
-```bash
-# Add a new rule to your template
-architect-mcp add-rule api-standards "API endpoint standards" \
-  --template-name my-template \
-  --must-do "Use RESTful naming conventions" \
-  --must-do "Include OpenAPI documentation" \
-  --must-not-do "Never expose internal IDs"
-```
-
-## Template Structure
-
-architect-mcp works with templates that have:
-
-1. **architect.yaml** - Design patterns and file organization
-   ```yaml
-   features:
-     - name: Service Layer
-       design_pattern: Service classes with dependency injection
-       includes:
-         - src/services/**/*.ts
-       description: Business logic in service classes
-   ```
-
-2. **RULES.yaml** - Coding standards and rules
-   ```yaml
-   version: "1.0"
-   template: my-template
-   rules:
-     - pattern: src/services/**/*.ts
-       description: Service implementation standards
-       must_do:
-         - rule: Use dependency injection
-         - rule: Return typed results
-       must_not_do:
-         - rule: Never use static-only utility classes
-   ```
-
-## How It Works
-
-1. **Project Detection**: Finds the project containing the file using project.json
-2. **Template Resolution**: Identifies the source template from project configuration
-3. **Pattern Matching**: Matches file path against patterns in architect.yaml and RULES.yaml
-4. **Rule Inheritance**: Resolves inherited rules from global and template-specific configs
-5. **Analysis**: Returns patterns and rules, or performs LLM-based analysis if enabled
+---
 
 ## Documentation
 
-For detailed information about the architecture and design philosophy:
+| Document | Description |
+|----------|-------------|
+| [Design Pattern Overview](./docs/design-pattern-overview.md) | Philosophy and architecture of the pattern system |
+| [Rules Overview](./docs/rules-overview.md) | How RULES.yaml works, inheritance, review modes |
+| [Hooks Integration](./docs/hooks.md) | Setting up automatic hooks with AI agents |
 
-- **[Design Pattern Overview](./docs/design-pattern-overview.md)**: High-level explanation of the design pattern system, architectural philosophy, and core principles
-- **[Rules Overview](./docs/rules-overview.md)**: Detailed guide to the coding rules system (RULES.yaml), rule inheritance, and code review workflow
-- **[Hooks Integration](./docs/hooks.md)**: Guide to integrating architect-mcp with AI coding agents via hooks (experimental)
+---
 
 ## License
 

@@ -1,150 +1,185 @@
 # @agiflowai/aicode-toolkit
 
-AI-powered code toolkit CLI for scaffolding and development workflows.
+> CLI for initializing projects and managing AI Code Toolkit templates
 
-## Features
+The main entry point for setting up AI Code Toolkit in your workspace. Handles project initialization, template management, and MCP server configuration.
 
-- **Template management**: Initialize templates folder and add templates from remote repositories
-- **Dynamic template discovery**: Automatically finds templates in your workspace
-- **Multiple frameworks**: Support for Next.js, Vite React, and custom boilerplates
-- **Git integration**: Clone templates from GitHub repositories or subdirectories
-
-## Installation
+## Quick Start
 
 ```bash
-pnpm install @agiflowai/aicode-toolkit
+# Initialize templates in existing project
+npx @agiflowai/aicode-toolkit init
+
+# Create new project with templates
+npx @agiflowai/aicode-toolkit init --name my-project --project-type monolith
 ```
 
-Or install globally:
+---
+
+## Commands
+
+### `init`
+
+Initialize AI Code Toolkit in your workspace.
+
+**For existing projects:**
+```bash
+npx @agiflowai/aicode-toolkit init
+```
+
+This will:
+1. Create `templates/` folder in your workspace
+2. Download official templates (Next.js 15, TypeScript lib, MCP package)
+3. Detect installed AI coding agents (Claude Code, Cursor, etc.)
+4. Optionally configure MCP servers
+
+**For new projects:**
+```bash
+# Interactive mode
+npx @agiflowai/aicode-toolkit init
+
+# Non-interactive mode
+npx @agiflowai/aicode-toolkit init --name my-app --project-type monolith
+```
+
+This will:
+1. Create project directory
+2. Initialize git repository
+3. Download templates
+4. Create `toolkit.yaml` configuration
+
+**Options:**
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--name <name>` | Project name (for new projects) | - |
+| `--project-type <type>` | `monolith` or `monorepo` | - |
+| `--path <path>` | Custom templates path | `./templates` |
+| `--no-download` | Skip template download | `false` |
+
+### `add`
+
+Add templates from GitHub repositories.
 
 ```bash
-pnpm install -g @agiflowai/aicode-toolkit
+# Add from full repository
+npx @agiflowai/aicode-toolkit add \
+  --name my-template \
+  --url https://github.com/yourorg/template-repo
+
+# Add from repository subdirectory
+npx @agiflowai/aicode-toolkit add \
+  --name react-vite \
+  --url https://github.com/AgiFlow/aicode-toolkit/tree/main/templates/react-vite
 ```
 
-## Usage
-
-### Initialize Templates
-
-The `init` command sets up your templates folder and **automatically downloads official templates** from the AgiFlow repository:
-
-```bash
-# Initialize templates folder and download official templates
-aicode init
-
-# Or specify a custom path
-aicode init --path ./my-templates
-
-# Skip auto-download if you want to add templates manually
-aicode init --no-download
-```
-
-**What `init` does:**
-1. Creates `templates/` folder in your workspace root
-2. Automatically downloads official templates from [AgiFlow/aicode-toolkit](https://github.com/AgiFlow/aicode-toolkit/tree/main/templates)
-3. Creates a README.md with usage instructions
-4. Skips templates that already exist (safe to re-run)
-
-**What gets downloaded:**
-- ✅ `nextjs-15-drizzle` - Next.js 15 with App Router, TypeScript, Tailwind CSS 4, Storybook, and optional Drizzle ORM
-- ✅ More templates coming soon...
-
-### Add Templates
-
-Add templates from GitHub repositories or subdirectories:
-
-```bash
-# Add a template from a full repository
-aicode add --name my-template --url https://github.com/yourorg/nextjs-template
-
-# Add a template from a repository subdirectory
-aicode add \
-  --name nextjs-15-drizzle \
-  --url https://github.com/AgiFlow/aicode-toolkit/tree/main/templates/nextjs-15-drizzle
-
-# Add to a specific type folder
-aicode add \
-  --name react-component \
-  --url https://github.com/yourorg/react-component-scaffold \
-  --type scaffold
-```
-
-**What `add` does:**
-1. Parses GitHub URL to detect full repository vs subdirectory
-2. Downloads template using git clone (full repo) or sparse checkout (subdirectory)
-3. Validates template has required configuration files (scaffold.yaml)
-4. Saves template to your templates folder
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `--name <name>` | Template name (required) |
+| `--url <url>` | GitHub URL (required) |
+| `--type <type>` | Template type folder |
 
 **Supported URL formats:**
 - Full repository: `https://github.com/user/repo`
 - Subdirectory: `https://github.com/user/repo/tree/branch/path/to/template`
-- With `.git` extension: `https://github.com/user/repo.git`
+- With .git: `https://github.com/user/repo.git`
 
-## CLI Commands
+---
 
-### `aicode init`
+## What Gets Installed
 
-Initialize templates folder structure at workspace root.
+When you run `init`, these official templates are downloaded:
 
-**Options:**
-- `--path <path>`: Custom path for templates folder (default: `./templates`)
-- `--no-download`: Skip automatic download of official templates
+| Template | Description |
+|----------|-------------|
+| `nextjs-15-drizzle` | Next.js 15 + App Router + TypeScript + Tailwind CSS 4 + Drizzle ORM |
+| `typescript-lib` | TypeScript library with ESM/CJS builds |
+| `typescript-mcp-package` | MCP server package template |
 
-**Examples:**
-```bash
-# Initialize at default location
-aicode init
+Each template includes:
+- `scaffold.yaml` - Boilerplate and feature definitions
+- `architect.yaml` - Design patterns (optional)
+- `RULES.yaml` - Coding standards (optional)
 
-# Initialize at custom location
-aicode init --path ./custom-templates
+---
 
-# Initialize without downloading templates
-aicode init --no-download
+## Project Types
+
+### Monolith
+
+Single application with `toolkit.yaml` at root:
+
+```
+my-app/
+├── toolkit.yaml          # sourceTemplate: "nextjs-15"
+├── templates/
+│   └── nextjs-15/
+├── src/
+└── package.json
 ```
 
-### `aicode add`
+### Monorepo
 
-Add a template from a GitHub repository.
+Multiple projects with `project.json` in each:
 
-**Options:**
-- `--name <name>`: Name for the template (required)
-- `--url <url>`: GitHub repository URL (required)
-- `--type <type>`: Template type folder (default: auto-detect)
-
-**Examples:**
-```bash
-# Add template from full repository
-aicode add --name my-template --url https://github.com/user/repo
-
-# Add template from subdirectory
-aicode add \
-  --name nextjs-15 \
-  --url https://github.com/AgiFlow/aicode-toolkit/tree/main/templates/nextjs-15-drizzle
-
-# Specify custom type
-aicode add \
-  --name my-scaffold \
-  --url https://github.com/user/repo \
-  --type scaffold
 ```
+my-workspace/
+├── templates/
+│   ├── nextjs-15/
+│   └── typescript-lib/
+├── apps/
+│   └── web/
+│       └── project.json  # sourceTemplate: "nextjs-15"
+└── packages/
+    └── shared/
+        └── project.json  # sourceTemplate: "typescript-lib"
+```
+
+---
+
+## Coding Agent Detection
+
+The CLI automatically detects installed AI coding agents:
+
+| Agent | Config Location | Status |
+|-------|-----------------|--------|
+| Claude Code | `.mcp.json` | Supported |
+| Cursor | `.cursor/mcp.json` | Supported |
+| Gemini CLI | `.gemini/settings.json` | Supported |
+| Codex CLI | `.codex/config.json` | Supported |
+| GitHub Copilot | VS Code settings | Supported |
+
+When detected, the CLI offers to configure MCP servers (scaffold-mcp, architect-mcp) automatically.
+
+---
 
 ## Template Structure
 
-Templates are organized in the `templates/` folder at your workspace root:
-
 ```
 templates/
-├── nextjs-15-drizzle/
-│   ├── scaffold.yaml          # Template configuration
-│   ├── package.json.liquid    # Template files with variables
-│   └── ...
-└── README.md
+└── nextjs-15/
+    ├── scaffold.yaml         # Required: boilerplate + feature definitions
+    ├── architect.yaml        # Optional: design patterns
+    ├── RULES.yaml            # Optional: coding standards
+    └── src/                  # Template files (.liquid for variable replacement)
+        ├── package.json.liquid
+        └── app/
+            └── page.tsx.liquid
 ```
 
-Each template must have a `scaffold.yaml` file that defines:
-- Boilerplate configurations
-- Feature scaffolds
-- Variable schemas
-- File includes
+See [scaffold-mcp documentation](../../packages/scaffold-mcp/docs/template-conventions.md) for template creation guide.
+
+---
+
+## Related Packages
+
+| Package | Description |
+|---------|-------------|
+| [@agiflowai/scaffold-mcp](../../packages/scaffold-mcp) | MCP server for code scaffolding |
+| [@agiflowai/architect-mcp](../../packages/architect-mcp) | MCP server for design patterns |
+| [@agiflowai/one-mcp](../../packages/one-mcp) | MCP proxy for reduced token usage |
+
+---
 
 ## License
 
