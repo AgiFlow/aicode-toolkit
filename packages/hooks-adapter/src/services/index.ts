@@ -17,6 +17,7 @@
 // Export execution logging service
 export {
   ExecutionLogService,
+  type HasExecutedParams,
   type LogExecutionParams,
   type LogStats,
 } from './ExecutionLogService';

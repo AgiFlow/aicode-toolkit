@@ -24,7 +24,7 @@ describe('ExecutionLogService', () => {
     test('returns false when log file does not exist', async () => {
       vi.mocked(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
 
-      const result = await service.hasExecuted('/test/file.ts', 'deny');
+      const result = await service.hasExecuted({ filePath: '/test/file.ts', decision: 'deny' });
 
       expect(result).toBe(false);
     });
@@ -40,7 +40,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await service.hasExecuted('/test/file.ts', 'deny');
+      const result = await service.hasExecuted({ filePath: '/test/file.ts', decision: 'deny' });
 
       expect(result).toBe(true);
     });
@@ -59,7 +59,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await service.hasExecuted(filePath, decision);
+      const result = await service.hasExecuted({ filePath, decision });
 
       expect(result).toBe(false);
     });
@@ -73,7 +73,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
 
-      const result = await service.hasExecuted('/test/file.ts', 'deny');
+      const result = await service.hasExecuted({ filePath: '/test/file.ts', decision: 'deny' });
 
       expect(result).toBe(true);
     });
@@ -82,7 +82,7 @@ describe('ExecutionLogService', () => {
       const logContent = 'invalid json\n{"valid": "entry"}';
       vi.mocked(fs.readFile).mockResolvedValue(logContent);
 
-      const result = await service.hasExecuted('/test/file.ts', 'deny');
+      const result = await service.hasExecuted({ filePath: '/test/file.ts', decision: 'deny' });
 
       expect(result).toBe(false);
     });
@@ -91,7 +91,7 @@ describe('ExecutionLogService', () => {
       vi.mocked(fs.readFile).mockRejectedValue(new Error('Permission denied'));
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = await service.hasExecuted('/test/file.ts', 'deny');
+      const result = await service.hasExecuted({ filePath: '/test/file.ts', decision: 'deny' });
 
       expect(result).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalled();

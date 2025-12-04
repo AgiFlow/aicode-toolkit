@@ -62,6 +62,18 @@ export interface LogExecutionParams {
 }
 
 /**
+ * Input parameters for checking if a hook execution has occurred
+ */
+export interface HasExecutedParams {
+  /** File path to check */
+  filePath: string;
+  /** Decision to check for (e.g., 'deny' means we already showed patterns) */
+  decision: string;
+  /** Optional file pattern to match */
+  filePattern?: string;
+}
+
+/**
  * Service for tracking hook executions using an append-only log
  * Prevents duplicate hook actions (e.g., showing design patterns twice for same file)
  * Each session has its own log file for isolation
@@ -94,12 +106,12 @@ export class ExecutionLogService {
    * NOTE: Uses fail-open strategy - on error, returns false to allow action.
    * This ensures hooks can still provide guidance even if log access fails.
    *
-   * @param filePath - File path to check
-   * @param decision - Decision to check for (e.g., 'deny' means we already showed patterns)
-   * @param filePattern - Optional file pattern to match
+   * @param params - Parameters for checking execution
    * @returns true if the action was already taken, false on error (fail-open)
    */
-  async hasExecuted(filePath: string, decision: string, filePattern?: string): Promise<boolean> {
+  async hasExecuted(params: HasExecutedParams): Promise<boolean> {
+    const { filePath, decision, filePattern } = params;
+
     try {
       const entries = await this.loadLog();
 
