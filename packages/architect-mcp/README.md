@@ -125,13 +125,13 @@ Or if installed globally:
 }
 ```
 
-### Hooks Integration
+### Hooks Integration (Experimental)
 
-architect-mcp integrates with AI coding agents' hook systems to automatically provide design patterns before file edits and review code after changes. This provides real-time guidance without requiring manual MCP tool calls.
+> **Experimental:** Hooks integration is currently experimental and the API may change in future releases.
 
-#### Claude Code Hooks
+architect-mcp integrates with AI coding agents' hook systems to automatically provide design patterns before file edits and review code after changes.
 
-Add to your Claude Code settings (`.claude/settings.json` or `.claude/settings.local.json`):
+**Quick setup for Claude Code** (`.claude/settings.json`):
 
 ```json
 {
@@ -142,7 +142,7 @@ Add to your Claude Code settings (`.claude/settings.json` or `.claude/settings.l
         "hooks": [
           {
             "type": "command",
-            "command": "npx @agiflowai/architect-mcp hook --type claude-code:pre-tool-use"
+            "command": "npx @agiflowai/architect-mcp hook --type claude-code.preToolUse"
           }
         ]
       }
@@ -153,7 +153,7 @@ Add to your Claude Code settings (`.claude/settings.json` or `.claude/settings.l
         "hooks": [
           {
             "type": "command",
-            "command": "npx @agiflowai/architect-mcp hook --type claude-code:post-tool-use"
+            "command": "npx @agiflowai/architect-mcp hook --type claude-code.postToolUse"
           }
         ]
       }
@@ -162,63 +162,7 @@ Add to your Claude Code settings (`.claude/settings.json` or `.claude/settings.l
 }
 ```
 
-**How Claude Code hooks work:**
-
-- **PreToolUse (Edit|Write)**: Before Claude edits or writes a file, the hook provides relevant design patterns and coding standards from `architect.yaml`. This helps Claude follow your project's architectural guidelines.
-
-- **PostToolUse (Edit|Write)**: After Claude edits or writes a file, the hook reviews the changes against your `RULES.yaml`. If violations are found, Claude receives feedback to fix them.
-
-**Hook decisions:**
-
-| Decision | Behavior |
-|----------|----------|
-| `allow` | Proceed with the operation, optionally with guidance message |
-| `deny` | Block the operation with an error message |
-| `ask` | Prompt the user for confirmation |
-| `skip` | Silently allow (no output to Claude) |
-
-**Execution tracking:** Hooks automatically track executions per session to avoid duplicate processing. Each file is only analyzed once per tool use cycle.
-
-#### Gemini CLI Hooks (WIP)
-
-> **Note:** Gemini CLI hooks integration is currently a work in progress and may not be fully functional.
-
-Add to your Gemini CLI settings (`~/.gemini/settings.json`):
-
-```json
-{
-  "hooks": {
-    "beforeToolUse": [
-      {
-        "command": "npx @agiflowai/architect-mcp hook --type gemini-cli:before-tool-use",
-        "matcher": ".*"
-      }
-    ],
-    "afterToolUse": [
-      {
-        "command": "npx @agiflowai/architect-mcp hook --type gemini-cli:after-tool-use",
-        "matcher": ".*"
-      }
-    ]
-  }
-}
-```
-
-**How Gemini CLI hooks work:**
-
-- **beforeToolUse**: Before Gemini writes or edits a file, the hook provides relevant design patterns and coding standards from `architect.yaml`.
-
-- **afterToolUse**: After Gemini writes or edits a file, the hook reviews the changes against your `RULES.yaml`.
-
-**Hook decisions:**
-
-| Decision | Behavior |
-|----------|----------|
-| `ALLOW` | Proceed with the operation, optionally with guidance message |
-| `BLOCK` | Block the operation with an error message |
-| `WARN` | Show a warning but allow the operation |
-
-**Note:** The hooks use `@agiflowai/hooks-adapter` internally for normalized hook handling across different AI coding agents.
+For detailed configuration, supported agents, and troubleshooting, see **[Hooks Documentation](./docs/hooks.md)**.
 
 #### Available MCP Tools
 
@@ -295,19 +239,19 @@ architect-mcp supports hook mode for integration with AI coding agents like Clau
 
 ```bash
 # Claude Code hooks (reads from stdin, writes to stdout)
-architect-mcp hook --type claude-code:pre-tool-use   # Design patterns before edit
-architect-mcp hook --type claude-code:post-tool-use  # Code review after edit
+architect-mcp hook --type claude-code.preToolUse   # Design patterns before edit
+architect-mcp hook --type claude-code.postToolUse  # Code review after edit
 
 # Gemini CLI hooks (WIP)
-architect-mcp hook --type gemini-cli:before-tool-use  # Design patterns before edit
-architect-mcp hook --type gemini-cli:after-tool-use   # Code review after edit
+architect-mcp hook --type gemini-cli.beforeToolUse  # Design patterns before edit
+architect-mcp hook --type gemini-cli.afterToolUse   # Code review after edit
 ```
 
-**Hook type format:** `<agent>:<event>`
+**Hook type format:** `<agent>.<event>`
 - **agent**: `claude-code` or `gemini-cli`
-- **event**: `pre-tool-use`/`post-tool-use` (Claude Code) or `before-tool-use`/`after-tool-use` (Gemini CLI)
+- **event**: `preToolUse`/`postToolUse` (Claude Code) or `beforeToolUse`/`afterToolUse` (Gemini CLI)
 
-**Note:** Hook commands are called by the AI agent's hook system, not directly by users. The commands read tool use context from stdin (JSON format) and write hook responses to stdout.
+**Note:** Hook commands are called by the AI agent's hook system, not directly by users. See **[Hooks Documentation](./docs/hooks.md)** for details.
 
 #### Pattern Management Commands
 
@@ -429,6 +373,7 @@ For detailed information about the architecture and design philosophy:
 
 - **[Design Pattern Overview](./docs/design-pattern-overview.md)**: High-level explanation of the design pattern system, architectural philosophy, and core principles
 - **[Rules Overview](./docs/rules-overview.md)**: Detailed guide to the coding rules system (RULES.yaml), rule inheritance, and code review workflow
+- **[Hooks Integration](./docs/hooks.md)**: Guide to integrating architect-mcp with AI coding agents via hooks (experimental)
 
 ## License
 
