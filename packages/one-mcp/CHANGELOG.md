@@ -1,3 +1,21 @@
+## 0.2.3 (2025-12-04)
+
+### 🚀 Features
+
+- **hooks-adapter:** Refactor hooks and add ExecutionLogService improvements ([7a241a3](https://github.com/AgiFlow/aicode-toolkit/commit/7a241a3))
+
+### 🩹 Fixes
+
+- **architect-mcp:** hooks Fix multiple hooks running issue ([df6cbda](https://github.com/AgiFlow/aicode-toolkit/commit/df6cbda))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.6
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.2.2 (2025-11-28)
 
 ### 🚀 Features

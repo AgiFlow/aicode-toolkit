@@ -1,3 +1,30 @@
+## 1.0.7 (2025-12-04)
+
+### 🚀 Features
+
+- **hooks-adapter:** Refactor hooks and add ExecutionLogService improvements ([7a241a3](https://github.com/AgiFlow/aicode-toolkit/commit/7a241a3))
+- **scaffold-mcp:** hooks Fix scaffold files reminder ([bdb5e48](https://github.com/AgiFlow/aicode-toolkit/commit/bdb5e48))
+- **scaffold-mcp:** hooks Add claude codes hook ([91989aa](https://github.com/AgiFlow/aicode-toolkit/commit/91989aa))
+
+### 🩹 Fixes
+
+- Improve hook implementations and documentation ([dc430b2](https://github.com/AgiFlow/aicode-toolkit/commit/dc430b2))
+- hooks Fix reviewCodeChange and useScaffoldMethod hook ([396a4cc](https://github.com/AgiFlow/aicode-toolkit/commit/396a4cc))
+- hooks Fix hooks adapter ([553e358](https://github.com/AgiFlow/aicode-toolkit/commit/553e358))
+- hooks Fix scaffold-mcp hooks ([d72a669](https://github.com/AgiFlow/aicode-toolkit/commit/d72a669))
+- **architect-mcp:** Hook format Fix --hook config format ([ad18201](https://github.com/AgiFlow/aicode-toolkit/commit/ad18201))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.6
+- Updated @agiflowai/architect-mcp to 1.0.7
+- Updated @agiflowai/hooks-adapter to 0.0.2
+- Updated @agiflowai/aicode-utils to 1.0.6
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.6 (2025-12-02)
 
 ### 🧱 Updated Dependencies

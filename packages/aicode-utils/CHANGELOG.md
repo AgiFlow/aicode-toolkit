@@ -1,3 +1,17 @@
+## 1.0.6 (2025-12-04)
+
+### 🚀 Features
+
+- **aicode-utils:** Add edge case handling to generateStableId ([7b4ca15](https://github.com/AgiFlow/aicode-toolkit/commit/7b4ca15))
+
+### 🩹 Fixes
+
+- hooks Fix scaffold-mcp hooks ([d72a669](https://github.com/AgiFlow/aicode-toolkit/commit/d72a669))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.5 (2025-12-02)
 
 This was a version bump only for @agiflowai/aicode-utils to align it with other projects, there were no code changes.
