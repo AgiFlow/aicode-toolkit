@@ -25,6 +25,7 @@ import { CLAUDE_CODE, GEMINI_CLI } from '@agiflowai/coding-agent-bridge';
 import {
   ClaudeCodeAdapter,
   GeminiCliAdapter,
+  parseHookType,
   type ClaudeCodeHookInput,
   type GeminiCliHookInput,
   type HookResponse,
@@ -35,18 +36,28 @@ interface HookOptions {
   type?: string;
 }
 
-/**
- * Parse hook type option in format: agent.hookMethod
- * Examples: claude-code.preToolUse, gemini-cli.afterTool
- */
-function parseHookType(hookType: string): { agent: string; hookMethod: string } {
-  const [agent, hookMethod] = hookType.split('.');
+/** Type for Claude Code hook callback function */
+type ClaudeCodeHookCallback = (context: ClaudeCodeHookInput) => Promise<HookResponse>;
 
-  if (!agent || !hookMethod) {
-    throw new Error(`Invalid hook type: ${hookType}. Expected: <agent>.<hookMethod>`);
-  }
+/** Type for Gemini CLI hook callback function */
+type GeminiCliHookCallback = (context: GeminiCliHookInput) => Promise<HookResponse>;
 
-  return { agent, hookMethod };
+/** Interface for class-based hook with preToolUse and postToolUse methods */
+interface HookClass<T> {
+  preToolUse?: (context: T) => Promise<HookResponse>;
+  postToolUse?: (context: T) => Promise<HookResponse>;
+}
+
+/** Interface for Claude Code hook module exports */
+interface ClaudeCodeHookModule {
+  GetFileDesignPatternHook?: new () => HookClass<ClaudeCodeHookInput>;
+  ReviewCodeChangeHook?: new () => HookClass<ClaudeCodeHookInput>;
+}
+
+/** Interface for Gemini CLI hook module exports */
+interface GeminiCliHookModule {
+  GetFileDesignPatternHook?: new () => HookClass<GeminiCliHookInput>;
+  ReviewCodeChangeHook?: new () => HookClass<GeminiCliHookInput>;
 }
 
 /**
@@ -58,7 +69,7 @@ export const hookCommand = new Command('hook')
     '--type <agentAndMethod>',
     'Hook type: <agent>.<method> (e.g., claude-code.preToolUse, gemini-cli.afterTool)',
   )
-  .action(async (options: HookOptions) => {
+  .action(async (options: HookOptions): Promise<void> => {
     try {
       if (!options.type) {
         print.error('--type option is required');
@@ -73,29 +84,35 @@ export const hookCommand = new Command('hook')
       const { agent, hookMethod } = parseHookType(options.type);
 
       if (agent === CLAUDE_CODE) {
-        // Import both hook modules
-        const [getFileDesignPatternHooks, reviewCodeChangeHooks] = await Promise.all([
+        // Import hook modules (dynamic import for conditional loading based on agent type)
+        const [getFileDesignPatternModule, reviewCodeChangeModule]: [ClaudeCodeHookModule, ClaudeCodeHookModule] = await Promise.all([
           import('../hooks/claudeCode/getFileDesignPattern'),
           import('../hooks/claudeCode/reviewCodeChange'),
         ]);
 
-        const hookName = `${hookMethod}Hook`;
-
         // Collect all available hooks for this hook method
-        const claudeCallbacks: Array<(context: ClaudeCodeHookInput) => Promise<HookResponse>> = [];
+        const claudeCallbacks: ClaudeCodeHookCallback[] = [];
 
-        const getFileHook = (getFileDesignPatternHooks as any)[hookName] as ((context: ClaudeCodeHookInput) => Promise<HookResponse>) | undefined;
-        const reviewCodeHook = (reviewCodeChangeHooks as any)[hookName] as ((context: ClaudeCodeHookInput) => Promise<HookResponse>) | undefined;
-
-        if (getFileHook) {
-          claudeCallbacks.push(getFileHook);
+        // Instantiate GetFileDesignPatternHook class and get the method
+        if (getFileDesignPatternModule.GetFileDesignPatternHook) {
+          const hookInstance = new getFileDesignPatternModule.GetFileDesignPatternHook();
+          const hookFn = hookInstance[hookMethod as keyof HookClass<ClaudeCodeHookInput>];
+          if (hookFn) {
+            claudeCallbacks.push(hookFn.bind(hookInstance));
+          }
         }
-        if (reviewCodeHook) {
-          claudeCallbacks.push(reviewCodeHook);
+
+        // Instantiate ReviewCodeChangeHook class and get the method
+        if (reviewCodeChangeModule.ReviewCodeChangeHook) {
+          const hookInstance = new reviewCodeChangeModule.ReviewCodeChangeHook();
+          const hookFn = hookInstance[hookMethod as keyof HookClass<ClaudeCodeHookInput>];
+          if (hookFn) {
+            claudeCallbacks.push(hookFn.bind(hookInstance));
+          }
         }
 
         if (claudeCallbacks.length === 0) {
-          print.error(`Hook not found: ${hookName} in Claude Code hooks`);
+          print.error(`Hook not found: ${hookMethod} in Claude Code hooks`);
           process.exit(1);
         }
 
@@ -105,29 +122,35 @@ export const hookCommand = new Command('hook')
         await adapter.executeMultiple(claudeCallbacks);
 
       } else if (agent === GEMINI_CLI) {
-        // Import both hook modules
-        const [getFileDesignPatternHooks, reviewCodeChangeHooks] = await Promise.all([
+        // Import hook modules (dynamic import for conditional loading based on agent type)
+        const [getFileDesignPatternModule, reviewCodeChangeModule]: [GeminiCliHookModule, GeminiCliHookModule] = await Promise.all([
           import('../hooks/geminiCli/getFileDesignPattern'),
           import('../hooks/geminiCli/reviewCodeChange'),
         ]);
 
-        const hookName = `${hookMethod}Hook`;
-
         // Collect all available hooks for this hook method
-        const geminiCallbacks: Array<(context: GeminiCliHookInput) => Promise<HookResponse>> = [];
+        const geminiCallbacks: GeminiCliHookCallback[] = [];
 
-        const getFileHook = (getFileDesignPatternHooks as any)[hookName] as ((context: GeminiCliHookInput) => Promise<HookResponse>) | undefined;
-        const reviewCodeHook = (reviewCodeChangeHooks as any)[hookName] as ((context: GeminiCliHookInput) => Promise<HookResponse>) | undefined;
-
-        if (getFileHook) {
-          geminiCallbacks.push(getFileHook);
+        // Instantiate GetFileDesignPatternHook class and get the method
+        if (getFileDesignPatternModule.GetFileDesignPatternHook) {
+          const hookInstance = new getFileDesignPatternModule.GetFileDesignPatternHook();
+          const hookFn = hookInstance[hookMethod as keyof HookClass<GeminiCliHookInput>];
+          if (hookFn) {
+            geminiCallbacks.push(hookFn.bind(hookInstance));
+          }
         }
-        if (reviewCodeHook) {
-          geminiCallbacks.push(reviewCodeHook);
+
+        // Instantiate ReviewCodeChangeHook class and get the method
+        if (reviewCodeChangeModule.ReviewCodeChangeHook) {
+          const hookInstance = new reviewCodeChangeModule.ReviewCodeChangeHook();
+          const hookFn = hookInstance[hookMethod as keyof HookClass<GeminiCliHookInput>];
+          if (hookFn) {
+            geminiCallbacks.push(hookFn.bind(hookInstance));
+          }
         }
 
         if (geminiCallbacks.length === 0) {
-          print.error(`Hook not found: ${hookName} in Gemini CLI hooks`);
+          print.error(`Hook not found: ${hookMethod} in Gemini CLI hooks`);
           process.exit(1);
         }
 

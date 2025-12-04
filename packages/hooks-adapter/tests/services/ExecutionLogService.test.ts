@@ -219,7 +219,11 @@ describe('ExecutionLogService', () => {
     });
 
     test('handles missing log file gracefully', async () => {
-      vi.mocked(fs.unlink).mockRejectedValue({ code: 'ENOENT' });
+      // Create a proper Node.js-style error with code property
+      const enoentError = Object.assign(new Error('ENOENT: no such file or directory'), {
+        code: 'ENOENT',
+      });
+      vi.mocked(fs.unlink).mockRejectedValue(enoentError);
 
       await expect(service.clearLog()).resolves.toBeUndefined();
     });
@@ -362,7 +366,7 @@ describe('ExecutionLogService', () => {
 
       expect(result).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Failed to load execution log:',
+        expect.stringContaining('Failed to load execution log'),
         expect.any(Error),
       );
     });
@@ -535,7 +539,7 @@ describe('ExecutionLogService', () => {
 
       expect(result).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Failed to load execution log:',
+        expect.stringContaining('Failed to load execution log'),
         expect.any(Error),
       );
     });

@@ -647,76 +647,81 @@ rules:
           // ✅ GOOD
           export { Service1, Service2 } from './services';
   - pattern: src/hooks/**/*.ts
-    description: Hook Callback Implementation Standards
+    description: Hook Class Implementation Standards
     inherits:
       - import-standards
       - export-standards
       - error-handling
       - type-safety
     must_do:
-      - rule: Export named hook callbacks with adapter-specific input types
+      - rule: Export a hook class with preToolUse and postToolUse methods
         codeExample: |-
-          // ✅ GOOD - Claude Code hooks
+          // ✅ GOOD - Claude Code hook class
           import type { ClaudeCodeHookInput, HookResponse } from '@agiflowai/hooks-adapter';
+          import {
+            ExecutionLogService,
+            DECISION_SKIP,
+            DECISION_DENY,
+            DECISION_ALLOW,
+          } from '@agiflowai/hooks-adapter';
 
-          export const preToolUseHook = async (
-            context: ClaudeCodeHookInput
-          ): Promise<HookResponse> => {
-            // Access Claude Code fields: tool_name, tool_input, session_id, etc.
-            const filePath = context.tool_input.file_path;
-            return { decision: DECISION_SKIP, message: '' };
-          };
+          export class MyFeatureHook {
+            async preToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+              try {
+                // Access Claude Code fields: tool_name, tool_input, session_id, etc.
+                const filePath = context.tool_input.file_path;
+                return { decision: DECISION_SKIP, message: '' };
+              } catch (error) {
+                return {
+                  decision: DECISION_SKIP,
+                  message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`
+                };
+              }
+            }
 
-          export const postToolUseHook = async (
-            context: ClaudeCodeHookInput
-          ): Promise<HookResponse> => {
-            return { decision: DECISION_SKIP, message: '' };
-          };
-
-          // ✅ GOOD - Gemini CLI hooks
-          import type { GeminiCliHookInput, HookResponse } from '@agiflowai/hooks-adapter';
-
-          export const beforeToolHook = async (
-            context: GeminiCliHookInput
-          ): Promise<HookResponse> => {
-            // Access Gemini fields: tool_name, tool_input, session_id, event, etc.
-            return { decision: DECISION_SKIP, message: '' };
-          };
-
-          export const afterToolHook = async (
-            context: GeminiCliHookInput
-          ): Promise<HookResponse> => {
-            return { decision: DECISION_SKIP, message: '' };
-          };
-      - rule: Always use fail-open pattern - return SKIP on errors
+            async postToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+              try {
+                return { decision: DECISION_SKIP, message: '' };
+              } catch (error) {
+                return {
+                  decision: DECISION_SKIP,
+                  message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`
+                };
+              }
+            }
+          }
+      - rule: Always use fail-open pattern - return SKIP on errors in each method
         codeExample: |-
           // ✅ GOOD
-          try {
-            // Hook logic
-            return { decision: DECISION_ALLOW, message: 'Success' };
-          } catch (error) {
-            return {
-              decision: DECISION_SKIP,
-              message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`
-            };
+          async preToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+            try {
+              // Hook logic
+              return { decision: DECISION_ALLOW, message: 'Success' };
+            } catch (error) {
+              return {
+                decision: DECISION_SKIP,
+                message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`
+              };
+            }
           }
-      - rule: Use ExecutionLogService for session state tracking
+      - rule: Use ExecutionLogService instance for session state tracking
         codeExample: |-
-          // ✅ GOOD - Track session state (Claude Code)
-          const sessionKey = `my-hook-${context.session_id}`;
-          const alreadyProcessed = await ExecutionLogService.hasExecuted(
-            context.session_id,
-            sessionKey,
-            DECISION_DENY
-          );
+          // ✅ GOOD - Instantiate with session_id
+          async preToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+            const executionLog = new ExecutionLogService(context.session_id);
+            const sessionKey = 'my-hook';
+            const alreadyProcessed = await executionLog.hasExecuted(
+              sessionKey,
+              DECISION_DENY
+            );
 
-          if (!alreadyProcessed) {
-            await ExecutionLogService.logExecution({
-              sessionId: context.session_id,
-              filePath: sessionKey,
-              operation: 'my-operation',
-              decision: DECISION_DENY
-            });
+            if (!alreadyProcessed) {
+              await executionLog.logExecution({
+                filePath: sessionKey,
+                operation: 'my-operation',
+                decision: DECISION_DENY
+              });
+            }
           }
       - rule: Return proper HookResponse with decision and message
         codeExample: |-
@@ -734,17 +739,27 @@ rules:
           if (!filePath || !['Read', 'Write', 'Edit'].includes(context.tool_name)) {
             return { decision: DECISION_SKIP, message: 'Not a file operation' };
           }
+      - rule: Use PascalCase class name with Hook suffix
+        codeExample: |-
+          // ✅ GOOD
+          export class ListScaffoldMethodsHook { }
+          export class ValidateInputHook { }
+          export class GetFileDesignPatternHook { }
+
+          // ❌ BAD
+          export class listScaffoldMethods { }  // Wrong: not PascalCase
+          export class ListScaffoldMethods { }  // Wrong: missing Hook suffix
     must_not_do:
-      - rule: Never throw errors or let errors propagate
+      - rule: Never throw errors or let errors propagate from methods
         codeExample: |-
           // ❌ BAD - Throws error
-          export const preToolUseHook = async (context: ClaudeCodeHookInput) => {
+          async preToolUse(context: ClaudeCodeHookInput) {
             const data = await riskyOperation(); // Can throw
             return { decision: DECISION_ALLOW };
-          };
+          }
 
           // ✅ GOOD - Catches and returns SKIP
-          export const preToolUseHook = async (context: ClaudeCodeHookInput): Promise<HookResponse> => {
+          async preToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
             try {
               const data = await riskyOperation();
               return { decision: DECISION_ALLOW, message: '' };
@@ -754,7 +769,7 @@ rules:
                 message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`
               };
             }
-          };
+          }
       - rule: Never mutate context object
         codeExample: |-
           // ❌ BAD
@@ -774,4 +789,15 @@ rules:
             const data = await fs.promises.readFile('/path');
           } catch (error) {
             return { decision: DECISION_SKIP, message: 'Error occurred' };
+          }
+      - rule: Never export standalone functions instead of class
+        codeExample: |-
+          // ❌ BAD - Standalone functions
+          export const preToolUseHook = async (context) => { };
+          export const postToolUseHook = async (context) => { };
+
+          // ✅ GOOD - Class with methods
+          export class MyHook {
+            async preToolUse(context) { }
+            async postToolUse(context) { }
           }

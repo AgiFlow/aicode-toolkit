@@ -18,4 +18,5 @@
 export {
   ExecutionLogService,
   type LogExecutionParams,
+  type LogStats,
 } from './ExecutionLogService';

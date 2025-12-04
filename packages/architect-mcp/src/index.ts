@@ -44,6 +44,10 @@ export {
   RuleFinder,
 } from './services/index';
 
+// Hooks - Claude Code integration
+export { GetFileDesignPatternHook as ClaudeCodeGetFileDesignPatternHook } from './hooks/claudeCode/getFileDesignPattern';
+export { ReviewCodeChangeHook as ClaudeCodeReviewCodeChangeHook } from './hooks/claudeCode/reviewCodeChange';
+
 // Hooks - Gemini CLI integration
-export { beforeToolHook as geminiCliGetFileDesignPatternBeforeToolHook } from './hooks/geminiCli/getFileDesignPattern';
-export { afterToolHook as geminiCliReviewCodeChangeAfterToolHook } from './hooks/geminiCli/reviewCodeChange';
+export { GetFileDesignPatternHook as GeminiCliGetFileDesignPatternHook } from './hooks/geminiCli/getFileDesignPattern';
+export { ReviewCodeChangeHook as GeminiCliReviewCodeChangeHook } from './hooks/geminiCli/reviewCodeChange';

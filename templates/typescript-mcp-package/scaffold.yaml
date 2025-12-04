@@ -252,13 +252,13 @@ features:
     patterns:
       - src/prompts/**/*.ts
   - name: scaffold-hook
-    description: Generate hook callbacks for AI agent integrations (Claude Code, Gemini CLI). Creates hook files with preToolUse/beforeTool and postToolUse/afterTool callbacks for proactive guidance and post-execution tracking. Perfect for adding intelligent behavior like showing scaffold methods before file writes or tracking scaffold completion progress.
+    description: Generate a hook class for AI agent integrations (Claude Code, Gemini CLI). Creates a hook class with preToolUse/postToolUse methods for proactive guidance and post-execution tracking. Perfect for adding intelligent behavior like showing scaffold methods before file writes or tracking scaffold completion progress.
     variables_schema:
       type: object
       properties:
         hookName:
           type: string
-          description: Name of the hook file in camelCase (e.g., 'listScaffoldMethods', 'validateInput')
+          description: Name of the hook in camelCase (e.g., 'listScaffoldMethods', 'validateInput'). Will be converted to PascalCase for class name.
         agentType:
           type: string
           description: Target agent type - 'claudeCode' or 'geminiCli'
@@ -267,11 +267,11 @@ features:
             - geminiCli
         withPreHook:
           type: boolean
-          description: Include pre-tool hook (preToolUseHook for Claude Code, beforeToolHook for Gemini CLI)
+          description: Include preToolUse method (called before tool execution)
           default: true
         withPostHook:
           type: boolean
-          description: Include post-tool hook (postToolUseHook for Claude Code, afterToolHook for Gemini CLI)
+          description: Include postToolUse method (called after tool execution)
           default: true
       required:
         - hookName
@@ -280,22 +280,22 @@ features:
     includes:
       - src/hooks/claudeCode/example.ts->src/hooks/{{ agentType }}/{{ hookName }}.ts
     instruction: |-
-      Hook callbacks follow a fail-open pattern with proactive guidance for AI agents. Each hook file exports named callbacks for lifecycle events (pre/post tool execution).
+      Hook classes follow a fail-open pattern with proactive guidance for AI agents. Each hook file exports a class with preToolUse and postToolUse methods.
 
-      Pattern explanation: Hooks are TypeScript modules that export callback functions (preToolUseHook/beforeToolHook, postToolUseHook/afterToolHook). They receive normalized HookContext and return HookResponse with decision (ALLOW/DENY/SKIP) and message. Hooks should fail open (return SKIP on errors) to avoid blocking operations.
+      Pattern explanation: Hooks are TypeScript classes that export preToolUse() and postToolUse() methods. They receive ClaudeCodeHookInput (or GeminiCliHookInput) and return HookResponse with decision (ALLOW/DENY/SKIP) and message. Hooks should fail open (return SKIP on errors) to avoid blocking operations.
 
-      File organization: Hooks live in src/hooks/{agentType}/{hookName}.ts organized by target agent (claudeCode, geminiCli). Each agent type has different hook names but same normalized context.
+      File organization: Hooks live in src/hooks/{agentType}/{hookName}.ts organized by target agent (claudeCode, geminiCli). Each hook is a class with PascalCase name ending in 'Hook' (e.g., ListScaffoldMethodsHook).
 
-      Naming conventions: Hook files use camelCase (e.g., listScaffoldMethods.ts). Export callbacks use agent-specific names: preToolUseHook/postToolUseHook for Claude Code, beforeToolHook/afterToolHook for Gemini CLI.
+      Naming conventions: Hook files use camelCase (e.g., listScaffoldMethods.ts). Hook classes use PascalCase with 'Hook' suffix (e.g., ListScaffoldMethodsHook). Methods are preToolUse() and postToolUse() for Claude Code.
 
       Hook lifecycle:
-      - Pre-hooks (preToolUseHook/beforeToolHook): Called before tool execution. Return DENY to show guidance without executing tool, SKIP to allow normal execution, ALLOW to proceed with custom message.
-      - Post-hooks (postToolUseHook/afterToolHook): Called after tool execution. Track state, provide reminders, or validate results. Return ALLOW with message for feedback, SKIP to suppress output.
+      - preToolUse(): Called before tool execution. Return DENY to show guidance without executing tool, SKIP to allow normal execution, ALLOW to proceed with custom message.
+      - postToolUse(): Called after tool execution. Track state, provide reminders, or validate results. Return ALLOW with message for feedback, SKIP to suppress output.
 
-      Usage guidelines: Import HookCallback, HookContext, HookResponse from @agiflowai/hooks-adapter. Use ExecutionLogService for session state tracking. Always handle errors gracefully with fail-open pattern (return SKIP on errors). Format messages clearly for LLM consumption with markdown. Use DECISION_ALLOW, DECISION_DENY, DECISION_SKIP constants.
+      Usage guidelines: Import ClaudeCodeHookInput, HookResponse from @agiflowai/hooks-adapter. Use ExecutionLogService for session state tracking (instantiate with session_id). Always handle errors gracefully with fail-open pattern (return SKIP on errors). Format messages clearly for LLM consumption with markdown. Use DECISION_ALLOW, DECISION_DENY, DECISION_SKIP constants.
 
       Common patterns:
-      - Session tracking: Use ExecutionLogService.hasExecuted() to avoid repeating guidance
+      - Session tracking: Use executionLog.hasExecuted() to avoid repeating guidance
       - Proactive guidance: Show available options before AI makes choices (use DENY decision)
       - Progress tracking: Track multi-step operations and remind about incomplete steps
       - Fail-open: Always catch errors and return SKIP to allow operation to proceed

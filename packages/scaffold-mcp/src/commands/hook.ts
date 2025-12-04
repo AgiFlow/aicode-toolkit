@@ -25,28 +25,37 @@ import { CLAUDE_CODE, GEMINI_CLI } from '@agiflowai/coding-agent-bridge';
 import {
   ClaudeCodeAdapter,
   GeminiCliAdapter,
+  parseHookType,
   type ClaudeCodeHookInput,
   type GeminiCliHookInput,
   type HookResponse,
 } from '@agiflowai/hooks-adapter';
-import { messages } from '@agiflowai/aicode-utils';
+import { print } from '@agiflowai/aicode-utils';
 
 interface HookOptions {
   type?: string;
 }
 
-/**
- * Parse hook type option in format: agent.hookMethod
- * Examples: claude-code.preToolUse, gemini-cli.afterTool
- */
-function parseHookType(hookType: string): { agent: string; hookMethod: string } {
-  const [agent, hookMethod] = hookType.split('.');
+/** Type for Claude Code hook callback function */
+type ClaudeCodeHookCallback = (context: ClaudeCodeHookInput) => Promise<HookResponse>;
 
-  if (!agent || !hookMethod) {
-    throw new Error(`Invalid hook type: ${hookType}. Expected: <agent>.<hookMethod>`);
-  }
+/** Type for Gemini CLI hook callback function */
+type GeminiCliHookCallback = (context: GeminiCliHookInput) => Promise<HookResponse>;
 
-  return { agent, hookMethod };
+/** Interface for class-based hook with preToolUse and postToolUse methods */
+interface HookClass<T> {
+  preToolUse?: (context: T) => Promise<HookResponse>;
+  postToolUse?: (context: T) => Promise<HookResponse>;
+}
+
+/** Interface for Claude Code hook module exports */
+interface ClaudeCodeHookModule {
+  UseScaffoldMethodHook?: new () => HookClass<ClaudeCodeHookInput>;
+}
+
+/** Interface for Gemini CLI hook module exports */
+interface GeminiCliHookModule {
+  UseScaffoldMethodHook?: new () => HookClass<GeminiCliHookInput>;
 }
 
 /**
@@ -58,54 +67,82 @@ export const hookCommand = new Command('hook')
     '--type <agentAndMethod>',
     'Hook type: <agent>.<method> (e.g., claude-code.postToolUse, gemini-cli.afterTool)',
   )
-  .action(async (options: HookOptions) => {
+  .action(async (options: HookOptions): Promise<void> => {
     try {
       if (!options.type) {
-        messages.error('--type option is required');
-        messages.hint('Examples:');
-        messages.hint('  scaffold hook --type claude-code.preToolUse');
-        messages.hint('  scaffold hook --type claude-code.postToolUse');
-        messages.hint('  scaffold hook --type gemini-cli.beforeTool');
-        messages.hint('  scaffold hook --type gemini-cli.afterTool');
+        print.error('--type option is required');
+        print.info('Examples:');
+        print.info('  scaffold hook --type claude-code.preToolUse');
+        print.info('  scaffold hook --type claude-code.postToolUse');
+        print.info('  scaffold hook --type gemini-cli.beforeTool');
+        print.info('  scaffold hook --type gemini-cli.afterTool');
         process.exit(1);
       }
 
       const { agent, hookMethod } = parseHookType(options.type);
 
       if (agent === CLAUDE_CODE) {
-        const hooks = await import('../hooks/claudeCode/useScaffoldMethod');
-        const hookName = `${hookMethod}Hook` as keyof typeof hooks;
-        const callback = hooks[hookName] as
-          | ((context: ClaudeCodeHookInput) => Promise<HookResponse>)
-          | undefined;
+        // Import hook module (dynamic import for conditional loading based on agent type)
+        const useScaffoldMethodModule: ClaudeCodeHookModule = await import(
+          '../hooks/claudeCode/useScaffoldMethod'
+        );
 
-        if (!callback) {
-          messages.error(`Hook not found: ${hookName} in claudeCode/useScaffoldMethod`);
+        // Collect all available hooks for this hook method
+        const claudeCallbacks: ClaudeCodeHookCallback[] = [];
+
+        // Instantiate UseScaffoldMethodHook class and get the method
+        if (useScaffoldMethodModule.UseScaffoldMethodHook) {
+          const hookInstance = new useScaffoldMethodModule.UseScaffoldMethodHook();
+          const hookFn = hookInstance[hookMethod as keyof HookClass<ClaudeCodeHookInput>];
+          if (hookFn) {
+            claudeCallbacks.push(hookFn.bind(hookInstance));
+          }
+        }
+
+        if (claudeCallbacks.length === 0) {
+          print.error(`Hook not found: ${hookMethod} in Claude Code hooks`);
           process.exit(1);
         }
 
         const adapter = new ClaudeCodeAdapter();
-        await adapter.execute(callback);
-      } else if (agent === GEMINI_CLI) {
-        const hooks = await import('../hooks/geminiCli/useScaffoldMethod');
-        const hookName = `${hookMethod}Hook` as keyof typeof hooks;
-        const callback = hooks[hookName] as
-          | ((context: GeminiCliHookInput) => Promise<HookResponse>)
-          | undefined;
 
-        if (!callback) {
-          messages.error(`Hook not found: ${hookName} in geminiCli/useScaffoldMethod`);
+        // Execute all hooks in serial with shared stdin
+        await adapter.executeMultiple(claudeCallbacks);
+
+      } else if (agent === GEMINI_CLI) {
+        // Import hook module (dynamic import for conditional loading based on agent type)
+        const useScaffoldMethodModule: GeminiCliHookModule = await import(
+          '../hooks/geminiCli/useScaffoldMethod'
+        );
+
+        // Collect all available hooks for this hook method
+        const geminiCallbacks: GeminiCliHookCallback[] = [];
+
+        // Instantiate UseScaffoldMethodHook class and get the method
+        if (useScaffoldMethodModule.UseScaffoldMethodHook) {
+          const hookInstance = new useScaffoldMethodModule.UseScaffoldMethodHook();
+          const hookFn = hookInstance[hookMethod as keyof HookClass<GeminiCliHookInput>];
+          if (hookFn) {
+            geminiCallbacks.push(hookFn.bind(hookInstance));
+          }
+        }
+
+        if (geminiCallbacks.length === 0) {
+          print.error(`Hook not found: ${hookMethod} in Gemini CLI hooks`);
           process.exit(1);
         }
 
         const adapter = new GeminiCliAdapter();
-        await adapter.execute(callback);
+
+        // Execute all hooks in serial with shared stdin
+        await adapter.executeMultiple(geminiCallbacks);
+
       } else {
-        messages.error(`Unsupported agent: ${agent}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);
+        print.error(`Unsupported agent: ${agent}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);
         process.exit(1);
       }
     } catch (error) {
-      messages.error(`Hook error: ${(error as Error).message}`);
+      print.error(`Hook error: ${(error as Error).message}`);
       process.exit(1);
     }
   });

@@ -2,12 +2,12 @@
  * {{ hookName }} Hook for {{ agentType | pascalCase }}
  *
  * DESIGN PATTERNS:
- * - Hook callback pattern: Multiple lifecycle hooks in single file
+ * - Class-based hook pattern: Encapsulates lifecycle hooks in a single class
  * - Fail-open pattern: Errors allow operation to proceed with warning
  * - Session state tracking: Use ExecutionLogService to track state across hook invocations
  *
  * CODING STANDARDS:
- * - Export named callbacks: {% if agentType == 'claudeCode' %}preToolUseHook, postToolUseHook{% else %}beforeToolHook, afterToolHook{% endif %}
+ * - Export a class with {% if agentType == 'claudeCode' %}preToolUse, postToolUse{% else %}beforeTool, afterTool{% endif %} methods
  * - Handle all errors gracefully with fail-open behavior (return SKIP on errors)
  * - Format messages clearly for LLM consumption using markdown
  * - Use DECISION_ALLOW, DECISION_DENY, DECISION_SKIP constants
@@ -19,7 +19,7 @@
  * - Using inline dynamic imports (use static imports at top)
  */
 
-import type { HookCallback, HookContext, HookResponse } from '@agiflowai/hooks-adapter';
+import type { ClaudeCodeHookInput, HookResponse } from '@agiflowai/hooks-adapter';
 import {
   ExecutionLogService,
   DECISION_SKIP,
@@ -27,92 +27,102 @@ import {
   DECISION_ALLOW,
 } from '@agiflowai/hooks-adapter';
 
-{% if withPreHook %}/**
- * {% if agentType == 'claudeCode' %}PreToolUse{% else %}BeforeTool{% endif %} hook callback for {{ agentType | pascalCase }}
- * 
- * Called before tool execution. Can provide proactive guidance or validation.
- * Return DENY to show guidance without executing tool.
- * Return SKIP to allow normal execution.
- * Return ALLOW to proceed with custom message.
- *
- * @param context - Normalized hook context
- * @returns Hook response with decision and optional message
- */
-export const {% if agentType == 'claudeCode' %}preToolUseHook{% else %}beforeToolHook{% endif %}: HookCallback = async (context: HookContext): Promise<HookResponse> => {
-  try {
-    // Example: Check if we already processed this session
-    const sessionKey = `{{ hookName | kebabCase }}-${context.sessionId}`;
-    const alreadyProcessed = await ExecutionLogService.hasExecuted(
-      context.sessionId,
-      sessionKey,
-      DECISION_DENY,
-    );
-
-    if (alreadyProcessed) {
-      return {
-        decision: DECISION_SKIP,
-        message: 'Already processed in this session',
-      };
-    }
-
-    // TODO: Implement your pre-hook logic here
-    // Example: Provide guidance, validate input, check conditions
-
-    // Log execution
-    await ExecutionLogService.logExecution({
-      sessionId: context.sessionId,
-      filePath: sessionKey,
-      operation: '{{ hookName | kebabCase }}',
-      decision: DECISION_DENY,
-    });
-
-    return {
-      decision: DECISION_DENY,
-      message: '🎯 **Guidance Message**\n\nProvide helpful guidance to the AI here.',
-    };
-  } catch (error) {
-    // Fail open: skip hook and let operation continue
-    return {
-      decision: DECISION_SKIP,
-      message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,
-    };
-  }
-};
-{% endif %}
-{% if withPostHook %}
 /**
- * {% if agentType == 'claudeCode' %}PostToolUse{% else %}AfterTool{% endif %} hook callback for {{ agentType | pascalCase }}
- * 
- * Called after tool execution. Can track state, provide reminders, or validate results.
- * Return ALLOW with message for feedback to the AI.
- * Return SKIP to suppress output.
+ * {{ hookName | pascalCase }} Hook class for {{ agentType | pascalCase }}
  *
- * @param context - Normalized hook context
- * @returns Hook response with decision and optional message
+ * Provides lifecycle hooks for tool execution:
+ * - preToolUse: Called before tool execution
+ * - postToolUse: Called after tool execution
  */
-export const {% if agentType == 'claudeCode' %}postToolUseHook{% else %}afterToolHook{% endif %}: HookCallback = async (context: HookContext): Promise<HookResponse> => {
-  try {
-    // Only process relevant operations
-    if (!context.filePath || context.operation !== 'edit') {
+export class {{ hookName | pascalCase }}Hook {
+  {% if withPreHook %}/**
+   * PreToolUse hook for {{ agentType | pascalCase }}
+   *
+   * Called before tool execution. Can provide proactive guidance or validation.
+   * Return DENY to show guidance without executing tool.
+   * Return SKIP to allow normal execution.
+   * Return ALLOW to proceed with custom message.
+   *
+   * @param context - Claude Code hook input
+   * @returns Hook response with decision and optional message
+   */
+  async preToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+    try {
+      // Create execution log service for this session
+      const executionLog = new ExecutionLogService(context.session_id);
+
+      // Example: Check if we already processed this file in this session
+      const sessionKey = `{{ hookName | kebabCase }}`;
+      const alreadyProcessed = await executionLog.hasExecuted(
+        sessionKey,
+        DECISION_DENY,
+      );
+
+      if (alreadyProcessed) {
+        return {
+          decision: DECISION_SKIP,
+          message: 'Already processed in this session',
+        };
+      }
+
+      // TODO: Implement your pre-hook logic here
+      // Example: Provide guidance, validate input, check conditions
+
+      // Log execution
+      await executionLog.logExecution({
+        filePath: sessionKey,
+        operation: '{{ hookName | kebabCase }}',
+        decision: DECISION_DENY,
+      });
+
+      return {
+        decision: DECISION_DENY,
+        message: '🎯 **Guidance Message**\n\nProvide helpful guidance to the AI here.',
+      };
+    } catch (error) {
+      // Fail open: skip hook and let operation continue
       return {
         decision: DECISION_SKIP,
-        message: 'Not a relevant operation',
+        message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
-
-    // TODO: Implement your post-hook logic here
-    // Example: Track progress, provide reminders, validate output
-
-    return {
-      decision: DECISION_ALLOW,
-      message: '✅ Operation completed successfully',
-    };
-  } catch (error) {
-    // Fail open: skip hook and let operation continue
-    return {
-      decision: DECISION_SKIP,
-      message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,
-    };
   }
-};
-{% endif %}
+  {% endif %}
+  {% if withPostHook %}/**
+   * PostToolUse hook for {{ agentType | pascalCase }}
+   *
+   * Called after tool execution. Can track state, provide reminders, or validate results.
+   * Return ALLOW with message for feedback to the AI.
+   * Return SKIP to suppress output.
+   *
+   * @param context - Claude Code hook input
+   * @returns Hook response with decision and optional message
+   */
+  async postToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+    try {
+      // Only process relevant operations
+      const filePath = context.tool_input?.file_path;
+      if (!filePath || !['Read', 'Write', 'Edit'].includes(context.tool_name)) {
+        return {
+          decision: DECISION_SKIP,
+          message: 'Not a relevant operation',
+        };
+      }
+
+      // TODO: Implement your post-hook logic here
+      // Example: Track progress, provide reminders, validate output
+
+      return {
+        decision: DECISION_ALLOW,
+        message: '✅ Operation completed successfully',
+      };
+    } catch (error) {
+      // Fail open: skip hook and let operation continue
+      return {
+        decision: DECISION_SKIP,
+        message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+  {% endif %}
+}

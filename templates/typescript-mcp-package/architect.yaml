@@ -352,163 +352,50 @@ features:
         }
       }
       ```
-  - name: hook-callback-pattern
-    design_pattern: Hook Callback Pattern
+  - name: hook-class-pattern
+    design_pattern: Hook Class Pattern
     includes:
       - src/hooks/**/*.ts
     description: |-
       ## Pattern Overview
-      Design pattern for implementing hook callbacks that provide proactive guidance and post-execution tracking for AI agents (Claude Code, Gemini CLI).
+      Design pattern for implementing hook classes with preToolUse and postToolUse methods for AI agent integrations.
 
       ## What TO DO ✅
 
-      - Export named callbacks for agent type (preToolUseHook/beforeToolHook, postToolUseHook/afterToolHook)
-      - Always use fail-open pattern - return SKIP on errors to avoid blocking operations
-      - Use ExecutionLogService for session state tracking
-      - Return proper HookResponse with decision (ALLOW/DENY/SKIP) and message
-      - Handle all errors with try-catch and return SKIP decision
-      - Format messages clearly for LLM consumption using markdown
-      - Use DECISION_ALLOW, DECISION_DENY, DECISION_SKIP constants
-      - Keep hook logic lightweight - delegate complex operations to services
+      - Export a hook class with preToolUse() and postToolUse() methods
+      - Use PascalCase class name with Hook suffix (e.g., MyFeatureHook)
+      - Use fail-open pattern - return SKIP on errors
+      - Use ExecutionLogService instance for session state tracking
 
       ## What NOT TO DO ❌
 
-      - Don't throw errors or let errors propagate (always catch and return SKIP)
-      - Don't mutate the context object (read-only)
-      - Don't use blocking operations without error handling
-      - Don't put complex business logic in hooks (delegate to services)
-      - Don't use inline dynamic imports (use static imports at top)
+      - Don't export standalone functions (use class with methods)
+      - Don't throw errors (always catch and return SKIP)
+      - Don't mutate the context object
 
-      ## Hook Lifecycle
+      ## Example
 
-      **Pre-hooks** (preToolUseHook/beforeToolHook):
-      - Called before tool execution
-      - Return DENY to show guidance without executing tool
-      - Return SKIP to allow normal execution
-      - Return ALLOW to proceed with custom message
-
-      **Post-hooks** (postToolUseHook/afterToolHook):
-      - Called after tool execution
-      - Track state, provide reminders, or validate results
-      - Return ALLOW with message for feedback
-      - Return SKIP to suppress output
-
-      ## Examples
-
-      ### Claude Code Hook (preToolUseHook/postToolUseHook)
       ```typescript
       import type { ClaudeCodeHookInput, HookResponse } from '@agiflowai/hooks-adapter';
-      import {
-        ExecutionLogService,
-        DECISION_SKIP,
-        DECISION_DENY,
-        DECISION_ALLOW,
-      } from '@agiflowai/hooks-adapter';
+      import { ExecutionLogService, DECISION_SKIP, DECISION_DENY } from '@agiflowai/hooks-adapter';
 
-      export const preToolUseHook = async (context: ClaudeCodeHookInput): Promise<HookResponse> => {
-        try {
-          const sessionKey = `my-hook-${context.session_id}`;
-          const alreadyShown = await ExecutionLogService.hasExecuted(
-            context.session_id,
-            sessionKey,
-            DECISION_DENY,
-          );
-
-          if (alreadyShown) {
-            return {
-              decision: DECISION_SKIP,
-              message: 'Already processed',
-            };
+      export class MyFeatureHook {
+        async preToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+          try {
+            const executionLog = new ExecutionLogService(context.session_id);
+            // Hook logic here
+            return { decision: DECISION_DENY, message: 'Guidance message' };
+          } catch (error) {
+            return { decision: DECISION_SKIP, message: `Error: ${error}` };
           }
-
-          await ExecutionLogService.logExecution({
-            sessionId: context.session_id,
-            filePath: sessionKey,
-            operation: 'my-operation',
-            decision: DECISION_DENY,
-          });
-
-          return {
-            decision: DECISION_DENY,
-            message: '🎯 **Guidance**\n\nProvide helpful guidance here.',
-          };
-        } catch (error) {
-          return {
-            decision: DECISION_SKIP,
-            message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,
-          };
         }
-      };
 
-      export const postToolUseHook = async (context: ClaudeCodeHookInput): Promise<HookResponse> => {
-        try {
-          const filePath = context.tool_input?.file_path;
-          const operation = extractOperation(context.tool_name);
-
-          if (!filePath || operation !== 'edit') {
-            return {
-              decision: DECISION_SKIP,
-              message: 'Not a relevant operation',
-            };
+        async postToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+          try {
+            return { decision: DECISION_SKIP, message: '' };
+          } catch (error) {
+            return { decision: DECISION_SKIP, message: `Error: ${error}` };
           }
-
-          return {
-            decision: DECISION_ALLOW,
-            message: '✅ Operation completed',
-          };
-        } catch (error) {
-          return {
-            decision: DECISION_SKIP,
-            message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,
-          };
         }
-      };
-
-      function extractOperation(toolName: string): string {
-        if (toolName === 'Edit') return 'edit';
-        if (toolName === 'Write') return 'write';
-        if (toolName === 'Read') return 'read';
-        return 'unknown';
       }
-      ```
-
-      ### Gemini CLI Hook (beforeToolHook/afterToolHook)
-      ```typescript
-      import type { GeminiCliHookInput, HookResponse } from '@agiflowai/hooks-adapter';
-      import {
-        ExecutionLogService,
-        DECISION_SKIP,
-        DECISION_DENY,
-        DECISION_ALLOW,
-      } from '@agiflowai/hooks-adapter';
-
-      export const beforeToolHook = async (context: GeminiCliHookInput): Promise<HookResponse> => {
-        try {
-          // Proactive guidance before tool execution
-          return {
-            decision: DECISION_DENY,
-            message: '🎯 Consider using alternative approach',
-          };
-        } catch (error) {
-          return {
-            decision: DECISION_SKIP,
-            message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,
-          };
-        }
-      };
-
-      export const afterToolHook = async (context: GeminiCliHookInput): Promise<HookResponse> => {
-        try {
-          // Track state or provide feedback after execution
-          return {
-            decision: DECISION_ALLOW,
-            message: '✅ Next steps reminder',
-          };
-        } catch (error) {
-          return {
-            decision: DECISION_SKIP,
-            message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,
-          };
-        }
-      };
       ```
