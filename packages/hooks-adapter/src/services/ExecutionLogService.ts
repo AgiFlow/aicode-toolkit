@@ -71,6 +71,8 @@ export interface HasExecutedParams {
   decision: string;
   /** Optional file pattern to match */
   filePattern?: string;
+  /** Optional project path to distinguish same patterns in different projects */
+  projectPath?: string;
 }
 
 /**
@@ -110,7 +112,7 @@ export class ExecutionLogService {
    * @returns true if the action was already taken, false on error (fail-open)
    */
   async hasExecuted(params: HasExecutedParams): Promise<boolean> {
-    const { filePath, decision, filePattern } = params;
+    const { filePath, decision, filePattern, projectPath } = params;
 
     try {
       const entries = await this.loadLog();
@@ -122,8 +124,12 @@ export class ExecutionLogService {
         const matchedFile =
           (entry.filePattern === filePattern && entry.filePattern && filePattern) ||
           entry.filePath === filePath;
-        // Match file and decision (session is already filtered by log file)
-        if (entry.decision === decision && matchedFile) {
+
+        // Match project path if provided (allows same patterns in different projects)
+        const matchedProject = !projectPath || entry.projectPath === projectPath;
+
+        // Match file, decision, and project (session is already filtered by log file)
+        if (entry.decision === decision && matchedFile && matchedProject) {
           return true;
         }
       }

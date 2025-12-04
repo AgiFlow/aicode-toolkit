@@ -101,19 +101,21 @@ AdapterProxyService.execute(agentName, hookType, callback);
 Tracks hook executions to prevent duplicate actions within a session.
 
 ```typescript
+// Create a service instance for the session
+const executionLog = new ExecutionLogService(sessionId);
+
 // Check if already executed
-const executed = await ExecutionLogService.hasExecuted(sessionId, filePath, decision);
+const executed = await executionLog.hasExecuted({ filePath, decision });
 
 // Log an execution
-await ExecutionLogService.logExecution({
-  sessionId,
+await executionLog.logExecution({
   filePath,
   operation: 'read',
   decision: 'allow',
 });
 
 // Check if file has changed since last execution
-const changed = await ExecutionLogService.hasFileChanged(sessionId, filePath, decision);
+const changed = await executionLog.hasFileChanged(filePath, decision);
 ```
 
 ## License

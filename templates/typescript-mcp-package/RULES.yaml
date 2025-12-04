@@ -710,10 +710,10 @@ rules:
           async preToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
             const executionLog = new ExecutionLogService(context.session_id);
             const sessionKey = 'my-hook';
-            const alreadyProcessed = await executionLog.hasExecuted(
-              sessionKey,
-              DECISION_DENY
-            );
+            const alreadyProcessed = await executionLog.hasExecuted({
+              filePath: sessionKey,
+              decision: DECISION_DENY
+            });
 
             if (!alreadyProcessed) {
               await executionLog.logExecution({

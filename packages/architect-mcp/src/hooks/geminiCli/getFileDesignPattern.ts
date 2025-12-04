@@ -84,12 +84,15 @@ export class GetFileDesignPatternHook {
 
       // Derive operation from tool name
       const operation = extractOperation(context.tool_name);
+      const projectPath = templateMapping?.projectPath;
 
       // Check if we already showed patterns for this file in this session
-      const alreadyShown = await executionLog.hasExecuted(
+      const alreadyShown = await executionLog.hasExecuted({
         filePath,
-        DECISION_DENY, // 'deny' means we showed patterns
-      );
+        decision: DECISION_DENY, // 'deny' means we showed patterns
+        filePattern: filePatterns,
+        projectPath,
+      });
 
       if (alreadyShown) {
         // Already showed patterns - skip hook and let Gemini continue normally
@@ -98,6 +101,7 @@ export class GetFileDesignPatternHook {
           operation: operation,
           decision: DECISION_SKIP,
           filePattern: filePatterns,
+          projectPath,
         });
 
         return {
@@ -122,6 +126,7 @@ export class GetFileDesignPatternHook {
           operation: operation,
           decision: DECISION_SKIP,
           filePattern: filePatterns,
+          projectPath,
         });
 
         return {
@@ -152,6 +157,7 @@ export class GetFileDesignPatternHook {
         operation: operation,
         decision: DECISION_DENY,
         filePattern: filePatterns,
+        projectPath,
       });
 
       // Return DENY so Gemini sees the patterns

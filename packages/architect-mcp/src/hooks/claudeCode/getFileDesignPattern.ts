@@ -83,11 +83,13 @@ export class GetFileDesignPatternHook {
       }
 
       // Check if we already showed patterns for this file in this session
-      const alreadyShown = await executionLog.hasExecuted(
+      const projectPath = templateMapping?.projectPath;
+      const alreadyShown = await executionLog.hasExecuted({
         filePath,
-        DECISION_DENY, // 'deny' means we showed patterns
-        filePatterns,
-      );
+        decision: DECISION_DENY, // 'deny' means we showed patterns
+        filePattern: filePatterns,
+        projectPath,
+      });
 
       if (alreadyShown) {
         // Already showed patterns - skip hook and let Claude continue normally
@@ -96,6 +98,7 @@ export class GetFileDesignPatternHook {
           operation: context.tool_name.toLowerCase() as 'read' | 'write' | 'edit',
           decision: DECISION_SKIP,
           filePattern: filePatterns,
+          projectPath,
         });
 
         return {
@@ -120,6 +123,7 @@ export class GetFileDesignPatternHook {
           operation: context.tool_name || 'unknown',
           decision: DECISION_SKIP,
           filePattern: filePatterns,
+          projectPath,
         });
 
         return {
@@ -150,6 +154,7 @@ export class GetFileDesignPatternHook {
         operation: context.tool_name || 'unknown',
         decision: DECISION_DENY,
         filePattern: filePatterns,
+        projectPath,
       });
 
       // Return DENY so Claude sees the patterns

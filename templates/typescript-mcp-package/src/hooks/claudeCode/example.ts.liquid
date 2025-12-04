@@ -53,10 +53,10 @@ export class {{ hookName | pascalCase }}Hook {
 
       // Example: Check if we already processed this file in this session
       const sessionKey = `{{ hookName | kebabCase }}`;
-      const alreadyProcessed = await executionLog.hasExecuted(
-        sessionKey,
-        DECISION_DENY,
-      );
+      const alreadyProcessed = await executionLog.hasExecuted({
+        filePath: sessionKey,
+        decision: DECISION_DENY,
+      });
 
       if (alreadyProcessed) {
         return {
