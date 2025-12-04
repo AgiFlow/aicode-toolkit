@@ -24,19 +24,15 @@ import { print } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 import { GetFileDesignPatternTool } from '../tools/GetFileDesignPatternTool';
 import {
-  CLAUDE_CODE,
   type LlmToolId,
   isValidLlmTool,
   SUPPORTED_LLM_TOOLS,
 } from '@agiflowai/coding-agent-bridge';
-import { AdapterProxyService, PRE_TOOL_USE } from '@agiflowai/hooks-adapter';
-import { preToolUseHook } from '../hooks/claudeCode/preToolUse';
 
 interface GetFileDesignPatternOptions {
   verbose?: boolean;
   json?: boolean;
   llmTool?: string;
-  hook?: string;
 }
 
 /**
@@ -44,7 +40,7 @@ interface GetFileDesignPatternOptions {
  */
 export const getFileDesignPatternCommand = new Command('get-file-design-pattern')
   .description('Analyze a file against template-specific and global design patterns')
-  .argument('[file-path]', 'Path to the file to analyze (optional if using --hook)')
+  .argument('<file-path>', 'Path to the file to analyze')
   .option('-v, --verbose', 'Enable verbose output', false)
   .option('-j, --json', 'Output as JSON', false)
   .option(
@@ -52,24 +48,8 @@ export const getFileDesignPatternCommand = new Command('get-file-design-pattern'
     `Use LLM to filter relevant patterns. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
     undefined,
   )
-  .option(
-    '--hook <agent>',
-    'Run in hook mode for specified agent (e.g., claude-code)',
-  )
-  .action(async (filePath: string | undefined, options: GetFileDesignPatternOptions) => {
+  .action(async (filePath: string, options: GetFileDesignPatternOptions): Promise<void> => {
     try {
-      // HOOK MODE: Delegate to AdapterProxy
-      if (options.hook) {
-        await AdapterProxyService.execute(CLAUDE_CODE, PRE_TOOL_USE, preToolUseHook);
-        return;
-      }
-
-      // NORMAL CLI MODE: Use file-path argument
-      if (!filePath) {
-        print.error('file-path is required when not using --hook mode');
-        process.exit(1);
-      }
-
       if (options.verbose) {
         print.info(`Analyzing file: ${filePath}`);
         if (options.llmTool) {

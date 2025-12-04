@@ -146,6 +146,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^3.0.0
         version: 3.2.4(vitest@3.2.4(@types/node@22.18.8)(jsdom@16.7.0)(lightningcss@1.30.1)(terser@5.44.0))
+      chance:
+        specifier: ^1.1.13
+        version: 1.1.13
       tsdown:
         specifier: ^0.16.4
         version: 0.16.4(ms@2.1.3)(oxc-resolver@11.9.0)(typescript@5.9.3)
@@ -244,6 +247,9 @@ importers:
 
   packages/hooks-adapter:
     dependencies:
+      '@agiflowai/aicode-utils':
+        specifier: workspace:*
+        version: link:../aicode-utils
       '@agiflowai/coding-agent-bridge':
         specifier: workspace:*
         version: link:../coding-agent-bridge
@@ -254,6 +260,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^3.0.0
         version: 3.2.4(vitest@3.2.4(@types/node@22.18.8)(jsdom@16.7.0)(lightningcss@1.30.1)(terser@5.44.0))
+      chance:
+        specifier: ^1.1.13
+        version: 1.1.13
       tsdown:
         specifier: ^0.16.4
         version: 0.16.4(ms@2.1.3)(oxc-resolver@11.9.0)(typescript@5.9.3)
@@ -315,6 +324,15 @@ importers:
       '@agiflowai/aicode-utils':
         specifier: workspace:*
         version: link:../aicode-utils
+      '@agiflowai/architect-mcp':
+        specifier: workspace:*
+        version: link:../architect-mcp
+      '@agiflowai/coding-agent-bridge':
+        specifier: workspace:*
+        version: link:../coding-agent-bridge
+      '@agiflowai/hooks-adapter':
+        specifier: workspace:*
+        version: link:../hooks-adapter
       '@composio/json-schema-to-zod':
         specifier: 0.1.15
         version: 0.1.15
@@ -342,6 +360,9 @@ importers:
       liquidjs:
         specifier: 10.21.1
         version: 10.21.1
+      minimatch:
+        specifier: ^10.0.1
+        version: 10.0.3
       pino:
         specifier: ^10.0.0
         version: 10.0.0
@@ -2185,6 +2206,9 @@ packages:
   chalk@5.6.2:
     resolution: {integrity: sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA==}
     engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
+
+  chance@1.1.13:
+    resolution: {integrity: sha512-V6lQCljcLznE7tUYUM9EOAnnKXbctE6j/rdQkYOHIWbfGQbrzTsAXNW9CdU5XCo4ArXQCj/rb6HgxPlmGJcaUg==}
 
   chardet@2.1.0:
     resolution: {integrity: sha512-bNFETTG/pM5ryzQ9Ad0lJOTa6HWD/YsScAR3EnCPZRPlQh77JocYktSHOUHelyhm8IARL+o4c4F1bP5KVOjiRA==}
@@ -5853,14 +5877,6 @@ snapshots:
       chai: 5.3.3
       tinyrainbow: 2.0.0
 
-  '@vitest/mocker@2.1.9(vite@5.4.20(@types/node@22.18.8)(lightningcss@1.30.1)(terser@5.44.0))':
-    dependencies:
-      '@vitest/spy': 2.1.9
-      estree-walker: 3.0.3
-      magic-string: 0.30.19
-    optionalDependencies:
-      vite: 5.4.20(@types/node@22.18.8)(lightningcss@1.30.1)(terser@5.44.0)
-
   '@vitest/mocker@2.1.9(vite@5.4.20(@types/node@24.6.2)(lightningcss@1.30.1)(terser@5.44.0))':
     dependencies:
       '@vitest/spy': 2.1.9
@@ -6196,6 +6212,8 @@ snapshots:
       supports-color: 7.2.0
 
   chalk@5.6.2: {}
+
+  chance@1.1.13: {}
 
   chardet@2.1.0: {}
 
@@ -8162,7 +8180,7 @@ snapshots:
   vitest@2.1.9(@types/node@22.18.8)(jsdom@16.7.0)(lightningcss@1.30.1)(terser@5.44.0):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.20(@types/node@22.18.8)(lightningcss@1.30.1)(terser@5.44.0))
+      '@vitest/mocker': 2.1.9(vite@5.4.20(@types/node@24.6.2)(lightningcss@1.30.1)(terser@5.44.0))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9

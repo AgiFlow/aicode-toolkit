@@ -1,15 +1,15 @@
 /**
- * Tests for ClaudeCodePostToolUseAdapter
+ * Tests for ClaudeCodeAdapter (PostToolUse mode)
  */
 
 import { describe, test, expect, beforeEach } from 'vitest';
-import { ClaudeCodePostToolUseAdapter } from '../../src/adapters/ClaudeCodePostToolUseAdapter';
+import { ClaudeCodeAdapter } from '../../src/adapters/ClaudeCodeAdapter';
 
-describe('ClaudeCodePostToolUseAdapter', () => {
-  let adapter: ClaudeCodePostToolUseAdapter;
+describe('ClaudeCodeAdapter (PostToolUse)', () => {
+  let adapter: ClaudeCodeAdapter;
 
   beforeEach(() => {
-    adapter = new ClaudeCodePostToolUseAdapter();
+    adapter = new ClaudeCodeAdapter();
   });
 
   describe('parseInput', () => {
@@ -29,20 +29,20 @@ describe('ClaudeCodePostToolUseAdapter', () => {
 
       const context = adapter.parseInput(input);
 
-      expect(context.toolName).toBe('Read');
-      expect(context.toolInput).toEqual({ file_path: '/test/file.ts', limit: 100 });
-      expect(context.filePath).toBe('/test/file.ts');
-      expect(context.operation).toBe('read');
+      expect(context.tool_name).toBe('Read');
+      expect(context.tool_input).toEqual({ file_path: '/test/file.ts', limit: 100 });
+      expect(context.tool_response).toEqual({ content: 'file content' });
       expect(context.cwd).toBe('/workspace');
-      expect(context.sessionId).toBe('session-123');
-      expect(context.llmTool).toBe('claude-code');
+      expect(context.session_id).toBe('session-123');
+      expect(context.llm_tool).toBe('claude-code');
+      expect(context.hook_event_name).toBe('PostToolUse');
     });
 
     test.each([
-      ['Write', 'write'],
-      ['Edit', 'edit'],
-      ['Read', 'read'],
-    ])('extracts %s operation as %s', (toolName, operation) => {
+      ['Write', { file_path: '/test/file.ts', content: 'test' }],
+      ['Edit', { file_path: '/test/file.ts', old_string: 'a', new_string: 'b' }],
+      ['Read', { file_path: '/test/file.ts' }],
+    ])('parses %s tool input correctly', (toolName, toolInput) => {
       const input = JSON.stringify({
         session_id: 'session-test',
         transcript_path: '/path/to/transcript.txt',
@@ -50,17 +50,18 @@ describe('ClaudeCodePostToolUseAdapter', () => {
         permission_mode: 'ask',
         hook_event_name: 'PostToolUse',
         tool_name: toolName,
-        tool_input: { file_path: '/test/file.ts' },
+        tool_input: toolInput,
         tool_response: {},
         tool_use_id: 'tool-use-123',
       });
 
       const context = adapter.parseInput(input);
 
-      expect(context.operation).toBe(operation);
+      expect(context.tool_name).toBe(toolName);
+      expect(context.tool_input).toEqual(toolInput);
     });
 
-    test('extracts filePath from tool_input', () => {
+    test('parses tool_input with file_path', () => {
       const input = JSON.stringify({
         session_id: 'session-789',
         transcript_path: '/path/to/transcript.txt',
@@ -75,10 +76,10 @@ describe('ClaudeCodePostToolUseAdapter', () => {
 
       const context = adapter.parseInput(input);
 
-      expect(context.filePath).toBe('/test/input-file.ts');
+      expect(context.tool_input.file_path).toBe('/test/input-file.ts');
     });
 
-    test('extracts filePath from tool_response when not in tool_input', () => {
+    test('parses tool_response correctly', () => {
       const input = JSON.stringify({
         session_id: 'session-789',
         transcript_path: '/path/to/transcript.txt',
@@ -87,16 +88,19 @@ describe('ClaudeCodePostToolUseAdapter', () => {
         hook_event_name: 'PostToolUse',
         tool_name: 'Read',
         tool_input: {},
-        tool_response: { filePath: '/test/response-file.ts' },
+        tool_response: { filePath: '/test/response-file.ts', content: 'file content' },
         tool_use_id: 'tool-use-789',
       });
 
       const context = adapter.parseInput(input);
 
-      expect(context.filePath).toBe('/test/response-file.ts');
+      expect(context.tool_response).toEqual({
+        filePath: '/test/response-file.ts',
+        content: 'file content',
+      });
     });
 
-    test('returns undefined for non-file tool operations', () => {
+    test('parses non-file tool operations', () => {
       const input = JSON.stringify({
         session_id: 'session-999',
         transcript_path: '/path/to/transcript.txt',
@@ -111,8 +115,9 @@ describe('ClaudeCodePostToolUseAdapter', () => {
 
       const context = adapter.parseInput(input);
 
-      expect(context.filePath).toBeUndefined();
-      expect(context.operation).toBeUndefined();
+      expect(context.tool_name).toBe('Bash');
+      expect(context.tool_input).toEqual({ command: 'ls -la' });
+      expect(context.tool_response).toEqual({ output: 'file1.txt' });
     });
 
     test('handles missing llm_tool field', () => {
@@ -144,6 +149,20 @@ describe('ClaudeCodePostToolUseAdapter', () => {
 
   describe('formatOutput', () => {
     test('formats deny decision as block', () => {
+      // First parse input to set hookEventName
+      const input = JSON.stringify({
+        session_id: 'session-123',
+        transcript_path: '/path/to/transcript.txt',
+        cwd: '/workspace',
+        permission_mode: 'ask',
+        hook_event_name: 'PostToolUse',
+        tool_name: 'Write',
+        tool_input: { file_path: '/test/file.ts' },
+        tool_response: {},
+        tool_use_id: 'tool-use-456',
+      });
+      adapter.parseInput(input);
+
       const response = {
         decision: 'deny' as const,
         message: 'Operation blocked',
@@ -158,6 +177,20 @@ describe('ClaudeCodePostToolUseAdapter', () => {
     });
 
     test('formats allow decision with message as additionalContext', () => {
+      // Set PostToolUse mode
+      const input = JSON.stringify({
+        session_id: 'session-123',
+        hook_event_name: 'PostToolUse',
+        tool_name: 'Write',
+        tool_input: {},
+        tool_response: {},
+        tool_use_id: 'tool-use-456',
+        cwd: '/workspace',
+        transcript_path: '/path',
+        permission_mode: 'ask',
+      });
+      adapter.parseInput(input);
+
       const response = {
         decision: 'allow' as const,
         message: 'Code review feedback',
@@ -173,6 +206,20 @@ describe('ClaudeCodePostToolUseAdapter', () => {
     });
 
     test('formats allow decision without message', () => {
+      // Set PostToolUse mode
+      const input = JSON.stringify({
+        session_id: 'session-123',
+        hook_event_name: 'PostToolUse',
+        tool_name: 'Write',
+        tool_input: {},
+        tool_response: {},
+        tool_use_id: 'tool-use-456',
+        cwd: '/workspace',
+        transcript_path: '/path',
+        permission_mode: 'ask',
+      });
+      adapter.parseInput(input);
+
       const response = {
         decision: 'allow' as const,
         message: '',
@@ -187,6 +234,20 @@ describe('ClaudeCodePostToolUseAdapter', () => {
     });
 
     test('formats skip decision without blocking', () => {
+      // Set PostToolUse mode
+      const input = JSON.stringify({
+        session_id: 'session-123',
+        hook_event_name: 'PostToolUse',
+        tool_name: 'Write',
+        tool_input: {},
+        tool_response: {},
+        tool_use_id: 'tool-use-456',
+        cwd: '/workspace',
+        transcript_path: '/path',
+        permission_mode: 'ask',
+      });
+      adapter.parseInput(input);
+
       const response = {
         decision: 'skip' as const,
         message: '',
@@ -195,12 +256,25 @@ describe('ClaudeCodePostToolUseAdapter', () => {
       const output = adapter.formatOutput(response);
       const parsed = JSON.parse(output);
 
-      expect(parsed.decision).toBeUndefined();
-      expect(parsed.reason).toBeUndefined();
-      expect(parsed.hookSpecificOutput.hookEventName).toBe('PostToolUse');
+      // Skip returns empty object
+      expect(Object.keys(parsed).length).toBe(0);
     });
 
     test('formats ask decision without blocking', () => {
+      // Set PostToolUse mode
+      const input = JSON.stringify({
+        session_id: 'session-123',
+        hook_event_name: 'PostToolUse',
+        tool_name: 'Write',
+        tool_input: {},
+        tool_response: {},
+        tool_use_id: 'tool-use-456',
+        cwd: '/workspace',
+        transcript_path: '/path',
+        permission_mode: 'ask',
+      });
+      adapter.parseInput(input);
+
       const response = {
         decision: 'ask' as const,
         message: 'Review needed',

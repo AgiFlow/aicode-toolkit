@@ -352,3 +352,50 @@ features:
         }
       }
       ```
+  - name: hook-class-pattern
+    design_pattern: Hook Class Pattern
+    includes:
+      - src/hooks/**/*.ts
+    description: |-
+      ## Pattern Overview
+      Design pattern for implementing hook classes with preToolUse and postToolUse methods for AI agent integrations.
+
+      ## What TO DO ✅
+
+      - Export a hook class with preToolUse() and postToolUse() methods
+      - Use PascalCase class name with Hook suffix (e.g., MyFeatureHook)
+      - Use fail-open pattern - return SKIP on errors
+      - Use ExecutionLogService instance for session state tracking
+
+      ## What NOT TO DO ❌
+
+      - Don't export standalone functions (use class with methods)
+      - Don't throw errors (always catch and return SKIP)
+      - Don't mutate the context object
+
+      ## Example
+
+      ```typescript
+      import type { ClaudeCodeHookInput, HookResponse } from '@agiflowai/hooks-adapter';
+      import { ExecutionLogService, DECISION_SKIP, DECISION_DENY } from '@agiflowai/hooks-adapter';
+
+      export class MyFeatureHook {
+        async preToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+          try {
+            const executionLog = new ExecutionLogService(context.session_id);
+            // Hook logic here
+            return { decision: DECISION_DENY, message: 'Guidance message' };
+          } catch (error) {
+            return { decision: DECISION_SKIP, message: `Error: ${error}` };
+          }
+        }
+
+        async postToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+          try {
+            return { decision: DECISION_SKIP, message: '' };
+          } catch (error) {
+            return { decision: DECISION_SKIP, message: `Error: ${error}` };
+          }
+        }
+      }
+      ```

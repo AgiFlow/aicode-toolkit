@@ -43,3 +43,11 @@ export {
   PatternMatcher,
   RuleFinder,
 } from './services/index';
+
+// Hooks - Claude Code integration
+export { GetFileDesignPatternHook as ClaudeCodeGetFileDesignPatternHook } from './hooks/claudeCode/getFileDesignPattern';
+export { ReviewCodeChangeHook as ClaudeCodeReviewCodeChangeHook } from './hooks/claudeCode/reviewCodeChange';
+
+// Hooks - Gemini CLI integration
+export { GetFileDesignPatternHook as GeminiCliGetFileDesignPatternHook } from './hooks/geminiCli/getFileDesignPattern';
+export { ReviewCodeChangeHook as GeminiCliReviewCodeChangeHook } from './hooks/geminiCli/reviewCodeChange';

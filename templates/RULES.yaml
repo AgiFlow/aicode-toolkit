@@ -2,6 +2,33 @@ version: '1.0'
 template: shared
 description: Shared rules and patterns for all Agiflow templates
 rules:
+  - pattern: import-standards
+    description: Import organization and standards
+    should_do:
+      - rule: Use static imports at the top of the file instead of inline dynamic imports
+        codeExample: |
+          // ✅ GOOD
+          import { listScaffoldMethods } from '../hooks/geminiCli/listScaffoldMethods';
+
+          const hooks = await listScaffoldMethods();
+
+          // ⚠️ AVOID - Unnecessary dynamic import
+          const hooks = await import('../hooks/geminiCli/listScaffoldMethods');
+
+          // ✅ OK - Dynamic import when necessary (lazy loading, conditional)
+          if (condition) {
+            const module = await import('./heavy-module');
+          }
+    must_not_do:
+      - rule: Never use inline require() statements - use static imports
+        codeExample: |
+          // ❌ BAD - Inline require
+          const { listScaffoldMethods } = require('../hooks/geminiCli/listScaffoldMethods');
+          const hooks = require('./hooks');
+
+          // ✅ GOOD - Static import
+          import { listScaffoldMethods } from '../hooks/geminiCli/listScaffoldMethods';
+          import hooks from './hooks';
   - pattern: export-standards
     description: Strict export standards enforced across all TypeScript/JavaScript files
     must_do:

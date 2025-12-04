@@ -5,6 +5,7 @@ rules:
   - pattern: src/tools/**/*.ts
     description: MCP Tool Implementation Standards
     inherits:
+      - import-standards
       - export-standards
       - error-handling
       - type-safety
@@ -116,6 +117,7 @@ rules:
   - pattern: src/services/**/*.ts
     description: Service Layer Implementation Standards
     inherits:
+      - import-standards
       - export-standards
       - error-handling
       - type-safety
@@ -162,6 +164,7 @@ rules:
   - pattern: src/commands/**/*.ts
     description: CLI Command Implementation Standards
     inherits:
+      - import-standards
       - export-standards
       - error-handling
       - type-safety
@@ -197,6 +200,7 @@ rules:
   - pattern: src/index.ts
     description: Main barrel export file for public API
     inherits:
+      - import-standards
       - export-standards
     must_do:
       - rule: Export all public-facing modules using named exports
@@ -243,6 +247,7 @@ rules:
   - pattern: src/cli.ts
     description: Main CLI entry point standards
     inherits:
+      - import-standards
       - export-standards
       - error-handling
     must_do:
@@ -260,6 +265,7 @@ rules:
   - pattern: src/server/index.ts
     description: MCP Server setup standards
     inherits:
+      - import-standards
       - export-standards
       - error-handling
     must_do:
@@ -290,6 +296,7 @@ rules:
   - pattern: tests/**/*.test.ts
     description: Test file standards
     inherits:
+      - import-standards
       - naming-conventions
       - type-safety
     must_do:
@@ -313,6 +320,7 @@ rules:
   - pattern: src/prompts/**/*.ts
     description: MCP Prompt Implementation Standards
     inherits:
+      - import-standards
       - export-standards
       - error-handling
       - type-safety
@@ -393,6 +401,7 @@ rules:
   - pattern: src/transports/**/*.ts
     description: MCP Transport Setup Standards
     inherits:
+      - import-standards
       - export-standards
       - error-handling
       - async-await-patterns
@@ -455,6 +464,7 @@ rules:
   - pattern: src/types/**/*.ts
     description: Type Definitions and Interfaces Standards
     inherits:
+      - import-standards
       - export-standards
       - type-safety
       - documentation-standards
@@ -540,6 +550,7 @@ rules:
   - pattern: src/commands/index.ts
     description: CLI Barrel Export Standards
     inherits:
+      - import-standards
       - export-standards
     must_do:
       - rule: Export all CLI commands from index.ts using barrel exports
@@ -573,6 +584,7 @@ rules:
   - pattern: src/tools/index.ts
     description: Tools Barrel Export Standards
     inherits:
+      - import-standards
       - export-standards
     must_do:
       - rule: Export all tools from index.ts using barrel exports
@@ -602,6 +614,7 @@ rules:
   - pattern: src/services/index.ts
     description: Services Barrel Export Standards
     inherits:
+      - import-standards
       - export-standards
     must_do:
       - rule: Export all services from index.ts using barrel exports
@@ -631,5 +644,160 @@ rules:
           // ❌ BAD
           export * from './services';
 
-          // ✅ GOOD  
+          // ✅ GOOD
           export { Service1, Service2 } from './services';
+  - pattern: src/hooks/**/*.ts
+    description: Hook Class Implementation Standards
+    inherits:
+      - import-standards
+      - export-standards
+      - error-handling
+      - type-safety
+    must_do:
+      - rule: Export a hook class with preToolUse and postToolUse methods
+        codeExample: |-
+          // ✅ GOOD - Claude Code hook class
+          import type { ClaudeCodeHookInput, HookResponse } from '@agiflowai/hooks-adapter';
+          import {
+            ExecutionLogService,
+            DECISION_SKIP,
+            DECISION_DENY,
+            DECISION_ALLOW,
+          } from '@agiflowai/hooks-adapter';
+
+          export class MyFeatureHook {
+            async preToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+              try {
+                // Access Claude Code fields: tool_name, tool_input, session_id, etc.
+                const filePath = context.tool_input.file_path;
+                return { decision: DECISION_SKIP, message: '' };
+              } catch (error) {
+                return {
+                  decision: DECISION_SKIP,
+                  message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`
+                };
+              }
+            }
+
+            async postToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+              try {
+                return { decision: DECISION_SKIP, message: '' };
+              } catch (error) {
+                return {
+                  decision: DECISION_SKIP,
+                  message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`
+                };
+              }
+            }
+          }
+      - rule: Always use fail-open pattern - return SKIP on errors in each method
+        codeExample: |-
+          // ✅ GOOD
+          async preToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+            try {
+              // Hook logic
+              return { decision: DECISION_ALLOW, message: 'Success' };
+            } catch (error) {
+              return {
+                decision: DECISION_SKIP,
+                message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`
+              };
+            }
+          }
+      - rule: Use ExecutionLogService instance for session state tracking
+        codeExample: |-
+          // ✅ GOOD - Instantiate with session_id
+          async preToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+            const executionLog = new ExecutionLogService(context.session_id);
+            const sessionKey = 'my-hook';
+            const alreadyProcessed = await executionLog.hasExecuted({
+              filePath: sessionKey,
+              decision: DECISION_DENY
+            });
+
+            if (!alreadyProcessed) {
+              await executionLog.logExecution({
+                filePath: sessionKey,
+                operation: 'my-operation',
+                decision: DECISION_DENY
+              });
+            }
+          }
+      - rule: Return proper HookResponse with decision and message
+        codeExample: |-
+          // ✅ GOOD
+          return {
+            decision: DECISION_DENY,
+            message: '🎯 **Guidance**\n\nProvide helpful guidance here.'
+          };
+      - rule: Extract file paths and data from tool_input
+        codeExample: |-
+          // ✅ GOOD - Claude Code
+          const filePath = context.tool_input.file_path;
+          const content = context.tool_input.content;
+
+          if (!filePath || !['Read', 'Write', 'Edit'].includes(context.tool_name)) {
+            return { decision: DECISION_SKIP, message: 'Not a file operation' };
+          }
+      - rule: Use PascalCase class name with Hook suffix
+        codeExample: |-
+          // ✅ GOOD
+          export class ListScaffoldMethodsHook { }
+          export class ValidateInputHook { }
+          export class GetFileDesignPatternHook { }
+
+          // ❌ BAD
+          export class listScaffoldMethods { }  // Wrong: not PascalCase
+          export class ListScaffoldMethods { }  // Wrong: missing Hook suffix
+    must_not_do:
+      - rule: Never throw errors or let errors propagate from methods
+        codeExample: |-
+          // ❌ BAD - Throws error
+          async preToolUse(context: ClaudeCodeHookInput) {
+            const data = await riskyOperation(); // Can throw
+            return { decision: DECISION_ALLOW };
+          }
+
+          // ✅ GOOD - Catches and returns SKIP
+          async preToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+            try {
+              const data = await riskyOperation();
+              return { decision: DECISION_ALLOW, message: '' };
+            } catch (error) {
+              return {
+                decision: DECISION_SKIP,
+                message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`
+              };
+            }
+          }
+      - rule: Never mutate context object
+        codeExample: |-
+          // ❌ BAD
+          context.session_id = 'new-id';
+          context.tool_input = { modified: true };
+
+          // ✅ GOOD - Read only
+          const sessionId = context.session_id;
+          const input = context.tool_input;
+      - rule: Never use blocking operations without error handling
+        codeExample: |-
+          // ❌ BAD
+          const data = fs.readFileSync('/path'); // Blocks and can throw
+
+          // ✅ GOOD
+          try {
+            const data = await fs.promises.readFile('/path');
+          } catch (error) {
+            return { decision: DECISION_SKIP, message: 'Error occurred' };
+          }
+      - rule: Never export standalone functions instead of class
+        codeExample: |-
+          // ❌ BAD - Standalone functions
+          export const preToolUseHook = async (context) => { };
+          export const postToolUseHook = async (context) => { };
+
+          // ✅ GOOD - Class with methods
+          export class MyHook {
+            async preToolUse(context) { }
+            async postToolUse(context) { }
+          }

@@ -89,6 +89,45 @@ Or if installed globally:
 }
 ```
 
+### Hooks Integration (Experimental)
+
+> **Experimental:** Hooks integration is currently experimental and the API may change in future releases.
+
+scaffold-mcp integrates with AI coding agents' hook systems to provide proactive scaffolding guidance when creating new files.
+
+**Quick setup for Claude Code** (`.claude/settings.json`):
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx @agiflowai/scaffold-mcp hook --type claude-code.preToolUse"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__one-mcp__use_tool",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx @agiflowai/scaffold-mcp hook --type claude-code.postToolUse"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+For detailed configuration, supported agents, and troubleshooting, see **[Hooks Documentation](./docs/hooks.md)**.
+
 #### Available MCP Tools
 
 **Standard Tools** (always available):
@@ -241,6 +280,7 @@ scaffold-mcp scaffold add scaffold-nextjs-page \
 - [MCP Tools](./docs/mcp-tools.md) - MCP server tools reference
 - [Template Conventions](./docs/template-conventions.md) - Guide for creating templates with Liquid syntax
 - [Advanced Generators](./docs/advanced-generators.md) - Guide for creating custom TypeScript generators
+- [Hooks Integration](./docs/hooks.md) - Guide to integrating scaffold-mcp with AI coding agents via hooks (experimental)
 
 ## License
 

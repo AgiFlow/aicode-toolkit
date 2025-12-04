@@ -24,19 +24,15 @@ import { log, print } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 import { ReviewCodeChangeTool } from '../tools/ReviewCodeChangeTool';
 import {
-  CLAUDE_CODE,
   type LlmToolId,
   isValidLlmTool,
   SUPPORTED_LLM_TOOLS,
 } from '@agiflowai/coding-agent-bridge';
-import { AdapterProxyService, POST_TOOL_USE } from '@agiflowai/hooks-adapter';
-import { postToolUseHook } from '../hooks/claudeCode/postToolUse';
 
 interface ReviewCodeChangeOptions {
   verbose?: boolean;
   json?: boolean;
   llmTool?: string;
-  hook?: string;
 }
 
 /**
@@ -46,7 +42,7 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
   .description(
     'Review code changes against template-specific and global rules to identify violations',
   )
-  .argument('[file-path]', 'Path to the file to review (optional if using --hook)')
+  .argument('<file-path>', 'Path to the file to review')
   .option('-v, --verbose', 'Enable verbose output', false)
   .option('-j, --json', 'Output as JSON', false)
   .option(
@@ -54,24 +50,8 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
     `LLM tool to use for code review. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
     'claude-code',
   )
-  .option(
-    '--hook <agent>',
-    'Run in hook mode for specified agent (e.g., claude-code)',
-  )
-  .action(async (filePath: string | undefined, options: ReviewCodeChangeOptions) => {
+  .action(async (filePath: string, options: ReviewCodeChangeOptions): Promise<void> => {
     try {
-      // HOOK MODE: Delegate to AdapterProxy
-      if (options.hook) {
-        await AdapterProxyService.execute(CLAUDE_CODE, POST_TOOL_USE, postToolUseHook);
-        return;
-      }
-
-      // NORMAL CLI MODE: Use file-path argument
-      if (!filePath) {
-        print.error('file-path is required when not using --hook mode');
-        process.exit(1);
-      }
-
       if (options.verbose) {
         log.info('Reviewing file:', filePath);
         log.info('Using LLM tool:', options.llmTool);

@@ -12,17 +12,19 @@ vi.mock('node:fs/promises');
 import { ExecutionLogService } from '../../src/services/ExecutionLogService';
 
 describe('ExecutionLogService', () => {
+  let service: ExecutionLogService;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset the internal cache
-    (ExecutionLogService as any).cache = null;
+    // Create a new service instance for each test
+    service = new ExecutionLogService('session-123');
   });
 
   describe('hasExecuted', () => {
     test('returns false when log file does not exist', async () => {
       vi.mocked(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
 
-      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
+      const result = await service.hasExecuted({ filePath: '/test/file.ts', decision: 'deny' });
 
       expect(result).toBe(false);
     });
@@ -38,16 +40,15 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
+      const result = await service.hasExecuted({ filePath: '/test/file.ts', decision: 'deny' });
 
       expect(result).toBe(true);
     });
 
     test.each([
-      ['session-456', '/test/file.ts', 'deny', 'different session'],
-      ['session-123', '/test/other.ts', 'deny', 'different file'],
-      ['session-123', '/test/file.ts', 'allow', 'different decision'],
-    ])('returns false for %s', async (sessionId, filePath, decision) => {
+      ['/test/other.ts', 'deny', 'different file'],
+      ['/test/file.ts', 'allow', 'different decision'],
+    ])('returns false for %s', async (filePath, decision) => {
       const logEntry = JSON.stringify({
         timestamp: Date.now(),
         sessionId: 'session-123',
@@ -58,7 +59,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await ExecutionLogService.hasExecuted(sessionId, filePath, decision);
+      const result = await service.hasExecuted({ filePath, decision });
 
       expect(result).toBe(false);
     });
@@ -72,7 +73,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
 
-      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
+      const result = await service.hasExecuted({ filePath: '/test/file.ts', decision: 'deny' });
 
       expect(result).toBe(true);
     });
@@ -81,7 +82,7 @@ describe('ExecutionLogService', () => {
       const logContent = 'invalid json\n{"valid": "entry"}';
       vi.mocked(fs.readFile).mockResolvedValue(logContent);
 
-      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
+      const result = await service.hasExecuted({ filePath: '/test/file.ts', decision: 'deny' });
 
       expect(result).toBe(false);
     });
@@ -90,7 +91,7 @@ describe('ExecutionLogService', () => {
       vi.mocked(fs.readFile).mockRejectedValue(new Error('Permission denied'));
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
+      const result = await service.hasExecuted({ filePath: '/test/file.ts', decision: 'deny' });
 
       expect(result).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalled();
@@ -101,8 +102,7 @@ describe('ExecutionLogService', () => {
     test('appends execution to log file', async () => {
       vi.mocked(fs.appendFile).mockResolvedValue(undefined);
 
-      await ExecutionLogService.logExecution({
-        sessionId: 'session-123',
+      await service.logExecution({
         filePath: '/test/file.ts',
         operation: 'edit',
         decision: 'deny',
@@ -122,8 +122,7 @@ describe('ExecutionLogService', () => {
     test('appends execution with filePattern to log file', async () => {
       vi.mocked(fs.appendFile).mockResolvedValue(undefined);
 
-      await ExecutionLogService.logExecution({
-        sessionId: 'session-123',
+      await service.logExecution({
         filePath: '/test/file.ts',
         operation: 'edit',
         decision: 'deny',
@@ -142,12 +141,36 @@ describe('ExecutionLogService', () => {
       expect(logData.timestamp).toBeDefined();
     });
 
+    test('appends execution with generatedFiles to log file', async () => {
+      vi.mocked(fs.appendFile).mockResolvedValue(undefined);
+
+      await service.logExecution({
+        filePath: '/test/project',
+        operation: 'scaffold',
+        decision: 'allow',
+        generatedFiles: ['/test/project/src/component.ts', '/test/project/src/component.test.ts'],
+      });
+
+      expect(fs.appendFile).toHaveBeenCalled();
+      const callArgs = vi.mocked(fs.appendFile).mock.calls[0];
+      const logData = JSON.parse(callArgs[1] as string);
+
+      expect(logData.sessionId).toBe('session-123');
+      expect(logData.filePath).toBe('/test/project');
+      expect(logData.operation).toBe('scaffold');
+      expect(logData.decision).toBe('allow');
+      expect(logData.generatedFiles).toEqual([
+        '/test/project/src/component.ts',
+        '/test/project/src/component.test.ts',
+      ]);
+      expect(logData.timestamp).toBeDefined();
+    });
+
     test('handles append errors gracefully', async () => {
       vi.mocked(fs.appendFile).mockRejectedValue(new Error('Disk full'));
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      await ExecutionLogService.logExecution({
-        sessionId: 'session-123',
+      await service.logExecution({
         filePath: '/test/file.ts',
         operation: 'edit',
         decision: 'deny',
@@ -164,26 +187,24 @@ describe('ExecutionLogService', () => {
     test('returns zero stats for empty log', async () => {
       vi.mocked(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
 
-      const stats = await ExecutionLogService.getStats();
+      const stats = await service.getStats();
 
       expect(stats.totalEntries).toBe(0);
-      expect(stats.uniqueSessions).toBe(0);
       expect(stats.uniqueFiles).toBe(0);
     });
 
     test('calculates stats correctly for multiple entries', async () => {
       const entries = [
         { sessionId: 'session-123', filePath: '/test/file1.ts', decision: 'deny' },
-        { sessionId: 'session-456', filePath: '/test/file2.ts', decision: 'allow' },
+        { sessionId: 'session-123', filePath: '/test/file2.ts', decision: 'allow' },
         { sessionId: 'session-123', filePath: '/test/file1.ts', decision: 'allow' },
       ].map((e) => JSON.stringify({ ...e, timestamp: Date.now(), operation: 'edit' }));
 
       vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
 
-      const stats = await ExecutionLogService.getStats();
+      const stats = await service.getStats();
 
       expect(stats.totalEntries).toBe(3);
-      expect(stats.uniqueSessions).toBe(2);
       expect(stats.uniqueFiles).toBe(2);
     });
   });
@@ -192,21 +213,335 @@ describe('ExecutionLogService', () => {
     test('removes log file successfully', async () => {
       vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
-      await ExecutionLogService.clearLog();
+      await service.clearLog();
 
       expect(fs.unlink).toHaveBeenCalled();
     });
 
     test('handles missing log file gracefully', async () => {
-      vi.mocked(fs.unlink).mockRejectedValue({ code: 'ENOENT' });
+      // Create a proper Node.js-style error with code property
+      const enoentError = Object.assign(new Error('ENOENT: no such file or directory'), {
+        code: 'ENOENT',
+      });
+      vi.mocked(fs.unlink).mockRejectedValue(enoentError);
 
-      await expect(ExecutionLogService.clearLog()).resolves.toBeUndefined();
+      await expect(service.clearLog()).resolves.toBeUndefined();
     });
 
     test('throws error for other unlink errors', async () => {
       vi.mocked(fs.unlink).mockRejectedValue(new Error('Permission denied'));
 
-      await expect(ExecutionLogService.clearLog()).rejects.toThrow('Permission denied');
+      await expect(service.clearLog()).rejects.toThrow('Permission denied');
+    });
+  });
+
+  describe('wasRecentlyReviewed', () => {
+    test('returns false when no previous review exists', async () => {
+      vi.mocked(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
+
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
+
+      expect(result).toBe(false);
+    });
+
+    test('returns true when file was reviewed within debounce window', async () => {
+      const now = Date.now();
+      const recentTimestamp = now - 2000; // 2 seconds ago
+
+      const logEntry = JSON.stringify({
+        timestamp: recentTimestamp,
+        sessionId: 'session-123',
+        filePath: '/test/file.ts',
+        operation: 'edit',
+        decision: 'allow',
+        fileMtime: 123456789,
+        fileChecksum: 'abc123',
+      });
+
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
+
+      expect(result).toBe(true);
+    });
+
+    test('returns false when file was reviewed outside debounce window', async () => {
+      const now = Date.now();
+      const oldTimestamp = now - 5000; // 5 seconds ago
+
+      const logEntry = JSON.stringify({
+        timestamp: oldTimestamp,
+        sessionId: 'session-123',
+        filePath: '/test/file.ts',
+        operation: 'edit',
+        decision: 'allow',
+      });
+
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
+
+      expect(result).toBe(false);
+    });
+
+    test('returns false for different file', async () => {
+      const now = Date.now();
+      const recentTimestamp = now - 1000;
+
+      const logEntry = JSON.stringify({
+        timestamp: recentTimestamp,
+        sessionId: 'session-123',
+        filePath: '/test/other.ts',
+        operation: 'edit',
+        decision: 'allow',
+      });
+
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
+
+      expect(result).toBe(false);
+    });
+
+    test('uses most recent matching entry', async () => {
+      const now = Date.now();
+      const entries = [
+        {
+          timestamp: now - 5000,
+          sessionId: 'session-123',
+          filePath: '/test/file.ts',
+          decision: 'allow',
+          fileMtime: 123456789,
+          fileChecksum: 'abc123',
+        },
+        {
+          timestamp: now - 2000,
+          sessionId: 'session-123',
+          filePath: '/test/file.ts',
+          decision: 'deny',
+          fileMtime: 123456790,
+          fileChecksum: 'def456',
+        },
+      ].map((e) => JSON.stringify({ ...e, operation: 'edit' }));
+
+      vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
+
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
+
+      expect(result).toBe(true);
+    });
+
+    test('uses custom debounce window', async () => {
+      const now = Date.now();
+      const recentTimestamp = now - 4000; // 4 seconds ago
+
+      const logEntry = JSON.stringify({
+        timestamp: recentTimestamp,
+        sessionId: 'session-123',
+        filePath: '/test/file.ts',
+        operation: 'edit',
+        decision: 'allow',
+        fileMtime: 123456789,
+        fileChecksum: 'abc123',
+      });
+
+      // Test with 5000ms debounce - should be recent
+      const service1 = new ExecutionLogService('session-123');
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+      const result5s = await service1.wasRecentlyReviewed('/test/file.ts', 5000);
+      expect(result5s).toBe(true);
+
+      // Test with 3000ms debounce - should NOT be recent
+      const service2 = new ExecutionLogService('session-123');
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+      const result3s = await service2.wasRecentlyReviewed('/test/file.ts', 3000);
+      expect(result3s).toBe(false);
+    });
+
+    test('handles errors gracefully and returns false', async () => {
+      vi.mocked(fs.readFile).mockRejectedValue(new Error('Read error'));
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
+
+      expect(result).toBe(false);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to load execution log'),
+        expect.any(Error),
+      );
+    });
+
+    test('uses default debounce of 3000ms when not specified', async () => {
+      const now = Date.now();
+      const recentTimestamp = now - 2000;
+
+      const logEntry = JSON.stringify({
+        timestamp: recentTimestamp,
+        sessionId: 'session-123',
+        filePath: '/test/file.ts',
+        operation: 'edit',
+        decision: 'allow',
+        fileMtime: 123456789,
+        fileChecksum: 'abc123',
+      });
+
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+
+      const result = await service.wasRecentlyReviewed('/test/file.ts');
+
+      expect(result).toBe(true);
+    });
+
+    test('ignores non-review operations without fileMtime or fileChecksum', async () => {
+      const now = Date.now();
+      const entries = [
+        {
+          timestamp: now - 1000,
+          sessionId: 'session-123',
+          filePath: '/test/file.ts',
+          operation: 'read',
+          decision: 'allow',
+          // No fileMtime or fileChecksum - this is a non-review operation
+        },
+        {
+          timestamp: now - 5000,
+          sessionId: 'session-123',
+          filePath: '/test/file.ts',
+          operation: 'edit',
+          decision: 'allow',
+          fileMtime: 123456789,
+          fileChecksum: 'abc123',
+        },
+      ].map((e) => JSON.stringify(e));
+
+      vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
+
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
+
+      // Should return false because the only review operation (with fileMtime/fileChecksum)
+      // is older than 3 seconds
+      expect(result).toBe(false);
+    });
+
+    test('ignores skip decisions even with fileMtime', async () => {
+      const now = Date.now();
+      const entries = [
+        {
+          timestamp: now - 1000,
+          sessionId: 'session-123',
+          filePath: '/test/file.ts',
+          operation: 'edit',
+          decision: 'skip',
+          fileMtime: 123456789,
+          fileChecksum: 'abc123',
+        },
+      ].map((e) => JSON.stringify(e));
+
+      vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
+
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
+
+      // Should return false because skip decisions are not actual reviews
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('wasGeneratedByScaffold', () => {
+    test('returns false when no scaffold log exists', async () => {
+      vi.mocked(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
+
+      const result = await service.wasGeneratedByScaffold('/test/file.ts');
+
+      expect(result).toBe(false);
+    });
+
+    test('returns true when file was generated by scaffold', async () => {
+      const logEntry = JSON.stringify({
+        timestamp: Date.now(),
+        sessionId: 'session-123',
+        filePath: '/test/project',
+        operation: 'scaffold',
+        decision: 'allow',
+        generatedFiles: ['/test/project/src/component.ts', '/test/project/src/component.test.ts'],
+      });
+
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+
+      const result = await service.wasGeneratedByScaffold('/test/project/src/component.ts');
+
+      expect(result).toBe(true);
+    });
+
+    test('returns false when file was not in generated files list', async () => {
+      const logEntry = JSON.stringify({
+        timestamp: Date.now(),
+        sessionId: 'session-123',
+        filePath: '/test/project',
+        operation: 'scaffold',
+        decision: 'allow',
+        generatedFiles: ['/test/project/src/component.ts'],
+      });
+
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+
+      const result = await service.wasGeneratedByScaffold('/test/project/src/other.ts');
+
+      expect(result).toBe(false);
+    });
+
+    test('returns false when scaffold has no generatedFiles', async () => {
+      const logEntry = JSON.stringify({
+        timestamp: Date.now(),
+        sessionId: 'session-123',
+        filePath: '/test/project',
+        operation: 'scaffold',
+        decision: 'allow',
+      });
+
+      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
+
+      const result = await service.wasGeneratedByScaffold('/test/project/src/component.ts');
+
+      expect(result).toBe(false);
+    });
+
+    test('checks only scaffold operations', async () => {
+      const entries = [
+        {
+          timestamp: Date.now(),
+          sessionId: 'session-123',
+          filePath: '/test/file.ts',
+          operation: 'edit',
+          decision: 'allow',
+        },
+        {
+          timestamp: Date.now(),
+          sessionId: 'session-123',
+          filePath: '/test/project',
+          operation: 'scaffold',
+          decision: 'allow',
+          generatedFiles: ['/test/project/src/component.ts'],
+        },
+      ].map((e) => JSON.stringify(e));
+
+      vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
+
+      const result = await service.wasGeneratedByScaffold('/test/project/src/component.ts');
+
+      expect(result).toBe(true);
+    });
+
+    test('handles errors gracefully and returns false', async () => {
+      vi.mocked(fs.readFile).mockRejectedValue(new Error('Read error'));
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const result = await service.wasGeneratedByScaffold('/test/file.ts');
+
+      expect(result).toBe(false);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to load execution log'),
+        expect.any(Error),
+      );
     });
   });
 });

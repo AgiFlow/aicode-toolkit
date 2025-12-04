@@ -1,10 +1,15 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { generateStableId } from '@agiflowai/aicode-utils';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { FileSystemService } from '../services/FileSystemService';
 import { ScaffoldingMethodsService } from '../services/ScaffoldingMethodsService';
 import type { ToolDefinition } from './types';
 
 export class UseScaffoldMethodTool {
   static readonly TOOL_NAME = 'use-scaffold-method';
+  private static readonly TEMP_LOG_DIR = os.tmpdir();
 
   private fileSystemService: FileSystemService;
   private scaffoldingMethodsService: ScaffoldingMethodsService;
@@ -17,6 +22,37 @@ export class UseScaffoldMethodTool {
       templatesPath,
     );
     this.isMonolith = isMonolith;
+  }
+
+  /**
+   * Write scaffold execution info to temp log file for hook processing
+   */
+  private async writePendingScaffoldLog(
+    scaffoldId: string,
+    projectPath: string,
+    featureName: string,
+    generatedFiles: string[],
+  ): Promise<void> {
+    try {
+      const logEntry = {
+        timestamp: Date.now(),
+        scaffoldId,
+        projectPath,
+        featureName,
+        generatedFiles,
+        operation: 'scaffold',
+      };
+
+      const tempLogFile = path.join(
+        UseScaffoldMethodTool.TEMP_LOG_DIR,
+        `scaffold-mcp-pending-${scaffoldId}.jsonl`,
+      );
+
+      await fs.appendFile(tempLogFile, `${JSON.stringify(logEntry)}\n`, 'utf-8');
+    } catch (error) {
+      // Fail silently - logging should not break the tool
+      console.error('Failed to write pending scaffold log:', error);
+    }
   }
 
   /**
@@ -95,6 +131,19 @@ IMPORTANT:
         variables,
       });
 
+      // Generate stable scaffold ID
+      const scaffoldId = generateStableId(6);
+
+      // Write scaffold execution to temp log for hook processing
+      if (result.createdFiles && result.createdFiles.length > 0) {
+        await this.writePendingScaffoldLog(
+          scaffoldId,
+          resolvedProjectPath,
+          scaffold_feature_name,
+          result.createdFiles,
+        );
+      }
+
       // Append instructions for LLM to review and implement the scaffolded files
       const enhancedMessage = `${result.message}
 
@@ -112,6 +161,10 @@ Do not skip the implementation step - the scaffolded files contain templates tha
           {
             type: 'text',
             text: enhancedMessage,
+          },
+          {
+            type: 'text',
+            text: `SCAFFOLD_ID:${scaffoldId}`,
           },
         ],
       };

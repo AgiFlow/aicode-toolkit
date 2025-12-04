@@ -2,22 +2,40 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Write",
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/architect-mcp/src/cli.ts get-file-design-pattern --hook claude-code"
+            "command": "bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.preToolUse"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Update",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.preToolUse"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|Update",
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/architect-mcp/src/cli.ts review-code-change --hook claude-code"
+            "command": "bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.postToolUse"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__one-mcp__use_tool",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.postToolUse"
           }
         ]
       }

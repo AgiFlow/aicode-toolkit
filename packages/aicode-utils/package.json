@@ -45,6 +45,7 @@
     "@types/node": "^22.0.0",
     "@types/ora": "^3.2.0",
     "@vitest/coverage-v8": "^3.0.0",
+    "chance": "^1.1.13",
     "tsdown": "^0.16.4",
     "typescript": "5.9.3",
     "vitest": "^3.0.0"

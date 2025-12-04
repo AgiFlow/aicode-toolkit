@@ -78,11 +78,9 @@ interface HookResponse {
 
 ### ClaudeCodeAdapter
 
-Adapter for Claude Code PreToolUse hooks. Parses Claude Code's JSON stdin format and formats responses accordingly.
+Unified adapter for both Claude Code PreToolUse and PostToolUse hooks. Automatically detects the hook event type from the input and formats responses accordingly.
 
-### ClaudeCodePostToolUseAdapter
-
-Adapter for Claude Code PostToolUse hooks. Handles post-execution hook format with tool response data.
+The adapter stores the `hook_event_name` during parsing and morphs its output format based on whether it's handling a PreToolUse or PostToolUse event.
 
 ### BaseAdapter
 
@@ -103,19 +101,21 @@ AdapterProxyService.execute(agentName, hookType, callback);
 Tracks hook executions to prevent duplicate actions within a session.
 
 ```typescript
+// Create a service instance for the session
+const executionLog = new ExecutionLogService(sessionId);
+
 // Check if already executed
-const executed = await ExecutionLogService.hasExecuted(sessionId, filePath, decision);
+const executed = await executionLog.hasExecuted({ filePath, decision });
 
 // Log an execution
-await ExecutionLogService.logExecution({
-  sessionId,
+await executionLog.logExecution({
   filePath,
   operation: 'read',
   decision: 'allow',
 });
 
 // Check if file has changed since last execution
-const changed = await ExecutionLogService.hasFileChanged(sessionId, filePath, decision);
+const changed = await executionLog.hasFileChanged(filePath, decision);
 ```
 
 ## License
