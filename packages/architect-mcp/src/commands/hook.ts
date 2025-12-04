@@ -101,10 +101,9 @@ export const hookCommand = new Command('hook')
 
         const adapter = new ClaudeCodeAdapter();
 
-        // Execute all hooks in serial
-        for (const callback of claudeCallbacks) {
-          await adapter.execute(callback);
-        }
+        // Execute all hooks in serial with shared stdin
+        await adapter.executeMultiple(claudeCallbacks);
+
       } else if (agent === GEMINI_CLI) {
         // Import both hook modules
         const [getFileDesignPatternHooks, reviewCodeChangeHooks] = await Promise.all([
@@ -134,10 +133,9 @@ export const hookCommand = new Command('hook')
 
         const adapter = new GeminiCliAdapter();
 
-        // Execute all hooks in serial
-        for (const callback of geminiCallbacks) {
-          await adapter.execute(callback);
-        }
+        // Execute all hooks in serial with shared stdin
+        await adapter.executeMultiple(geminiCallbacks);
+
       } else {
         print.error(`Unsupported agent: ${agent}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);
         process.exit(1);

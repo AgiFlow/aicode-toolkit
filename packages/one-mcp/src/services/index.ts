@@ -7,3 +7,4 @@
 
 export * from './ConfigFetcherService';
 export * from './McpClientManagerService';
+export * from './TestService';

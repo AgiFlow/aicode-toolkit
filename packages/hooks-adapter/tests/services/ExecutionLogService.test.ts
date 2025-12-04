@@ -250,6 +250,8 @@ describe('ExecutionLogService', () => {
         filePath: '/test/file.ts',
         operation: 'edit',
         decision: 'allow',
+        fileMtime: 123456789,
+        fileChecksum: 'abc123',
       });
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
@@ -305,12 +307,16 @@ describe('ExecutionLogService', () => {
           sessionId: 'session-123',
           filePath: '/test/file.ts',
           decision: 'allow',
+          fileMtime: 123456789,
+          fileChecksum: 'abc123',
         },
         {
           timestamp: now - 2000,
           sessionId: 'session-123',
           filePath: '/test/file.ts',
           decision: 'deny',
+          fileMtime: 123456790,
+          fileChecksum: 'def456',
         },
       ].map((e) => JSON.stringify({ ...e, operation: 'edit' }));
 
@@ -331,6 +337,8 @@ describe('ExecutionLogService', () => {
         filePath: '/test/file.ts',
         operation: 'edit',
         decision: 'allow',
+        fileMtime: 123456789,
+        fileChecksum: 'abc123',
       });
 
       // Test with 5000ms debounce - should be recent
@@ -369,6 +377,8 @@ describe('ExecutionLogService', () => {
         filePath: '/test/file.ts',
         operation: 'edit',
         decision: 'allow',
+        fileMtime: 123456789,
+        fileChecksum: 'abc123',
       });
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
@@ -376,6 +386,59 @@ describe('ExecutionLogService', () => {
       const result = await service.wasRecentlyReviewed('/test/file.ts');
 
       expect(result).toBe(true);
+    });
+
+    test('ignores non-review operations without fileMtime or fileChecksum', async () => {
+      const now = Date.now();
+      const entries = [
+        {
+          timestamp: now - 1000,
+          sessionId: 'session-123',
+          filePath: '/test/file.ts',
+          operation: 'read',
+          decision: 'allow',
+          // No fileMtime or fileChecksum - this is a non-review operation
+        },
+        {
+          timestamp: now - 5000,
+          sessionId: 'session-123',
+          filePath: '/test/file.ts',
+          operation: 'edit',
+          decision: 'allow',
+          fileMtime: 123456789,
+          fileChecksum: 'abc123',
+        },
+      ].map((e) => JSON.stringify(e));
+
+      vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
+
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
+
+      // Should return false because the only review operation (with fileMtime/fileChecksum)
+      // is older than 3 seconds
+      expect(result).toBe(false);
+    });
+
+    test('ignores skip decisions even with fileMtime', async () => {
+      const now = Date.now();
+      const entries = [
+        {
+          timestamp: now - 1000,
+          sessionId: 'session-123',
+          filePath: '/test/file.ts',
+          operation: 'edit',
+          decision: 'skip',
+          fileMtime: 123456789,
+          fileChecksum: 'abc123',
+        },
+      ].map((e) => JSON.stringify(e));
+
+      vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
+
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
+
+      // Should return false because skip decisions are not actual reviews
+      expect(result).toBe(false);
     });
   });
 

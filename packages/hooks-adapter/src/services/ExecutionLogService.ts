@@ -311,8 +311,12 @@ export class ExecutionLogService {
       for (let i = entries.length - 1; i >= 0; i--) {
         const entry = entries[i];
 
-        // Match file
-        if (entry.filePath === filePath) {
+        // Match file and check if it's a review operation (has fileMtime or fileChecksum)
+        // and has decision 'allow' or 'deny' (actual reviews, not skips)
+        const isReviewOperation = entry.fileMtime !== undefined || entry.fileChecksum !== undefined;
+        const isReviewDecision = entry.decision === 'allow' || entry.decision === 'deny';
+
+        if (entry.filePath === filePath && isReviewOperation && isReviewDecision) {
           // Check if this review was recent (within debounce window)
           const timeSinceLastReview = now - entry.timestamp;
           if (timeSinceLastReview < debounceMs) {

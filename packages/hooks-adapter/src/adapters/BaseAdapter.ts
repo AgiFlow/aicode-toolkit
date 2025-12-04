@@ -73,6 +73,46 @@ export abstract class BaseAdapter<TContext = any> {
   }
 
   /**
+   * Execute multiple hooks with shared stdin (read once, execute all)
+   * This is useful when multiple hooks need to process the same input
+   * @param callbacks - Array of callback functions to execute
+   */
+  async executeMultiple(callbacks: Array<(context: TContext) => Promise<HookResponse>>): Promise<void> {
+    try {
+      // Read stdin from AI agent once
+      const stdin = await this.readStdin();
+
+      // Parse into context once
+      const context = this.parseInput(stdin);
+
+      // Execute all callbacks in serial, collecting responses
+      const responses: HookResponse[] = [];
+      for (const callback of callbacks) {
+        const response = await callback(context);
+        responses.push(response);
+      }
+
+      // Find first non-skip response (priority order)
+      const finalResponse = responses.find(r => r.decision !== 'skip');
+
+      // If all responses are skip, exit without output
+      if (!finalResponse) {
+        process.exit(0);
+        return;
+      }
+
+      // Format and output the first non-skip response
+      const output = this.formatOutput(finalResponse);
+
+      // Write to stdout
+      console.log(output);
+      process.exit(0);
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  /**
    * Read stdin from AI agent
    * @returns Promise resolving to stdin content
    */
