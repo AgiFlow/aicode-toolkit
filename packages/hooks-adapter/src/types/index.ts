@@ -28,6 +28,9 @@ export interface HookContext {
   /** Input parameters passed to the tool */
   toolInput: Record<string, any>;
 
+  /** Tool execution result (only available in post-tool hooks) */
+  toolResult?: any;
+
   /** File path if this is a file operation */
   filePath?: string;
 

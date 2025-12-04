@@ -1,4 +1,5 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { generateStableId } from '@agiflowai/aicode-utils';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -8,7 +9,7 @@ import type { ToolDefinition } from './types';
 
 export class UseScaffoldMethodTool {
   static readonly TOOL_NAME = 'use-scaffold-method';
-  private static readonly TEMP_LOG_FILE = path.join(os.tmpdir(), 'scaffold-mcp-pending.jsonl');
+  private static readonly TEMP_LOG_DIR = os.tmpdir();
 
   private fileSystemService: FileSystemService;
   private scaffoldingMethodsService: ScaffoldingMethodsService;
@@ -27,6 +28,7 @@ export class UseScaffoldMethodTool {
    * Write scaffold execution info to temp log file for hook processing
    */
   private async writePendingScaffoldLog(
+    scaffoldId: string,
     projectPath: string,
     featureName: string,
     generatedFiles: string[],
@@ -34,17 +36,19 @@ export class UseScaffoldMethodTool {
     try {
       const logEntry = {
         timestamp: Date.now(),
+        scaffoldId,
         projectPath,
         featureName,
         generatedFiles,
         operation: 'scaffold',
       };
 
-      await fs.appendFile(
-        UseScaffoldMethodTool.TEMP_LOG_FILE,
-        `${JSON.stringify(logEntry)}\n`,
-        'utf-8',
+      const tempLogFile = path.join(
+        UseScaffoldMethodTool.TEMP_LOG_DIR,
+        `scaffold-mcp-pending-${scaffoldId}.jsonl`,
       );
+
+      await fs.appendFile(tempLogFile, `${JSON.stringify(logEntry)}\n`, 'utf-8');
     } catch (error) {
       // Fail silently - logging should not break the tool
       console.error('Failed to write pending scaffold log:', error);
@@ -127,9 +131,13 @@ IMPORTANT:
         variables,
       });
 
+      // Generate stable scaffold ID
+      const scaffoldId = generateStableId(6);
+
       // Write scaffold execution to temp log for hook processing
       if (result.createdFiles && result.createdFiles.length > 0) {
         await this.writePendingScaffoldLog(
+          scaffoldId,
           resolvedProjectPath,
           scaffold_feature_name,
           result.createdFiles,
@@ -154,15 +162,11 @@ Do not skip the implementation step - the scaffolded files contain templates tha
             type: 'text',
             text: enhancedMessage,
           },
-        ],
-        _meta: {
-          scaffold: {
-            featureName: scaffold_feature_name,
-            projectPath: resolvedProjectPath,
-            generatedFiles: result.createdFiles || [],
-            existingFiles: result.existingFiles || [],
+          {
+            type: 'text',
+            text: `SCAFFOLD_ID:${scaffoldId}`,
           },
-        },
+        ],
       };
     } catch (error) {
       return {

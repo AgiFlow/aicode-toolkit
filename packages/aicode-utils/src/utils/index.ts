@@ -16,6 +16,7 @@
  */
 
 export * from './fsHelpers';
+export * from './generateStableId';
 export * from './logger';
 export * from './print';
 export * from './projectTypeDetector';

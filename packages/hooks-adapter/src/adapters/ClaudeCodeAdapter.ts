@@ -101,9 +101,10 @@ export class ClaudeCodeAdapter extends BaseAdapter {
     this.hookEventName = input.hook_event_name;
 
     // Extract tool_response if this is PostToolUse
-    const toolResponse = this.hookEventName === 'PostToolUse'
-      ? (input as ClaudeCodePostToolUseInput).tool_response
-      : undefined;
+    const toolResponse =
+      this.hookEventName === 'PostToolUse'
+        ? (input as ClaudeCodePostToolUseInput).tool_response
+        : undefined;
 
     const context: HookContext = {
       toolName: input.tool_name,
@@ -117,7 +118,7 @@ export class ClaudeCodeAdapter extends BaseAdapter {
 
     log.debug('ClaudeCodeAdapter: Parsed context', {
       hookEventName: this.hookEventName,
-      context
+      context,
     });
 
     return context;
@@ -133,7 +134,7 @@ export class ClaudeCodeAdapter extends BaseAdapter {
   formatOutput(response: HookResponse): string {
     log.debug('ClaudeCodeAdapter: Formatting output', {
       hookEventName: this.hookEventName,
-      response
+      response,
     });
 
     // If decision is 'skip', return empty object (hook has nothing to say)
@@ -212,7 +213,7 @@ export class ClaudeCodeAdapter extends BaseAdapter {
   private extractFilePath(
     toolName: string,
     toolInput: any,
-    toolResponse?: any
+    toolResponse?: any,
   ): string | undefined {
     // File operations have file_path parameter
     if (['Read', 'Write', 'Edit'].includes(toolName)) {

@@ -1,0 +1,118 @@
+/**
+ * {{ hookName }} Hook for {{ agentType | pascalCase }}
+ *
+ * DESIGN PATTERNS:
+ * - Hook callback pattern: Multiple lifecycle hooks in single file
+ * - Fail-open pattern: Errors allow operation to proceed with warning
+ * - Session state tracking: Use ExecutionLogService to track state across hook invocations
+ *
+ * CODING STANDARDS:
+ * - Export named callbacks: {% if agentType == 'claudeCode' %}preToolUseHook, postToolUseHook{% else %}beforeToolHook, afterToolHook{% endif %}
+ * - Handle all errors gracefully with fail-open behavior (return SKIP on errors)
+ * - Format messages clearly for LLM consumption using markdown
+ * - Use DECISION_ALLOW, DECISION_DENY, DECISION_SKIP constants
+ *
+ * AVOID:
+ * - Blocking operations on errors (always fail open)
+ * - Complex business logic (delegate to tools/services)
+ * - Mutating context object
+ * - Using inline dynamic imports (use static imports at top)
+ */
+
+import type { HookCallback, HookContext, HookResponse } from '@agiflowai/hooks-adapter';
+import {
+  ExecutionLogService,
+  DECISION_SKIP,
+  DECISION_DENY,
+  DECISION_ALLOW,
+} from '@agiflowai/hooks-adapter';
+
+{% if withPreHook %}/**
+ * {% if agentType == 'claudeCode' %}PreToolUse{% else %}BeforeTool{% endif %} hook callback for {{ agentType | pascalCase }}
+ * 
+ * Called before tool execution. Can provide proactive guidance or validation.
+ * Return DENY to show guidance without executing tool.
+ * Return SKIP to allow normal execution.
+ * Return ALLOW to proceed with custom message.
+ *
+ * @param context - Normalized hook context
+ * @returns Hook response with decision and optional message
+ */
+export const {% if agentType == 'claudeCode' %}preToolUseHook{% else %}beforeToolHook{% endif %}: HookCallback = async (context: HookContext): Promise<HookResponse> => {
+  try {
+    // Example: Check if we already processed this session
+    const sessionKey = `{{ hookName | kebabCase }}-${context.sessionId}`;
+    const alreadyProcessed = await ExecutionLogService.hasExecuted(
+      context.sessionId,
+      sessionKey,
+      DECISION_DENY,
+    );
+
+    if (alreadyProcessed) {
+      return {
+        decision: DECISION_SKIP,
+        message: 'Already processed in this session',
+      };
+    }
+
+    // TODO: Implement your pre-hook logic here
+    // Example: Provide guidance, validate input, check conditions
+
+    // Log execution
+    await ExecutionLogService.logExecution({
+      sessionId: context.sessionId,
+      filePath: sessionKey,
+      operation: '{{ hookName | kebabCase }}',
+      decision: DECISION_DENY,
+    });
+
+    return {
+      decision: DECISION_DENY,
+      message: '🎯 **Guidance Message**\n\nProvide helpful guidance to the AI here.',
+    };
+  } catch (error) {
+    // Fail open: skip hook and let operation continue
+    return {
+      decision: DECISION_SKIP,
+      message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+};
+{% endif %}
+{% if withPostHook %}
+/**
+ * {% if agentType == 'claudeCode' %}PostToolUse{% else %}AfterTool{% endif %} hook callback for {{ agentType | pascalCase }}
+ * 
+ * Called after tool execution. Can track state, provide reminders, or validate results.
+ * Return ALLOW with message for feedback to the AI.
+ * Return SKIP to suppress output.
+ *
+ * @param context - Normalized hook context
+ * @returns Hook response with decision and optional message
+ */
+export const {% if agentType == 'claudeCode' %}postToolUseHook{% else %}afterToolHook{% endif %}: HookCallback = async (context: HookContext): Promise<HookResponse> => {
+  try {
+    // Only process relevant operations
+    if (!context.filePath || context.operation !== 'edit') {
+      return {
+        decision: DECISION_SKIP,
+        message: 'Not a relevant operation',
+      };
+    }
+
+    // TODO: Implement your post-hook logic here
+    // Example: Track progress, provide reminders, validate output
+
+    return {
+      decision: DECISION_ALLOW,
+      message: '✅ Operation completed successfully',
+    };
+  } catch (error) {
+    // Fail open: skip hook and let operation continue
+    return {
+      decision: DECISION_SKIP,
+      message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+};
+{% endif %}

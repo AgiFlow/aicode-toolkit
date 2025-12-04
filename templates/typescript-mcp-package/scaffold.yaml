@@ -251,6 +251,58 @@ features:
       Testing approach: Write unit tests for prompt generation with various argument combinations. Verify message structure, content, and metadata. Ensure arguments are properly validated. Use Vitest for testing framework.
     patterns:
       - src/prompts/**/*.ts
+  - name: scaffold-hook
+    description: Generate hook callbacks for AI agent integrations (Claude Code, Gemini CLI). Creates hook files with preToolUse/beforeTool and postToolUse/afterTool callbacks for proactive guidance and post-execution tracking. Perfect for adding intelligent behavior like showing scaffold methods before file writes or tracking scaffold completion progress.
+    variables_schema:
+      type: object
+      properties:
+        hookName:
+          type: string
+          description: Name of the hook file in camelCase (e.g., 'listScaffoldMethods', 'validateInput')
+        agentType:
+          type: string
+          description: Target agent type - 'claudeCode' or 'geminiCli'
+          enum:
+            - claudeCode
+            - geminiCli
+        withPreHook:
+          type: boolean
+          description: Include pre-tool hook (preToolUseHook for Claude Code, beforeToolHook for Gemini CLI)
+          default: true
+        withPostHook:
+          type: boolean
+          description: Include post-tool hook (postToolUseHook for Claude Code, afterToolHook for Gemini CLI)
+          default: true
+      required:
+        - hookName
+        - agentType
+      additionalProperties: false
+    includes:
+      - src/hooks/claudeCode/example.ts->src/hooks/{{ agentType }}/{{ hookName }}.ts
+    instruction: |-
+      Hook callbacks follow a fail-open pattern with proactive guidance for AI agents. Each hook file exports named callbacks for lifecycle events (pre/post tool execution).
+
+      Pattern explanation: Hooks are TypeScript modules that export callback functions (preToolUseHook/beforeToolHook, postToolUseHook/afterToolHook). They receive normalized HookContext and return HookResponse with decision (ALLOW/DENY/SKIP) and message. Hooks should fail open (return SKIP on errors) to avoid blocking operations.
+
+      File organization: Hooks live in src/hooks/{agentType}/{hookName}.ts organized by target agent (claudeCode, geminiCli). Each agent type has different hook names but same normalized context.
+
+      Naming conventions: Hook files use camelCase (e.g., listScaffoldMethods.ts). Export callbacks use agent-specific names: preToolUseHook/postToolUseHook for Claude Code, beforeToolHook/afterToolHook for Gemini CLI.
+
+      Hook lifecycle:
+      - Pre-hooks (preToolUseHook/beforeToolHook): Called before tool execution. Return DENY to show guidance without executing tool, SKIP to allow normal execution, ALLOW to proceed with custom message.
+      - Post-hooks (postToolUseHook/afterToolHook): Called after tool execution. Track state, provide reminders, or validate results. Return ALLOW with message for feedback, SKIP to suppress output.
+
+      Usage guidelines: Import HookCallback, HookContext, HookResponse from @agiflowai/hooks-adapter. Use ExecutionLogService for session state tracking. Always handle errors gracefully with fail-open pattern (return SKIP on errors). Format messages clearly for LLM consumption with markdown. Use DECISION_ALLOW, DECISION_DENY, DECISION_SKIP constants.
+
+      Common patterns:
+      - Session tracking: Use ExecutionLogService.hasExecuted() to avoid repeating guidance
+      - Proactive guidance: Show available options before AI makes choices (use DENY decision)
+      - Progress tracking: Track multi-step operations and remind about incomplete steps
+      - Fail-open: Always catch errors and return SKIP to allow operation to proceed
+
+      Testing approach: Write unit tests with mocked ExecutionLogService and context. Test all decision paths (ALLOW/DENY/SKIP), error handling, and session tracking logic. Use Vitest for testing framework.
+    patterns:
+      - src/hooks/**/*.ts
   - name: scaffold-command
     description: Generate a new CLI command for MCP packages using Commander.js pattern. Creates a command file with options, argument parsing, and action handler with proper error handling. Perfect for adding new CLI commands to extend MCP server functionality with custom operations and workflows.
     variables_schema:

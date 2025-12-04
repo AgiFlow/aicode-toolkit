@@ -5,6 +5,7 @@ rules:
   - pattern: src/tools/**/*.ts
     description: MCP Tool Implementation Standards
     inherits:
+      - import-standards
       - export-standards
       - error-handling
       - type-safety
@@ -116,6 +117,7 @@ rules:
   - pattern: src/services/**/*.ts
     description: Service Layer Implementation Standards
     inherits:
+      - import-standards
       - export-standards
       - error-handling
       - type-safety
@@ -162,6 +164,7 @@ rules:
   - pattern: src/commands/**/*.ts
     description: CLI Command Implementation Standards
     inherits:
+      - import-standards
       - export-standards
       - error-handling
       - type-safety
@@ -197,6 +200,7 @@ rules:
   - pattern: src/index.ts
     description: Main barrel export file for public API
     inherits:
+      - import-standards
       - export-standards
     must_do:
       - rule: Export all public-facing modules using named exports
@@ -243,6 +247,7 @@ rules:
   - pattern: src/cli.ts
     description: Main CLI entry point standards
     inherits:
+      - import-standards
       - export-standards
       - error-handling
     must_do:
@@ -260,6 +265,7 @@ rules:
   - pattern: src/server/index.ts
     description: MCP Server setup standards
     inherits:
+      - import-standards
       - export-standards
       - error-handling
     must_do:
@@ -290,6 +296,7 @@ rules:
   - pattern: tests/**/*.test.ts
     description: Test file standards
     inherits:
+      - import-standards
       - naming-conventions
       - type-safety
     must_do:
@@ -313,6 +320,7 @@ rules:
   - pattern: src/prompts/**/*.ts
     description: MCP Prompt Implementation Standards
     inherits:
+      - import-standards
       - export-standards
       - error-handling
       - type-safety
@@ -393,6 +401,7 @@ rules:
   - pattern: src/transports/**/*.ts
     description: MCP Transport Setup Standards
     inherits:
+      - import-standards
       - export-standards
       - error-handling
       - async-await-patterns
@@ -455,6 +464,7 @@ rules:
   - pattern: src/types/**/*.ts
     description: Type Definitions and Interfaces Standards
     inherits:
+      - import-standards
       - export-standards
       - type-safety
       - documentation-standards
@@ -540,6 +550,7 @@ rules:
   - pattern: src/commands/index.ts
     description: CLI Barrel Export Standards
     inherits:
+      - import-standards
       - export-standards
     must_do:
       - rule: Export all CLI commands from index.ts using barrel exports
@@ -573,6 +584,7 @@ rules:
   - pattern: src/tools/index.ts
     description: Tools Barrel Export Standards
     inherits:
+      - import-standards
       - export-standards
     must_do:
       - rule: Export all tools from index.ts using barrel exports
@@ -602,6 +614,7 @@ rules:
   - pattern: src/services/index.ts
     description: Services Barrel Export Standards
     inherits:
+      - import-standards
       - export-standards
     must_do:
       - rule: Export all services from index.ts using barrel exports
@@ -631,5 +644,97 @@ rules:
           // ❌ BAD
           export * from './services';
 
-          // ✅ GOOD  
+          // ✅ GOOD
           export { Service1, Service2 } from './services';
+  - pattern: src/hooks/**/*.ts
+    description: Hook Callback Implementation Standards
+    inherits:
+      - import-standards
+      - export-standards
+      - error-handling
+      - type-safety
+    must_do:
+      - rule: Export named hook callbacks for agent type
+        codeExample: |-
+          // ✅ GOOD - Claude Code hooks
+          export const preToolUseHook: HookCallback = async (context) => { };
+          export const postToolUseHook: HookCallback = async (context) => { };
+
+          // ✅ GOOD - Gemini CLI hooks
+          export const beforeToolHook: HookCallback = async (context) => { };
+          export const afterToolHook: HookCallback = async (context) => { };
+      - rule: Always use fail-open pattern - return SKIP on errors
+        codeExample: |-
+          // ✅ GOOD
+          try {
+            // Hook logic
+            return { decision: DECISION_ALLOW, message: 'Success' };
+          } catch (error) {
+            return {
+              decision: DECISION_SKIP,
+              message: `⚠️ Hook error: ${error instanceof Error ? error.message : String(error)}`
+            };
+          }
+      - rule: Use ExecutionLogService for session state tracking
+        codeExample: |-
+          // ✅ GOOD - Track session state
+          const sessionKey = `my-hook-${context.sessionId}`;
+          const alreadyProcessed = await ExecutionLogService.hasExecuted(
+            context.sessionId,
+            sessionKey,
+            DECISION_DENY
+          );
+
+          if (!alreadyProcessed) {
+            await ExecutionLogService.logExecution({
+              sessionId: context.sessionId,
+              filePath: sessionKey,
+              operation: 'my-operation',
+              decision: DECISION_DENY
+            });
+          }
+      - rule: Return proper HookResponse with decision and message
+        codeExample: |-
+          // ✅ GOOD
+          return {
+            decision: DECISION_DENY,
+            message: '🎯 **Guidance**\n\nProvide helpful guidance here.'
+          };
+    must_not_do:
+      - rule: Never throw errors or let errors propagate
+        codeExample: |-
+          // ❌ BAD - Throws error
+          export const preToolUseHook: HookCallback = async (context) => {
+            const data = await riskyOperation(); // Can throw
+            return { decision: DECISION_ALLOW };
+          };
+
+          // ✅ GOOD - Catches and returns SKIP
+          export const preToolUseHook: HookCallback = async (context) => {
+            try {
+              const data = await riskyOperation();
+              return { decision: DECISION_ALLOW };
+            } catch (error) {
+              return { decision: DECISION_SKIP, message: 'Error occurred' };
+            }
+          };
+      - rule: Never mutate context object
+        codeExample: |-
+          // ❌ BAD
+          context.sessionId = 'new-id';
+          context.toolInput = { modified: true };
+
+          // ✅ GOOD - Read only
+          const sessionId = context.sessionId;
+          const input = context.toolInput;
+      - rule: Never use blocking operations without error handling
+        codeExample: |-
+          // ❌ BAD
+          const data = fs.readFileSync('/path'); // Blocks and can throw
+
+          // ✅ GOOD
+          try {
+            const data = await fs.promises.readFile('/path');
+          } catch (error) {
+            return { decision: DECISION_SKIP };
+          }

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/scaffold-mcp/src/cli.ts scaffold list --hook claude-code.preToolUse"
+            "command": "bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.preToolUse"
           }
         ]
       },
@@ -31,11 +31,11 @@
         ]
       },
       {
-        "matcher": "mcp__one-mcp__use-scaffold-method",
+        "matcher": "mcp__one-mcp__use_tool",
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/scaffold-mcp/src/cli.ts scaffold list --hook claude-code.postToolUse"
+            "command": "bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.postToolUse"
           }
         ]
       }
