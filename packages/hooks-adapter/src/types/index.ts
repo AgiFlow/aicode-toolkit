@@ -19,41 +19,12 @@
  */
 
 /**
- * Normalized context passed to hook callback function
- */
-export interface HookContext {
-  /** Name of the tool being invoked (e.g., "Read", "Write", "Edit") */
-  toolName: string;
-
-  /** Input parameters passed to the tool */
-  toolInput: Record<string, any>;
-
-  /** Tool execution result (only available in post-tool hooks) */
-  toolResult?: any;
-
-  /** File path if this is a file operation */
-  filePath?: string;
-
-  /** Type of file operation */
-  operation?: 'read' | 'write' | 'edit';
-
-  /** Current working directory */
-  cwd: string;
-
-  /** Unique session identifier */
-  sessionId: string;
-
-  /** Optional LLM tool to use for processing (e.g., "claude-code", "gemini") */
-  llmTool?: string;
-}
-
-/**
- * Normalized decision types for hook responses
+ * Decision types for hook responses
  */
 export type Decision = 'allow' | 'deny' | 'ask' | 'skip';
 
 /**
- * Normalized response from hook callback function
+ * Response from hook callback function
  */
 export interface HookResponse {
   /** Permission decision for the tool execution */
@@ -68,9 +39,3 @@ export interface HookResponse {
   /** Optional updated input parameters for the tool */
   updatedInput?: Record<string, any>;
 }
-
-/**
- * Hook callback function signature
- * Takes normalized context and returns normalized response
- */
-export type HookCallback = (context: HookContext) => Promise<HookResponse>;

@@ -19,26 +19,28 @@
  */
 
 import { BaseAdapter } from './BaseAdapter';
-import type { HookContext, HookResponse } from '../types';
+import type { HookResponse } from '../types';
 import { log } from '@agiflowai/aicode-utils';
 
 /**
  * Claude Code hook input format (PreToolUse)
  */
-interface ClaudeCodePreToolUseInput {
+export interface ClaudeCodePreToolUseInput {
   tool_name: string;
   tool_input: Record<string, any>;
   cwd: string;
   session_id: string;
   hook_event_name: 'PreToolUse';
   tool_use_id: string;
+  transcript_path: string;
+  permission_mode: string;
   llm_tool?: string;
 }
 
 /**
  * Claude Code hook input format (PostToolUse)
  */
-interface ClaudeCodePostToolUseInput {
+export interface ClaudeCodePostToolUseInput {
   tool_name: string;
   tool_input: Record<string, any>;
   tool_response: Record<string, any>;
@@ -54,7 +56,7 @@ interface ClaudeCodePostToolUseInput {
 /**
  * Union type for both hook input formats
  */
-type ClaudeCodeHookInput = ClaudeCodePreToolUseInput | ClaudeCodePostToolUseInput;
+export type ClaudeCodeHookInput = ClaudeCodePreToolUseInput | ClaudeCodePostToolUseInput;
 
 /**
  * Claude Code PreToolUse hook output format
@@ -83,16 +85,16 @@ interface ClaudeCodePostToolUseOutput {
 /**
  * Unified adapter for Claude Code hook format (PreToolUse & PostToolUse)
  */
-export class ClaudeCodeAdapter extends BaseAdapter {
+export class ClaudeCodeAdapter extends BaseAdapter<ClaudeCodeHookInput> {
   private hookEventName: 'PreToolUse' | 'PostToolUse' = 'PreToolUse';
 
   /**
-   * Parse Claude Code stdin into normalized HookContext
+   * Parse Claude Code stdin into full hook input (preserves all fields)
    *
    * @param stdin - Raw JSON string from Claude Code
-   * @returns Normalized hook context
+   * @returns Full Claude Code hook input
    */
-  parseInput(stdin: string): HookContext {
+  parseInput(stdin: string): ClaudeCodeHookInput {
     log.debug('ClaudeCodeAdapter: Parsing input', { stdin });
 
     const input = JSON.parse(stdin) as ClaudeCodeHookInput;
@@ -100,28 +102,12 @@ export class ClaudeCodeAdapter extends BaseAdapter {
     // Store hook event type for use in formatOutput
     this.hookEventName = input.hook_event_name;
 
-    // Extract tool_response if this is PostToolUse
-    const toolResponse =
-      this.hookEventName === 'PostToolUse'
-        ? (input as ClaudeCodePostToolUseInput).tool_response
-        : undefined;
-
-    const context: HookContext = {
-      toolName: input.tool_name,
-      toolInput: input.tool_input,
-      filePath: this.extractFilePath(input.tool_name, input.tool_input, toolResponse),
-      operation: this.extractOperation(input.tool_name),
-      cwd: input.cwd,
-      sessionId: input.session_id,
-      llmTool: input.llm_tool,
-    };
-
-    log.debug('ClaudeCodeAdapter: Parsed context', {
+    log.debug('ClaudeCodeAdapter: Parsed input', {
       hookEventName: this.hookEventName,
-      context,
+      input,
     });
 
-    return context;
+    return input;
   }
 
   /**
@@ -202,40 +188,4 @@ export class ClaudeCodeAdapter extends BaseAdapter {
     return formattedOutput;
   }
 
-  /**
-   * Extract file path from tool input or response
-   *
-   * @param toolName - Name of the tool
-   * @param toolInput - Tool input parameters
-   * @param toolResponse - Tool response data (for PostToolUse)
-   * @returns File path if this is a file operation
-   */
-  private extractFilePath(
-    toolName: string,
-    toolInput: any,
-    toolResponse?: any,
-  ): string | undefined {
-    // File operations have file_path parameter
-    if (['Read', 'Write', 'Edit'].includes(toolName)) {
-      return toolInput.file_path || toolResponse?.filePath;
-    }
-
-    return undefined;
-  }
-
-  /**
-   * Extract operation type from tool name
-   *
-   * @param toolName - Name of the tool
-   * @returns Operation type if this is a file operation
-   */
-  private extractOperation(toolName: string): 'read' | 'write' | 'edit' | undefined {
-    const operationMap: Record<string, 'read' | 'write' | 'edit'> = {
-      Read: 'read',
-      Write: 'write',
-      Edit: 'edit',
-    };
-
-    return operationMap[toolName];
-  }
 }

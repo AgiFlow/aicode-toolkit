@@ -17,18 +17,19 @@
  * - Tight coupling to specific AI tool formats
  */
 
-import type { HookContext, HookResponse, HookCallback } from '../types';
+import type { HookResponse } from '../types';
 
 /**
- * Abstract base adapter for normalizing AI agent hook formats
+ * Abstract base adapter for AI agent hook formats
+ * @template TContext - The adapter-specific input context type
  */
-export abstract class BaseAdapter {
+export abstract class BaseAdapter<TContext = any> {
   /**
-   * Parse stdin from AI agent into normalized HookContext
+   * Parse stdin from AI agent into context (specific to each adapter)
    * @param stdin - Raw stdin string from AI agent
-   * @returns Normalized hook context
+   * @returns Context object (can be adapter-specific or normalized)
    */
-  abstract parseInput(stdin: string): HookContext;
+  abstract parseInput(stdin: string): TContext;
 
   /**
    * Format normalized HookResponse into AI agent-specific output
@@ -38,20 +39,20 @@ export abstract class BaseAdapter {
   abstract formatOutput(response: HookResponse): string;
 
   /**
-   * Execute hook callback with normalized context
+   * Execute hook callback with context
    * Template method that orchestrates the hook execution flow
    *
    * @param callback - Hook callback function to execute
    */
-  async execute(callback: HookCallback): Promise<void> {
+  async execute(callback: (context: TContext) => Promise<HookResponse>): Promise<void> {
     try {
       // Read stdin from AI agent
       const stdin = await this.readStdin();
 
-      // Parse into normalized context
+      // Parse into context
       const context = this.parseInput(stdin);
 
-      // Execute callback with normalized context
+      // Execute callback with context
       const response = await callback(context);
 
       // If decision is 'skip', don't output anything and let Claude continue normally

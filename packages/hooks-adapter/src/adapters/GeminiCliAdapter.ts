@@ -17,14 +17,14 @@
  */
 
 import { BaseAdapter } from './BaseAdapter';
-import type { HookContext, HookResponse } from '../types';
+import type { HookResponse } from '../types';
 import { DECISION_ALLOW, DECISION_DENY, DECISION_ASK, DECISION_SKIP } from '../constants';
 import { log } from '@agiflowai/aicode-utils';
 
 /**
  * Gemini CLI hook input format (BeforeTool/AfterTool)
  */
-interface GeminiCliHookInput {
+export interface GeminiCliHookInput {
   tool_name: string;
   tool_input: Record<string, any>;
   cwd: string;
@@ -45,34 +45,24 @@ interface GeminiCliHookOutput {
 /**
  * Adapter for Gemini CLI hook format
  */
-export class GeminiCliAdapter extends BaseAdapter {
+export class GeminiCliAdapter extends BaseAdapter<GeminiCliHookInput> {
   /**
-   * Parse Gemini CLI stdin into normalized HookContext
+   * Parse Gemini CLI stdin into full hook input (preserves all fields)
    *
    * @param stdin - Raw JSON string from Gemini CLI
-   * @returns Normalized hook context
+   * @returns Full Gemini CLI hook input
    */
-  parseInput(stdin: string): HookContext {
+  parseInput(stdin: string): GeminiCliHookInput {
     log.debug('GeminiCliAdapter.parseInput - Raw input:', stdin);
 
     const input = JSON.parse(stdin) as GeminiCliHookInput;
 
-    const context: HookContext = {
-      toolName: input.tool_name,
-      toolInput: input.tool_input,
-      filePath: this.extractFilePath(input.tool_name, input.tool_input),
-      operation: this.extractOperation(input.tool_name),
-      cwd: input.cwd,
-      sessionId: input.session_id,
-      llmTool: input.llm_tool || 'gemini-cli',
-    };
-
     log.debug(
-      'GeminiCliAdapter.parseInput - Normalized context:',
-      JSON.stringify(context, null, 2),
+      'GeminiCliAdapter.parseInput - Parsed input:',
+      JSON.stringify(input, null, 2),
     );
 
-    return context;
+    return input;
   }
 
   /**
@@ -128,46 +118,4 @@ export class GeminiCliAdapter extends BaseAdapter {
     return outputStr;
   }
 
-  /**
-   * Extract file path from tool input
-   *
-   * @param toolName - Name of the tool
-   * @param toolInput - Tool input parameters
-   * @returns File path if this is a file operation
-   */
-  private extractFilePath(toolName: string, toolInput: any): string | undefined {
-    // Gemini CLI file operations
-    // Note: Tool names might differ from Claude Code, adjust as needed
-    const fileTools = ['read_file', 'write_file', 'edit_file', 'replace_file', 'smart_edit'];
-
-    if (fileTools.includes(toolName.toLowerCase())) {
-      return toolInput.file_path || toolInput.path;
-    }
-
-    return undefined;
-  }
-
-  /**
-   * Extract operation type from tool name
-   *
-   * @param toolName - Name of the tool
-   * @returns Operation type if this is a file operation
-   */
-  private extractOperation(toolName: string): 'read' | 'write' | 'edit' | undefined {
-    const lowerToolName = toolName.toLowerCase();
-
-    if (lowerToolName.includes('read')) {
-      return 'read';
-    }
-
-    if (lowerToolName.includes('write')) {
-      return 'write';
-    }
-
-    if (lowerToolName.includes('edit') || lowerToolName.includes('replace')) {
-      return 'edit';
-    }
-
-    return undefined;
-  }
 }
