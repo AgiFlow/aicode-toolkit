@@ -236,7 +236,7 @@ rules:
           const userId = '123';
 
           // ✅ GOOD
-          const userId = faker.string.uuid();
+          const userId = chance.guid();
       - rule: Skip edge cases and error scenarios
   - pattern: src/services/index.ts
     description: Service Layer Barrel Export Standards
