@@ -17,15 +17,15 @@
  * - Mutating context object
  */
 
-import type { HookCallback, HookContext, HookResponse } from '@agiflowai/hooks-adapter';
+import type { ClaudeCodeHookInput, HookResponse } from '@agiflowai/hooks-adapter';
 import {
   ExecutionLogService,
   DECISION_SKIP,
   DECISION_DENY,
   DECISION_ALLOW,
 } from '@agiflowai/hooks-adapter';
-import { CLAUDE_CODE } from '@agiflowai/coding-agent-bridge';
-import { ReviewCodeChangeTool } from '../../tools/ReviewCodeChangeTool';
+import { CLAUDE_CODE, isValidLlmTool, type LlmToolId } from '@agiflowai/coding-agent-bridge';
+import { CodeReviewService } from '../../services/CodeReviewService';
 import { TemplateFinder } from '../../services/TemplateFinder';
 import { ArchitectParser } from '../../services/ArchitectParser';
 import { PatternMatcher } from '../../services/PatternMatcher';
@@ -34,7 +34,7 @@ import { PatternMatcher } from '../../services/PatternMatcher';
  * PreToolUse hook - not applicable for reviewCodeChange
  * This tool is only called after file operations
  */
-export const preToolUseHook: HookCallback = async (): Promise<HookResponse> => {
+export const preToolUseHook = async (): Promise<HookResponse> => {
   return {
     decision: DECISION_SKIP,
     message: 'PreToolUse not applicable for reviewCodeChange',
@@ -48,11 +48,14 @@ export const preToolUseHook: HookCallback = async (): Promise<HookResponse> => {
  * @param context - Normalized hook context
  * @returns Hook response with code review feedback or skip
  */
-export const postToolUseHook: HookCallback = async (
-  context: HookContext,
+export const postToolUseHook = async (
+  context: ClaudeCodeHookInput,
 ): Promise<HookResponse> => {
+  // Extract file path from tool input
+  const filePath = context.tool_input?.file_path;
+
   // Only process file operations
-  if (!context.filePath) {
+  if (!filePath) {
     return {
       decision: DECISION_SKIP,
       message: 'Not a file operation',
@@ -62,8 +65,8 @@ export const postToolUseHook: HookCallback = async (
   try {
     // Check if file was recently reviewed (debounce within 3 seconds)
     const wasRecent = await ExecutionLogService.wasRecentlyReviewed(
-      context.sessionId,
-      context.filePath,
+      context.session_id,
+      filePath,
       3000, // 3 seconds debounce
     );
 
@@ -79,26 +82,29 @@ export const postToolUseHook: HookCallback = async (
     const architectParser = new ArchitectParser();
     const patternMatcher = new PatternMatcher();
 
-    const templateMapping = await templateFinder.findTemplateForFile(context.filePath);
+    const templateMapping = await templateFinder.findTemplateForFile(filePath);
     const templateConfig = templateMapping
       ? await architectParser.parseArchitectFile(templateMapping.templatePath)
       : null;
     const globalConfig = await architectParser.parseGlobalArchitectFile();
 
     const filePatterns = patternMatcher.getMatchedFilePatterns(
-      context.filePath,
+      filePath,
       templateConfig,
       globalConfig,
       templateMapping?.projectPath,
     );
 
     // Get current file metadata for change detection
-    const fileMetadata = await ExecutionLogService.getFileMetadata(context.filePath);
+    const fileMetadata = await ExecutionLogService.getFileMetadata(filePath);
+
+    // Derive operation from tool name
+    const operation = extractOperation(context.tool_name);
 
     // Check if file has changed since last review (skip if unchanged)
     const fileChanged = await ExecutionLogService.hasFileChanged(
-      context.sessionId,
-      context.filePath,
+      context.session_id,
+      filePath,
       DECISION_ALLOW, // Check against last successful review
     );
 
@@ -109,40 +115,22 @@ export const postToolUseHook: HookCallback = async (
       };
     }
 
-    // Execute: Review the code change
-    // Use context.llmTool if provided, otherwise fallback to CLAUDE_CODE constant
-    const tool = new ReviewCodeChangeTool({
-      llmTool: (context.llmTool || CLAUDE_CODE) as any, // Type will be validated by the tool
-    });
-    const result = await tool.execute({ file_path: context.filePath });
-
-    // Parse result
-    const data = JSON.parse(result.content[0].text as string);
-
-    if (result.isError) {
-      // Error reviewing code - skip and let Claude continue
-      await ExecutionLogService.logExecution({
-        sessionId: context.sessionId,
-        filePath: context.filePath,
-        operation: context.operation || 'unknown',
-        decision: DECISION_SKIP,
-        filePattern: filePatterns,
-        fileMtime: fileMetadata?.mtime,
-        fileChecksum: fileMetadata?.checksum,
-      });
-
-      return {
-        decision: DECISION_SKIP,
-        message: `⚠️ Could not review code: ${data.error}`,
-      };
+    // Execute: Review the code change using service directly
+    // Validate and use context.llm_tool if provided, otherwise fallback to CLAUDE_CODE constant
+    let llmTool: LlmToolId = CLAUDE_CODE;
+    if (context.llm_tool && isValidLlmTool(context.llm_tool)) {
+      llmTool = context.llm_tool;
     }
+
+    const service = new CodeReviewService({ llmTool });
+    const data = await service.reviewCodeChange(filePath);
 
     // If fixes are required (must_do or must_not_do violations), block with full response
     if (data.fix_required) {
       await ExecutionLogService.logExecution({
-        sessionId: context.sessionId,
-        filePath: context.filePath,
-        operation: context.operation || 'unknown',
+        sessionId: context.session_id,
+        filePath: filePath,
+        operation: operation,
         decision: DECISION_DENY,
         filePattern: filePatterns,
         fileMtime: fileMetadata?.mtime,
@@ -158,9 +146,9 @@ export const postToolUseHook: HookCallback = async (
     // Otherwise (no fix required), provide feedback and issues without blocking
     // decision: 'allow' means additionalContext is used, not blocking
     await ExecutionLogService.logExecution({
-      sessionId: context.sessionId,
-      filePath: context.filePath,
-      operation: context.operation || 'unknown',
+      sessionId: context.session_id,
+      filePath: filePath,
+      operation: operation,
       decision: DECISION_ALLOW,
       filePattern: filePatterns,
       fileMtime: fileMetadata?.mtime,
@@ -186,3 +174,13 @@ export const postToolUseHook: HookCallback = async (
     };
   }
 };
+
+/**
+ * Extract operation type from tool name
+ */
+function extractOperation(toolName: string): string {
+  if (toolName === 'Edit' || toolName === 'Update') return 'edit';
+  if (toolName === 'Write') return 'write';
+  if (toolName === 'Read') return 'read';
+  return 'unknown';
+}

@@ -312,9 +312,11 @@ export class ScaffoldingMethodsService {
       try {
         const { ExecutionLogService, DECISION_ALLOW } = await import('@agiflowai/hooks-adapter');
 
+        // Create execution log service for this session
+        const executionLog = new ExecutionLogService(sessionId);
+
         // Log execution for the project path with list of generated files
-        await ExecutionLogService.logExecution({
-          sessionId,
+        await executionLog.logExecution({
           filePath: absoluteProjectPath,
           operation: 'scaffold',
           decision: DECISION_ALLOW,

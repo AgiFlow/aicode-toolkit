@@ -57,10 +57,7 @@ export class GeminiCliAdapter extends BaseAdapter<GeminiCliHookInput> {
 
     const input = JSON.parse(stdin) as GeminiCliHookInput;
 
-    log.debug(
-      'GeminiCliAdapter.parseInput - Parsed input:',
-      JSON.stringify(input, null, 2),
-    );
+    log.debug('GeminiCliAdapter.parseInput - Parsed input:', JSON.stringify(input, null, 2));
 
     return input;
   }
@@ -117,5 +114,4 @@ export class GeminiCliAdapter extends BaseAdapter<GeminiCliHookInput> {
 
     return outputStr;
   }
-
 }

@@ -29,20 +29,20 @@ describe('ClaudeCodeAdapter (PostToolUse)', () => {
 
       const context = adapter.parseInput(input);
 
-      expect(context.toolName).toBe('Read');
-      expect(context.toolInput).toEqual({ file_path: '/test/file.ts', limit: 100 });
-      expect(context.filePath).toBe('/test/file.ts');
-      expect(context.operation).toBe('read');
+      expect(context.tool_name).toBe('Read');
+      expect(context.tool_input).toEqual({ file_path: '/test/file.ts', limit: 100 });
+      expect(context.tool_response).toEqual({ content: 'file content' });
       expect(context.cwd).toBe('/workspace');
-      expect(context.sessionId).toBe('session-123');
-      expect(context.llmTool).toBe('claude-code');
+      expect(context.session_id).toBe('session-123');
+      expect(context.llm_tool).toBe('claude-code');
+      expect(context.hook_event_name).toBe('PostToolUse');
     });
 
     test.each([
-      ['Write', 'write'],
-      ['Edit', 'edit'],
-      ['Read', 'read'],
-    ])('extracts %s operation as %s', (toolName, operation) => {
+      ['Write', { file_path: '/test/file.ts', content: 'test' }],
+      ['Edit', { file_path: '/test/file.ts', old_string: 'a', new_string: 'b' }],
+      ['Read', { file_path: '/test/file.ts' }],
+    ])('parses %s tool input correctly', (toolName, toolInput) => {
       const input = JSON.stringify({
         session_id: 'session-test',
         transcript_path: '/path/to/transcript.txt',
@@ -50,17 +50,18 @@ describe('ClaudeCodeAdapter (PostToolUse)', () => {
         permission_mode: 'ask',
         hook_event_name: 'PostToolUse',
         tool_name: toolName,
-        tool_input: { file_path: '/test/file.ts' },
+        tool_input: toolInput,
         tool_response: {},
         tool_use_id: 'tool-use-123',
       });
 
       const context = adapter.parseInput(input);
 
-      expect(context.operation).toBe(operation);
+      expect(context.tool_name).toBe(toolName);
+      expect(context.tool_input).toEqual(toolInput);
     });
 
-    test('extracts filePath from tool_input', () => {
+    test('parses tool_input with file_path', () => {
       const input = JSON.stringify({
         session_id: 'session-789',
         transcript_path: '/path/to/transcript.txt',
@@ -75,10 +76,10 @@ describe('ClaudeCodeAdapter (PostToolUse)', () => {
 
       const context = adapter.parseInput(input);
 
-      expect(context.filePath).toBe('/test/input-file.ts');
+      expect(context.tool_input.file_path).toBe('/test/input-file.ts');
     });
 
-    test('extracts filePath from tool_response when not in tool_input', () => {
+    test('parses tool_response correctly', () => {
       const input = JSON.stringify({
         session_id: 'session-789',
         transcript_path: '/path/to/transcript.txt',
@@ -87,16 +88,19 @@ describe('ClaudeCodeAdapter (PostToolUse)', () => {
         hook_event_name: 'PostToolUse',
         tool_name: 'Read',
         tool_input: {},
-        tool_response: { filePath: '/test/response-file.ts' },
+        tool_response: { filePath: '/test/response-file.ts', content: 'file content' },
         tool_use_id: 'tool-use-789',
       });
 
       const context = adapter.parseInput(input);
 
-      expect(context.filePath).toBe('/test/response-file.ts');
+      expect(context.tool_response).toEqual({
+        filePath: '/test/response-file.ts',
+        content: 'file content',
+      });
     });
 
-    test('returns undefined for non-file tool operations', () => {
+    test('parses non-file tool operations', () => {
       const input = JSON.stringify({
         session_id: 'session-999',
         transcript_path: '/path/to/transcript.txt',
@@ -111,8 +115,9 @@ describe('ClaudeCodeAdapter (PostToolUse)', () => {
 
       const context = adapter.parseInput(input);
 
-      expect(context.filePath).toBeUndefined();
-      expect(context.operation).toBeUndefined();
+      expect(context.tool_name).toBe('Bash');
+      expect(context.tool_input).toEqual({ command: 'ls -la' });
+      expect(context.tool_response).toEqual({ output: 'file1.txt' });
     });
 
     test('handles missing llm_tool field', () => {

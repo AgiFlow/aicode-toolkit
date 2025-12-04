@@ -17,7 +17,10 @@
  * - Mutating context object
  */
 
-import type { HookCallback, HookContext, HookResponse } from '@agiflowai/hooks-adapter';
+import type {
+  ClaudeCodeHookInput,
+  HookResponse,
+} from '@agiflowai/hooks-adapter';
 import {
   ExecutionLogService,
   DECISION_SKIP,
@@ -32,14 +35,17 @@ import { PatternMatcher } from '../../services/PatternMatcher';
  * PreToolUse hook callback for Claude Code
  * Provides design patterns before file edit/write operations
  *
- * @param context - Normalized hook context
+ * @param context - Claude Code hook input
  * @returns Hook response with design patterns or error message
  */
-export const preToolUseHook: HookCallback = async (
-  context: HookContext,
+export const preToolUseHook = async (
+  context: ClaudeCodeHookInput,
 ): Promise<HookResponse> => {
+  // Extract file path from tool input
+  const filePath = context.tool_input.file_path;
+
   // Only process file operations
-  if (!context.filePath) {
+  if (!filePath || !['Read', 'Write', 'Edit'].includes(context.tool_name)) {
     return {
       decision: DECISION_SKIP,
       message: 'Not a file operation',
@@ -47,19 +53,22 @@ export const preToolUseHook: HookCallback = async (
   }
 
   try {
+    // Create execution log service for this session
+    const executionLog = new ExecutionLogService(context.session_id);
+
     // Get matched file patterns early for logging
     const templateFinder = new TemplateFinder();
     const architectParser = new ArchitectParser();
     const patternMatcher = new PatternMatcher();
 
-    const templateMapping = await templateFinder.findTemplateForFile(context.filePath);
+    const templateMapping = await templateFinder.findTemplateForFile(filePath);
     const templateConfig = templateMapping
       ? await architectParser.parseArchitectFile(templateMapping.templatePath)
       : null;
     const globalConfig = await architectParser.parseGlobalArchitectFile();
 
     const filePatterns = patternMatcher.getMatchedFilePatterns(
-      context.filePath,
+      filePath,
       templateConfig,
       globalConfig,
       templateMapping?.projectPath,
@@ -74,18 +83,17 @@ export const preToolUseHook: HookCallback = async (
     }
 
     // Check if we already showed patterns for this file in this session
-    const alreadyShown = await ExecutionLogService.hasExecuted(
-      context.sessionId,
-      context.filePath,
+    const alreadyShown = await executionLog.hasExecuted(
+      filePath,
       DECISION_DENY, // 'deny' means we showed patterns
+      filePatterns,
     );
 
     if (alreadyShown) {
       // Already showed patterns - skip hook and let Claude continue normally
-      await ExecutionLogService.logExecution({
-        sessionId: context.sessionId,
-        filePath: context.filePath,
-        operation: context.operation || 'unknown',
+      await executionLog.logExecution({
+        filePath: filePath,
+        operation: context.tool_name.toLowerCase() as 'read' | 'write' | 'edit',
         decision: DECISION_SKIP,
         filePattern: filePatterns,
       });
@@ -98,19 +106,18 @@ export const preToolUseHook: HookCallback = async (
 
     // First edit - get design patterns and deny to show them to Claude
     const tool = new GetFileDesignPatternTool({
-      llmTool: context.llmTool as any, // Type will be validated by the tool
+      llmTool: context.llm_tool as any, // Type will be validated by the tool
     });
-    const result = await tool.execute({ file_path: context.filePath });
+    const result = await tool.execute({ file_path: filePath });
 
     // Parse result
     const data = JSON.parse(result.content[0].text as string);
 
     if (result.isError) {
       // Error getting patterns - skip and let Claude continue
-      await ExecutionLogService.logExecution({
-        sessionId: context.sessionId,
-        filePath: context.filePath,
-        operation: context.operation || 'unknown',
+      await executionLog.logExecution({
+        filePath: context.tool_input?.file_path,
+        operation: context.tool_name || 'unknown',
         decision: DECISION_SKIP,
         filePattern: filePatterns,
       });
@@ -130,7 +137,7 @@ export const preToolUseHook: HookCallback = async (
     }
 
     // Format patterns for LLM
-    let message = 'You must follow these design patterns when editing/writing this file:\n\n';
+    let message = 'The hook is blocked only once once to provide guideline for this file patterns. You must follow these design patterns when editing/writing this file:\n\n';
     message += `**Matched file patterns:** ${filePatterns}\n\n`;
 
     for (const pattern of data.matched_patterns) {
@@ -138,10 +145,9 @@ export const preToolUseHook: HookCallback = async (
     }
 
     // Log that we showed patterns (decision: deny)
-    await ExecutionLogService.logExecution({
-      sessionId: context.sessionId,
-      filePath: context.filePath,
-      operation: context.operation || 'unknown',
+    await executionLog.logExecution({
+      filePath: context.tool_input?.file_path,
+      operation: context.tool_name || 'unknown',
       decision: DECISION_DENY,
       filePattern: filePatterns,
     });
@@ -165,7 +171,7 @@ export const preToolUseHook: HookCallback = async (
  * PostToolUse hook - not applicable for getFileDesignPattern
  * This tool is only called before file operations
  */
-export const postToolUseHook: HookCallback = async (): Promise<HookResponse> => {
+export const postToolUseHook = async (): Promise<HookResponse> => {
   return {
     decision: DECISION_SKIP,
     message: 'PostToolUse not applicable for getFileDesignPattern',

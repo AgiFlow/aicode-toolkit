@@ -12,17 +12,19 @@ vi.mock('node:fs/promises');
 import { ExecutionLogService } from '../../src/services/ExecutionLogService';
 
 describe('ExecutionLogService', () => {
+  let service: ExecutionLogService;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset the internal cache
-    (ExecutionLogService as any).cache = null;
+    // Create a new service instance for each test
+    service = new ExecutionLogService('session-123');
   });
 
   describe('hasExecuted', () => {
     test('returns false when log file does not exist', async () => {
       vi.mocked(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
 
-      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
+      const result = await service.hasExecuted('/test/file.ts', 'deny');
 
       expect(result).toBe(false);
     });
@@ -38,16 +40,15 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
+      const result = await service.hasExecuted('/test/file.ts', 'deny');
 
       expect(result).toBe(true);
     });
 
     test.each([
-      ['session-456', '/test/file.ts', 'deny', 'different session'],
-      ['session-123', '/test/other.ts', 'deny', 'different file'],
-      ['session-123', '/test/file.ts', 'allow', 'different decision'],
-    ])('returns false for %s', async (sessionId, filePath, decision) => {
+      ['/test/other.ts', 'deny', 'different file'],
+      ['/test/file.ts', 'allow', 'different decision'],
+    ])('returns false for %s', async (filePath, decision) => {
       const logEntry = JSON.stringify({
         timestamp: Date.now(),
         sessionId: 'session-123',
@@ -58,7 +59,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await ExecutionLogService.hasExecuted(sessionId, filePath, decision);
+      const result = await service.hasExecuted(filePath, decision);
 
       expect(result).toBe(false);
     });
@@ -72,7 +73,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
 
-      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
+      const result = await service.hasExecuted('/test/file.ts', 'deny');
 
       expect(result).toBe(true);
     });
@@ -81,7 +82,7 @@ describe('ExecutionLogService', () => {
       const logContent = 'invalid json\n{"valid": "entry"}';
       vi.mocked(fs.readFile).mockResolvedValue(logContent);
 
-      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
+      const result = await service.hasExecuted('/test/file.ts', 'deny');
 
       expect(result).toBe(false);
     });
@@ -90,7 +91,7 @@ describe('ExecutionLogService', () => {
       vi.mocked(fs.readFile).mockRejectedValue(new Error('Permission denied'));
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = await ExecutionLogService.hasExecuted('session-123', '/test/file.ts', 'deny');
+      const result = await service.hasExecuted('/test/file.ts', 'deny');
 
       expect(result).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalled();
@@ -101,8 +102,7 @@ describe('ExecutionLogService', () => {
     test('appends execution to log file', async () => {
       vi.mocked(fs.appendFile).mockResolvedValue(undefined);
 
-      await ExecutionLogService.logExecution({
-        sessionId: 'session-123',
+      await service.logExecution({
         filePath: '/test/file.ts',
         operation: 'edit',
         decision: 'deny',
@@ -122,8 +122,7 @@ describe('ExecutionLogService', () => {
     test('appends execution with filePattern to log file', async () => {
       vi.mocked(fs.appendFile).mockResolvedValue(undefined);
 
-      await ExecutionLogService.logExecution({
-        sessionId: 'session-123',
+      await service.logExecution({
         filePath: '/test/file.ts',
         operation: 'edit',
         decision: 'deny',
@@ -145,8 +144,7 @@ describe('ExecutionLogService', () => {
     test('appends execution with generatedFiles to log file', async () => {
       vi.mocked(fs.appendFile).mockResolvedValue(undefined);
 
-      await ExecutionLogService.logExecution({
-        sessionId: 'session-123',
+      await service.logExecution({
         filePath: '/test/project',
         operation: 'scaffold',
         decision: 'allow',
@@ -172,8 +170,7 @@ describe('ExecutionLogService', () => {
       vi.mocked(fs.appendFile).mockRejectedValue(new Error('Disk full'));
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      await ExecutionLogService.logExecution({
-        sessionId: 'session-123',
+      await service.logExecution({
         filePath: '/test/file.ts',
         operation: 'edit',
         decision: 'deny',
@@ -190,26 +187,24 @@ describe('ExecutionLogService', () => {
     test('returns zero stats for empty log', async () => {
       vi.mocked(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
 
-      const stats = await ExecutionLogService.getStats();
+      const stats = await service.getStats();
 
       expect(stats.totalEntries).toBe(0);
-      expect(stats.uniqueSessions).toBe(0);
       expect(stats.uniqueFiles).toBe(0);
     });
 
     test('calculates stats correctly for multiple entries', async () => {
       const entries = [
         { sessionId: 'session-123', filePath: '/test/file1.ts', decision: 'deny' },
-        { sessionId: 'session-456', filePath: '/test/file2.ts', decision: 'allow' },
+        { sessionId: 'session-123', filePath: '/test/file2.ts', decision: 'allow' },
         { sessionId: 'session-123', filePath: '/test/file1.ts', decision: 'allow' },
       ].map((e) => JSON.stringify({ ...e, timestamp: Date.now(), operation: 'edit' }));
 
       vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
 
-      const stats = await ExecutionLogService.getStats();
+      const stats = await service.getStats();
 
       expect(stats.totalEntries).toBe(3);
-      expect(stats.uniqueSessions).toBe(2);
       expect(stats.uniqueFiles).toBe(2);
     });
   });
@@ -218,7 +213,7 @@ describe('ExecutionLogService', () => {
     test('removes log file successfully', async () => {
       vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
-      await ExecutionLogService.clearLog();
+      await service.clearLog();
 
       expect(fs.unlink).toHaveBeenCalled();
     });
@@ -226,13 +221,13 @@ describe('ExecutionLogService', () => {
     test('handles missing log file gracefully', async () => {
       vi.mocked(fs.unlink).mockRejectedValue({ code: 'ENOENT' });
 
-      await expect(ExecutionLogService.clearLog()).resolves.toBeUndefined();
+      await expect(service.clearLog()).resolves.toBeUndefined();
     });
 
     test('throws error for other unlink errors', async () => {
       vi.mocked(fs.unlink).mockRejectedValue(new Error('Permission denied'));
 
-      await expect(ExecutionLogService.clearLog()).rejects.toThrow('Permission denied');
+      await expect(service.clearLog()).rejects.toThrow('Permission denied');
     });
   });
 
@@ -240,11 +235,7 @@ describe('ExecutionLogService', () => {
     test('returns false when no previous review exists', async () => {
       vi.mocked(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
 
-      const result = await ExecutionLogService.wasRecentlyReviewed(
-        'session-123',
-        '/test/file.ts',
-        3000,
-      );
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
 
       expect(result).toBe(false);
     });
@@ -263,11 +254,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await ExecutionLogService.wasRecentlyReviewed(
-        'session-123',
-        '/test/file.ts',
-        3000,
-      );
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
 
       expect(result).toBe(true);
     });
@@ -286,34 +273,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await ExecutionLogService.wasRecentlyReviewed(
-        'session-123',
-        '/test/file.ts',
-        3000,
-      );
-
-      expect(result).toBe(false);
-    });
-
-    test('returns false for different session', async () => {
-      const now = Date.now();
-      const recentTimestamp = now - 1000;
-
-      const logEntry = JSON.stringify({
-        timestamp: recentTimestamp,
-        sessionId: 'session-456',
-        filePath: '/test/file.ts',
-        operation: 'edit',
-        decision: 'allow',
-      });
-
-      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
-
-      const result = await ExecutionLogService.wasRecentlyReviewed(
-        'session-123',
-        '/test/file.ts',
-        3000,
-      );
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
 
       expect(result).toBe(false);
     });
@@ -332,11 +292,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await ExecutionLogService.wasRecentlyReviewed(
-        'session-123',
-        '/test/file.ts',
-        3000,
-      );
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
 
       expect(result).toBe(false);
     });
@@ -360,11 +316,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
 
-      const result = await ExecutionLogService.wasRecentlyReviewed(
-        'session-123',
-        '/test/file.ts',
-        3000,
-      );
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
 
       expect(result).toBe(true);
     });
@@ -381,26 +333,16 @@ describe('ExecutionLogService', () => {
         decision: 'allow',
       });
 
+      // Test with 5000ms debounce - should be recent
+      const service1 = new ExecutionLogService('session-123');
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
-
-      // With 5000ms debounce, 4s ago should be recent
-      const result5s = await ExecutionLogService.wasRecentlyReviewed(
-        'session-123',
-        '/test/file.ts',
-        5000,
-      );
+      const result5s = await service1.wasRecentlyReviewed('/test/file.ts', 5000);
       expect(result5s).toBe(true);
 
-      // Reset cache for second test
-      (ExecutionLogService as any).cache = null;
+      // Test with 3000ms debounce - should NOT be recent
+      const service2 = new ExecutionLogService('session-123');
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
-
-      // With 3000ms debounce, 4s ago should NOT be recent
-      const result3s = await ExecutionLogService.wasRecentlyReviewed(
-        'session-123',
-        '/test/file.ts',
-        3000,
-      );
+      const result3s = await service2.wasRecentlyReviewed('/test/file.ts', 3000);
       expect(result3s).toBe(false);
     });
 
@@ -408,11 +350,7 @@ describe('ExecutionLogService', () => {
       vi.mocked(fs.readFile).mockRejectedValue(new Error('Read error'));
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = await ExecutionLogService.wasRecentlyReviewed(
-        'session-123',
-        '/test/file.ts',
-        3000,
-      );
+      const result = await service.wasRecentlyReviewed('/test/file.ts', 3000);
 
       expect(result).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -435,7 +373,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await ExecutionLogService.wasRecentlyReviewed('session-123', '/test/file.ts');
+      const result = await service.wasRecentlyReviewed('/test/file.ts');
 
       expect(result).toBe(true);
     });
@@ -445,10 +383,7 @@ describe('ExecutionLogService', () => {
     test('returns false when no scaffold log exists', async () => {
       vi.mocked(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
 
-      const result = await ExecutionLogService.wasGeneratedByScaffold(
-        'session-123',
-        '/test/file.ts',
-      );
+      const result = await service.wasGeneratedByScaffold('/test/file.ts');
 
       expect(result).toBe(false);
     });
@@ -465,10 +400,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await ExecutionLogService.wasGeneratedByScaffold(
-        'session-123',
-        '/test/project/src/component.ts',
-      );
+      const result = await service.wasGeneratedByScaffold('/test/project/src/component.ts');
 
       expect(result).toBe(true);
     });
@@ -485,30 +417,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await ExecutionLogService.wasGeneratedByScaffold(
-        'session-123',
-        '/test/project/src/other.ts',
-      );
-
-      expect(result).toBe(false);
-    });
-
-    test('returns false for different session', async () => {
-      const logEntry = JSON.stringify({
-        timestamp: Date.now(),
-        sessionId: 'session-456',
-        filePath: '/test/project',
-        operation: 'scaffold',
-        decision: 'allow',
-        generatedFiles: ['/test/project/src/component.ts'],
-      });
-
-      vi.mocked(fs.readFile).mockResolvedValue(logEntry);
-
-      const result = await ExecutionLogService.wasGeneratedByScaffold(
-        'session-123',
-        '/test/project/src/component.ts',
-      );
+      const result = await service.wasGeneratedByScaffold('/test/project/src/other.ts');
 
       expect(result).toBe(false);
     });
@@ -524,10 +433,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(logEntry);
 
-      const result = await ExecutionLogService.wasGeneratedByScaffold(
-        'session-123',
-        '/test/project/src/component.ts',
-      );
+      const result = await service.wasGeneratedByScaffold('/test/project/src/component.ts');
 
       expect(result).toBe(false);
     });
@@ -553,10 +459,7 @@ describe('ExecutionLogService', () => {
 
       vi.mocked(fs.readFile).mockResolvedValue(entries.join('\n'));
 
-      const result = await ExecutionLogService.wasGeneratedByScaffold(
-        'session-123',
-        '/test/project/src/component.ts',
-      );
+      const result = await service.wasGeneratedByScaffold('/test/project/src/component.ts');
 
       expect(result).toBe(true);
     });
@@ -565,10 +468,7 @@ describe('ExecutionLogService', () => {
       vi.mocked(fs.readFile).mockRejectedValue(new Error('Read error'));
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = await ExecutionLogService.wasGeneratedByScaffold(
-        'session-123',
-        '/test/file.ts',
-      );
+      const result = await service.wasGeneratedByScaffold('/test/file.ts');
 
       expect(result).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalledWith(

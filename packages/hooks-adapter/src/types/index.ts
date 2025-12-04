@@ -24,6 +24,33 @@
 export type Decision = 'allow' | 'deny' | 'ask' | 'skip';
 
 /**
+ * Normalized hook context passed to hook callbacks
+ * Provides a common interface for hooks regardless of the underlying AI agent format
+ */
+export interface HookContext {
+  /** Name of the tool being executed (e.g., 'Read', 'Write', 'Edit') */
+  toolName: string;
+
+  /** Input parameters for the tool */
+  toolInput: Record<string, any>;
+
+  /** File path for file operations (extracted from tool input if applicable) */
+  filePath?: string;
+
+  /** Operation type for file operations */
+  operation?: 'read' | 'write' | 'edit';
+
+  /** Current working directory */
+  cwd: string;
+
+  /** Unique session identifier */
+  sessionId: string;
+
+  /** Optional LLM tool identifier (e.g., 'claude-code') */
+  llmTool?: string;
+}
+
+/**
  * Response from hook callback function
  */
 export interface HookResponse {

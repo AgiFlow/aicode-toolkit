@@ -72,42 +72,50 @@ export interface LogExecutionParams {
 /**
  * Service for tracking hook executions using an append-only log
  * Prevents duplicate hook actions (e.g., showing design patterns twice for same file)
+ * Each session has its own log file for isolation
  */
 export class ExecutionLogService {
-  /** Log file path - stored in system temp directory */
-  private static readonly LOG_FILE = path.join(os.tmpdir(), 'hook-adapter-executions.jsonl');
+  /** Log file path for this session - stored in system temp directory */
+  private readonly logFile: string;
 
   /** In-memory cache of recent executions (last 1000 entries) */
-  private static cache: HookLogEntry[] | null = null;
+  private cache: HookLogEntry[] | null = null;
 
   /** Max cache size to prevent memory bloat */
   private static readonly MAX_CACHE_SIZE = 1000;
 
+  /** Session ID for this service instance */
+  private readonly sessionId: string;
+
+  /**
+   * Create a new ExecutionLogService instance for a specific session
+   * @param sessionId - Unique session identifier
+   */
+  constructor(sessionId: string) {
+    this.sessionId = sessionId;
+    this.logFile = path.join(os.tmpdir(), `hook-adapter-executions-${sessionId}.jsonl`);
+  }
+
   /**
    * Check if a specific action was already taken for this file in this session
    *
-   * @param sessionId - Session identifier
    * @param filePath - File path to check
    * @param decision - Decision to check for (e.g., 'deny' means we already showed patterns)
+   * @param filePattern - Optional file pattern to match
    * @returns true if the action was already taken
    */
-  static async hasExecuted(
-    sessionId: string,
-    filePath: string,
-    decision: string,
-  ): Promise<boolean> {
-    const entries = await ExecutionLogService.loadLog();
+  async hasExecuted(filePath: string, decision: string, filePattern?: string): Promise<boolean> {
+    const entries = await this.loadLog();
 
     // Search from end (most recent) for efficiency
     for (let i = entries.length - 1; i >= 0; i--) {
       const entry = entries[i];
 
-      // Match session, file, and decision
-      if (
-        entry.sessionId === sessionId &&
-        entry.filePath === filePath &&
-        entry.decision === decision
-      ) {
+      const matchedFile =
+        (entry.filePattern === filePattern && entry.filePattern && filePattern) ||
+        entry.filePath === filePath;
+      // Match file and decision (session is already filtered by log file)
+      if (entry.decision === decision && matchedFile) {
         return true;
       }
     }
@@ -118,12 +126,12 @@ export class ExecutionLogService {
   /**
    * Log a hook execution
    *
-   * @param params - Log execution parameters
+   * @param params - Log execution parameters (sessionId will be set automatically)
    */
-  static async logExecution(params: LogExecutionParams): Promise<void> {
+  async logExecution(params: Omit<LogExecutionParams, 'sessionId'>): Promise<void> {
     const entry: HookLogEntry = {
       timestamp: Date.now(),
-      sessionId: params.sessionId,
+      sessionId: this.sessionId,
       filePath: params.filePath,
       operation: params.operation,
       decision: params.decision,
@@ -138,16 +146,14 @@ export class ExecutionLogService {
 
     // Append to log file (JSONL format - one JSON object per line)
     try {
-      await fs.appendFile(ExecutionLogService.LOG_FILE, `${JSON.stringify(entry)}\n`, 'utf-8');
+      await fs.appendFile(this.logFile, `${JSON.stringify(entry)}\n`, 'utf-8');
 
       // Update cache
-      if (ExecutionLogService.cache) {
-        ExecutionLogService.cache.push(entry);
+      if (this.cache) {
+        this.cache.push(entry);
         // Trim cache if too large
-        if (ExecutionLogService.cache.length > ExecutionLogService.MAX_CACHE_SIZE) {
-          ExecutionLogService.cache = ExecutionLogService.cache.slice(
-            -ExecutionLogService.MAX_CACHE_SIZE,
-          );
+        if (this.cache.length > ExecutionLogService.MAX_CACHE_SIZE) {
+          this.cache = this.cache.slice(-ExecutionLogService.MAX_CACHE_SIZE);
         }
       }
     } catch (error) {
@@ -160,15 +166,15 @@ export class ExecutionLogService {
    * Load execution log from file
    * Uses in-memory cache for performance
    */
-  private static async loadLog(): Promise<HookLogEntry[]> {
+  private async loadLog(): Promise<HookLogEntry[]> {
     // Return cached data if available
-    if (ExecutionLogService.cache !== null) {
-      return ExecutionLogService.cache;
+    if (this.cache !== null) {
+      return this.cache;
     }
 
     try {
       // Read log file
-      const content = await fs.readFile(ExecutionLogService.LOG_FILE, 'utf-8');
+      const content = await fs.readFile(this.logFile, 'utf-8');
 
       // Parse JSONL format
       const lines = content.trim().split('\n').filter(Boolean);
@@ -181,29 +187,29 @@ export class ExecutionLogService {
       }
 
       // Keep only recent entries to prevent memory bloat
-      ExecutionLogService.cache = entries.slice(-ExecutionLogService.MAX_CACHE_SIZE);
-      return ExecutionLogService.cache;
+      this.cache = entries.slice(-ExecutionLogService.MAX_CACHE_SIZE);
+      return this.cache;
     } catch (error: any) {
       // File doesn't exist yet or read error - start with empty log
       if (error.code === 'ENOENT') {
-        ExecutionLogService.cache = [];
-        return ExecutionLogService.cache;
+        this.cache = [];
+        return this.cache;
       }
 
       // Other errors - fail silently and return empty
       console.error('Failed to load execution log:', error);
-      ExecutionLogService.cache = [];
-      return ExecutionLogService.cache;
+      this.cache = [];
+      return this.cache;
     }
   }
 
   /**
    * Clear the execution log (for testing)
    */
-  static async clearLog(): Promise<void> {
+  async clearLog(): Promise<void> {
     try {
-      await fs.unlink(ExecutionLogService.LOG_FILE);
-      ExecutionLogService.cache = [];
+      await fs.unlink(this.logFile);
+      this.cache = [];
     } catch (error: any) {
       if (error.code !== 'ENOENT') {
         throw error;
@@ -214,18 +220,15 @@ export class ExecutionLogService {
   /**
    * Get log statistics (for debugging)
    */
-  static async getStats(): Promise<{
+  async getStats(): Promise<{
     totalEntries: number;
-    uniqueSessions: number;
     uniqueFiles: number;
   }> {
-    const entries = await ExecutionLogService.loadLog();
-    const sessions = new Set(entries.map((e) => e.sessionId));
+    const entries = await this.loadLog();
     const files = new Set(entries.map((e) => e.filePath));
 
     return {
       totalEntries: entries.length,
-      uniqueSessions: sessions.size,
       uniqueFiles: files.size,
     };
   }
@@ -236,9 +239,7 @@ export class ExecutionLogService {
    * @param filePath - Path to the file
    * @returns File metadata or null if file doesn't exist
    */
-  static async getFileMetadata(
-    filePath: string,
-  ): Promise<{ mtime: number; checksum: string } | null> {
+  async getFileMetadata(filePath: string): Promise<{ mtime: number; checksum: string } | null> {
     try {
       // Read file content first to compute checksum - this is the authoritative value
       // for detecting changes. We get mtime after for optimization purposes.
@@ -261,27 +262,18 @@ export class ExecutionLogService {
    * Check if a file has changed since the last execution for this session
    * Returns true if the file should be reviewed (new file or content changed)
    *
-   * @param sessionId - Session identifier
    * @param filePath - File path to check
    * @param decision - Decision type to check for
    * @returns true if file has changed or no previous execution found
    */
-  static async hasFileChanged(
-    sessionId: string,
-    filePath: string,
-    decision: string,
-  ): Promise<boolean> {
-    const entries = await ExecutionLogService.loadLog();
+  async hasFileChanged(filePath: string, decision: string): Promise<boolean> {
+    const entries = await this.loadLog();
 
-    // Find the most recent execution for this session/file/decision
+    // Find the most recent execution for this file/decision
     let lastExecution: HookLogEntry | null = null;
     for (let i = entries.length - 1; i >= 0; i--) {
       const entry = entries[i];
-      if (
-        entry.sessionId === sessionId &&
-        entry.filePath === filePath &&
-        entry.decision === decision
-      ) {
+      if (entry.filePath === filePath && entry.decision === decision) {
         lastExecution = entry;
         break;
       }
@@ -293,7 +285,7 @@ export class ExecutionLogService {
     }
 
     // Get current file metadata
-    const currentMetadata = await ExecutionLogService.getFileMetadata(filePath);
+    const currentMetadata = await this.getFileMetadata(filePath);
     if (!currentMetadata) {
       return true; // File doesn't exist, let hook handle it
     }
@@ -306,26 +298,21 @@ export class ExecutionLogService {
    * Check if file was recently reviewed (within debounce window)
    * Prevents noisy feedback during rapid successive edits
    *
-   * @param sessionId - Session identifier
    * @param filePath - File path to check
    * @param debounceMs - Debounce window in milliseconds (default: 3000ms = 3 seconds)
    * @returns true if file was reviewed within debounce window
    */
-  static async wasRecentlyReviewed(
-    sessionId: string,
-    filePath: string,
-    debounceMs = 3000,
-  ): Promise<boolean> {
+  async wasRecentlyReviewed(filePath: string, debounceMs = 3000): Promise<boolean> {
     try {
-      const entries = await ExecutionLogService.loadLog();
+      const entries = await this.loadLog();
       const now = Date.now();
 
       // Search from end (most recent) for efficiency
       for (let i = entries.length - 1; i >= 0; i--) {
         const entry = entries[i];
 
-        // Match session and file
-        if (entry.sessionId === sessionId && entry.filePath === filePath) {
+        // Match file
+        if (entry.filePath === filePath) {
           // Check if this review was recent (within debounce window)
           const timeSinceLastReview = now - entry.timestamp;
           if (timeSinceLastReview < debounceMs) {
@@ -350,20 +337,19 @@ export class ExecutionLogService {
    * Check if a file was generated by a scaffold method
    * Useful for hooks to avoid suggesting scaffold for files already created by scaffold
    *
-   * @param sessionId - Session identifier
    * @param filePath - File path to check
    * @returns true if file was generated by scaffold in this session
    */
-  static async wasGeneratedByScaffold(sessionId: string, filePath: string): Promise<boolean> {
+  async wasGeneratedByScaffold(filePath: string): Promise<boolean> {
     try {
-      const entries = await ExecutionLogService.loadLog();
+      const entries = await this.loadLog();
 
       // Search from end (most recent) for efficiency
       for (let i = entries.length - 1; i >= 0; i--) {
         const entry = entries[i];
 
-        // Only check scaffold operations for this session
-        if (entry.sessionId === sessionId && entry.operation === 'scaffold') {
+        // Only check scaffold operations
+        if (entry.operation === 'scaffold') {
           // Check if this file is in the generatedFiles list
           if (entry.generatedFiles && entry.generatedFiles.includes(filePath)) {
             return true;

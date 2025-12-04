@@ -17,7 +17,7 @@
  * - Mutating context object
  */
 
-import type { HookCallback, HookContext, HookResponse } from '@agiflowai/hooks-adapter';
+import type { GeminiCliHookInput, HookResponse } from '@agiflowai/hooks-adapter';
 import {
   ExecutionLogService,
   DECISION_SKIP,
@@ -34,20 +34,18 @@ import { TemplatesManagerService } from '@agiflowai/aicode-utils';
  * @param context - Normalized hook context
  * @returns Hook response with scaffolding methods guidance
  */
-export const beforeToolHook: HookCallback = async (context: HookContext): Promise<HookResponse> => {
+export const beforeToolHook = async (context: GeminiCliHookInput): Promise<HookResponse> => {
   try {
+    // Create execution log service for this session
+    const executionLog = new ExecutionLogService(context.session_id);
+
     // Check if we already showed scaffold methods in this session
-    const sessionKey = `list-scaffold-methods-${context.sessionId}`;
-    const alreadyShown = await ExecutionLogService.hasExecuted(
-      context.sessionId,
-      sessionKey,
-      DECISION_DENY, // 'deny' means we showed the methods
-    );
+    const sessionKey = `list-scaffold-methods-${context.session_id}`;
+    const alreadyShown = await executionLog.hasExecuted(sessionKey, DECISION_DENY);
 
     if (alreadyShown) {
       // Already showed methods - skip hook and let Gemini continue normally
-      await ExecutionLogService.logExecution({
-        sessionId: context.sessionId,
+      await executionLog.logExecution({
         filePath: sessionKey,
         operation: 'list-scaffold-methods',
         decision: DECISION_SKIP,
@@ -64,12 +62,11 @@ export const beforeToolHook: HookCallback = async (context: HookContext): Promis
     const tool = new ListScaffoldingMethodsTool(templatesPath, false);
 
     // Execute the tool to get scaffolding methods
-    const result = await tool.execute(context.toolInput || {});
+    const result = await tool.execute(context.tool_input || {});
 
     if (result.isError) {
       // Error getting methods - skip and let Gemini continue
-      await ExecutionLogService.logExecution({
-        sessionId: context.sessionId,
+      await executionLog.logExecution({
         filePath: sessionKey,
         operation: 'list-scaffold-methods',
         decision: DECISION_SKIP,
@@ -86,8 +83,7 @@ export const beforeToolHook: HookCallback = async (context: HookContext): Promis
 
     if (!data.methods || data.methods.length === 0) {
       // No methods available - still deny to guide AI
-      await ExecutionLogService.logExecution({
-        sessionId: context.sessionId,
+      await executionLog.logExecution({
         filePath: sessionKey,
         operation: 'list-scaffold-methods',
         decision: DECISION_DENY,
@@ -128,8 +124,7 @@ export const beforeToolHook: HookCallback = async (context: HookContext): Promis
       '3. Using scaffold methods ensures consistency with project patterns and includes all necessary boilerplate\n';
 
     // Log that we showed methods (decision: deny)
-    await ExecutionLogService.logExecution({
-      sessionId: context.sessionId,
+    await executionLog.logExecution({
       filePath: sessionKey,
       operation: 'list-scaffold-methods',
       decision: DECISION_DENY,
@@ -156,29 +151,35 @@ export const beforeToolHook: HookCallback = async (context: HookContext): Promis
  * @param context - Normalized hook context
  * @returns Hook response with scaffold completion tracking
  */
-export const afterToolHook: HookCallback = async (context: HookContext): Promise<HookResponse> => {
+export const afterToolHook = async (context: GeminiCliHookInput): Promise<HookResponse> => {
   try {
+    // Create execution log service for this session
+    const executionLog = new ExecutionLogService(context.session_id);
+
+    // Extract file path from tool input
+    const filePath = context.tool_input?.file_path;
+
     // Extract actual tool name (handle both direct calls and MCP proxy calls)
     const actualToolName =
-      context.toolName === 'mcp__one-mcp__use_tool'
-        ? context.toolInput?.toolName
-        : context.toolName;
+      context.tool_name === 'mcp__one-mcp__use_tool'
+        ? context.tool_input?.toolName
+        : context.tool_name;
 
     // Check if this is a use-scaffold-method tool execution
     if (actualToolName === 'use-scaffold-method') {
-      // Extract scaffold ID from tool result
-      const scaffoldId = extractScaffoldId(context.toolResult);
-      if (scaffoldId) {
-        await processPendingScaffoldLogs(context.sessionId, scaffoldId);
-      }
+      // For Gemini CLI AfterTool hook, we skip scaffold ID extraction
+      // as tool_result is not available in the GeminiCliHookInput type
       return {
         decision: DECISION_ALLOW,
         message: 'Scaffold execution logged for progress tracking',
       };
     }
 
+    // Derive operation from tool name
+    const operation = extractOperation(actualToolName);
+
     // Only process file edit/write operations
-    if (!context.filePath || (context.operation !== 'edit' && context.operation !== 'write')) {
+    if (!filePath || (operation !== 'edit' && operation !== 'write')) {
       return {
         decision: DECISION_SKIP,
         message: 'Not a file edit/write operation',
@@ -186,7 +187,7 @@ export const afterToolHook: HookCallback = async (context: HookContext): Promise
     }
 
     // Get the last scaffold execution for this session
-    const lastScaffoldExecution = await getLastScaffoldExecution(context.sessionId);
+    const lastScaffoldExecution = await getLastScaffoldExecution(executionLog);
 
     if (!lastScaffoldExecution) {
       // No scaffold execution found - skip
@@ -200,11 +201,7 @@ export const afterToolHook: HookCallback = async (context: HookContext): Promise
 
     // Check if scaffold is already marked as fulfilled
     const fulfilledKey = `scaffold-fulfilled-${scaffoldId}`;
-    const alreadyFulfilled = await ExecutionLogService.hasExecuted(
-      context.sessionId,
-      fulfilledKey,
-      DECISION_ALLOW,
-    );
+    const alreadyFulfilled = await executionLog.hasExecuted(fulfilledKey, DECISION_ALLOW);
 
     if (alreadyFulfilled) {
       // Scaffold already completed - skip
@@ -215,21 +212,16 @@ export const afterToolHook: HookCallback = async (context: HookContext): Promise
     }
 
     // Check if the edited file is in the generated files list
-    const isScaffoldedFile = generatedFiles.includes(context.filePath);
+    const isScaffoldedFile = generatedFiles.includes(filePath);
 
     if (isScaffoldedFile) {
       // Track this file as edited
-      const editKey = `scaffold-edit-${scaffoldId}-${context.filePath}`;
-      const alreadyTracked = await ExecutionLogService.hasExecuted(
-        context.sessionId,
-        editKey,
-        DECISION_ALLOW,
-      );
+      const editKey = `scaffold-edit-${scaffoldId}-${filePath}`;
+      const alreadyTracked = await executionLog.hasExecuted(editKey, DECISION_ALLOW);
 
       if (!alreadyTracked) {
         // Log this file as edited
-        await ExecutionLogService.logExecution({
-          sessionId: context.sessionId,
+        await executionLog.logExecution({
           filePath: editKey,
           operation: 'scaffold-file-edit',
           decision: DECISION_ALLOW,
@@ -238,14 +230,13 @@ export const afterToolHook: HookCallback = async (context: HookContext): Promise
     }
 
     // Check how many files have been edited vs total
-    const editedFiles = await getEditedScaffoldFiles(context.sessionId, scaffoldId);
+    const editedFiles = await getEditedScaffoldFiles(executionLog, scaffoldId);
     const totalFiles = generatedFiles.length;
     const remainingFiles = generatedFiles.filter((f: string) => !editedFiles.includes(f));
 
     // If all files have been edited, mark scaffold as fulfilled
     if (remainingFiles.length === 0) {
-      await ExecutionLogService.logExecution({
-        sessionId: context.sessionId,
+      await executionLog.logExecution({
         filePath: fulfilledKey,
         operation: 'scaffold-fulfilled',
         decision: DECISION_ALLOW,
@@ -292,6 +283,17 @@ Don't forget to complete the implementation for all scaffolded files!
 };
 
 /**
+ * Extract operation type from tool name
+ */
+function extractOperation(toolName: string): string {
+  const lowerToolName = toolName.toLowerCase();
+  if (lowerToolName === 'edit' || lowerToolName === 'update') return 'edit';
+  if (lowerToolName === 'write') return 'write';
+  if (lowerToolName === 'read') return 'read';
+  return 'unknown';
+}
+
+/**
  * Extract scaffold ID from tool result
  */
 function extractScaffoldId(toolResult: any): string | null {
@@ -318,16 +320,15 @@ function extractScaffoldId(toolResult: any): string | null {
  * Helper function to get the last scaffold execution for a session
  */
 async function getLastScaffoldExecution(
-  sessionId: string,
+  executionLog: ExecutionLogService,
 ): Promise<{ scaffoldId: string; generatedFiles: string[]; featureName?: string } | null> {
-  const entries = await (ExecutionLogService as any).loadLog();
+  const entries = await (executionLog as any).loadLog();
 
   // Search from end (most recent) for efficiency
   for (let i = entries.length - 1; i >= 0; i--) {
     const entry = entries[i];
 
     if (
-      entry.sessionId === sessionId &&
       entry.operation === 'scaffold' &&
       entry.scaffoldId &&
       entry.generatedFiles &&
@@ -347,13 +348,15 @@ async function getLastScaffoldExecution(
 /**
  * Helper function to get list of edited scaffold files
  */
-async function getEditedScaffoldFiles(sessionId: string, scaffoldId: string): Promise<string[]> {
-  const entries = await (ExecutionLogService as any).loadLog();
+async function getEditedScaffoldFiles(
+  executionLog: ExecutionLogService,
+  scaffoldId: string,
+): Promise<string[]> {
+  const entries = await (executionLog as any).loadLog();
   const editedFiles: string[] = [];
 
   for (const entry of entries) {
     if (
-      entry.sessionId === sessionId &&
       entry.operation === 'scaffold-file-edit' &&
       entry.filePath.startsWith(`scaffold-edit-${scaffoldId}-`)
     ) {
@@ -382,6 +385,9 @@ async function processPendingScaffoldLogs(sessionId: string, scaffoldId: string)
     const content = await fs.readFile(tempLogFile, 'utf-8');
     const lines = content.trim().split('\n').filter(Boolean);
 
+    // Create execution log service for this session
+    const executionLog = new ExecutionLogService(sessionId);
+
     try {
       // Process each pending log entry
       for (const line of lines) {
@@ -390,8 +396,7 @@ async function processPendingScaffoldLogs(sessionId: string, scaffoldId: string)
 
           // Log to ExecutionLogService with sessionId from hook context
           // Use scaffoldId as unique key instead of projectPath to support multiple scaffolds per project
-          await ExecutionLogService.logExecution({
-            sessionId,
+          await executionLog.logExecution({
             filePath: `scaffold-${entry.scaffoldId}`,
             operation: 'scaffold',
             decision: DECISION_ALLOW,

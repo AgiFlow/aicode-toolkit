@@ -11,7 +11,7 @@
         ]
       },
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Update",
         "hooks": [
           {
             "type": "command",
@@ -22,7 +22,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|Update",
         "hooks": [
           {
             "type": "command",

@@ -397,7 +397,7 @@ features:
 
       ### Claude Code Hook (preToolUseHook/postToolUseHook)
       ```typescript
-      import type { HookCallback, HookContext, HookResponse } from '@agiflowai/hooks-adapter';
+      import type { ClaudeCodeHookInput, HookResponse } from '@agiflowai/hooks-adapter';
       import {
         ExecutionLogService,
         DECISION_SKIP,
@@ -405,11 +405,11 @@ features:
         DECISION_ALLOW,
       } from '@agiflowai/hooks-adapter';
 
-      export const preToolUseHook: HookCallback = async (context: HookContext): Promise<HookResponse> => {
+      export const preToolUseHook = async (context: ClaudeCodeHookInput): Promise<HookResponse> => {
         try {
-          const sessionKey = `my-hook-${context.sessionId}`;
+          const sessionKey = `my-hook-${context.session_id}`;
           const alreadyShown = await ExecutionLogService.hasExecuted(
-            context.sessionId,
+            context.session_id,
             sessionKey,
             DECISION_DENY,
           );
@@ -422,7 +422,7 @@ features:
           }
 
           await ExecutionLogService.logExecution({
-            sessionId: context.sessionId,
+            sessionId: context.session_id,
             filePath: sessionKey,
             operation: 'my-operation',
             decision: DECISION_DENY,
@@ -440,9 +440,12 @@ features:
         }
       };
 
-      export const postToolUseHook: HookCallback = async (context: HookContext): Promise<HookResponse> => {
+      export const postToolUseHook = async (context: ClaudeCodeHookInput): Promise<HookResponse> => {
         try {
-          if (!context.filePath || context.operation !== 'edit') {
+          const filePath = context.tool_input?.file_path;
+          const operation = extractOperation(context.tool_name);
+
+          if (!filePath || operation !== 'edit') {
             return {
               decision: DECISION_SKIP,
               message: 'Not a relevant operation',
@@ -460,11 +463,18 @@ features:
           };
         }
       };
+
+      function extractOperation(toolName: string): string {
+        if (toolName === 'Edit') return 'edit';
+        if (toolName === 'Write') return 'write';
+        if (toolName === 'Read') return 'read';
+        return 'unknown';
+      }
       ```
 
       ### Gemini CLI Hook (beforeToolHook/afterToolHook)
       ```typescript
-      import type { HookCallback, HookContext, HookResponse } from '@agiflowai/hooks-adapter';
+      import type { GeminiCliHookInput, HookResponse } from '@agiflowai/hooks-adapter';
       import {
         ExecutionLogService,
         DECISION_SKIP,
@@ -472,7 +482,7 @@ features:
         DECISION_ALLOW,
       } from '@agiflowai/hooks-adapter';
 
-      export const beforeToolHook: HookCallback = async (context: HookContext): Promise<HookResponse> => {
+      export const beforeToolHook = async (context: GeminiCliHookInput): Promise<HookResponse> => {
         try {
           // Proactive guidance before tool execution
           return {
@@ -487,7 +497,7 @@ features:
         }
       };
 
-      export const afterToolHook: HookCallback = async (context: HookContext): Promise<HookResponse> => {
+      export const afterToolHook = async (context: GeminiCliHookInput): Promise<HookResponse> => {
         try {
           // Track state or provide feedback after execution
           return {

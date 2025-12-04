@@ -89,10 +89,10 @@ export class ClaudeCodeAdapter extends BaseAdapter<ClaudeCodeHookInput> {
   private hookEventName: 'PreToolUse' | 'PostToolUse' = 'PreToolUse';
 
   /**
-   * Parse Claude Code stdin into full hook input (preserves all fields)
+   * Parse Claude Code stdin into ClaudeCodeHookInput
    *
    * @param stdin - Raw JSON string from Claude Code
-   * @returns Full Claude Code hook input
+   * @returns ClaudeCodeHookInput
    */
   parseInput(stdin: string): ClaudeCodeHookInput {
     log.debug('ClaudeCodeAdapter: Parsing input', { stdin });
@@ -187,5 +187,4 @@ export class ClaudeCodeAdapter extends BaseAdapter<ClaudeCodeHookInput> {
 
     return formattedOutput;
   }
-
 }

@@ -22,7 +22,13 @@
 
 import { Command } from 'commander';
 import { CLAUDE_CODE, GEMINI_CLI } from '@agiflowai/coding-agent-bridge';
-import { ClaudeCodeAdapter, GeminiCliAdapter } from '@agiflowai/hooks-adapter';
+import {
+  ClaudeCodeAdapter,
+  GeminiCliAdapter,
+  type ClaudeCodeHookInput,
+  type GeminiCliHookInput,
+  type HookResponse,
+} from '@agiflowai/hooks-adapter';
 import { messages } from '@agiflowai/aicode-utils';
 
 interface HookOptions {
@@ -69,7 +75,9 @@ export const hookCommand = new Command('hook')
       if (agent === CLAUDE_CODE) {
         const hooks = await import('../hooks/claudeCode/useScaffoldMethod');
         const hookName = `${hookMethod}Hook` as keyof typeof hooks;
-        const callback = hooks[hookName];
+        const callback = hooks[hookName] as
+          | ((context: ClaudeCodeHookInput) => Promise<HookResponse>)
+          | undefined;
 
         if (!callback) {
           messages.error(`Hook not found: ${hookName} in claudeCode/useScaffoldMethod`);
@@ -81,7 +89,9 @@ export const hookCommand = new Command('hook')
       } else if (agent === GEMINI_CLI) {
         const hooks = await import('../hooks/geminiCli/useScaffoldMethod');
         const hookName = `${hookMethod}Hook` as keyof typeof hooks;
-        const callback = hooks[hookName];
+        const callback = hooks[hookName] as
+          | ((context: GeminiCliHookInput) => Promise<HookResponse>)
+          | undefined;
 
         if (!callback) {
           messages.error(`Hook not found: ${hookName} in geminiCli/useScaffoldMethod`);

@@ -20,8 +20,8 @@
  */
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type { Tool, ToolDefinition } from '../types/index.js';
-import { CodeReviewService } from '../services/CodeReviewService.js';
+import type { Tool, ToolDefinition } from '../types';
+import { CodeReviewService } from '../services/CodeReviewService';
 import type { LlmToolId } from '@agiflowai/coding-agent-bridge';
 
 interface ReviewCodeChangeToolInput {
