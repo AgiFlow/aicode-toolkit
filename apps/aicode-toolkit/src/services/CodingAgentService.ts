@@ -210,8 +210,9 @@ export class CodingAgentService {
   /**
    * Setup MCP configuration for the selected coding agent
    * @param agent - The coding agent to configure
+   * @param selectedMcpServers - Optional array of selected MCP servers
    */
-  async setupMCP(agent: CodingAgent): Promise<void> {
+  async setupMCP(agent: CodingAgent, selectedMcpServers?: string[]): Promise<void> {
     if (agent === NONE) {
       print.info('Skipping MCP configuration');
       return;
@@ -248,32 +249,121 @@ export class CodingAgentService {
       return;
     }
 
-    // Build standardized MCP server configurations
-    const mcpServers = {
-      'scaffold-mcp': {
-        type: 'stdio' as const,
-        command: 'npx',
-        args: ['-y', '@agiflowai/scaffold-mcp', 'mcp-serve'],
-        disabled: false,
-      },
-      'architect-mcp': {
-        type: 'stdio' as const,
-        command: 'npx',
-        args: ['-y', '@agiflowai/architect-mcp', 'mcp-serve'],
-        disabled: false,
-      },
-    };
+    // Check if one-mcp is selected
+    const useOneMcp = selectedMcpServers?.includes('one-mcp');
 
-    // Update MCP settings using the service (each service handles its own format conversion)
-    await service.updateMcpSettings({
-      servers: mcpServers,
-    });
+    if (useOneMcp) {
+      // Create mcp-config.yaml with the other selected MCP servers
+      await this.createMcpConfigYaml(selectedMcpServers);
 
-    print.success(`Added scaffold-mcp and architect-mcp to ${configLocation}`);
+      // Configure one-mcp as the single MCP server
+      const mcpServers = {
+        'one-mcp': {
+          type: 'stdio' as const,
+          command: 'npx',
+          args: ['-y', '@agiflowai/one-mcp', 'mcp-serve'],
+          disabled: false,
+        },
+      };
+
+      await service.updateMcpSettings({
+        servers: mcpServers,
+      });
+
+      print.success(`Added one-mcp to ${configLocation}`);
+      print.success('Created mcp-config.yaml with selected MCP server configurations');
+    } else {
+      // Build standardized MCP server configurations for individual servers
+      const mcpServers: Record<
+        string,
+        { type: 'stdio'; command: string; args: string[]; disabled: boolean }
+      > = {};
+
+      if (selectedMcpServers?.includes('scaffold-mcp') ?? true) {
+        mcpServers['scaffold-mcp'] = {
+          type: 'stdio' as const,
+          command: 'npx',
+          args: ['-y', '@agiflowai/scaffold-mcp', 'mcp-serve'],
+          disabled: false,
+        };
+      }
+
+      if (selectedMcpServers?.includes('architect-mcp') ?? true) {
+        mcpServers['architect-mcp'] = {
+          type: 'stdio' as const,
+          command: 'npx',
+          args: ['-y', '@agiflowai/architect-mcp', 'mcp-serve'],
+          disabled: false,
+        };
+      }
+
+      // Update MCP settings using the service (each service handles its own format conversion)
+      await service.updateMcpSettings({
+        servers: mcpServers,
+      });
+
+      const serverNames = Object.keys(mcpServers).join(' and ');
+      print.success(`Added ${serverNames} to ${configLocation}`);
+    }
+
     print.info('\nNext steps:');
     print.indent(`1. ${restartInstructions}`);
-    print.indent('2. The scaffold-mcp and architect-mcp servers will be available');
+    print.indent('2. The configured MCP servers will be available');
 
     print.success('\nMCP configuration completed!');
+  }
+
+  /**
+   * Create mcp-config.yaml file using one-mcp init command
+   * This is used when one-mcp is selected to configure which servers it should include
+   * Excludes one-mcp itself from the config file
+   * @param selectedMcpServers - Array of selected MCP servers
+   */
+  private async createMcpConfigYaml(selectedMcpServers?: string[]): Promise<void> {
+    const { execSync } = await import('node:child_process');
+    const path = await import('node:path');
+
+    // Build the MCP server configurations for included servers (excluding one-mcp)
+    const servers: Record<string, { command: string; args: string[] }> = {};
+
+    // Filter out one-mcp and add the rest
+    const serversToInclude = selectedMcpServers?.filter((s) => s !== 'one-mcp') ?? [];
+
+    for (const server of serversToInclude) {
+      if (server === 'scaffold-mcp') {
+        servers['scaffold-mcp'] = {
+          command: 'npx',
+          args: ['-y', '@agiflowai/scaffold-mcp', 'mcp-serve', '--admin-enable'],
+        };
+      } else if (server === 'architect-mcp') {
+        servers['architect-mcp'] = {
+          command: 'npx',
+          args: ['-y', '@agiflowai/architect-mcp', 'mcp-serve', '--admin-enable'],
+        };
+      }
+    }
+
+    // If no servers selected (only one-mcp), include all available servers by default
+    if (Object.keys(servers).length === 0) {
+      servers['scaffold-mcp'] = {
+        command: 'npx',
+        args: ['-y', '@agiflowai/scaffold-mcp', 'mcp-serve', '--admin-enable'],
+      };
+      servers['architect-mcp'] = {
+        command: 'npx',
+        args: ['-y', '@agiflowai/architect-mcp', 'mcp-serve', '--admin-enable'],
+      };
+    }
+
+    const configPath = path.join(this.workspaceRoot, 'mcp-config.yaml');
+
+    // Build the command with optional --mcp-servers argument
+    const mcpServersJson = JSON.stringify(servers);
+    const command = `npx -y @agiflowai/one-mcp init -o "${configPath}" -f --mcp-servers '${mcpServersJson}'`;
+
+    execSync(command, {
+      cwd: this.workspaceRoot,
+      stdio: 'inherit',
+    });
   }
 }
