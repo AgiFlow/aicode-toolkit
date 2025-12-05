@@ -263,6 +263,7 @@ const initActors = {
 
   /**
    * Prompt user to select MCP servers
+   * If one-mcp is selected, mcp-config.yaml will be created with other selected servers
    */
   promptMcpSelection: fromPromise(async () => {
     const checkbox = await import('@inquirer/prompts').then((m) => m.checkbox);
@@ -271,7 +272,8 @@ const initActors = {
       name: MCP_SERVER_INFO[server].name,
       value: server,
       description: `\n  ${MCP_SERVER_INFO[server].description}`,
-      checked: true, // Both selected by default
+      // one-mcp and all others selected by default
+      checked: true,
     }));
 
     print.divider();
@@ -376,6 +378,7 @@ const initActors = {
 
   /**
    * Download templates to tmp folder
+   * Gracefully handles errors and returns null to skip template steps
    */
   downloadTemplates: fromPromise(async () => {
     const spinner = ora('Downloading templates from AgiFlow/aicode-toolkit...').start();
@@ -386,8 +389,9 @@ const initActors = {
       spinner.succeed('Templates downloaded successfully');
       return tmpPath;
     } catch (error) {
-      spinner.fail('Failed to download templates');
-      throw error;
+      spinner.warn('Failed to download templates - skipping template setup');
+      print.info('You can run "aicode-toolkit init" again later to set up templates');
+      return null; // Return null to indicate download failed gracefully
     }
   }),
 
@@ -590,13 +594,13 @@ const initActors = {
     async ({
       input: actorInput,
     }: {
-      input: { workspaceRoot: string; codingAgent: CodingAgent };
+      input: { workspaceRoot: string; codingAgent: CodingAgent; selectedMcpServers?: string[] };
     }) => {
       const spinner = ora(`Setting up MCP for ${actorInput.codingAgent}...`).start();
 
       try {
         const codingAgentService = new CodingAgentService(actorInput.workspaceRoot);
-        await codingAgentService.setupMCP(actorInput.codingAgent);
+        await codingAgentService.setupMCP(actorInput.codingAgent, actorInput.selectedMcpServers);
         spinner.succeed('MCP configuration completed');
       } catch (error) {
         spinner.fail('Failed to configure MCP');

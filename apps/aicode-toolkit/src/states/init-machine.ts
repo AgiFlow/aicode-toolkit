@@ -369,21 +369,26 @@ export const initMachine = createMachine(
 
       /**
        * Download templates to tmp folder
+       * Gracefully handles download failures by skipping to MCP setup
        */
       downloadingTemplates: {
         invoke: {
           src: 'downloadTemplates',
-          onDone: {
-            target: 'listingTemplates',
-            actions: assign({
-              tmpTemplatesPath: ({ event }) => event.output,
-            }),
-          },
+          onDone: [
+            {
+              // If download returned null, skip to MCP setup
+              target: 'checkingSkipMcp',
+              guard: ({ event }) => event.output === null,
+            },
+            {
+              target: 'listingTemplates',
+              actions: assign({
+                tmpTemplatesPath: ({ event }) => event.output,
+              }),
+            },
+          ],
           onError: {
-            target: 'failed',
-            actions: assign({
-              error: ({ event }) => event.error as Error,
-            }),
+            target: 'checkingSkipMcp', // Gracefully skip to MCP setup on error
           },
         },
       },
@@ -556,6 +561,7 @@ export const initMachine = createMachine(
           input: ({ context }) => ({
             workspaceRoot: context.workspaceRoot!,
             codingAgent: context.codingAgent!,
+            selectedMcpServers: context.selectedMcpServers,
           }),
           onDone: {
             target: 'detectingSpecTool',
