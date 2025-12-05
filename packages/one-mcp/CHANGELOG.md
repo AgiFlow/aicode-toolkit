@@ -1,3 +1,17 @@
+## 0.2.4 (2025-12-05)
+
+### 🚀 Features
+
+- **aicode-toolkit:** add one-mcp support in MCP selection ([e731037](https://github.com/AgiFlow/aicode-toolkit/commit/e731037))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.7
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.2.3 (2025-12-04)
 
 ### 🚀 Features

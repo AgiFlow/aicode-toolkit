@@ -1,3 +1,18 @@
+## 1.0.9 (2025-12-05)
+
+### 🚀 Features
+
+- **aicode-toolkit:** add one-mcp support in MCP selection ([e731037](https://github.com/AgiFlow/aicode-toolkit/commit/e731037))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.7
+- Updated @agiflowai/aicode-utils to 1.0.7
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.8 (2025-12-04)
 
 ### 🧱 Updated Dependencies

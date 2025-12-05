@@ -1,7 +1,7 @@
 {
   "name": "@agiflowai/aicode-toolkit",
   "description": "AI-powered code toolkit CLI for scaffolding, architecture management, and development workflows",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "license": "AGPL-3.0",
   "author": "AgiflowIO",
   "repository": {
