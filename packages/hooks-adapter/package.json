@@ -1,7 +1,7 @@
 {
   "name": "@agiflowai/hooks-adapter",
   "description": "Hook adapters for normalizing AI agent hook formats (Claude Code, Gemini, etc.)",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "license": "AGPL-3.0",
   "author": "AgiflowIO",
   "repository": {

@@ -1,3 +1,11 @@
+## 1.0.9 (2025-12-07)
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.8
+- Updated @agiflowai/hooks-adapter to 0.0.4
+- Updated @agiflowai/aicode-utils to 1.0.8
+
 ## 1.0.8 (2025-12-05)
 
 ### 🧱 Updated Dependencies

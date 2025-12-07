@@ -1,3 +1,9 @@
+## 1.0.8 (2025-12-07)
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.8
+
 ## 1.0.7 (2025-12-05)
 
 ### 🧱 Updated Dependencies

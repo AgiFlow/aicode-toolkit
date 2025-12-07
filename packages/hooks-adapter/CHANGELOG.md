@@ -1,3 +1,18 @@
+## 0.0.4 (2025-12-07)
+
+### 🚀 Features
+
+- **one-mcp:** add skills support with liquid templates ([4c1a1b4](https://github.com/AgiFlow/aicode-toolkit/commit/4c1a1b4))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.8
+- Updated @agiflowai/aicode-utils to 1.0.8
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.0.3 (2025-12-05)
 
 ### 🧱 Updated Dependencies
