@@ -58,3 +58,7 @@ mcpServers:
       instruction: >
         Use this server for browser automation, web scraping, and end-to-end testing
         with Playwright.
+
+skills:
+  paths:
+    - .claude/skills

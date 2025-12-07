@@ -23,6 +23,7 @@
 import { Command } from 'commander';
 import { ConfigFetcherService } from '../services/ConfigFetcherService';
 import { McpClientManagerService } from '../services/McpClientManagerService';
+import { SkillService } from '../services/SkillService';
 import { findConfigFile } from '../utils';
 
 /**
@@ -77,8 +78,14 @@ export const describeToolsCommand = new Command('describe-tools')
         process.exit(1);
       }
 
-      // Search for tools
+      // Initialize skill service if skills are configured
+      const cwd = process.env.PROJECT_PATH || process.cwd();
+      const skillPaths = config.skills?.paths || [];
+      const skillService = skillPaths.length > 0 ? new SkillService(cwd, skillPaths) : undefined;
+
+      // Search for tools and skills
       const foundTools: any[] = [];
+      const foundSkills: any[] = [];
       const notFoundTools: string[] = [...toolNames];
 
       for (const client of clients) {
@@ -114,9 +121,53 @@ export const describeToolsCommand = new Command('describe-tools')
         }
       }
 
+      // Search for skills in remaining not found tools
+      if (skillService && notFoundTools.length > 0) {
+        const skillsToCheck = [...notFoundTools];
+        for (const toolName of skillsToCheck) {
+          // Handle skill__ prefix
+          const skillName = toolName.startsWith('skill__')
+            ? toolName.slice('skill__'.length)
+            : toolName;
+
+          const skill = await skillService.getSkill(skillName);
+          if (skill) {
+            foundSkills.push({
+              name: skill.name,
+              location: skill.basePath,
+              instructions: skill.content,
+            });
+
+            // Remove from not found list
+            const idx = notFoundTools.indexOf(toolName);
+            if (idx > -1) {
+              notFoundTools.splice(idx, 1);
+            }
+          }
+        }
+      }
+
+      // Build next steps guidance
+      const nextSteps: string[] = [];
+      if (foundTools.length > 0) {
+        nextSteps.push('For MCP tools: Use the use_tool function with toolName and toolArgs based on the inputSchema above.');
+      }
+      if (foundSkills.length > 0) {
+        nextSteps.push(`For skill, just follow skill's description to continue.`);
+      }
+
       // Output results
       if (options.json) {
-        const result: any = { tools: foundTools };
+        const result: any = {};
+        if (foundTools.length > 0) {
+          result.tools = foundTools;
+        }
+        if (foundSkills.length > 0) {
+          result.skills = foundSkills;
+        }
+        if (nextSteps.length > 0) {
+          result.nextSteps = nextSteps;
+        }
         if (notFoundTools.length > 0) {
           result.notFound = notFoundTools;
         }
@@ -134,12 +185,31 @@ export const describeToolsCommand = new Command('describe-tools')
           }
         }
 
-        if (notFoundTools.length > 0) {
-          console.error(`\nTools not found: ${notFoundTools.join(', ')}`);
+        if (foundSkills.length > 0) {
+          console.log('\nFound skills:\n');
+          for (const skill of foundSkills) {
+            console.log(`Skill: ${skill.name}`);
+            console.log(`Location: ${skill.location}`);
+            console.log(`Instructions:\n${skill.instructions}`);
+            console.log('');
+          }
         }
 
-        if (foundTools.length === 0) {
-          console.error('No tools found');
+        // Print next steps guidance
+        if (nextSteps.length > 0) {
+          console.log('\nNext steps:');
+          for (const step of nextSteps) {
+            console.log(`  • ${step}`);
+          }
+          console.log('');
+        }
+
+        if (notFoundTools.length > 0) {
+          console.error(`\nTools/skills not found: ${notFoundTools.join(', ')}`);
+        }
+
+        if (foundTools.length === 0 && foundSkills.length === 0) {
+          console.error('No tools or skills found');
           process.exit(1);
         }
       }
