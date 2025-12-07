@@ -126,22 +126,24 @@ describe('GeminiCliAdapter', () => {
       expect(context.llm_tool).toBeUndefined();
     });
 
-    it.each(['BeforeTool', 'AfterTool', 'BeforeModel', 'AfterModel'] as const)(
-      'should parse %s event correctly',
-      (event) => {
-        const input = JSON.stringify({
-          tool_name: chance.word(),
-          tool_input: { file_path: generateFilePath() },
-          cwd: generateCwd(),
-          session_id: generateSessionId(),
-          event,
-        });
+    it.each([
+      'BeforeTool',
+      'AfterTool',
+      'BeforeModel',
+      'AfterModel',
+    ] as const)('should parse %s event correctly', (event) => {
+      const input = JSON.stringify({
+        tool_name: chance.word(),
+        tool_input: { file_path: generateFilePath() },
+        cwd: generateCwd(),
+        session_id: generateSessionId(),
+        event,
+      });
 
-        const context = adapter.parseInput(input);
+      const context = adapter.parseInput(input);
 
-        expect(context.event).toBe(event);
-      },
-    );
+      expect(context.event).toBe(event);
+    });
 
     it('should throw SyntaxError on invalid JSON', () => {
       const invalidJson = chance.sentence();

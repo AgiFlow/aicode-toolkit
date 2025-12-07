@@ -24,17 +24,43 @@ import { createServer } from '../server';
 import { StdioTransportHandler } from '../transports/stdio';
 import { HttpTransportHandler } from '../transports/http';
 import { SseTransportHandler } from '../transports/sse';
-import { type TransportConfig, TransportMode } from '../types';
+import { type TransportConfig, type TransportHandler, TRANSPORT_MODE } from '../types';
 import { findConfigFile } from '../utils';
 
 /**
- * Start MCP server with given transport handler
+ * Valid transport types for the MCP server
  */
-async function startServer(handler: any) {
+type ValidTransportType = 'stdio' | 'http' | 'sse';
+
+/**
+ * Type guard to validate transport type
+ * @param type - The transport type string to validate
+ * @returns True if the type is a valid transport type
+ */
+function isValidTransportType(type: string): type is ValidTransportType {
+  return type === 'stdio' || type === 'http' || type === 'sse';
+}
+
+/**
+ * Options for the mcp-serve command
+ */
+interface McpServeOptions {
+  type: string;
+  port: number;
+  host: string;
+  config?: string;
+  cache: boolean;
+}
+
+/**
+ * Start MCP server with given transport handler
+ * @param handler - The transport handler to start
+ */
+async function startServer(handler: TransportHandler): Promise<void> {
   await handler.start();
 
   // Handle graceful shutdown
-  const shutdown = async (signal: string) => {
+  const shutdown = async (signal: string): Promise<void> => {
     console.error(`\nReceived ${signal}, shutting down gracefully...`);
     try {
       await handler.stop();
@@ -63,13 +89,19 @@ export const mcpServeCommand = new Command('mcp-serve')
   )
   .option('--host <host>', 'Host to bind to (http/sse only)', 'localhost')
   .option('-c, --config <path>', 'Path to MCP server configuration file')
-  .option('--no-cache', 'Force reload configuration from source, bypassing cache')
-  .action(async (options) => {
-    try {
-      const transportType = options.type.toLowerCase();
+  .option('--no-cache', 'Disable configuration caching, always reload from config file')
+  .action(async (options: McpServeOptions): Promise<void> => {
+    const transportType = options.type.toLowerCase();
 
+    // Validate transport type
+    if (!isValidTransportType(transportType)) {
+      console.error(`Unknown transport type: '${transportType}'. Valid options: stdio, http, sse`);
+      process.exit(1);
+    }
+
+    try {
       // Find config file: use provided path, or search PROJECT_PATH then cwd
-      const configFilePath = options.config || findConfigFile();
+      const configFilePath = options.config || findConfigFile() || undefined;
 
       const serverOptions = {
         configFilePath,
@@ -84,7 +116,7 @@ export const mcpServeCommand = new Command('mcp-serve')
         // For HTTP, pass the server instance directly (handler will create sessions)
         const server = await createServer(serverOptions);
         const config: TransportConfig = {
-          mode: TransportMode.HTTP,
+          mode: TRANSPORT_MODE.HTTP,
           port: options.port || Number(process.env.MCP_PORT) || 3000,
           host: options.host || process.env.MCP_HOST || 'localhost',
         };
@@ -94,18 +126,18 @@ export const mcpServeCommand = new Command('mcp-serve')
         // For SSE, pass the server instance directly (handler will create sessions)
         const server = await createServer(serverOptions);
         const config: TransportConfig = {
-          mode: TransportMode.SSE,
+          mode: TRANSPORT_MODE.SSE,
           port: options.port || Number(process.env.MCP_PORT) || 3000,
           host: options.host || process.env.MCP_HOST || 'localhost',
         };
         const handler = new SseTransportHandler(server, config);
         await startServer(handler);
-      } else {
-        console.error(`Unknown transport type: ${transportType}. Use: stdio, http, or sse`);
-        process.exit(1);
       }
     } catch (error) {
-      console.error('Failed to start MCP server:', error);
+      console.error(
+        `Failed to start MCP server with transport '${transportType}' on ${options.host}:${options.port}:`,
+        error,
+      );
       process.exit(1);
     }
   });

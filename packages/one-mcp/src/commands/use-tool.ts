@@ -23,6 +23,7 @@
 import { Command } from 'commander';
 import { ConfigFetcherService } from '../services/ConfigFetcherService';
 import { McpClientManagerService } from '../services/McpClientManagerService';
+import { SkillService } from '../services/SkillService';
 import { findConfigFile } from '../utils';
 
 /**
@@ -148,7 +149,48 @@ export const useToolCommand = new Command('use-tool')
       }
 
       if (matchingServers.length === 0) {
-        console.error(`Tool "${toolName}" not found on any connected server`);
+        // Tool not found in MCP servers - check if it's a skill
+        const cwd = process.env.PROJECT_PATH || process.cwd();
+        const skillPaths = config.skills?.paths || [];
+
+        if (skillPaths.length > 0) {
+          try {
+            const skillService = new SkillService(cwd, skillPaths);
+            // Handle skill__ prefix
+            const skillName = toolName.startsWith('skill__')
+              ? toolName.slice('skill__'.length)
+              : toolName;
+
+            const skill = await skillService.getSkill(skillName);
+            if (skill) {
+              // Skills return their content when "executed"
+              const result = {
+                content: [
+                  {
+                    type: 'text',
+                    text: skill.content,
+                  },
+                ],
+              };
+
+              if (options.json) {
+                console.log(JSON.stringify(result, null, 2));
+              } else {
+                console.log('\nSkill content:');
+                console.log(skill.content);
+              }
+
+              await clientManager.disconnectAll();
+              return;
+            }
+          } catch (error) {
+            if (!options.json) {
+              console.error(`Failed to lookup skill "${toolName}":`, error);
+            }
+          }
+        }
+
+        console.error(`Tool or skill "${toolName}" not found on any connected server or configured skill paths`);
         await clientManager.disconnectAll();
         process.exit(1);
       }

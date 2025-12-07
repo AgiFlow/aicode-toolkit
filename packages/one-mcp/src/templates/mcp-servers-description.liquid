@@ -1,0 +1,18 @@
+<mcp_servers>
+{% for server in servers -%}
+<server name="{{ server.name }}">
+{% if server.instruction -%}
+<instruction>{{ server.instruction }}</instruction>
+{% endif -%}
+<tools>
+{% if server.omitToolDescription -%}
+{{ server.toolNames | join: ", " }}
+{% else -%}
+{% for tool in server.tools -%}
+<tool-item><name>{{ tool.displayName }}</name><description>{{ tool.description | default: "No description" }}</description></tool-item>
+{% endfor -%}
+{% endif -%}
+</tools>
+</server>
+{% endfor -%}
+</mcp_servers>

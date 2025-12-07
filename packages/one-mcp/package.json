@@ -30,6 +30,7 @@
     "chalk": "5.6.2",
     "commander": "14.0.1",
     "express": "^4.21.2",
+    "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
     "liquidjs": "^10.21.0",
     "zod": "^3.24.1"

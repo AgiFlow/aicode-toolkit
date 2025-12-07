@@ -302,11 +302,19 @@ const RemoteConfigSourceSchema = z.object({
 export type RemoteConfigSource = z.infer<typeof RemoteConfigSourceSchema>;
 
 /**
+ * Skills configuration schema
+ */
+const SkillsConfigSchema = z.object({
+  paths: z.array(z.string()), // Array of paths to skills directories
+});
+
+/**
  * Full Claude Code MCP configuration schema
  */
 export const ClaudeCodeMcpConfigSchema = z.object({
   mcpServers: z.record(z.string(), ClaudeCodeServerConfigSchema),
   remoteConfigs: z.array(RemoteConfigSourceSchema).optional(), // Optional remote config sources
+  skills: SkillsConfigSchema.optional(), // Optional skills configuration
 });
 
 export type ClaudeCodeMcpConfig = z.infer<typeof ClaudeCodeMcpConfigSchema>;
@@ -368,9 +376,11 @@ const McpServerConfigSchema = z.discriminatedUnion('transport', [
  */
 export const InternalMcpConfigSchema = z.object({
   mcpServers: z.record(z.string(), McpServerConfigSchema),
+  skills: SkillsConfigSchema.optional(), // Optional skills configuration
 });
 
 export type InternalMcpConfig = z.infer<typeof InternalMcpConfigSchema>;
+export type SkillsConfig = z.infer<typeof SkillsConfigSchema>;
 
 /**
  * Transform Claude Code config to internal format
@@ -447,7 +457,10 @@ export function transformClaudeCodeConfig(claudeConfig: ClaudeCodeMcpConfig): In
     }
   }
 
-  return { mcpServers: transformedServers };
+  return {
+    mcpServers: transformedServers,
+    skills: claudeConfig.skills,
+  };
 }
 
 /**

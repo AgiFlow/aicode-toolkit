@@ -5,5 +5,6 @@
  * Add new service exports here as you create them.
  */
 
-export * from './ConfigFetcherService';
-export * from './McpClientManagerService';
+export { ConfigFetcherService } from './ConfigFetcherService';
+export { McpClientManagerService } from './McpClientManagerService';
+export { SkillService } from './SkillService';
