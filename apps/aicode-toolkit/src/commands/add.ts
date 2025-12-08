@@ -28,7 +28,9 @@ export const addCommand = new Command('add')
         : await TemplatesManagerService.findTemplatesPath();
 
       if (!foundTemplatesPath) {
-        messages.error('Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml');
+        messages.error(
+          'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
+        );
         process.exit(1);
       }
       const templatesPath = foundTemplatesPath;
