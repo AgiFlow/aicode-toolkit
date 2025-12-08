@@ -2,9 +2,9 @@ boilerplate:
   - name: scaffold-nextjs-app
     targetFolder: apps
     description: |-
-      A minimal Next.js 15 starter template with App Router, TypeScript, Tailwind CSS 4, and Storybook. Clean and simple foundation for building modern web applications with isolated component development. Optional Drizzle ORM integration for type-safe database operations with migration support.
+      A minimal Next.js 16 starter template with App Router, TypeScript, Tailwind CSS 4, and Storybook. Clean and simple foundation for building modern web applications with isolated component development. Optional Drizzle ORM integration for type-safe database operations with migration support.
 
-      Perfect for quick prototypes, new projects, or learning Next.js 15 features. Choose to include Drizzle ORM for database-backed applications or keep it minimal for static sites and prototypes.
+      Perfect for quick prototypes, new projects, or learning Next.js 16 features. Choose to include Drizzle ORM for database-backed applications or keep it minimal for static sites and prototypes.
 
       Includes essential developer tools: TypeScript with strict mode, Tailwind CSS 4 for styling, Storybook 9 for component development, ESLint for code quality, clean App Router structure, and optional Drizzle ORM with PostgreSQL support (Neon, Supabase, Vercel Postgres, or local).
     variables_schema:
@@ -51,10 +51,10 @@ boilerplate:
       - scripts/migrate.ts?withDrizzle=true
       - docker-compose.yml?withDrizzle=true
     instruction: |-
-      Minimal Next.js 15 application template with App Router, TypeScript, Tailwind CSS 4, and Storybook. Optionally includes Drizzle ORM for type-safe database operations.
+      Minimal Next.js 16 application template with App Router, TypeScript, Tailwind CSS 4, and Storybook. Optionally includes Drizzle ORM for type-safe database operations.
 
       File purposes:
-      - package.json: NPM configuration with Next.js 15, React 19, Tailwind CSS 4, Storybook 9, and optional Drizzle ORM
+      - package.json: NPM configuration with Next.js 16, React 19, Tailwind CSS 4, Storybook 9, and optional Drizzle ORM
       - next.config.ts: Next.js configuration with reactStrictMode and ESLint settings
       - postcss.config.js: PostCSS configuration for Tailwind CSS 4 and autoprefixer
       - tsconfig.json: TypeScript configuration with path aliases (@/)
@@ -107,7 +107,7 @@ boilerplate:
       - Database (if enabled): Import { db } from '@/db/drizzle' for database operations, use Drizzle Kit for schema changes
 features:
   - name: scaffold-route
-    description: Generate a new route (page) for Next.js 15 App Router with TypeScript and SEO metadata. Supports dynamic routes, layouts, loading states, error handling, and route groups. Creates page.tsx and optional layout.tsx, loading.tsx, and error.tsx files using the Server Component pattern.
+    description: Generate a new route (page) for Next.js 16 App Router with TypeScript and SEO metadata. Supports dynamic routes, layouts, loading states, error handling, and route groups. Creates page.tsx and optional layout.tsx, loading.tsx, and error.tsx files using the Server Component pattern.
     variables_schema:
       type: object
       properties:
