@@ -1,3 +1,14 @@
+## 1.0.9 (2025-12-08)
+
+### 🩹 Fixes
+
+- **aicode-utils:** consolidate git utilities and prevent command injection ([ff1b6b1](https://github.com/AgiFlow/aicode-toolkit/commit/ff1b6b1))
+- **aicode-utils:** return null instead of throwing when templates path not found ([6dd4545](https://github.com/AgiFlow/aicode-toolkit/commit/6dd4545))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.8 (2025-12-07)
 
 This was a version bump only for @agiflowai/aicode-utils to align it with other projects, there were no code changes.

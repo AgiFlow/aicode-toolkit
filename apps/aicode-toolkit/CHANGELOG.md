@@ -1,3 +1,20 @@
+## 1.0.11 (2025-12-08)
+
+### 🩹 Fixes
+
+- **aicode-utils:** consolidate git utilities and prevent command injection ([ff1b6b1](https://github.com/AgiFlow/aicode-toolkit/commit/ff1b6b1))
+- resolve TypeScript errors and fix test mocks ([e7320c4](https://github.com/AgiFlow/aicode-toolkit/commit/e7320c4))
+- handle null return from findTemplatesPath in consuming code ([a00a6b3](https://github.com/AgiFlow/aicode-toolkit/commit/a00a6b3))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.9
+- Updated @agiflowai/aicode-utils to 1.0.9
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.10 (2025-12-07)
 
 ### 🧱 Updated Dependencies

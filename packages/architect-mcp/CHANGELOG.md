@@ -1,3 +1,19 @@
+## 1.0.10 (2025-12-08)
+
+### 🩹 Fixes
+
+- resolve TypeScript errors and fix test mocks ([e7320c4](https://github.com/AgiFlow/aicode-toolkit/commit/e7320c4))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.9
+- Updated @agiflowai/hooks-adapter to 0.0.5
+- Updated @agiflowai/aicode-utils to 1.0.9
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.9 (2025-12-07)
 
 ### 🧱 Updated Dependencies

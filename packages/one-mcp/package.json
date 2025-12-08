@@ -1,7 +1,7 @@
 {
   "name": "@agiflowai/one-mcp",
   "description": "One MCP server package",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "license": "AGPL-3.0",
   "keywords": [
     "mcp",

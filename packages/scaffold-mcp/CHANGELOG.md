@@ -1,3 +1,27 @@
+## 1.0.10 (2025-12-08)
+
+### 🚀 Features
+
+- **one-mcp:** add prompt aggregation support ([cf538ff](https://github.com/AgiFlow/aicode-toolkit/commit/cf538ff))
+
+### 🩹 Fixes
+
+- **aicode-utils:** consolidate git utilities and prevent command injection ([ff1b6b1](https://github.com/AgiFlow/aicode-toolkit/commit/ff1b6b1))
+- resolve TypeScript errors and fix test mocks ([e7320c4](https://github.com/AgiFlow/aicode-toolkit/commit/e7320c4))
+- handle null return from findTemplatesPath in consuming code ([a00a6b3](https://github.com/AgiFlow/aicode-toolkit/commit/a00a6b3))
+- **aicode-utils:** return null instead of throwing when templates path not found ([6dd4545](https://github.com/AgiFlow/aicode-toolkit/commit/6dd4545))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.9
+- Updated @agiflowai/architect-mcp to 1.0.10
+- Updated @agiflowai/hooks-adapter to 0.0.5
+- Updated @agiflowai/aicode-utils to 1.0.9
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.9 (2025-12-07)
 
 ### 🧱 Updated Dependencies

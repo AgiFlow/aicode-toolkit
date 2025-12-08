@@ -1,3 +1,18 @@
+## 0.2.6 (2025-12-08)
+
+### 🚀 Features
+
+- **one-mcp:** add prompt-based skills support ([19d2fcd](https://github.com/AgiFlow/aicode-toolkit/commit/19d2fcd))
+- **one-mcp:** add prompt aggregation support ([cf538ff](https://github.com/AgiFlow/aicode-toolkit/commit/cf538ff))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.9
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.2.5 (2025-12-07)
 
 ### 🚀 Features
