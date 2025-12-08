@@ -97,12 +97,11 @@ describe('TemplatesManagerService', () => {
       expect(result).toBe(templatesPath);
     });
 
-    it('should throw error when templates folder not found', () => {
+    it('should return null when templates folder not found', () => {
       vi.mocked(fsHelpers.pathExistsSync).mockReturnValue(false);
 
-      expect(() => {
-        TemplatesManagerService.findTemplatesPathSync();
-      }).toThrow('Templates folder not found');
+      const result = TemplatesManagerService.findTemplatesPathSync();
+      expect(result).toBeNull();
     });
   });
 
@@ -123,12 +122,11 @@ describe('TemplatesManagerService', () => {
       expect(result).toBe(templatesPath);
     });
 
-    it('should throw error when templates folder not found', async () => {
+    it('should return null when templates folder not found', async () => {
       vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
 
-      await expect(TemplatesManagerService.findTemplatesPath()).rejects.toThrow(
-        'Templates folder not found',
-      );
+      const result = await TemplatesManagerService.findTemplatesPath();
+      expect(result).toBeNull();
     });
   });
 });

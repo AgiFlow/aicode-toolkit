@@ -45,10 +45,9 @@ export class TemplatesManagerService {
    * 4. Verify the templates directory exists
    *
    * @param startPath - The path to start searching from (defaults to process.cwd())
-   * @returns The absolute path to the templates directory
-   * @throws Error if templates directory is not found
+   * @returns The absolute path to the templates directory, or null if not found
    */
-  static async findTemplatesPath(startPath: string = process.cwd()): Promise<string> {
+  static async findTemplatesPath(startPath: string = process.cwd()): Promise<string | null> {
     // First, find the workspace root
     const workspaceRoot = await TemplatesManagerService.findWorkspaceRoot(startPath);
 
@@ -69,9 +68,8 @@ export class TemplatesManagerService {
         if (await pathExists(templatesPath)) {
           return templatesPath;
         } else {
-          throw new Error(
-            `Templates path specified in toolkit.yaml does not exist: ${templatesPath}`,
-          );
+          // Return null instead of throwing - let caller handle missing path
+          return null;
         }
       }
     }
@@ -83,10 +81,8 @@ export class TemplatesManagerService {
       return templatesPath;
     }
 
-    throw new Error(
-      `Templates folder not found at ${templatesPath}.\n` +
-        `Either create a 'templates' folder or specify templatesPath in toolkit.yaml`,
-    );
+    // Return null instead of throwing - let caller handle missing path
+    return null;
   }
 
   /**
@@ -119,10 +115,9 @@ export class TemplatesManagerService {
    * Use this when you need immediate access and are sure templates exist.
    *
    * @param startPath - The path to start searching from (defaults to process.cwd())
-   * @returns The absolute path to the templates directory
-   * @throws Error if templates directory is not found
+   * @returns The absolute path to the templates directory, or null if not found
    */
-  static findTemplatesPathSync(startPath: string = process.cwd()): string {
+  static findTemplatesPathSync(startPath: string = process.cwd()): string | null {
     // First, find the workspace root
     const workspaceRoot = TemplatesManagerService.findWorkspaceRootSync(startPath);
 
@@ -143,9 +138,8 @@ export class TemplatesManagerService {
         if (pathExistsSync(templatesPath)) {
           return templatesPath;
         } else {
-          throw new Error(
-            `Templates path specified in toolkit.yaml does not exist: ${templatesPath}`,
-          );
+          // Return null instead of throwing - let caller handle missing path
+          return null;
         }
       }
     }
@@ -157,10 +151,8 @@ export class TemplatesManagerService {
       return templatesPath;
     }
 
-    throw new Error(
-      `Templates folder not found at ${templatesPath}.\n` +
-        `Either create a 'templates' folder or specify templatesPath in toolkit.yaml`,
-    );
+    // Return null instead of throwing - let caller handle missing path
+    return null;
   }
 
   /**

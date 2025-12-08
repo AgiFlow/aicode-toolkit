@@ -192,6 +192,135 @@ filesystem:
   read_file, list_directory, search_files
 ```
 
+### Skills
+
+Skills are reusable prompt templates that provide specialized capabilities to AI agents. They are markdown files with YAML frontmatter that get loaded and made available through the `describe_tools` output.
+
+#### Configuration
+
+Enable skills by adding a `skills` section to your config:
+
+```yaml
+mcpServers:
+  # ... your MCP servers
+
+skills:
+  paths:
+    - ".claude/skills"           # Relative to config file
+    - "/absolute/path/to/skills" # Absolute paths also supported
+```
+
+#### Skill File Structure
+
+Skills can be organized in two ways:
+
+**Flat structure:**
+```
+.claude/skills/
+├── pdf/
+│   └── SKILL.md
+└── data-analysis/
+    └── SKILL.md
+```
+
+**Skill file format (`SKILL.md`):**
+```markdown
+---
+name: pdf
+description: Create and manipulate PDF documents
+---
+
+# PDF Skill
+
+This skill helps you work with PDF files...
+
+## Usage
+...
+```
+
+#### Required Frontmatter
+
+Each `SKILL.md` must have:
+- `name`: Unique identifier for the skill
+- `description`: Brief description shown to AI agents
+
+#### How Skills Work
+
+1. Skills are discovered from configured paths at startup
+2. Available skills are listed in the `describe_tools` output
+3. AI agents can invoke skills by name (e.g., `skill: "pdf"`)
+4. The skill's content expands as a prompt providing specialized instructions
+
+#### Precedence
+
+When multiple paths are configured, skills from earlier paths take precedence over skills with the same name from later paths.
+
+### Prompt-Based Skills
+
+You can also convert MCP server prompts into skills. This allows you to expose prompts from MCP servers as executable skills that AI agents can invoke.
+
+#### Configuration
+
+Add a `prompts` section under a server's `config`:
+
+```yaml
+mcpServers:
+  my-server:
+    command: npx
+    args:
+      - -y
+      - "@mycompany/mcp-server"
+    config:
+      instruction: "My MCP server"
+      prompts:
+        code-review:
+          skill:
+            name: code-reviewer
+            description: "Review code for best practices and potential issues"
+            folder: "./prompts/code-review"  # Optional: resource folder
+        documentation:
+          skill:
+            name: doc-generator
+            description: "Generate documentation from code"
+```
+
+#### How Prompt-Based Skills Work
+
+1. **Configuration**: Define which prompts should be exposed as skills in the server config
+2. **Discovery**: Prompt-based skills appear alongside file-based skills in `describe_tools`
+3. **Invocation**: When an AI agent requests a prompt-based skill, one-mcp:
+   - Fetches the prompt content from the MCP server
+   - Returns the prompt messages as skill instructions
+4. **Execution**: The AI agent follows the skill instructions
+
+#### Skill Configuration Fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Unique skill identifier shown to AI agents |
+| `description` | Yes | Brief description of what the skill does |
+| `folder` | No | Optional folder path for skill resources |
+
+#### Example Use Case
+
+Convert a complex prompt from an MCP server into a reusable skill:
+
+```yaml
+mcpServers:
+  architect-mcp:
+    command: npx
+    args: ["-y", "@agiflowai/architect-mcp", "mcp-serve"]
+    config:
+      instruction: "Architecture and design patterns"
+      prompts:
+        design-review:
+          skill:
+            name: design-reviewer
+            description: "Review code architecture and suggest improvements"
+```
+
+When the AI agent invokes `design-reviewer`, it receives the full prompt content from `architect-mcp`'s `design-review` prompt, enabling sophisticated code review capabilities.
+
 ---
 
 ## MCP Tools

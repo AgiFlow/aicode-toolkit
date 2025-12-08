@@ -142,6 +142,22 @@ interface SkillTemplateData {
 }
 
 /**
+ * Result of finding a prompt-based skill configuration
+ * @property serverName - The MCP server that owns this prompt
+ * @property promptName - The prompt name used to fetch content
+ * @property skill - The skill configuration from the prompt
+ */
+interface PromptSkillMatch {
+  serverName: string;
+  promptName: string;
+  skill: {
+    name: string;
+    description: string;
+    folder?: string;
+  };
+}
+
+/**
  * Result from building servers section, includes rendered content and tool names for clash detection
  * @property content - Rendered servers section string
  * @property toolNames - Set of all tool display names for clash detection with skills
@@ -185,11 +201,112 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
   }
 
   /**
+   * Collects skills derived from prompt configurations across all connected MCP servers.
+   * Prompts with a skill configuration are converted to skill format for display.
+   *
+   * @returns Array of skill template data derived from prompts
+   */
+  private collectPromptSkills(): SkillTemplateData[] {
+    const clients = this.clientManager.getAllClients();
+    const promptSkills: SkillTemplateData[] = [];
+
+    for (const client of clients) {
+      if (!client.prompts) continue;
+
+      for (const promptConfig of Object.values(client.prompts)) {
+        if (promptConfig.skill) {
+          promptSkills.push({
+            name: promptConfig.skill.name,
+            displayName: promptConfig.skill.name,
+            description: promptConfig.skill.description,
+          });
+        }
+      }
+    }
+
+    return promptSkills;
+  }
+
+  /**
+   * Finds a prompt-based skill by name from all connected MCP servers.
+   * Returns the prompt name and skill config for fetching the prompt content.
+   *
+   * @param skillName - The skill name to search for
+   * @returns Object with serverName, promptName, and skill config, or undefined if not found
+   */
+  private findPromptSkill(skillName: string): PromptSkillMatch | undefined {
+    if (!skillName) return undefined;
+
+    const clients = this.clientManager.getAllClients();
+
+    for (const client of clients) {
+      if (!client.prompts) continue;
+
+      for (const [promptName, promptConfig] of Object.entries(client.prompts)) {
+        if (promptConfig.skill && promptConfig.skill.name === skillName) {
+          return {
+            serverName: client.serverName,
+            promptName,
+            skill: promptConfig.skill,
+          };
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Retrieves skill content from a prompt-based skill configuration.
+   * Fetches the prompt from the MCP server and extracts text content.
+   *
+   * @param skillName - The skill name being requested
+   * @returns SkillDescription if found and successfully fetched, undefined otherwise
+   */
+  private async getPromptSkillContent(skillName: string): Promise<SkillDescription | undefined> {
+    const promptSkill = this.findPromptSkill(skillName);
+    if (!promptSkill) return undefined;
+
+    const client = this.clientManager.getClient(promptSkill.serverName);
+    if (!client) {
+      console.error(`Client not found for server '${promptSkill.serverName}' when fetching prompt skill '${skillName}'`);
+      return undefined;
+    }
+
+    try {
+      const promptResult = await client.getPrompt(promptSkill.promptName);
+      // Prompt messages can contain either string content or TextContent objects with text field
+      const instructions = promptResult.messages
+        ?.map((m) => {
+          const content = m.content;
+          if (typeof content === 'string') return content;
+          if (content && typeof content === 'object' && 'text' in content) {
+            return String(content.text);
+          }
+          return '';
+        })
+        .join('\n') || '';
+
+      return {
+        name: promptSkill.skill.name,
+        // Location is either the configured folder or a prompt reference
+        location: promptSkill.skill.folder || `prompt:${promptSkill.serverName}/${promptSkill.promptName}`,
+        instructions,
+      };
+    } catch (error) {
+      console.error(
+        `Failed to get prompt-based skill '${skillName}': ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      return undefined;
+    }
+  }
+
+  /**
    * Builds the skills section of the tool description using a Liquid template.
    *
-   * Retrieves all available skills from the SkillService and renders them
-   * using the skills-description.liquid template. Skills are only prefixed
-   * with skill__ when their name clashes with an MCP tool or another skill.
+   * Retrieves all available skills from the SkillService and prompt-based skills,
+   * then renders them using the skills-description.liquid template. Skills are only
+   * prefixed with skill__ when their name clashes with an MCP tool or another skill.
    *
    * @param mcpToolNames - Set of MCP tool names to check for clashes
    * @returns Rendered skills section string with available skills list
@@ -197,14 +314,27 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
   private async buildSkillsSection(mcpToolNames: Set<string>): Promise<string> {
     const rawSkills = this.skillService ? await this.skillService.getSkills() : [];
 
+    // Collect skills from prompt configurations
+    const promptSkills = this.collectPromptSkills();
+
+    // Combine file-based skills and prompt-based skills
+    const allSkillsData: SkillTemplateData[] = [
+      ...rawSkills.map((skill) => ({
+        name: skill.name,
+        displayName: skill.name,
+        description: skill.description,
+      })),
+      ...promptSkills,
+    ];
+
     // Track skill names to detect clashes between skills
     const skillNameCounts = new Map<string, number>();
-    for (const skill of rawSkills) {
+    for (const skill of allSkillsData) {
       skillNameCounts.set(skill.name, (skillNameCounts.get(skill.name) || 0) + 1);
     }
 
     // Format skills with prefix only when clashing with MCP tools or other skills
-    const skills: SkillTemplateData[] = rawSkills.map((skill) => {
+    const skills: SkillTemplateData[] = allSkillsData.map((skill) => {
       const clashesWithMcpTool = mcpToolNames.has(skill.name);
       const clashesWithOtherSkill = (skillNameCounts.get(skill.name) || 0) > 1;
       const needsPrefix = clashesWithMcpTool || clashesWithOtherSkill;
@@ -410,9 +540,11 @@ ${skillsSection}`,
       const notFoundItems: string[] = [];
 
       for (const requestedName of toolNames) {
-        // Handle skill__ prefix - lookup skills from SkillService
+        // Handle skill__ prefix - lookup skills from SkillService or prompt-based skills
         if (requestedName.startsWith(SKILL_PREFIX)) {
           const skillName = requestedName.slice(SKILL_PREFIX.length);
+
+          // First try SkillService
           if (this.skillService) {
             const skill = await this.skillService.getSkill(skillName);
             if (skill) {
@@ -421,12 +553,18 @@ ${skillsSection}`,
                 location: skill.basePath,
                 instructions: skill.content,
               });
-            } else {
-              notFoundItems.push(requestedName);
+              continue;
             }
-          } else {
-            notFoundItems.push(requestedName);
           }
+
+          // Fallback to prompt-based skills if not found in SkillService
+          const promptSkillContent = await this.getPromptSkillContent(skillName);
+          if (promptSkillContent) {
+            foundSkills.push(promptSkillContent);
+            continue;
+          }
+
+          notFoundItems.push(requestedName);
           continue;
         }
 
@@ -462,6 +600,8 @@ ${skillsSection}`,
           if (!servers || servers.length === 0) {
             // Tool not found in MCP servers - check if it's a skill by plain name
             // Skills can be displayed without skill__ prefix when they don't clash
+
+            // First check file-based skills from SkillService
             if (this.skillService) {
               const skill = await this.skillService.getSkill(actualToolName);
               if (skill) {
@@ -473,6 +613,14 @@ ${skillsSection}`,
                 continue;
               }
             }
+
+            // Then check prompt-based skills
+            const promptSkillContent = await this.getPromptSkillContent(actualToolName);
+            if (promptSkillContent) {
+              foundSkills.push(promptSkillContent);
+              continue;
+            }
+
             notFoundItems.push(requestedName);
             continue;
           }

@@ -17,6 +17,12 @@ boilerplateCommand
   .action(async (options) => {
     try {
       const templatesDir = await TemplatesManagerService.findTemplatesPath();
+      if (!templatesDir) {
+        messages.error(
+          'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
+        );
+        process.exit(1);
+      }
       const boilerplateService = new BoilerplateService(templatesDir);
       const { boilerplates, nextCursor } = await boilerplateService.listBoilerplates(
         options.cursor,
@@ -75,6 +81,12 @@ boilerplateCommand
   .action(async (boilerplateName, options) => {
     try {
       const templatesDir = await TemplatesManagerService.findTemplatesPath();
+      if (!templatesDir) {
+        messages.error(
+          'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
+        );
+        process.exit(1);
+      }
       const boilerplateService = new BoilerplateService(templatesDir);
 
       // Parse variables if provided
@@ -197,6 +209,12 @@ boilerplateCommand
   .action(async (boilerplateName) => {
     try {
       const templatesDir = await TemplatesManagerService.findTemplatesPath();
+      if (!templatesDir) {
+        messages.error(
+          'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
+        );
+        process.exit(1);
+      }
       const boilerplateService = new BoilerplateService(templatesDir);
       const bp = await boilerplateService.getBoilerplate(boilerplateName);
 

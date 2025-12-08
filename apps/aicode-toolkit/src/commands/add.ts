@@ -23,9 +23,17 @@ export const addCommand = new Command('add')
   .action(async (options) => {
     try {
       // Use TemplatesManagerService to find templates path, or use provided --path override
-      const templatesPath = options.path
+      const foundTemplatesPath = options.path
         ? path.resolve(options.path)
         : await TemplatesManagerService.findTemplatesPath();
+
+      if (!foundTemplatesPath) {
+        messages.error(
+          'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
+        );
+        process.exit(1);
+      }
+      const templatesPath = foundTemplatesPath;
 
       const templateType = options.type.toLowerCase();
       const templateName = options.name;

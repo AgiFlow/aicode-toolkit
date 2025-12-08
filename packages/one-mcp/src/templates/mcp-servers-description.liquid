@@ -1,4 +1,12 @@
 <mcp_servers>
+<instructions>
+Before you use any tools above, you MUST call this tool with a list of tool names to learn how to use them properly before use_tool; this includes:
+- Arguments schema needed to pass to the tool use
+- Description about each tool
+
+This tool is optimized for batch queries - you can request multiple tools at once for better performance.
+</instructions>
+
 {% for server in servers -%}
 <server name="{{ server.name }}">
 {% if server.instruction -%}
@@ -9,7 +17,7 @@
 {{ server.toolNames | join: ", " }}
 {% else -%}
 {% for tool in server.tools -%}
-<tool-item><name>{{ tool.displayName }}</name><description>{{ tool.description | default: "No description" }}</description></tool-item>
+<item><name>{{ tool.displayName }}</name><description>{{ tool.description | default: "No description" }}</description></item>
 {% endfor -%}
 {% endif -%}
 </tools>

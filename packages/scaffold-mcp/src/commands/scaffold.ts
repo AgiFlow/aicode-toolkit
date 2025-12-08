@@ -35,6 +35,12 @@ scaffoldCommand
       }
 
       const templatesDir = await TemplatesManagerService.findTemplatesPath();
+      if (!templatesDir) {
+        messages.error(
+          'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
+        );
+        process.exit(1);
+      }
       const fileSystemService = new FileSystemService();
       const scaffoldingMethodsService = new ScaffoldingMethodsService(
         fileSystemService,
@@ -151,6 +157,12 @@ scaffoldCommand
       }
 
       const templatesDir = await TemplatesManagerService.findTemplatesPath();
+      if (!templatesDir) {
+        messages.error(
+          'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
+        );
+        process.exit(1);
+      }
       const fileSystemService = new FileSystemService();
       const scaffoldingMethodsService = new ScaffoldingMethodsService(
         fileSystemService,
@@ -270,6 +282,12 @@ scaffoldCommand
       }
 
       const templatesDir = await TemplatesManagerService.findTemplatesPath();
+      if (!templatesDir) {
+        messages.error(
+          'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
+        );
+        process.exit(1);
+      }
       const fileSystemService = new FileSystemService();
       const scaffoldingMethodsService = new ScaffoldingMethodsService(
         fileSystemService,

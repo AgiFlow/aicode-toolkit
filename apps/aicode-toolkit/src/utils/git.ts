@@ -102,6 +102,7 @@ export function parseGitHubUrl(url: string): {
 
 /**
  * Clone a subdirectory from a git repository using sparse checkout
+ * Uses '--' to prevent command injection via malicious URLs starting with '--upload-pack'
  */
 export async function cloneSubdirectory(
   repoUrl: string,
@@ -115,8 +116,8 @@ export async function cloneSubdirectory(
     // Initialize a new git repo
     await execGit(['init', tempFolder]);
 
-    // Add remote
-    await execGit(['remote', 'add', 'origin', repoUrl], tempFolder);
+    // Add remote (use '--' to prevent URL injection)
+    await execGit(['remote', 'add', 'origin', '--', repoUrl], tempFolder);
 
     // Enable sparse checkout
     await execGit(['config', 'core.sparseCheckout', 'true'], tempFolder);
@@ -125,8 +126,8 @@ export async function cloneSubdirectory(
     const sparseCheckoutFile = path.join(tempFolder, '.git', 'info', 'sparse-checkout');
     await writeFile(sparseCheckoutFile, `${subdirectory}\n`);
 
-    // Pull the specific branch
-    await execGit(['pull', '--depth=1', 'origin', branch], tempFolder);
+    // Pull the specific branch (use '--' to prevent branch name injection)
+    await execGit(['pull', '--depth=1', 'origin', '--', branch], tempFolder);
 
     // Move the subdirectory content to target folder
     const sourceDir = path.join(tempFolder, subdirectory);
@@ -156,9 +157,10 @@ export async function cloneSubdirectory(
 
 /**
  * Clone entire repository
+ * Uses '--' to prevent command injection via malicious URLs starting with '--upload-pack'
  */
 export async function cloneRepository(repoUrl: string, targetFolder: string): Promise<void> {
-  await execGit(['clone', repoUrl, targetFolder]);
+  await execGit(['clone', '--', repoUrl, targetFolder]);
 
   // Remove .git folder
   const gitFolder = path.join(targetFolder, '.git');

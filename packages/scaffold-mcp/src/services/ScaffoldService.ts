@@ -25,7 +25,14 @@ export class ScaffoldService implements IScaffoldService {
     private variableReplacer: IVariableReplacementService,
     templatesRootPath?: string,
   ) {
-    this.templatesRootPath = templatesRootPath || TemplatesManagerService.findTemplatesPathSync();
+    const resolvedPath = templatesRootPath || TemplatesManagerService.findTemplatesPathSync();
+    if (!resolvedPath) {
+      throw new Error(
+        'Templates folder not found. Please create a "templates" folder in your workspace root, ' +
+          'or specify "templatesPath" in toolkit.yaml to point to your templates directory.',
+      );
+    }
+    this.templatesRootPath = resolvedPath;
     this.processingService = new ScaffoldProcessingService(fileSystem, variableReplacer);
   }
 
