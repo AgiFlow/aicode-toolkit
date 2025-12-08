@@ -12,13 +12,9 @@ MCP servers that teach AI coding agents your team's conventions. Provides scaffo
 
 ## Why This Exists
 
-AI agents generate functional code, but they don't know your project's structure, naming conventions, or architectural patterns. You end up manually fixing inconsistencies.
+As projects go from MVP to production, you introduce new patterns, conventions, etc. Your AGENTS.md, instruction.md, or CLAUDE.md also grows bigger and bigger, eating up all the context.
 
-This toolkit solves that with three components:
-
-1. **Templates** - Scaffolding for routes, components, services
-2. **Design Patterns** - Per-file-type architectural guidance
-3. **Rules** - Automated validation before code ships
+Growing from our frustration of using agents on large monorepos, this toolkit allows you to encode your team's conventions, patterns, and rules in a centralised, sharable location. Instead of preloading AI agents with docs, our tools follow a progressive discovery approach, where the AI agent can call the tool to discover pre-flight and post-check based on pattern matching.
 
 Think Rails conventions, but for any stack, enforced by your AI agent.
 
@@ -58,8 +54,8 @@ The init command configures MCP automatically. For manual setup:
       "args": [
         "-y", "@agiflowai/architect-mcp", "mcp-serve",
         "--admin-enable",
-        "--design-pattern-tool", "claude-code",
-        "--review-tool", "claude-code"
+        "--design-pattern-tool", "codex",
+        "--review-tool", "gemini-cli"
       ]
     }
   }
@@ -112,7 +108,7 @@ Should call `list-boilerplates`. If not recognized, restart the agent.
 
 ### scaffold-mcp
 
-Code generation from templates.
+Add new apps, libraries, or features that follow your company conventions. Generates minimal boilerplate code and uses guided generation to fill in the blanks.
 
 | Tool | Description |
 |------|-------------|
@@ -131,7 +127,7 @@ Code generation from templates.
 
 ### architect-mcp
 
-Design guidance and validation.
+Pre-flight suggestions to ensure AI-generated code follows best practices and design patterns based on your file structure. Post-check with RULES.yaml to enforce styles and patterns using an LLM as a judge.
 
 | Tool | Description |
 |------|-------------|
@@ -242,22 +238,30 @@ patterns:
 ### RULES.yaml
 
 ```yaml
+version: '1.0'
+template: typescript-lib
 rules:
-  - id: no-client-directive-in-pages
-    severity: error
-    category: must_not_do
-    file_patterns:
-      - "**/app/**/page.tsx"
-    pattern: "'use client'"
-    message: "Pages should be server components. Extract client logic."
+  - pattern: src/services/**/*.ts
+    description: Service Layer Implementation Standards
+    must_do:
+      - rule: Create class-based services with single responsibility
+        codeExample: |-
+          export class DataProcessorService {
+            async processData(input: string): Promise<ProcessedData> {
+              // Implementation
+            }
+          }
+      - rule: Use dependency injection for composability
+    must_not_do:
+      - rule: Create static-only utility classes - use functions
+        codeExample: |-
+          // ❌ BAD
+          export class Utils {
+            static format(s: string) {}
+          }
 
-  - id: default-export-required
-    severity: error
-    category: must_do
-    file_patterns:
-      - "**/app/**/page.tsx"
-    check: has_default_export
-    message: "Page components must export default."
+          // ✅ GOOD
+          export function format(s: string): string {}
 ```
 
 ---
@@ -271,14 +275,27 @@ rules:
 | `typescript-mcp-package` | MCP Server | Commander, MCP SDK |
 
 ### Custom Templates
+We suggest to build your own template from your existing repo. It's quite simple by using slash command:
 
-Ask your agent to create one:
-
+``` 
+/generate-boilerplate
 ```
-"Create a boilerplate for our React + Vite setup"
-```
+Use this slash command and reference your directory to create template. This will create `scaffold.yaml` with boillerplate config and relevant files extracted from your production application.  
 
-Agent uses `generate-boilerplate`, `generate-boilerplate-file`, `add-design-pattern`, `add-rule`.
+``` 
+/generate-feature-scaffold
+```
+After boilerplate is generated, you can now use this command to add `feature` scaffolding. Think of feature as a group of files that generated together per your requirement (new page, new service, etc...)
+
+The `scaffold-mcp` will automatically add this new template to the discovery.
+
+### Custom Design Pattern
+`add-design-pattern` is the tool from `architect-mcp` (with `--admin-enable` flag) that help you add a new design pattern to `architect.yaml` the template.
+Simply ask the AI agent to add a design pattern to a template by giving it a source file reference.
+
+### Custom Rule
+`add-rule` is the tool from `architect-mcp` (with `--admin-enable` flag) that help you add a new rule to the `RULES.yaml` in template.
+Simply ask the AI agent to add a new rule to a template by giving it a source file reference and your rule requirement. 
 
 ---
 
