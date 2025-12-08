@@ -28,16 +28,19 @@ import type {
   McpSseConfig,
   McpClientConnection,
   McpServerTransportType,
+  PromptConfig,
 } from '../types';
 
 /**
  * MCP Client wrapper for managing individual server connections
+ * This is an internal class used by McpClientManagerService
  */
 class McpClient implements McpClientConnection {
   serverName: string;
   serverInstruction?: string;
   toolBlacklist?: string[];
   omitToolDescription?: boolean;
+  prompts?: Record<string, PromptConfig>;
   transport: McpServerTransportType;
   private client: Client;
   private childProcess?: ChildProcess;
@@ -51,12 +54,14 @@ class McpClient implements McpClientConnection {
       instruction?: string;
       toolBlacklist?: string[];
       omitToolDescription?: boolean;
+      prompts?: Record<string, PromptConfig>;
     },
   ) {
     this.serverName = serverName;
     this.serverInstruction = config.instruction;
     this.toolBlacklist = config.toolBlacklist;
     this.omitToolDescription = config.omitToolDescription;
+    this.prompts = config.prompts;
     this.transport = transport;
     this.client = client;
   }
@@ -197,6 +202,7 @@ export class McpClientManagerService {
       instruction: config.instruction,
       toolBlacklist: config.toolBlacklist,
       omitToolDescription: config.omitToolDescription,
+      prompts: config.prompts,
     });
 
     try {

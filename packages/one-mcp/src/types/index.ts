@@ -135,6 +135,7 @@ export type McpServerTransportConfig = McpStdioConfig | McpHttpConfig | McpSseCo
  * @property instruction - Optional instruction text describing the server's purpose
  * @property toolBlacklist - Optional list of tool names to exclude from this server
  * @property omitToolDescription - Whether to omit tool descriptions in listings
+ * @property prompts - Optional prompts configuration for skill conversion
  * @property transport - The transport type (stdio, http, or sse)
  * @property config - Transport-specific configuration options
  */
@@ -143,6 +144,7 @@ export interface McpServerConfig {
   instruction?: string;
   toolBlacklist?: string[];
   omitToolDescription?: boolean;
+  prompts?: Record<string, PromptConfig>;
   transport: McpServerTransportType;
   config: McpServerTransportConfig;
 }
@@ -153,6 +155,26 @@ export interface McpServerConfig {
  */
 export interface SkillsConfig {
   paths: string[];
+}
+
+/**
+ * Prompt skill configuration for converting prompts to executable skills
+ * @property name - Skill name identifier
+ * @property description - Skill description shown in describe_tools
+ * @property folder - Optional folder path for skill resources
+ */
+export interface PromptSkillConfig {
+  name: string;
+  description: string;
+  folder?: string;
+}
+
+/**
+ * Prompt configuration that can be converted to a skill
+ * @property skill - Optional skill conversion configuration
+ */
+export interface PromptConfig {
+  skill?: PromptSkillConfig;
 }
 
 /**
@@ -213,6 +235,7 @@ export interface McpPromptInfo {
  * @property serverInstruction - Optional instruction text for the server
  * @property toolBlacklist - Optional list of tool names to exclude
  * @property omitToolDescription - Whether to omit tool descriptions
+ * @property prompts - Optional prompts configuration for skill conversion
  * @property transport - The transport type used for this connection
  */
 export interface McpClientConnection {
@@ -220,6 +243,7 @@ export interface McpClientConnection {
   serverInstruction?: string;
   toolBlacklist?: string[];
   omitToolDescription?: boolean;
+  prompts?: Record<string, PromptConfig>;
   transport: McpServerTransportType;
   /** List available tools from the server */
   listTools(): Promise<McpToolInfo[]>;

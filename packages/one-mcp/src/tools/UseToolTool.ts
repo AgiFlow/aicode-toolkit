@@ -24,10 +24,22 @@
  */
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type { Tool, ToolDefinition, Skill } from '../types';
+import type { Tool, ToolDefinition, Skill, PromptSkillConfig } from '../types';
 import type { McpClientManagerService } from '../services/McpClientManagerService';
 import type { SkillService } from '../services/SkillService';
 import { parseToolName } from '../utils';
+
+/**
+ * Result of finding a prompt-based skill configuration
+ * @property serverName - The MCP server that owns this prompt
+ * @property promptName - The prompt name used to fetch content
+ * @property skill - The skill configuration from the prompt
+ */
+interface PromptSkillMatch {
+  serverName: string;
+  promptName: string;
+  skill: PromptSkillConfig;
+}
 
 /**
  * Prefix used to identify skill invocations (e.g., skill__pdf)
@@ -83,7 +95,7 @@ export class UseToolTool implements Tool<UseToolToolInput> {
   getDefinition(): ToolDefinition {
     return {
       name: UseToolTool.TOOL_NAME,
-      description: `Execute an MCP tool with provided arguments. You MUST call describe_tools first to discover the tool's correct arguments. Then to use tool:
+      description: `Execute an MCP tool (NOT Skill) with provided arguments. You MUST call describe_tools first to discover the tool's correct arguments. Then to use tool:
 - Provide toolName and toolArgs based on the schema
 - If multiple servers provide the same tool, specify serverName
 `,
@@ -128,6 +140,52 @@ export class UseToolTool implements Tool<UseToolToolInput> {
   }
 
   /**
+   * Finds a prompt-based skill by name from all connected MCP servers.
+   *
+   * @param skillName - The skill name to search for
+   * @returns PromptSkillMatch if found, undefined otherwise
+   */
+  private findPromptSkill(skillName: string): PromptSkillMatch | undefined {
+    if (!skillName) return undefined;
+
+    const clients = this.clientManager.getAllClients();
+
+    for (const client of clients) {
+      if (!client.prompts) continue;
+
+      for (const [promptName, promptConfig] of Object.entries(client.prompts)) {
+        if (promptConfig.skill && promptConfig.skill.name === skillName) {
+          return {
+            serverName: client.serverName,
+            promptName,
+            skill: promptConfig.skill,
+          };
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Returns guidance message for prompt-based skill invocation.
+   *
+   * @param promptSkill - The prompt skill match that was found
+   * @returns CallToolResult with guidance message
+   */
+  private executePromptSkill(promptSkill: PromptSkillMatch): CallToolResult {
+    const location = promptSkill.skill.folder || `prompt:${promptSkill.serverName}/${promptSkill.promptName}`;
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Skill "${promptSkill.skill.name}" found. Skills provide instructions and should not be executed via use_tool.\n\nUse describe_tools to view the skill details at: ${location}\n\nThen follow the skill's instructions directly.`,
+        },
+      ],
+    };
+  }
+
+  /**
    * Executes a tool or skill based on the provided input.
    *
    * Handles three invocation patterns:
@@ -151,32 +209,29 @@ export class UseToolTool implements Tool<UseToolToolInput> {
       if (inputToolName.startsWith(SKILL_PREFIX)) {
         const skillName = inputToolName.slice(SKILL_PREFIX.length);
 
-        if (!this.skillService) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Skills are not configured. Cannot execute skill "${skillName}".`,
-              },
-            ],
-            isError: true,
-          };
+        // First check file-based skills from SkillService
+        if (this.skillService) {
+          const skill = await this.skillService.getSkill(skillName);
+          if (skill) {
+            return this.executeSkill(skill);
+          }
         }
 
-        const skill = await this.skillService.getSkill(skillName);
-        if (!skill) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Skill "${skillName}" not found. Use describe_tools to see available skills.`,
-              },
-            ],
-            isError: true,
-          };
+        // Then check prompt-based skills
+        const promptSkill = this.findPromptSkill(skillName);
+        if (promptSkill) {
+          return this.executePromptSkill(promptSkill);
         }
 
-        return this.executeSkill(skill);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Skill "${skillName}" not found. Use describe_tools to see available skills.`,
+            },
+          ],
+          isError: true,
+        };
       }
 
       // Handle MCP tool execution
@@ -258,11 +313,19 @@ export class UseToolTool implements Tool<UseToolToolInput> {
       if (matchingServers.length === 0) {
         // Tool not found in MCP servers - check if it's a skill by plain name
         // Skills can be displayed without skill__ prefix when they don't clash
+
+        // First check file-based skills from SkillService
         if (this.skillService) {
           const skill = await this.skillService.getSkill(actualToolName);
           if (skill) {
             return this.executeSkill(skill);
           }
+        }
+
+        // Then check prompt-based skills
+        const promptSkill = this.findPromptSkill(actualToolName);
+        if (promptSkill) {
+          return this.executePromptSkill(promptSkill);
         }
 
         return {

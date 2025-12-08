@@ -245,11 +245,30 @@ export function validateRemoteConfigSource(source: RemoteConfigSource): void {
  * This is the format users write in their config files
  */
 
+/**
+ * Prompt skill configuration schema
+ * Converts a prompt to an executable skill
+ */
+const PromptSkillConfigSchema = z.object({
+  name: z.string(), // Skill name identifier
+  description: z.string(), // Skill description shown in describe_tools
+  folder: z.string().optional(), // Optional folder path for skill resources
+});
+
+/**
+ * Prompt configuration schema
+ * Supports converting prompts to skills
+ */
+const PromptConfigSchema = z.object({
+  skill: PromptSkillConfigSchema.optional(), // Optional skill conversion config
+});
+
 // Additional config options (nested under 'config' key)
 const AdditionalConfigSchema = z.object({
   instruction: z.string().optional(),
   toolBlacklist: z.array(z.string()).optional(),
   omitToolDescription: z.boolean().optional(),
+  prompts: z.record(z.string(), PromptConfigSchema).optional(), // Optional prompts to skill conversion
 }).optional();
 
 // Stdio server config (standard Claude Code format)
@@ -343,6 +362,22 @@ const McpSseConfigSchema = z.object({
   headers: z.record(z.string(), z.string()).optional(),
 });
 
+/**
+ * Internal prompt skill configuration schema
+ */
+const InternalPromptSkillConfigSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  folder: z.string().optional(),
+});
+
+/**
+ * Internal prompt configuration schema
+ */
+const InternalPromptConfigSchema = z.object({
+  skill: InternalPromptSkillConfigSchema.optional(),
+});
+
 // Server config with transport type
 const McpServerConfigSchema = z.discriminatedUnion('transport', [
   z.object({
@@ -350,6 +385,7 @@ const McpServerConfigSchema = z.discriminatedUnion('transport', [
     instruction: z.string().optional(),
     toolBlacklist: z.array(z.string()).optional(),
     omitToolDescription: z.boolean().optional(),
+    prompts: z.record(z.string(), InternalPromptConfigSchema).optional(),
     transport: z.literal('stdio'),
     config: McpStdioConfigSchema,
   }),
@@ -358,6 +394,7 @@ const McpServerConfigSchema = z.discriminatedUnion('transport', [
     instruction: z.string().optional(),
     toolBlacklist: z.array(z.string()).optional(),
     omitToolDescription: z.boolean().optional(),
+    prompts: z.record(z.string(), InternalPromptConfigSchema).optional(),
     transport: z.literal('http'),
     config: McpHttpConfigSchema,
   }),
@@ -366,6 +403,7 @@ const McpServerConfigSchema = z.discriminatedUnion('transport', [
     instruction: z.string().optional(),
     toolBlacklist: z.array(z.string()).optional(),
     omitToolDescription: z.boolean().optional(),
+    prompts: z.record(z.string(), InternalPromptConfigSchema).optional(),
     transport: z.literal('sse'),
     config: McpSseConfigSchema,
   }),
@@ -381,6 +419,8 @@ export const InternalMcpConfigSchema = z.object({
 
 export type InternalMcpConfig = z.infer<typeof InternalMcpConfigSchema>;
 export type SkillsConfig = z.infer<typeof SkillsConfigSchema>;
+export type PromptSkillConfig = z.infer<typeof InternalPromptSkillConfigSchema>;
+export type PromptConfig = z.infer<typeof InternalPromptConfigSchema>;
 
 /**
  * Transform Claude Code config to internal format
@@ -414,12 +454,14 @@ export function transformClaudeCodeConfig(claudeConfig: ClaudeCodeMcpConfig): In
       const finalInstruction = stdioConfig.instruction || stdioConfig.config?.instruction;
       const toolBlacklist = stdioConfig.config?.toolBlacklist;
       const omitToolDescription = stdioConfig.config?.omitToolDescription;
+      const prompts = stdioConfig.config?.prompts;
 
       transformedServers[serverName] = {
         name: serverName,
         instruction: finalInstruction,
         toolBlacklist,
         omitToolDescription,
+        prompts,
         transport: 'stdio' as const,
         config: {
           command: interpolatedCommand,
@@ -442,12 +484,14 @@ export function transformClaudeCodeConfig(claudeConfig: ClaudeCodeMcpConfig): In
       const finalInstruction = httpConfig.instruction || httpConfig.config?.instruction;
       const toolBlacklist = httpConfig.config?.toolBlacklist;
       const omitToolDescription = httpConfig.config?.omitToolDescription;
+      const prompts = httpConfig.config?.prompts;
 
       transformedServers[serverName] = {
         name: serverName,
         instruction: finalInstruction,
         toolBlacklist,
         omitToolDescription,
+        prompts,
         transport,
         config: {
           url: interpolatedUrl,
