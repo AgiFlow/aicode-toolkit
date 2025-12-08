@@ -114,7 +114,14 @@ export class GetFileDesignPatternHook {
       const result = await tool.execute({ file_path: filePath });
 
       // Parse result
-      const data = JSON.parse(result.content[0].text as string);
+      const firstContent = result.content[0];
+      if (firstContent.type !== 'text') {
+        return {
+          decision: DECISION_SKIP,
+          message: '⚠️ Unexpected response type from design pattern tool',
+        };
+      }
+      const data = JSON.parse(firstContent.text);
 
       if (result.isError) {
         // Error getting patterns - skip and let Claude continue

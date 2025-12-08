@@ -37,34 +37,47 @@ vi.mock('@agiflowai/aicode-utils', async () => {
   };
 });
 
-vi.mock('@agiflowai/coding-agent-bridge', () => ({
-  CLAUDE_CODE: 'claude-code',
-  CODEX: 'codex',
-  CURSOR: 'cursor',
-  GEMINI_CLI: 'gemini-cli',
-  GITHUB_COPILOT: 'github-copilot',
-  NONE: 'none',
-  ClaudeCodeService: vi.fn().mockImplementation(() => ({
-    isEnabled: vi.fn().mockResolvedValue(true),
-    updateMcpSettings: vi.fn().mockResolvedValue(undefined),
-  })),
-  CodexService: vi.fn().mockImplementation(() => ({
-    isEnabled: vi.fn().mockResolvedValue(false),
-    updateMcpSettings: vi.fn().mockResolvedValue(undefined),
-  })),
-  CursorService: vi.fn().mockImplementation(() => ({
-    isEnabled: vi.fn().mockResolvedValue(false),
-    updateMcpSettings: vi.fn().mockResolvedValue(undefined),
-  })),
-  GeminiCliService: vi.fn().mockImplementation(() => ({
-    isEnabled: vi.fn().mockResolvedValue(false),
-    updateMcpSettings: vi.fn().mockResolvedValue(undefined),
-  })),
-  GitHubCopilotService: vi.fn().mockImplementation(() => ({
-    isEnabled: vi.fn().mockResolvedValue(false),
-    updateMcpSettings: vi.fn().mockResolvedValue(undefined),
-  })),
-}));
+vi.mock('@agiflowai/coding-agent-bridge', () => {
+  // Create mock classes that can be instantiated with 'new'
+  const MockClaudeCodeService = class {
+    isEnabled = vi.fn().mockResolvedValue(true);
+    updateMcpSettings = vi.fn().mockResolvedValue(undefined);
+  };
+
+  const MockCodexService = class {
+    isEnabled = vi.fn().mockResolvedValue(false);
+    updateMcpSettings = vi.fn().mockResolvedValue(undefined);
+  };
+
+  const MockCursorService = class {
+    isEnabled = vi.fn().mockResolvedValue(false);
+    updateMcpSettings = vi.fn().mockResolvedValue(undefined);
+  };
+
+  const MockGeminiCliService = class {
+    isEnabled = vi.fn().mockResolvedValue(false);
+    updateMcpSettings = vi.fn().mockResolvedValue(undefined);
+  };
+
+  const MockGitHubCopilotService = class {
+    isEnabled = vi.fn().mockResolvedValue(false);
+    updateMcpSettings = vi.fn().mockResolvedValue(undefined);
+  };
+
+  return {
+    CLAUDE_CODE: 'claude-code',
+    CODEX: 'codex',
+    CURSOR: 'cursor',
+    GEMINI_CLI: 'gemini-cli',
+    GITHUB_COPILOT: 'github-copilot',
+    NONE: 'none',
+    ClaudeCodeService: MockClaudeCodeService,
+    CodexService: MockCodexService,
+    CursorService: MockCursorService,
+    GeminiCliService: MockGeminiCliService,
+    GitHubCopilotService: MockGitHubCopilotService,
+  };
+});
 
 describe('CodingAgentService', () => {
   const workspaceRoot = '/test/workspace';

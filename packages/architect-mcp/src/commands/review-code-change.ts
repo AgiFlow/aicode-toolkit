@@ -76,13 +76,19 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
       });
 
       // Parse and display result
+      const firstContent = result.content[0];
+      if (firstContent.type !== 'text') {
+        print.error('❌ Error: Unexpected response type');
+        process.exit(1);
+      }
+
       if (result.isError) {
-        const errorData = JSON.parse(result.content[0].text as string);
+        const errorData = JSON.parse(firstContent.text);
         print.error('❌ Error:', errorData.error || errorData);
         process.exit(1);
       }
 
-      const data = JSON.parse(result.content[0].text as string);
+      const data = JSON.parse(firstContent.text);
 
       if (options.json) {
         // Output raw JSON

@@ -130,16 +130,25 @@ export class UseScaffoldMethodHook {
       // Execute the tool to get scaffolding methods
       const result = await tool.execute({ projectPath });
 
+      // Validate response type first
+      const firstContent = result.content[0];
+      if (firstContent?.type !== 'text') {
+        return {
+          decision: DECISION_SKIP,
+          message: '⚠️ Unexpected response type from scaffolding methods tool',
+        };
+      }
+
       if (result.isError) {
         // Error getting methods - skip and let Claude continue
         return {
           decision: DECISION_SKIP,
-          message: `⚠️ Could not load scaffolding methods: ${result.content[0].text}`,
+          message: `⚠️ Could not load scaffolding methods: ${firstContent.text}`,
         };
       }
 
       // Validate and parse the result
-      const resultText = result.content[0]?.text;
+      const resultText = firstContent.text;
       if (typeof resultText !== 'string') {
         return {
           decision: DECISION_SKIP,

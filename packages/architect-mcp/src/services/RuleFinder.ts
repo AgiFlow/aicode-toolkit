@@ -31,6 +31,9 @@ export class RuleFinder {
 
     try {
       const templatesRoot = await TemplatesManagerService.findTemplatesPath(this.workspaceRoot);
+      if (!templatesRoot) {
+        return null;
+      }
       const globalRulesPath = path.join(templatesRoot, 'RULES.yaml');
       const globalRulesContent = await fs.readFile(globalRulesPath, 'utf-8');
       this.globalRulesCache = yaml.load(globalRulesContent) as RulesYamlConfig;
@@ -194,6 +197,9 @@ export class RuleFinder {
     if (this.rulesCache.has(sourceTemplate)) {
       const cached = this.rulesCache.get(sourceTemplate)!;
       const templatesRoot = await TemplatesManagerService.findTemplatesPath(this.workspaceRoot);
+      if (!templatesRoot) {
+        return { rulesConfig: null, templatePath: null };
+      }
       const templatePath = path.join(templatesRoot, sourceTemplate);
       return { rulesConfig: cached, templatePath };
     }
@@ -201,6 +207,9 @@ export class RuleFinder {
     try {
       // Use TemplatesManagerService to find the templates directory
       const templatesRoot = await TemplatesManagerService.findTemplatesPath(this.workspaceRoot);
+      if (!templatesRoot) {
+        return { rulesConfig: null, templatePath: null };
+      }
       const templatePath = path.join(templatesRoot, sourceTemplate);
       const rulesPath = path.join(templatePath, 'RULES.yaml');
 

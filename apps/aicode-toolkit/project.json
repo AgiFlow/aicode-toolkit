@@ -13,7 +13,7 @@
       }
     },
     "test": {
-      "executor": "@nx/vite:test",
+      "executor": "@nx/vitest:test",
       "outputs": ["{workspaceRoot}/coverage/apps/aicode-toolkit"],
       "options": {
         "reportsDirectory": "../../coverage/apps/aicode-toolkit"

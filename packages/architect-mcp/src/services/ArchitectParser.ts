@@ -67,13 +67,12 @@ export class ArchitectParser {
     if (globalPath) {
       resolvedPath = globalPath;
     } else {
-      try {
-        const templatesRoot = await TemplatesManagerService.findTemplatesPath(this.workspaceRoot);
-        resolvedPath = path.join(templatesRoot, 'architect.yaml');
-      } catch {
+      const templatesRoot = await TemplatesManagerService.findTemplatesPath(this.workspaceRoot);
+      if (!templatesRoot) {
         // No templates directory found, return null
         return null;
       }
+      resolvedPath = path.join(templatesRoot, 'architect.yaml');
     }
     // Check cache first
     if (this.configCache.has(resolvedPath)) {
