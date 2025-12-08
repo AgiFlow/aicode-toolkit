@@ -87,13 +87,19 @@ export const addPatternCommand = new Command('add-pattern')
         });
 
         // Parse and display result
+        const firstContent = result.content[0];
+        if (firstContent.type !== 'text') {
+          print.error('❌ Error: Unexpected response type');
+          process.exit(1);
+        }
+
         if (result.isError) {
-          const errorData = JSON.parse(result.content[0].text as string);
+          const errorData = JSON.parse(firstContent.text);
           print.error('❌ Error:', errorData.error);
           process.exit(1);
         }
 
-        const successData = JSON.parse(result.content[0].text as string);
+        const successData = JSON.parse(firstContent.text);
         print.info(`✅ ${successData.message}`);
         print.info(`📄 File: ${successData.file}`);
 

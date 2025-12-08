@@ -80,6 +80,19 @@ export class AddDesignPatternTool implements Tool<AddDesignPatternToolInput> {
     try {
       // Get templates root
       const templatesRoot = await TemplatesManagerService.findTemplatesPath();
+      if (!templatesRoot) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Templates directory not found',
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
       const templatePath = path.join(templatesRoot, input.template_name);
 
       // Check if template exists

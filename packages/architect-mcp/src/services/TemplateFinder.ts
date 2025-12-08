@@ -80,6 +80,9 @@ export class TemplateFinder {
 
       // Get templates root
       const templatesRoot = await TemplatesManagerService.findTemplatesPath(this.workspaceRoot);
+      if (!templatesRoot) {
+        return null;
+      }
 
       // Map to template path - try to find architect.yaml
       const templatePath = path.join(templatesRoot, projectConfig.sourceTemplate);

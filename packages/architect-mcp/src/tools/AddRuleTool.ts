@@ -131,6 +131,19 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
 
       // Get templates root
       const templatesRoot = await TemplatesManagerService.findTemplatesPath();
+      if (!templatesRoot) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Templates directory not found',
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
 
       let rulesPath: string;
       let templateRef: string;
