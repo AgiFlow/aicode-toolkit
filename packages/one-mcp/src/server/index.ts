@@ -16,12 +16,15 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { ConfigFetcherService } from '../services/ConfigFetcherService';
 import { McpClientManagerService } from '../services/McpClientManagerService';
 import { SkillService } from '../services/SkillService';
 import { DescribeToolsTool } from '../tools/DescribeToolsTool';
 import { UseToolTool } from '../tools/UseToolTool';
+import { parseToolName } from '../utils';
 
 /**
  * Configuration options for creating an MCP server instance
@@ -44,6 +47,7 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
     {
       capabilities: {
         tools: {},
+        prompts: {},
       },
     }
   );
@@ -149,6 +153,105 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
     }
 
     throw new Error(`Unknown tool: ${name}`);
+  });
+
+  // Prompt handlers - aggregate prompts from all connected MCP servers
+  server.setRequestHandler(ListPromptsRequestSchema, async () => {
+    const clients = clientManager.getAllClients();
+
+    // Collect all prompts from all servers to detect name clashes
+    const promptToServers = new Map<string, string[]>();
+    const serverPromptsMap = new Map<string, Array<{ name: string; description?: string; arguments?: Array<{ name: string; description?: string; required?: boolean }> }>>();
+
+    await Promise.all(
+      clients.map(async (client) => {
+        try {
+          const prompts = await client.listPrompts();
+          serverPromptsMap.set(client.serverName, prompts);
+
+          // Track which servers have each prompt for clash detection
+          for (const prompt of prompts) {
+            if (!promptToServers.has(prompt.name)) {
+              promptToServers.set(prompt.name, []);
+            }
+            promptToServers.get(prompt.name)!.push(client.serverName);
+          }
+        } catch (error) {
+          console.error(`Failed to list prompts from ${client.serverName}:`, error);
+          serverPromptsMap.set(client.serverName, []);
+        }
+      })
+    );
+
+    // Build aggregated prompt list with server prefix when there are clashes
+    const aggregatedPrompts: Array<{ name: string; description?: string; arguments?: Array<{ name: string; description?: string; required?: boolean }> }> = [];
+
+    for (const client of clients) {
+      const prompts = serverPromptsMap.get(client.serverName) || [];
+      for (const prompt of prompts) {
+        const servers = promptToServers.get(prompt.name) || [];
+        const hasClash = servers.length > 1;
+
+        aggregatedPrompts.push({
+          name: hasClash ? `${client.serverName}__${prompt.name}` : prompt.name,
+          description: prompt.description,
+          arguments: prompt.arguments,
+        });
+      }
+    }
+
+    return { prompts: aggregatedPrompts };
+  });
+
+  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+    const { name, arguments: args } = request.params;
+    const clients = clientManager.getAllClients();
+
+    // Parse the prompt name to determine target server
+    const { serverName, actualToolName: actualPromptName } = parseToolName(name);
+
+    if (serverName) {
+      // Prefixed format: {serverName}__{promptName} - call specific server
+      const client = clientManager.getClient(serverName);
+      if (!client) {
+        throw new Error(`Server not found: ${serverName}`);
+      }
+      return await client.getPrompt(actualPromptName, args);
+    }
+
+    // Plain prompt name - find which server(s) have this prompt
+    const serversWithPrompt: string[] = [];
+
+    await Promise.all(
+      clients.map(async (client) => {
+        try {
+          const prompts = await client.listPrompts();
+          if (prompts.some(p => p.name === name)) {
+            serversWithPrompt.push(client.serverName);
+          }
+        } catch (error) {
+          console.error(`Failed to list prompts from ${client.serverName}:`, error);
+        }
+      })
+    );
+
+    if (serversWithPrompt.length === 0) {
+      throw new Error(`Prompt not found: ${name}`);
+    }
+
+    if (serversWithPrompt.length > 1) {
+      throw new Error(
+        `Prompt "${name}" exists on multiple servers: ${serversWithPrompt.join(', ')}. ` +
+        `Use the prefixed format (e.g., "${serversWithPrompt[0]}__${name}") to specify which server to use.`
+      );
+    }
+
+    // Unique prompt - call the single server that has it
+    const client = clientManager.getClient(serversWithPrompt[0]);
+    if (!client) {
+      throw new Error(`Server not found: ${serversWithPrompt[0]}`);
+    }
+    return await client.getPrompt(name, args);
   });
 
   return server;
