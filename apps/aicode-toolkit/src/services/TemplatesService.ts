@@ -17,8 +17,15 @@
  */
 
 import path from 'node:path';
-import { messages, print, pathExists, ensureDir, writeFile } from '@agiflowai/aicode-utils';
-import { cloneSubdirectory, fetchGitHubDirectoryContents } from '../utils/git';
+import {
+  messages,
+  print,
+  pathExists,
+  ensureDir,
+  writeFile,
+  cloneSubdirectory,
+  fetchGitHubDirectoryContents,
+} from '@agiflowai/aicode-utils';
 
 export interface TemplateRepoConfig {
   owner: string;

@@ -49,12 +49,3 @@ export { SseTransportHandler } from './transports/sse';
 export { StdioTransportHandler } from './transports/stdio';
 // Types
 export type * from './types/index';
-
-// Utils
-export {
-  cloneRepository,
-  cloneSubdirectory,
-  fetchGitHubDirectoryContents,
-  findWorkspaceRoot,
-  parseGitHubUrl,
-} from './utils/index';

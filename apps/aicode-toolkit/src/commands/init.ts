@@ -5,6 +5,7 @@ import {
   print,
   TemplatesManagerService,
   type ToolkitConfig,
+  findWorkspaceRoot,
 } from '@agiflowai/aicode-utils';
 import { confirm, input, select } from '@inquirer/prompts';
 import { Command } from 'commander';
@@ -21,7 +22,7 @@ import {
   TemplateSelectionService,
 } from '../services';
 import { type InitMachineInput, initMachine } from '../states/init-machine';
-import { displayBanner, findWorkspaceRoot } from '../utils';
+import { displayBanner } from '../utils';
 
 const DEFAULT_TEMPLATE_REPO = {
   owner: 'AgiFlow',

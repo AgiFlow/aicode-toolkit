@@ -16,13 +16,4 @@ export {
   TemplatesService,
 } from './services/index';
 // Utils
-export {
-  cloneRepository,
-  cloneSubdirectory,
-  displayBanner,
-  displayCompactBanner,
-  fetchGitHubDirectoryContents,
-  findWorkspaceRoot,
-  gitInit,
-  parseGitHubUrl,
-} from './utils/index';
+export { displayBanner, displayCompactBanner } from './utils/index';

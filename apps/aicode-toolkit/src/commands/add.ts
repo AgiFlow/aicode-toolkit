@@ -7,9 +7,11 @@ import {
   TemplatesManagerService,
   pathExists,
   ensureDir,
+  cloneRepository,
+  cloneSubdirectory,
+  parseGitHubUrl,
 } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
-import { cloneRepository, cloneSubdirectory, parseGitHubUrl } from '../utils';
 
 /**
  * Add command - add a template to templates folder

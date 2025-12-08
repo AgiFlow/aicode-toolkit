@@ -18,8 +18,16 @@
  * - Direct tool implementation (services should be tool-agnostic)
  */
 
-import { messages, ProjectType, mkdir, remove } from '@agiflowai/aicode-utils';
-import { cloneRepository, cloneSubdirectory, gitInit, parseGitHubUrl } from '../utils';
+import {
+  messages,
+  ProjectType,
+  mkdir,
+  remove,
+  cloneRepository,
+  cloneSubdirectory,
+  gitInit,
+  parseGitHubUrl,
+} from '@agiflowai/aicode-utils';
 
 // Reserved Windows/system names that should not be used
 export const RESERVED_PROJECT_NAMES = [
