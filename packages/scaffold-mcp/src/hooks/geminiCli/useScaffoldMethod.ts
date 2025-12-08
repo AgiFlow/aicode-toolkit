@@ -102,6 +102,12 @@ export class UseScaffoldMethodHook {
 
       // Get templates path and create tool
       const templatesPath = await TemplatesManagerService.findTemplatesPath();
+      if (!templatesPath) {
+        return {
+          decision: DECISION_SKIP,
+          message: 'Templates folder not found - skipping scaffold method check',
+        };
+      }
       const tool = new ListScaffoldingMethodsTool(templatesPath, false);
 
       // Execute the tool to get scaffolding methods
