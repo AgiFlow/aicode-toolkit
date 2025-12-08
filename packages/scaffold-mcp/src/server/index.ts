@@ -37,6 +37,13 @@ export function createServer(options: ServerOptions = {}) {
   // Find templates folder by searching upwards from current directory
   const templatesPath = TemplatesManagerService.findTemplatesPathSync();
 
+  if (!templatesPath) {
+    throw new Error(
+      'Templates folder not found. Please create a "templates" folder in your workspace root, ' +
+      'or specify "templatesPath" in toolkit.yaml to point to your templates directory.',
+    );
+  }
+
   // Initialize tools (conditional based on project type)
   const listBoilerplatesTool = !isMonolith ? new ListBoilerplatesTool(templatesPath, isMonolith) : null;
   const useBoilerplateTool = !isMonolith ? new UseBoilerplateTool(templatesPath, isMonolith) : null;
