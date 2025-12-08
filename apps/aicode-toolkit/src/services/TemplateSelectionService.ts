@@ -27,8 +27,9 @@ import {
   readdir,
   readFile,
   writeFile,
+  cloneSubdirectory,
+  fetchGitHubDirectoryContents,
 } from '@agiflowai/aicode-utils';
-import { cloneSubdirectory, fetchGitHubDirectoryContents } from '../utils/git';
 import type { TemplateRepoConfig } from './TemplatesService';
 
 export interface TemplateInfo {

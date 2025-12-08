@@ -13,13 +13,42 @@
  * - Test behavior, not implementation
  */
 
+import type { Dirent } from 'node:fs';
 import os from 'node:os';
 import * as fsHelpers from '@agiflowai/aicode-utils';
 import { ProjectType } from '@agiflowai/aicode-utils';
+import type { GitHubDirectoryEntry } from '@agiflowai/aicode-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TemplateSelectionService } from '../../src/services/TemplateSelectionService';
 
-// Mock dependencies
+/** Repository configuration for downloading templates */
+interface RepoConfig {
+  owner: string;
+  repo: string;
+  branch: string;
+  path: string;
+}
+
+/**
+ * Creates a mock Dirent object for testing readdir results.
+ * Only implements the properties used by TemplateSelectionService.
+ */
+function createMockDirent(name: string, isDir: boolean): Dirent {
+  return {
+    name,
+    isDirectory: () => isDir,
+    isFile: () => !isDir,
+    isBlockDevice: () => false,
+    isCharacterDevice: () => false,
+    isSymbolicLink: () => false,
+    isFIFO: () => false,
+    isSocket: () => false,
+    path: '',
+    parentPath: '',
+  };
+}
+
+// Mock @agiflowai/aicode-utils including fs functions, print utilities, and git functions
 vi.mock('@agiflowai/aicode-utils', async () => {
   const actual = await vi.importActual('@agiflowai/aicode-utils');
   return {
@@ -31,6 +60,8 @@ vi.mock('@agiflowai/aicode-utils', async () => {
     readdir: vi.fn(),
     copy: vi.fn(),
     remove: vi.fn(),
+    cloneSubdirectory: vi.fn(),
+    fetchGitHubDirectoryContents: vi.fn(),
     print: {
       info: vi.fn(),
       success: vi.fn(),
@@ -40,9 +71,6 @@ vi.mock('@agiflowai/aicode-utils', async () => {
     },
   };
 });
-vi.mock('../../src/utils/git');
-
-const { cloneSubdirectory, fetchGitHubDirectoryContents } = await import('../../src/utils/git');
 
 describe('TemplateSelectionService', () => {
   let service: TemplateSelectionService;
@@ -61,7 +89,7 @@ describe('TemplateSelectionService', () => {
   });
 
   describe('downloadTemplatesToTmp', () => {
-    const repoConfig = {
+    const repoConfig: RepoConfig = {
       owner: 'AgiFlow',
       repo: 'aicode-toolkit',
       branch: 'main',
@@ -69,31 +97,31 @@ describe('TemplateSelectionService', () => {
     };
 
     it('should download templates to tmp directory', async () => {
-      const mockContents = [
+      const mockContents: GitHubDirectoryEntry[] = [
         { name: 'nextjs-15', type: 'dir', path: 'templates/nextjs-15' },
         { name: 'typescript-mcp', type: 'dir', path: 'templates/typescript-mcp' },
         { name: 'README.md', type: 'file', path: 'templates/README.md' },
       ];
 
-      vi.mocked(fetchGitHubDirectoryContents).mockResolvedValue(mockContents as any);
+      vi.mocked(fsHelpers.fetchGitHubDirectoryContents).mockResolvedValue(mockContents);
       vi.mocked(fsHelpers.ensureDir).mockResolvedValue(undefined);
-      vi.mocked(cloneSubdirectory).mockResolvedValue(undefined);
+      vi.mocked(fsHelpers.cloneSubdirectory).mockResolvedValue(undefined);
 
       const result = await service.downloadTemplatesToTmp(repoConfig);
 
       expect(result).toBe(service.getTmpDir());
-      expect(fetchGitHubDirectoryContents).toHaveBeenCalledWith(
+      expect(fsHelpers.fetchGitHubDirectoryContents).toHaveBeenCalledWith(
         'AgiFlow',
         'aicode-toolkit',
         'templates',
         'main',
       );
       // Should only clone directories (not files)
-      expect(cloneSubdirectory).toHaveBeenCalledTimes(2);
+      expect(fsHelpers.cloneSubdirectory).toHaveBeenCalledTimes(2);
     });
 
     it('should throw error if no templates found', async () => {
-      vi.mocked(fetchGitHubDirectoryContents).mockResolvedValue([]);
+      vi.mocked(fsHelpers.fetchGitHubDirectoryContents).mockResolvedValue([]);
       vi.mocked(fsHelpers.ensureDir).mockResolvedValue(undefined);
 
       await expect(service.downloadTemplatesToTmp(repoConfig)).rejects.toThrow(
@@ -102,7 +130,9 @@ describe('TemplateSelectionService', () => {
     });
 
     it('should cleanup on download error', async () => {
-      vi.mocked(fetchGitHubDirectoryContents).mockRejectedValue(new Error('Network error'));
+      vi.mocked(fsHelpers.fetchGitHubDirectoryContents).mockRejectedValue(
+        new Error('Network error'),
+      );
       vi.mocked(fsHelpers.ensureDir).mockResolvedValue(undefined);
       vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
       vi.mocked(fsHelpers.remove).mockResolvedValue(undefined);
@@ -115,13 +145,13 @@ describe('TemplateSelectionService', () => {
 
   describe('listTemplates', () => {
     it('should list templates with descriptions', async () => {
-      const mockEntries = [
-        { name: 'nextjs-15', isDirectory: () => true },
-        { name: 'typescript-mcp', isDirectory: () => true },
-        { name: 'README.md', isDirectory: () => false },
+      const mockEntries: Dirent[] = [
+        createMockDirent('nextjs-15', true),
+        createMockDirent('typescript-mcp', true),
+        createMockDirent('README.md', false),
       ];
 
-      vi.mocked(fsHelpers.readdir).mockResolvedValue(mockEntries as any);
+      vi.mocked(fsHelpers.readdir).mockResolvedValue(mockEntries);
       vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
 
       const templates = await service.listTemplates();
@@ -132,9 +162,9 @@ describe('TemplateSelectionService', () => {
     });
 
     it('should read descriptions from scaffold.yaml', async () => {
-      const mockEntries = [{ name: 'nextjs-15', isDirectory: () => true }];
+      const mockEntries: Dirent[] = [createMockDirent('nextjs-15', true)];
 
-      vi.mocked(fsHelpers.readdir).mockResolvedValue(mockEntries as any);
+      vi.mocked(fsHelpers.readdir).mockResolvedValue(mockEntries);
       vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
       vi.mocked(fsHelpers.readFile).mockResolvedValue('description: Next.js 15 template');
 
@@ -186,7 +216,6 @@ describe('TemplateSelectionService', () => {
 
     it('should skip templates that already exist', async () => {
       const templateNames = ['nextjs-15'];
-      const _tmpDir = service.getTmpDir();
 
       vi.mocked(fsHelpers.ensureDir).mockResolvedValue(undefined);
       vi.mocked(fsHelpers.pathExists)

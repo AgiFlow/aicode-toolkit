@@ -14,18 +14,12 @@
  */
 
 import path from 'node:path';
-import * as fsHelpers from '@agiflowai/aicode-utils';
+import * as aicodeUtils from '@agiflowai/aicode-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TemplateRepoConfig } from '../../src/services/TemplatesService';
 import { TemplatesService } from '../../src/services/TemplatesService';
 
-// Mock dependencies
-vi.mock('../../src/utils/git', () => ({
-  cloneSubdirectory: vi.fn(),
-  fetchGitHubDirectoryContents: vi.fn(),
-}));
-
-// Mock @agiflowai/aicode-utils including fs functions and print utilities
+// Mock @agiflowai/aicode-utils including fs functions, print utilities, and git functions
 vi.mock('@agiflowai/aicode-utils', async () => {
   const actual = await vi.importActual('@agiflowai/aicode-utils');
   return {
@@ -33,6 +27,8 @@ vi.mock('@agiflowai/aicode-utils', async () => {
     pathExists: vi.fn(),
     ensureDir: vi.fn(),
     writeFile: vi.fn(),
+    cloneSubdirectory: vi.fn(),
+    fetchGitHubDirectoryContents: vi.fn(),
     print: {
       info: vi.fn(),
       success: vi.fn(),
@@ -61,13 +57,13 @@ describe('TemplatesService', () => {
   describe('initializeTemplatesFolder', () => {
     it('should create templates directory and README', async () => {
       const templatesPath = '/path/to/templates';
-      vi.mocked(fsHelpers.ensureDir).mockResolvedValue(undefined);
-      vi.mocked(fsHelpers.writeFile).mockResolvedValue(undefined);
+      vi.mocked(aicodeUtils.ensureDir).mockResolvedValue(undefined);
+      vi.mocked(aicodeUtils.writeFile).mockResolvedValue(undefined);
 
       await service.initializeTemplatesFolder(templatesPath);
 
-      expect(fsHelpers.ensureDir).toHaveBeenCalledWith(templatesPath);
-      expect(fsHelpers.writeFile).toHaveBeenCalledWith(
+      expect(aicodeUtils.ensureDir).toHaveBeenCalledWith(templatesPath);
+      expect(aicodeUtils.writeFile).toHaveBeenCalledWith(
         path.join(templatesPath, 'README.md'),
         expect.stringContaining('# Templates'),
       );
@@ -75,12 +71,12 @@ describe('TemplatesService', () => {
 
     it('should create README with proper content', async () => {
       const templatesPath = '/path/to/templates';
-      vi.mocked(fsHelpers.ensureDir).mockResolvedValue(undefined);
-      vi.mocked(fsHelpers.writeFile).mockResolvedValue(undefined);
+      vi.mocked(aicodeUtils.ensureDir).mockResolvedValue(undefined);
+      vi.mocked(aicodeUtils.writeFile).mockResolvedValue(undefined);
 
       await service.initializeTemplatesFolder(templatesPath);
 
-      const writeFileCall = vi.mocked(fsHelpers.writeFile).mock.calls[0];
+      const writeFileCall = vi.mocked(aicodeUtils.writeFile).mock.calls[0];
       const readmeContent = writeFileCall[1] as string;
 
       expect(readmeContent).toContain('# Templates');
@@ -101,13 +97,12 @@ describe('TemplatesService', () => {
 
     it('should handle empty templates directory', async () => {
       const templatesPath = '/path/to/templates';
-      const { fetchGitHubDirectoryContents } = await import('../../src/utils/git');
 
-      vi.mocked(fetchGitHubDirectoryContents).mockResolvedValue([]);
+      vi.mocked(aicodeUtils.fetchGitHubDirectoryContents).mockResolvedValue([]);
 
       await service.downloadTemplates(templatesPath, mockRepoConfig);
 
-      expect(fetchGitHubDirectoryContents).toHaveBeenCalledWith(
+      expect(aicodeUtils.fetchGitHubDirectoryContents).toHaveBeenCalledWith(
         mockRepoConfig.owner,
         mockRepoConfig.repo,
         mockRepoConfig.path,
@@ -117,23 +112,20 @@ describe('TemplatesService', () => {
 
     it('should download new templates', async () => {
       const templatesPath = '/path/to/templates';
-      const { fetchGitHubDirectoryContents, cloneSubdirectory } = await import(
-        '../../src/utils/git'
-      );
 
       const mockTemplates = [
         { name: 'nextjs-15', type: 'dir', path: 'templates/nextjs-15' },
         { name: 'react-vite', type: 'dir', path: 'templates/react-vite' },
       ];
 
-      vi.mocked(fetchGitHubDirectoryContents).mockResolvedValue(mockTemplates);
-      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
-      vi.mocked(cloneSubdirectory).mockResolvedValue(undefined);
+      vi.mocked(aicodeUtils.fetchGitHubDirectoryContents).mockResolvedValue(mockTemplates);
+      vi.mocked(aicodeUtils.pathExists).mockResolvedValue(false);
+      vi.mocked(aicodeUtils.cloneSubdirectory).mockResolvedValue(undefined);
 
       await service.downloadTemplates(templatesPath, mockRepoConfig);
 
-      expect(cloneSubdirectory).toHaveBeenCalledTimes(2);
-      expect(cloneSubdirectory).toHaveBeenCalledWith(
+      expect(aicodeUtils.cloneSubdirectory).toHaveBeenCalledTimes(2);
+      expect(aicodeUtils.cloneSubdirectory).toHaveBeenCalledWith(
         `https://github.com/${mockRepoConfig.owner}/${mockRepoConfig.repo}.git`,
         mockRepoConfig.branch,
         mockTemplates[0].path,
@@ -143,27 +135,24 @@ describe('TemplatesService', () => {
 
     it('should skip existing templates', async () => {
       const templatesPath = '/path/to/templates';
-      const { fetchGitHubDirectoryContents, cloneSubdirectory } = await import(
-        '../../src/utils/git'
-      );
 
       const mockTemplates = [
         { name: 'nextjs-15', type: 'dir', path: 'templates/nextjs-15' },
         { name: 'react-vite', type: 'dir', path: 'templates/react-vite' },
       ];
 
-      vi.mocked(fetchGitHubDirectoryContents).mockResolvedValue(mockTemplates);
+      vi.mocked(aicodeUtils.fetchGitHubDirectoryContents).mockResolvedValue(mockTemplates);
       // First template exists, second doesn't
-      vi.mocked(fsHelpers.pathExists).mockImplementation((pathToCheck) =>
+      vi.mocked(aicodeUtils.pathExists).mockImplementation((pathToCheck) =>
         Promise.resolve(pathToCheck === path.join(templatesPath, 'nextjs-15')),
       );
-      vi.mocked(cloneSubdirectory).mockResolvedValue(undefined);
+      vi.mocked(aicodeUtils.cloneSubdirectory).mockResolvedValue(undefined);
 
       await service.downloadTemplates(templatesPath, mockRepoConfig);
 
       // Should only clone the second template
-      expect(cloneSubdirectory).toHaveBeenCalledTimes(1);
-      expect(cloneSubdirectory).toHaveBeenCalledWith(
+      expect(aicodeUtils.cloneSubdirectory).toHaveBeenCalledTimes(1);
+      expect(aicodeUtils.cloneSubdirectory).toHaveBeenCalledWith(
         `https://github.com/${mockRepoConfig.owner}/${mockRepoConfig.repo}.git`,
         mockRepoConfig.branch,
         mockTemplates[1].path,
@@ -173,9 +162,6 @@ describe('TemplatesService', () => {
 
     it('should filter out non-directory items', async () => {
       const templatesPath = '/path/to/templates';
-      const { fetchGitHubDirectoryContents, cloneSubdirectory } = await import(
-        '../../src/utils/git'
-      );
 
       const mockContents = [
         { name: 'nextjs-15', type: 'dir', path: 'templates/nextjs-15' },
@@ -183,21 +169,22 @@ describe('TemplatesService', () => {
         { name: 'react-vite', type: 'dir', path: 'templates/react-vite' },
       ];
 
-      vi.mocked(fetchGitHubDirectoryContents).mockResolvedValue(mockContents);
-      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
-      vi.mocked(cloneSubdirectory).mockResolvedValue(undefined);
+      vi.mocked(aicodeUtils.fetchGitHubDirectoryContents).mockResolvedValue(mockContents);
+      vi.mocked(aicodeUtils.pathExists).mockResolvedValue(false);
+      vi.mocked(aicodeUtils.cloneSubdirectory).mockResolvedValue(undefined);
 
       await service.downloadTemplates(templatesPath, mockRepoConfig);
 
       // Should only clone directories (2 templates, not the README file)
-      expect(cloneSubdirectory).toHaveBeenCalledTimes(2);
+      expect(aicodeUtils.cloneSubdirectory).toHaveBeenCalledTimes(2);
     });
 
     it('should throw error on download failure', async () => {
       const templatesPath = '/path/to/templates';
-      const { fetchGitHubDirectoryContents } = await import('../../src/utils/git');
 
-      vi.mocked(fetchGitHubDirectoryContents).mockRejectedValue(new Error('Network error'));
+      vi.mocked(aicodeUtils.fetchGitHubDirectoryContents).mockRejectedValue(
+        new Error('Network error'),
+      );
 
       await expect(service.downloadTemplates(templatesPath, mockRepoConfig)).rejects.toThrow(
         'Failed to download templates: Network error',

@@ -15,8 +15,47 @@
  * - Re-exporting types (types should come from '../types')
  */
 
-export * from './fsHelpers';
-export * from './generateStableId';
-export * from './logger';
-export * from './print';
-export * from './projectTypeDetector';
+// File system helpers
+export {
+  pathExists,
+  pathExistsSync,
+  readFile,
+  readFileSync,
+  writeFile,
+  remove,
+  move,
+  copy,
+  ensureDir,
+  readdir,
+  readJson,
+  readJsonSync,
+  mkdir,
+  stat,
+  statSync,
+  accessSync,
+  mkdirSync,
+  writeFileSync,
+} from './fsHelpers';
+
+// ID generation
+export { generateStableId } from './generateStableId';
+
+// Git utilities
+export {
+  gitInit,
+  findWorkspaceRoot,
+  parseGitHubUrl,
+  cloneSubdirectory,
+  cloneRepository,
+  fetchGitHubDirectoryContents,
+} from './git';
+export type { ParsedGitHubUrl, GitHubDirectoryEntry } from './git';
+
+// Logging
+export { logger, log } from './logger';
+
+// Printing utilities
+export { print, icons, messages, sections } from './print';
+
+// Project type detection
+export { detectProjectType } from './projectTypeDetector';
