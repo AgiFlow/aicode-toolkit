@@ -192,6 +192,69 @@ filesystem:
   read_file, list_directory, search_files
 ```
 
+### Skills
+
+Skills are reusable prompt templates that provide specialized capabilities to AI agents. They are markdown files with YAML frontmatter that get loaded and made available through the `describe_tools` output.
+
+#### Configuration
+
+Enable skills by adding a `skills` section to your config:
+
+```yaml
+mcpServers:
+  # ... your MCP servers
+
+skills:
+  paths:
+    - ".claude/skills"           # Relative to config file
+    - "/absolute/path/to/skills" # Absolute paths also supported
+```
+
+#### Skill File Structure
+
+Skills can be organized in two ways:
+
+**Flat structure:**
+```
+.claude/skills/
+├── pdf/
+│   └── SKILL.md
+└── data-analysis/
+    └── SKILL.md
+```
+
+**Skill file format (`SKILL.md`):**
+```markdown
+---
+name: pdf
+description: Create and manipulate PDF documents
+---
+
+# PDF Skill
+
+This skill helps you work with PDF files...
+
+## Usage
+...
+```
+
+#### Required Frontmatter
+
+Each `SKILL.md` must have:
+- `name`: Unique identifier for the skill
+- `description`: Brief description shown to AI agents
+
+#### How Skills Work
+
+1. Skills are discovered from configured paths at startup
+2. Available skills are listed in the `describe_tools` output
+3. AI agents can invoke skills by name (e.g., `skill: "pdf"`)
+4. The skill's content expands as a prompt providing specialized instructions
+
+#### Precedence
+
+When multiple paths are configured, skills from earlier paths take precedence over skills with the same name from later paths.
+
 ---
 
 ## MCP Tools
