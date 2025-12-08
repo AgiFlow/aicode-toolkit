@@ -458,7 +458,7 @@ Instead of loading all tools upfront, agents discover tools on-demand. See [@agi
 4. Commit using [conventional commits](https://www.conventionalcommits.org)
 5. Open a Pull Request
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
+See [CONTRIBUTING.md](./docs/CONTRIBUTING.md) for detailed guidelines.
 
 ---
 
