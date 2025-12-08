@@ -12,7 +12,7 @@
       }
     },
     "test": {
-      "executor": "@nx/vite:test",
+      "executor": "@nx/vitest:test",
       "outputs": ["{workspaceRoot}/coverage/packages/scaffold-mcp"],
       "options": {
         "reportsDirectory": "../../coverage/packages/scaffold-mcp"

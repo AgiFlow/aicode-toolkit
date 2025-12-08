@@ -43,7 +43,7 @@
     "@types/node": "^22.0.0",
     "tsdown": "^0.16.4",
     "typescript": "5.9.3",
-    "vitest": "^2.1.8"
+    "vitest": "4.0.15"
   },
   "type": "module",
   "exports": {
