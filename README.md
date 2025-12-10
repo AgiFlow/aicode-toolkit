@@ -167,7 +167,7 @@ NOTE: This package hasn't been integrated to [aicode-toolkit](./apps/aicode-tool
 ---
 
 ## Workflow
-We suggest to play your task in advanced. Then simply give the task to agent to run autonomously. In copilot mode, you can prompt the agent using natural language or troubleshoot with the packages' cli commands.  
+We suggest to plan your task in advanced. Then simply give the task to agent to run autonomously. In copilot mode, you can prompt the agent using natural language or troubleshoot with the packages' cli commands.  
 
 ### Creating Projects
 
@@ -272,7 +272,9 @@ patterns:
 ```
 
 ### RULES.yaml
-There is no guarantee the AI follow your guidance. This file defines enforceable rules that the AI must, must not or should follow. The toolkit provide capability for a different AI agent to do code review and enforce the rules and not being affected by noisy context. First, we extract the rules based on the file pattern; then we give the file diff plus rules to another agent to identify violation. Anything in must_do or must_not_do rules violations we explicitly ask the agent to fix (and other agent also provide fixing recommendation).  
+There is no guarantee the AI follow your guidance. This file defines enforceable rules that the AI must, must not or should follow. The toolkit provide capability for a different AI agent to do code review and enforce the rules and not being affected by noisy context. 
+
+First, we extract the rules based on the file pattern; then we give the file diff plus rules to another agent to identify violation. Anything in must_do or must_not_do rules violations we explicitly ask the agent to fix (and other agent also provide fixing recommendation). You can inherit global RULES.yaml file in `templates/RULES.yaml` for maximum reusability.  
 
 ```yaml
 version: '1.0'
