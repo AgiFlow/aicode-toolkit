@@ -20,9 +20,9 @@
  */
 
 import { Command } from 'commander';
-import { createServer } from '../server/index.js';
-import { VitejsService } from '../services/VitejsService.js';
-import { StdioTransportHandler } from '../transports/stdio.js';
+import { createServer } from '../server';
+import { VitejsService } from '../services';
+import { StdioTransportHandler } from '../transports/stdio';
 
 /**
  * Start MCP server with given transport handler

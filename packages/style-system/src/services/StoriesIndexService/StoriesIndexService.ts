@@ -20,41 +20,32 @@
 import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import { log, TemplatesManagerService } from '@agiflowai/aicode-utils';
-import { parse } from '@babel/parser';
-// Import @babel/traverse with proper ESM/CJS compatibility
-import traverseModule from '@babel/traverse';
-import type { NodePath } from '@babel/traverse';
-import type * as t from '@babel/types';
+import { loadCsf } from '@storybook/csf-tools';
 import { glob } from 'glob';
+import type { ComponentInfo, StoryMeta } from './types';
 
-const traverse = (traverseModule as any).default || traverseModule;
-
-interface StoryMeta {
-  title: string;
-  component?: any;
-  tags?: string[];
-  parameters?: Record<string, any>;
-  argTypes?: Record<string, any>;
-}
-
-function isValidStoryMeta(meta: Partial<StoryMeta> | null): meta is StoryMeta {
-  return meta !== null && typeof meta.title === 'string' && meta.title.length > 0;
-}
-
-export interface ComponentInfo {
-  title: string;
-  filePath: string;
-  fileHash: string;
-  tags: string[];
-  stories: string[];
-  meta: StoryMeta;
-}
-
+/**
+ * StoriesIndexService handles indexing and querying Storybook story files.
+ *
+ * Provides methods for scanning story files, extracting metadata using AST parsing,
+ * and querying components by tags, title, or name.
+ *
+ * @example
+ * ```typescript
+ * const service = new StoriesIndexService();
+ * await service.initialize();
+ * const components = service.getAllComponents();
+ * const button = service.findComponentByName('Button');
+ * ```
+ */
 export class StoriesIndexService {
   private componentIndex: Map<string, ComponentInfo> = new Map();
   private monorepoRoot: string;
   private initialized = false;
 
+  /**
+   * Creates a new StoriesIndexService instance
+   */
   constructor() {
     this.monorepoRoot = TemplatesManagerService.getWorkspaceRootSync();
   }
@@ -92,109 +83,104 @@ export class StoriesIndexService {
   }
 
   /**
-   * Index a single story file using static AST parsing
+   * Index a single story file using @storybook/csf-tools.
+   *
+   * Uses the official Storybook CSF parser which handles all CSF formats
+   * including TypeScript satisfies/as expressions.
    */
   private async indexStoryFile(filePath: string): Promise<void> {
     // Read file content for hashing and parsing
     const content = await fs.readFile(filePath, 'utf-8');
     const fileHash = this.hashContent(content);
 
-    // Parse the TypeScript/TSX file
-    const ast = parse(content, {
-      sourceType: 'module',
-      plugins: ['typescript', 'jsx'],
+    // Parse the story file using @storybook/csf-tools
+    const csf = loadCsf(content, {
+      fileName: filePath,
+      makeTitle: (title) => title,
     });
 
-    let meta: Partial<StoryMeta> | null = null;
-    const stories: string[] = [];
+    // Parse the CSF to extract meta and stories
+    await csf.parse();
 
-    // Traverse the AST to find exports
-    const self = this;
-    traverse(ast, {
-      ExportDefaultDeclaration(path: NodePath<t.ExportDefaultDeclaration>) {
-        // Extract the default export (meta object)
-        const declaration = path.node.declaration;
-
-        if (declaration.type === 'ObjectExpression') {
-          meta = self.extractMetaFromObjectExpression(declaration);
-        } else if (declaration.type === 'Identifier') {
-          // Handle: const meta = {...}; export default meta;
-          // Find the variable declaration
-          const binding = path.scope.getBinding(declaration.name);
-          if (binding?.path.node.type === 'VariableDeclarator') {
-            const init = binding.path.node.init;
-            if (init?.type === 'ObjectExpression') {
-              meta = self.extractMetaFromObjectExpression(init);
-            }
-          }
-        }
-      },
-      ExportNamedDeclaration(path: NodePath<t.ExportNamedDeclaration>) {
-        // Extract named exports (stories)
-        const declaration = path.node.declaration;
-
-        if (declaration?.type === 'VariableDeclaration') {
-          for (const declarator of declaration.declarations) {
-            if (declarator.id.type === 'Identifier') {
-              stories.push(declarator.id.name);
-            }
-          }
-        } else if (declaration?.type === 'FunctionDeclaration' && declaration.id) {
-          stories.push(declaration.id.name);
-        }
-      },
-    });
-
-    // Validate meta using type guard
-    if (!isValidStoryMeta(meta)) {
-      log.warn(`[StoriesIndexService] No valid default export meta in ${filePath}`);
+    // Validate meta exists with title
+    if (!csf.meta?.title) {
+      log.warn(`[StoriesIndexService] No valid meta title in ${filePath}`);
       return;
     }
 
-    // At this point, meta is guaranteed to be StoryMeta with a title
-    const validMeta: StoryMeta = meta;
+    // Extract story names from the parsed stories (filter out undefined)
+    const stories = csf.stories.map((story) => story.name).filter((name): name is string => !!name);
 
-    // Extract tags from meta
-    const tags = validMeta.tags || [];
+    // Extract tags (ensure it's an array of strings)
+    const tags: string[] = Array.isArray(csf.meta.tags) ? csf.meta.tags.filter((t): t is string => typeof t === 'string') : [];
+
+    // Extract description from file header JSDoc or meta.parameters.docs.description
+    const description = this.extractDescription(content, csf.meta as unknown as Record<string, unknown>);
+
+    // Build StoryMeta from csf.meta
+    const meta: StoryMeta = {
+      title: csf.meta.title,
+      tags,
+    };
 
     // Create component info
     const componentInfo: ComponentInfo = {
-      title: validMeta.title,
+      title: meta.title,
       filePath,
       fileHash,
       tags,
       stories,
-      meta: validMeta,
+      meta,
+      description,
     };
 
     // Index by title
-    this.componentIndex.set(validMeta.title, componentInfo);
+    this.componentIndex.set(meta.title, componentInfo);
   }
 
   /**
-   * Extract meta object from AST ObjectExpression
+   * Extract component description from file header JSDoc or meta.parameters.docs.description.
+   *
+   * Priority:
+   * 1. meta.parameters.docs.description.component (Storybook standard)
+   * 2. File header JSDoc comment (first block comment in file)
+   *
+   * @param content - Raw file content
+   * @param meta - Parsed meta object from csf-tools
+   * @returns Description string or undefined
    */
-  private extractMetaFromObjectExpression(node: t.ObjectExpression): Partial<StoryMeta> {
-    const meta: Partial<StoryMeta> = {};
+  private extractDescription(
+    content: string,
+    meta: Record<string, unknown>,
+  ): string | undefined {
+    // Priority 1: Check meta.parameters.docs.description.component
+    const parameters = meta?.parameters as Record<string, unknown> | undefined;
+    const docs = parameters?.docs as Record<string, unknown> | undefined;
+    const descriptionObj = docs?.description as Record<string, unknown> | undefined;
+    const docsDescription = descriptionObj?.component;
+    if (typeof docsDescription === 'string' && docsDescription.trim()) {
+      return docsDescription.trim();
+    }
 
-    for (const prop of node.properties) {
-      if (prop.type !== 'ObjectProperty') continue;
+    // Priority 2: Extract file header JSDoc comment
+    // Look for the first block comment at the start of the file (after optional whitespace)
+    const jsDocMatch = content.match(/^\s*\/\*\*\s*([\s\S]*?)\s*\*\//);
+    if (jsDocMatch?.[1]) {
+      // Clean up JSDoc formatting: remove leading asterisks and normalize whitespace
+      const description = jsDocMatch[1]
+        .split('\n')
+        .map((line) => line.replace(/^\s*\*\s?/, '').trim())
+        .filter((line) => !line.startsWith('@')) // Remove JSDoc tags
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 
-      const key = prop.key.type === 'Identifier' ? prop.key.name : null;
-      if (!key) continue;
-
-      const value = prop.value;
-
-      if (key === 'title' && value.type === 'StringLiteral') {
-        meta.title = value.value;
-      } else if (key === 'tags' && value.type === 'ArrayExpression') {
-        meta.tags = value.elements
-          .filter((el): el is t.StringLiteral => el?.type === 'StringLiteral')
-          .map((el) => el.value);
+      if (description) {
+        return description;
       }
     }
 
-    return meta;
+    return undefined;
   }
 
   /**
@@ -206,6 +192,8 @@ export class StoriesIndexService {
 
   /**
    * Get all components filtered by tags
+   * @param tags - Optional array of tags to filter by
+   * @returns Array of matching components
    */
   getComponentsByTags(tags?: string[]): ComponentInfo[] {
     const components = Array.from(this.componentIndex.values());
@@ -219,6 +207,8 @@ export class StoriesIndexService {
 
   /**
    * Get component by title
+   * @param title - Exact title to match (e.g., "Components/Button")
+   * @returns Component info or undefined
    */
   getComponentByTitle(title: string): ComponentInfo | undefined {
     return this.componentIndex.get(title);
@@ -226,6 +216,8 @@ export class StoriesIndexService {
 
   /**
    * Find component by partial name match
+   * @param name - Partial name to search for
+   * @returns First matching component or undefined
    */
   findComponentByName(name: string): ComponentInfo | undefined {
     const lowerName = name.toLowerCase();
@@ -251,6 +243,8 @@ export class StoriesIndexService {
 
   /**
    * Refresh a specific file if it has changed
+   * @param filePath - Absolute path to story file
+   * @returns True if file was updated, false if unchanged
    */
   async refreshFile(filePath: string): Promise<boolean> {
     const content = await fs.readFile(filePath, 'utf-8');
@@ -271,16 +265,33 @@ export class StoriesIndexService {
 
   /**
    * Get all indexed components
+   * @returns Array of all component info objects
    */
   getAllComponents(): ComponentInfo[] {
     return Array.from(this.componentIndex.values());
   }
 
   /**
-   * Clear the index (for testing)
+   * Clear the index (useful for testing)
    */
   clear(): void {
     this.componentIndex.clear();
     this.initialized = false;
+  }
+
+  /**
+   * Get all unique tags from indexed components
+   * @returns Sorted array of unique tag names
+   */
+  getAllTags(): string[] {
+    const tagSet = new Set<string>();
+
+    for (const component of this.componentIndex.values()) {
+      for (const tag of component.tags) {
+        tagSet.add(tag);
+      }
+    }
+
+    return Array.from(tagSet).sort();
   }
 }

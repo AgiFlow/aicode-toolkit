@@ -216,52 +216,99 @@ features:
       }
       ```
   - name: react-component-pattern
-    design_pattern: React Component Pattern with Tailwind CSS
+    design_pattern: Smart/Dumb Component Pattern with Tailwind CSS
     includes:
       - src/components/**/*.tsx
       - src/app/**/_ui/components/**/*.tsx
     description: |-
       ## Pattern Overview
-      Design pattern for React components with TypeScript, Tailwind CSS, and proper composition patterns. Includes both client and server components with Storybook integration.
+      Design pattern for React components using the Smart/Dumb (Container/Presentational) pattern with TypeScript, Tailwind CSS, and Storybook integration. Components are split into smart components (logic) and dumb components (UI).
+
+      ## Component Structure
+
+      Each component directory contains three files:
+      - `index.tsx` - Smart component (handles state, logic, data fetching)
+      - `{ComponentName}View.tsx` - Dumb component (pure UI, props-driven)
+      - `{ComponentName}.stories.tsx` - Stories (render the View component)
 
       ## What TO DO ✅
 
-      - Use TypeScript with proper interface definitions
-      - Export component as default for simpler imports
+      ### Smart Component (index.tsx)
+      - Import and delegate rendering to the View component
+      - Handle business logic, state management, and data fetching
+      - Pass data and callbacks as props to the View
+      - Export as default for simpler imports
+      - Add 'use client' directive when client interactivity is needed
+
+      ### Dumb Component ({Name}View.tsx)
+      - Export props type for use in stories and smart component
+      - Keep as pure functions of their props (no hooks, no state)
+      - Use named export (not default)
       - Use cn() utility from @/lib/utils for className merging
-      - Add 'use client' directive only when client interactivity is needed
-      - Use React.forwardRef for components that need ref access
-      - Extend React.ComponentPropsWithoutRef or ComponentPropsWithRef for prop inheritance
-      - Keep components focused and single-purpose
-      - Use composition over prop drilling
-      - Create Storybook stories for component documentation
-      - Use Tailwind utility classes for styling
-      - Provide sensible prop defaults
+      - Extend React.ComponentPropsWithoutRef for prop inheritance
+
+      ### Stories ({Name}.stories.tsx)
+      - Import and render the View component, NOT the smart component
+      - Include Playground story (REQUIRED) showing all variants
+      - Include state stories (SUGGESTED): Default, Loading, Error, Empty, Disabled, etc.
+      - Use args and argTypes for interactive controls
 
       ## What NOT TO DO ❌
 
-      - Don't use inline styles unless absolutely necessary
-      - Don't forget 'use client' for components with hooks/events
-      - Don't create overly complex prop interfaces
+      - Don't put UI rendering logic in smart components
+      - Don't use hooks or state in View components
+      - Don't fetch data in View components
+      - Don't import the smart component in stories
+      - Don't use default export for View components
+      - Don't skip the Playground story
       - Don't mix server and client component logic
-      - Don't forget to forward refs when wrapping native elements
-      - Don't use CSS modules (use Tailwind instead)
-      - Don't create components without TypeScript types
-      - Don't skip Storybook stories for reusable components
 
       ## Examples
 
-      ### Client Component
+      ### Smart Component (index.tsx)
       ```typescript
       'use client';
 
+      import * as React from 'react';
+      import { ButtonView, type ButtonViewProps } from './ButtonView';
+
+      type ButtonProps = ButtonViewProps & {
+        onAsyncClick?: () => Promise<void>;
+      };
+
+      export default function Button({ onAsyncClick, onClick, ...props }: ButtonProps) {
+        const [loading, setLoading] = React.useState(false);
+
+        const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
+          if (onAsyncClick) {
+            setLoading(true);
+            await onAsyncClick();
+            setLoading(false);
+          }
+          onClick?.(e);
+        };
+
+        return <ButtonView {...props} loading={loading} onClick={handleClick} />;
+      }
+      ```
+
+      ### Dumb Component (ButtonView.tsx)
+      ```typescript
       import { cn } from '@/lib/utils';
 
-      interface ButtonProps extends React.ComponentPropsWithoutRef<'button'> {
+      export type ButtonViewProps = {
         variant?: 'primary' | 'secondary';
-      }
+        loading?: boolean;
+      } & React.ComponentPropsWithoutRef<'button'>;
 
-      export default function Button({ variant = 'primary', className, children, ...props }: ButtonProps) {
+      export function ButtonView({
+        variant = 'primary',
+        loading,
+        className,
+        children,
+        disabled,
+        ...rest
+      }: ButtonViewProps) {
         return (
           <button
             className={cn(
@@ -270,38 +317,54 @@ features:
               variant === 'secondary' && 'bg-gray-200 text-gray-900 hover:bg-gray-300',
               className
             )}
-            {...props}
+            disabled={disabled || loading}
+            {...rest}
           >
-            {children}
+            {loading ? 'Loading...' : children}
           </button>
         );
       }
       ```
 
-      ### Component with ForwardRef
+      ### Stories (Button.stories.tsx)
       ```typescript
-      'use client';
+      import type { Meta, StoryObj } from '@storybook/react';
+      import { ButtonView } from './ButtonView';
 
-      import { forwardRef } from 'react';
-      import { cn } from '@/lib/utils';
+      const meta = {
+        title: 'Components/Button',
+        component: ButtonView,
+        parameters: { layout: 'centered' },
+        tags: ['autodocs'],
+      } satisfies Meta<typeof ButtonView>;
 
-      interface InputProps extends React.ComponentPropsWithRef<'input'> {
-        error?: string;
-      }
+      export default meta;
+      type Story = StoryObj<typeof meta>;
 
-      const Input = forwardRef<HTMLInputElement, InputProps>(({ error, className, ...props }, ref) => (
-        <div>
-          <input
-            ref={ref}
-            className={cn('w-full rounded border px-3 py-2', error ? 'border-red-500' : 'border-gray-300', className)}
-            {...props}
-          />
-          {error && <p className="text-sm text-red-600">{error}</p>}
-        </div>
-      ));
+      // REQUIRED: Playground showing all variants
+      export const Playground: Story = {
+        render: () => (
+          <div className="flex flex-col gap-4">
+            <ButtonView variant="primary">Primary</ButtonView>
+            <ButtonView variant="secondary">Secondary</ButtonView>
+            <ButtonView loading>Loading</ButtonView>
+            <ButtonView disabled>Disabled</ButtonView>
+          </div>
+        ),
+      };
 
-      Input.displayName = 'Input';
-      export default Input;
+      // SUGGESTED: Individual state stories
+      export const Default: Story = {
+        args: { children: 'Click me' },
+      };
+
+      export const Loading: Story = {
+        args: { loading: true, children: 'Loading...' },
+      };
+
+      export const Disabled: Story = {
+        args: { disabled: true, children: 'Disabled' },
+      };
       ```
   - name: server-action-pattern
     design_pattern: Next.js Server Action Pattern

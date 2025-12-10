@@ -2,6 +2,7 @@
  * List App Components CLI Command
  */
 
+import { print } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 import { ListAppComponentsTool } from '../tools/ListAppComponentsTool';
 
@@ -31,9 +32,9 @@ export const listAppComponentsCommand = new Command('list-app-components')
       }
 
       const firstContent = result.content[0];
-      console.log(firstContent?.type === 'text' ? firstContent.text : '');
+      print.info(firstContent?.type === 'text' ? firstContent.text : '');
     } catch (error) {
-      console.error('Error:', error instanceof Error ? error.message : String(error));
+      print.error('Error:', error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
   });

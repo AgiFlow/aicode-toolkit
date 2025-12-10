@@ -21,18 +21,28 @@
 
 // Server
 export { createServer } from './server';
+
 // Services
 export { ComponentRendererService } from './services/ComponentRendererService';
 export { StoriesIndexService } from './services/StoriesIndexService';
-export { TailwindClassesService } from './services/TailwindClassesService';
 export { ThemeService } from './services/ThemeService';
 export { VitejsService } from './services/VitejsService';
+
+// CSS Classes services
+export {
+  BaseCSSClassesService,
+  CSSClassesServiceFactory,
+  DEFAULT_STYLE_SYSTEM_CONFIG,
+  TailwindCSSClassesService,
+} from './services/CssClasses';
+export type { CSSClassCategory, CSSClassesResult, CSSClassValue, StyleSystemConfig } from './services/CssClasses';
+
 // Tools
-export { GetTailwindClassesTool } from './tools/GetTailwindClassesTool';
-export { GetUiComponentTool } from './tools/GetUiComponentTool';
+export { GetCSSClassesTool } from './tools/GetCSSClassesTool';
+export { GetComponentVisualTool } from './tools/GetComponentVisualTool';
 export { ListAppComponentsTool } from './tools/ListAppComponentsTool';
 export { ListThemesTool } from './tools/ListThemesTool';
-export { ListWebUiComponentsTool } from './tools/ListWebUiComponentsTool';
+export { ListSharedComponentsTool } from './tools/ListSharedComponentsTool';
 // Transports
 export { StdioTransportHandler } from './transports/stdio';
 // Types

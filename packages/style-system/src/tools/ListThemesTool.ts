@@ -3,7 +3,7 @@
  *
  * DESIGN PATTERNS:
  * - Tool pattern with getDefinition() and execute() methods
- * - Service delegation for business logic
+ * - Factory pattern for service creation
  * - JSON Schema validation for inputs
  *
  * CODING STANDARDS:
@@ -20,34 +20,78 @@
  */
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type { DesignSystemConfig } from '../config';
-import { ThemeService } from '../services/ThemeService';
+import { getAppDesignSystemConfig } from '../config';
+import { ThemeServiceFactory } from '../services/ThemeService';
 import type { Tool, ToolDefinition } from '../types';
 
-export class ListThemesTool implements Tool<Record<string, never>> {
-  static readonly TOOL_NAME = 'list-themes';
+/**
+ * Input parameters for ListThemesTool
+ */
+interface ListThemesInput {
+  appPath?: string;
+}
 
-  private themeService: ThemeService;
+/**
+ * Tool to list all available theme configurations.
+ *
+ * Reads themes from CSS files configured in the app's project.json
+ * style-system config. Themes are extracted by parsing CSS class selectors
+ * that contain color variable definitions.
+ *
+ * @example
+ * ```typescript
+ * const tool = new ListThemesTool();
+ * const result = await tool.execute({ appPath: 'apps/my-app' });
+ * // Returns: { themes: [{ name: 'slate', ... }, { name: 'blue', ... }], source: 'css-file' }
+ * ```
+ */
+export class ListThemesTool implements Tool<ListThemesInput> {
+  static readonly TOOL_NAME = 'list_themes';
 
-  constructor(config: DesignSystemConfig) {
-    this.themeService = new ThemeService(config);
+  private serviceFactory: ThemeServiceFactory;
+
+  constructor() {
+    this.serviceFactory = new ThemeServiceFactory();
   }
 
   getDefinition(): ToolDefinition {
     return {
       name: ListThemesTool.TOOL_NAME,
-      description: 'List all available theme configurations from packages/frontend/shared-theme/configs',
+      description:
+        'List all available theme configurations. Reads themes from CSS files configured in the app\'s project.json style-system config.',
       inputSchema: {
         type: 'object',
-        properties: {},
+        properties: {
+          appPath: {
+            type: 'string',
+            description:
+              'App path (relative or absolute) to read theme config from project.json (e.g., "apps/my-app")',
+          },
+        },
         additionalProperties: false,
       },
     };
   }
 
-  async execute(_input: Record<string, never>): Promise<CallToolResult> {
+  async execute(input: ListThemesInput): Promise<CallToolResult> {
     try {
-      const result = await this.themeService.listAvailableThemes();
+      // Get config from app's project.json if appPath provided
+      let themePath: string | undefined;
+      let cssFiles: string[] | undefined;
+
+      if (input.appPath) {
+        const appConfig = await getAppDesignSystemConfig(input.appPath);
+        themePath = appConfig.themePath;
+        cssFiles = appConfig.cssFiles;
+      }
+
+      // Create service with resolved config
+      const service = await this.serviceFactory.createService({
+        themePath,
+        cssFiles,
+      });
+
+      const result = await service.listThemes();
 
       return {
         content: [

@@ -33,6 +33,13 @@ export interface DesignSystemConfig {
 
   /** Path to theme CSS file for Tailwind class extraction (optional) */
   themePath?: string;
+
+  /**
+   * Tags that identify shared/design system components.
+   * Components with these tags are considered shared and reusable.
+   * Default: ['style-system']
+   */
+  sharedComponentTags?: string[];
 }
 
 /**
@@ -45,11 +52,17 @@ interface ProjectJson {
 }
 
 /**
+ * Default tags for identifying shared/design system components
+ */
+export const DEFAULT_SHARED_COMPONENT_TAGS = ['style-system'];
+
+/**
  * Default configuration for apps without style-system config
  */
 const DEFAULT_CONFIG: DesignSystemConfig = {
   type: 'tailwind',
   themeProvider: '@agimonai/web-ui',
+  sharedComponentTags: DEFAULT_SHARED_COMPONENT_TAGS,
 };
 
 /**
@@ -97,4 +110,103 @@ export async function getAppDesignSystemConfigByName(appName: string): Promise<D
   }
 
   throw new Error(`Could not find app "${appName}" in common locations`);
+}
+
+/**
+ * Toolkit.yaml style-system configuration structure
+ */
+interface ToolkitStyleSystemConfig {
+  sharedComponentTags?: string[];
+}
+
+/**
+ * Toolkit.yaml structure (partial)
+ */
+interface ToolkitYaml {
+  'style-system'?: ToolkitStyleSystemConfig;
+}
+
+/**
+ * Get shared component tags from toolkit.yaml or use defaults.
+ *
+ * Reads configuration from toolkit.yaml at workspace root.
+ * Falls back to DEFAULT_SHARED_COMPONENT_TAGS if not configured.
+ *
+ * @returns Array of tag names that identify shared components
+ */
+export async function getSharedComponentTags(): Promise<string[]> {
+  const monorepoRoot = TemplatesManagerService.getWorkspaceRootSync();
+  const toolkitYamlPath = path.join(monorepoRoot, 'toolkit.yaml');
+
+  try {
+    const content = await fs.readFile(toolkitYamlPath, 'utf-8');
+    // Simple YAML parsing for sharedComponentTags array
+    const config = parseToolkitYaml(content);
+
+    if (config['style-system']?.sharedComponentTags?.length) {
+      log.info(`[Config] Loaded sharedComponentTags from toolkit.yaml: ${config['style-system'].sharedComponentTags.join(', ')}`);
+      return config['style-system'].sharedComponentTags;
+    }
+  } catch {
+    // toolkit.yaml doesn't exist or couldn't be read, use defaults
+  }
+
+  log.info(`[Config] Using default sharedComponentTags: ${DEFAULT_SHARED_COMPONENT_TAGS.join(', ')}`);
+  return DEFAULT_SHARED_COMPONENT_TAGS;
+}
+
+/**
+ * Simple YAML parser for toolkit.yaml style-system section.
+ * Handles the specific structure we need without a full YAML library.
+ */
+function parseToolkitYaml(content: string): ToolkitYaml {
+  const result: ToolkitYaml = {};
+  const lines = content.split('\n');
+
+  let inStyleSystem = false;
+  let inSharedComponentTags = false;
+  const tags: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Check for style-system section
+    if (trimmed === 'style-system:') {
+      inStyleSystem = true;
+      continue;
+    }
+
+    // Exit style-system section on non-indented line
+    if (inStyleSystem && !line.startsWith(' ') && !line.startsWith('\t') && trimmed !== '') {
+      inStyleSystem = false;
+      inSharedComponentTags = false;
+    }
+
+    if (inStyleSystem) {
+      // Check for sharedComponentTags key
+      if (trimmed === 'sharedComponentTags:') {
+        inSharedComponentTags = true;
+        continue;
+      }
+
+      // Exit sharedComponentTags on new key (not starting with -)
+      if (inSharedComponentTags && !trimmed.startsWith('-') && trimmed.includes(':')) {
+        inSharedComponentTags = false;
+      }
+
+      // Parse array items
+      if (inSharedComponentTags && trimmed.startsWith('-')) {
+        const tag = trimmed.slice(1).trim().replace(/^['"]|['"]$/g, '');
+        if (tag) {
+          tags.push(tag);
+        }
+      }
+    }
+  }
+
+  if (tags.length > 0) {
+    result['style-system'] = { sharedComponentTags: tags };
+  }
+
+  return result;
 }

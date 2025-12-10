@@ -4,6 +4,40 @@ description: Shared rules and patterns for all Agiflow templates
 rules:
   - pattern: import-standards
     description: Import organization and standards
+    must_do:
+      - rule: Use clean import paths without file extensions
+        codeExample: |
+          // ✅ GOOD - No file extensions
+          import { UserService } from '../services';
+          import { myTool } from '../tools/MyTool';
+          import type { Config } from '../types';
+
+          // ❌ BAD - File extensions in imports
+          import { UserService } from '../services/index.js';
+          import { myTool } from '../tools/MyTool.js';
+          import type { Config } from '../types.ts';
+      - rule: Use barrel imports without /index suffix
+        codeExample: |
+          // ✅ GOOD - Clean barrel imports
+          import { UserService } from '../services';
+          import { myTool } from '../tools';
+          import type { Config } from '../types';
+
+          // ❌ BAD - Explicit /index in path
+          import { UserService } from '../services/index';
+          import { myTool } from '../tools/index';
+      - rule: Import from barrel exports, not individual files (except @modelcontextprotocol/sdk)
+        codeExample: |
+          // ✅ GOOD - Import from barrel
+          import { UserService, OrderService } from '../services';
+          import { MyTool } from '../tools';
+
+          // ✅ OK - @modelcontextprotocol/sdk requires .js extension
+          import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+
+          // ❌ BAD - Direct file imports
+          import { UserService } from '../services/UserService';
+          import { OrderService } from '../services/OrderService';
     should_do:
       - rule: Use static imports at the top of the file instead of inline dynamic imports
         codeExample: |
@@ -20,6 +54,17 @@ rules:
             const module = await import('./heavy-module');
           }
     must_not_do:
+      - rule: Never use .js or .ts extensions in import paths
+        codeExample: |
+          // ❌ BAD - File extensions
+          import { UserService } from '../services/index.js';
+          import { myTool } from '../tools/MyTool.js';
+          import { config } from './config.ts';
+
+          // ✅ GOOD - No extensions
+          import { UserService } from '../services';
+          import { myTool } from '../tools/MyTool';
+          import { config } from './config';
       - rule: Never use inline require() statements - use static imports
         codeExample: |
           // ❌ BAD - Inline require
@@ -156,12 +201,12 @@ rules:
           // ✅ GOOD
           const MAX_RETRY_ATTEMPTS = 3;
           const API_BASE_URL = 'https://api.example.com';
-      - rule: Use kebab-case for file names
+      - rule: Use camelCase for file names
         codeExample: |
           // ✅ GOOD
-          user-service.ts
-          payment-processor.ts
-          order-validation.ts
+          userService.ts
+          paymentProcessor.ts
+          orderValidation.ts
     must_not_do:
       - rule: Never mix naming conventions
         codeExample: |

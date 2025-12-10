@@ -87,7 +87,7 @@ boilerplate:
       - Testing: Unit tests for tools and services, integration tests for server behavior
 features:
   - name: scaffold-mcp-service
-    description: Generate a service class for encapsulating business logic and data operations in MCP servers. Creates a TypeScript class with methods for core operations, proper error handling, and type definitions. Perfect for separating business logic from tool implementations, making code more maintainable and testable.
+    description: Generate a service module with class, types, and barrel export for encapsulating business logic in MCP servers. Creates a folder structure with TypeScript class, type definitions, and index file. Perfect for separating business logic from tool implementations, making code more maintainable and testable.
     variables_schema:
       type: object
       properties:
@@ -102,19 +102,27 @@ features:
         - serviceName
       additionalProperties: false
     includes:
-      - src/services/ExampleService.ts->src/services/{{ serviceName }}.ts
+      - src/services/ExampleService/ExampleService.ts->src/services/{{ serviceName }}/{{ serviceName }}.ts
+      - src/services/ExampleService/types.ts->src/services/{{ serviceName }}/types.ts
+      - src/services/ExampleService/index.ts->src/services/{{ serviceName }}/index.ts
       - src/services/index.ts
-      - tests/services/ExampleService.test.ts->tests/services/{{ serviceName }}.test.ts?withTest=true
+      - tests/unit/services/ExampleService/ExampleService.test.ts->tests/unit/services/{{ serviceName }}/{{ serviceName }}.test.ts?withTest=true
     instruction: |-
-      Services follow a class-based pattern for encapsulating business logic and operations. Each service is a TypeScript class that can be used by tools or other services.
+      Services follow a folder-based pattern for encapsulating business logic and operations. Each service has its own folder with implementation, types, and barrel export.
 
       Pattern explanation: Services are pure TypeScript classes that handle business logic, data processing, or external API calls. They keep tools thin and focused on input/output, while services handle the actual work. Services can call other services for complex operations.
 
-      File organization: Services live in src/services/{ServiceName}.ts. Test files mirror the source structure in tests/services/{ServiceName}.test.ts.
+      File organization:
+      - src/services/{ServiceName}/
+        - index.ts (barrel export)
+        - types.ts (type definitions)
+        - {ServiceName}.ts (implementation)
+      - tests/unit/services/{ServiceName}/
+        - {ServiceName}.test.ts (unit tests)
 
-      Naming conventions: Service classes use PascalCase with 'Service' suffix (e.g., FileService, DataProcessingService). Method names use camelCase and descriptive verbs (process, fetch, validate, transform).
+      Naming conventions: Service classes use PascalCase with 'Service' suffix (e.g., FileService, DataProcessingService). Method names use camelCase and descriptive verbs (process, fetch, validate, transform). Folder names match service class names in PascalCase.
 
-      Usage guidelines: Import services in tools or other services. Instantiate as needed or use singleton pattern. Keep methods focused on single responsibility. Handle errors with try-catch and throw descriptive errors. Return consistent types (T, Promise<T>, or Result<T>).
+      Usage guidelines: Import services from the folder barrel export. Instantiate as needed or use singleton pattern. Keep methods focused on single responsibility. Handle errors with try-catch and throw descriptive errors. Return consistent types (T, Promise<T>, or Result<T>).
 
       Testing approach: Write unit tests with mocked dependencies. Test each method independently. Use Vitest for testing framework. Mock external dependencies and focus on business logic testing.
     patterns:

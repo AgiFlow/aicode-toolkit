@@ -3,7 +3,7 @@
  */
 
 import { Command } from 'commander';
-import { GetUiComponentTool } from '../tools/GetUiComponentTool';
+import { GetComponentVisualTool } from '../tools/GetComponentVisualTool';
 
 interface GetUiComponentOptions {
   componentName: string;
@@ -25,7 +25,7 @@ export const getUiComponentCommand = new Command('get-ui-component')
   .option('-d, --dark-mode', 'Render the component in dark mode', false)
   .action(async (options: GetUiComponentOptions): Promise<void> => {
     try {
-      const tool = new GetUiComponentTool();
+      const tool = new GetComponentVisualTool();
       const result = await tool.execute({
         componentName: options.componentName,
         appPath: options.appPath,

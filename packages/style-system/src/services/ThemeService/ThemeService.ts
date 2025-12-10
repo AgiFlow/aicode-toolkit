@@ -20,12 +20,30 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { log, TemplatesManagerService } from '@agiflowai/aicode-utils';
 import { glob } from 'glob';
-import type { DesignSystemConfig } from '../config.js';
+import type { DesignSystemConfig } from '../../config';
+import type { AvailableThemesResult, ThemeInfo } from './types';
 
+/**
+ * ThemeService handles theme configuration and CSS generation.
+ *
+ * Provides methods for accessing theme CSS, generating theme wrappers,
+ * and listing available theme configurations.
+ *
+ * @example
+ * ```typescript
+ * const service = new ThemeService(designConfig);
+ * const cssFiles = await service.getThemeCSS();
+ * const themes = await service.listAvailableThemes();
+ * ```
+ */
 export class ThemeService {
   private monorepoRoot: string;
   private config: DesignSystemConfig;
 
+  /**
+   * Creates a new ThemeService instance
+   * @param config - Design system configuration
+   */
   constructor(config: DesignSystemConfig) {
     this.monorepoRoot = TemplatesManagerService.getWorkspaceRootSync();
     this.config = config;
@@ -36,6 +54,7 @@ export class ThemeService {
 
   /**
    * Get design system configuration
+   * @returns Current design system configuration
    */
   getConfig(): DesignSystemConfig {
     return this.config;
@@ -43,6 +62,7 @@ export class ThemeService {
 
   /**
    * Get theme CSS imports from config or common locations
+   * @returns Array of absolute paths to CSS files
    */
   async getThemeCSS(): Promise<string[]> {
     // If CSS files are specified in config, use those
@@ -72,6 +92,9 @@ export class ThemeService {
   /**
    * Generate theme provider wrapper code
    * Uses default export as specified in config
+   * @param componentCode - Component code to wrap
+   * @param darkMode - Whether to use dark mode theme
+   * @returns Generated wrapper code string
    */
   generateThemeWrapper(componentCode: string, darkMode = false): string {
     const { themeProvider } = this.config;
@@ -94,6 +117,8 @@ export default WrappedComponent;
 
   /**
    * Get inline theme styles for SSR
+   * @param darkMode - Whether to use dark mode styles
+   * @returns Combined CSS content as string
    */
   async getInlineStyles(darkMode = false): Promise<string> {
     const cssFiles = await this.getThemeCSS();
@@ -118,6 +143,8 @@ export default WrappedComponent;
 
   /**
    * Get Tailwind CSS classes for theming
+   * @param darkMode - Whether to use dark mode classes
+   * @returns Array of Tailwind class names
    */
   getTailwindClasses(darkMode = false): string[] {
     const baseClasses = ['font-sans', 'antialiased'];
@@ -131,6 +158,7 @@ export default WrappedComponent;
 
   /**
    * Validate that the theme provider path exists
+   * @returns True if theme provider is valid
    */
   async validateThemeProvider(): Promise<boolean> {
     try {
@@ -149,28 +177,17 @@ export default WrappedComponent;
 
   /**
    * List all available theme configurations
+   * @returns Object containing themes array and active brand
+   * @throws Error if themes directory cannot be read
    */
-  async listAvailableThemes(): Promise<{
-    themes: Array<{
-      name: string;
-      fileName: string;
-      path: string;
-      colors?: Record<string, string>;
-    }>;
-    activeBrand?: string;
-  }> {
+  async listAvailableThemes(): Promise<AvailableThemesResult> {
     const configsPath = path.join(this.monorepoRoot, 'packages/frontend/shared-theme/configs');
 
     try {
       const files = await fs.readdir(configsPath);
       const themeFiles = files.filter((file) => file.endsWith('.json'));
 
-      const themes: Array<{
-        name: string;
-        fileName: string;
-        path: string;
-        colors?: Record<string, string>;
-      }> = [];
+      const themes: ThemeInfo[] = [];
       let activeBrand: string | undefined;
 
       for (const file of themeFiles) {

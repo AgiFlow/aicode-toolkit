@@ -17,11 +17,11 @@ import type { DesignSystemConfig } from '../config';
 
 // Import Tool classes
 import {
-  GetTailwindClassesTool,
-  GetUiComponentTool,
+  GetCSSClassesTool,
+  GetComponentVisualTool,
   ListAppComponentsTool,
+  ListSharedComponentsTool,
   ListThemesTool,
-  ListWebUiComponentsTool,
 } from '../tools';
 
 /**
@@ -48,18 +48,18 @@ export function createServer(themePath = 'packages/frontend/web-theme/src/agimon
   );
 
   // Initialize tools
-  const listThemesTool = new ListThemesTool(DEFAULT_CONFIG);
-  const getTailwindClassesTool = new GetTailwindClassesTool(themePath);
-  const getUiComponentTool = new GetUiComponentTool();
-  const listWebUiComponentsTool = new ListWebUiComponentsTool();
+  const listThemesTool = new ListThemesTool();
+  const getCSSClassesTool = new GetCSSClassesTool(themePath);
+  const getComponentVisualTool = new GetComponentVisualTool();
+  const listSharedComponentsTool = new ListSharedComponentsTool();
   const listAppComponentsTool = new ListAppComponentsTool();
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     const tools = [
       listThemesTool.getDefinition(),
-      getTailwindClassesTool.getDefinition(),
-      getUiComponentTool.getDefinition(),
-      listWebUiComponentsTool.getDefinition(),
+      getCSSClassesTool.getDefinition(),
+      getComponentVisualTool.getDefinition(),
+      listSharedComponentsTool.getDefinition(),
       listAppComponentsTool.getDefinition(),
     ];
 
@@ -74,16 +74,16 @@ export function createServer(themePath = 'packages/frontend/web-theme/src/agimon
       return await listThemesTool.execute({} as any);
     }
 
-    if (name === GetTailwindClassesTool.TOOL_NAME) {
-      return await getTailwindClassesTool.execute(args as any);
+    if (name === GetCSSClassesTool.TOOL_NAME) {
+      return await getCSSClassesTool.execute(args as any);
     }
 
-    if (name === GetUiComponentTool.TOOL_NAME) {
-      return await getUiComponentTool.execute(args as any);
+    if (name === GetComponentVisualTool.TOOL_NAME) {
+      return await getComponentVisualTool.execute(args as any);
     }
 
-    if (name === ListWebUiComponentsTool.TOOL_NAME) {
-      return await listWebUiComponentsTool.execute({} as any);
+    if (name === ListSharedComponentsTool.TOOL_NAME) {
+      return await listSharedComponentsTool.execute({} as any);
     }
 
     if (name === ListAppComponentsTool.TOOL_NAME) {

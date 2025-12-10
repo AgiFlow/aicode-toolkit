@@ -19,11 +19,11 @@
  */
 
 import { Command } from 'commander';
-import { getTailwindClassesCommand } from './commands/get-tailwind-classes';
+import { getCSSClassesCommand } from './commands/get-css-classes';
 import { getUiComponentCommand } from './commands/get-ui-component';
 import { listAppComponentsCommand } from './commands/list-app-components';
 import { listThemesCommand } from './commands/list-themes';
-import { listWebUiComponentsCommand } from './commands/list-web-ui-components';
+import { listSharedComponentsCommand } from './commands/list-shared-components';
 import { mcpServeCommand } from './commands/mcp-serve';
 
 /**
@@ -38,11 +38,11 @@ async function main() {
     .version('0.1.0');
 
   // Add all commands
-  program.addCommand(getTailwindClassesCommand);
+  program.addCommand(getCSSClassesCommand);
   program.addCommand(getUiComponentCommand);
   program.addCommand(listAppComponentsCommand);
   program.addCommand(listThemesCommand);
-  program.addCommand(listWebUiComponentsCommand);
+  program.addCommand(listSharedComponentsCommand);
   program.addCommand(mcpServeCommand);
 
   // Parse arguments

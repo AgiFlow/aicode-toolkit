@@ -20,27 +20,29 @@
  * - Not exiting with appropriate exit codes on errors
  */
 
+import { print } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
-import type { DesignSystemConfig } from '../config';
 import { ListThemesTool } from '../tools/ListThemesTool';
 
-/**
- * Default configuration for list-themes command
- */
-const DEFAULT_CONFIG: DesignSystemConfig = {
-  type: 'tailwind',
-  themeProvider: '@agimonai/web-ui',
-};
+interface ListThemesOptions {
+  appPath?: string;
+}
 
 /**
- * List all available theme configurations from packages/frontend/shared-theme/configs
+ * List all available theme configurations from CSS files
  */
 export const listThemesCommand = new Command('list-themes')
-  .description('List all available theme configurations from packages/frontend/shared-theme/configs')
-  .action(async () => {
+  .description(
+    'List all available theme configurations from CSS files configured in project.json style-system config',
+  )
+  .option(
+    '-a, --app-path <path>',
+    'App path to read theme config from project.json (e.g., "apps/my-app")',
+  )
+  .action(async (options: ListThemesOptions): Promise<void> => {
     try {
-      const tool = new ListThemesTool(DEFAULT_CONFIG);
-      const result = await tool.execute({});
+      const tool = new ListThemesTool();
+      const result = await tool.execute({ appPath: options.appPath });
 
       if (result.isError) {
         const firstContent = result.content[0];
@@ -49,9 +51,9 @@ export const listThemesCommand = new Command('list-themes')
       }
 
       const firstContent = result.content[0];
-      console.log(firstContent?.type === 'text' ? firstContent.text : '');
+      print.info(firstContent?.type === 'text' ? firstContent.text : '');
     } catch (error) {
-      console.error('Error listing themes:', error instanceof Error ? error.message : String(error));
+      print.error('Error listing themes:', error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
   });

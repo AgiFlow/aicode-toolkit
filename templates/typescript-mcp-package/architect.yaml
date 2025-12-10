@@ -40,37 +40,89 @@ features:
   - name: mcp-service-pattern
     design_pattern: Service Layer Pattern
     includes:
-      - src/services/**/*.ts
+      - src/services/*/*.ts
     description: |-
-      Design pattern for implementing service classes that encapsulate business logic.
+      Design pattern for implementing service modules with folder-based organization.
 
-      ✅ **What TO DO:**
+      ## Folder Structure
+
+      Each service lives in its own folder with:
+      - `src/services/{ServiceName}/index.ts` - Barrel export
+      - `src/services/{ServiceName}/types.ts` - Type definitions
+      - `src/services/{ServiceName}/{ServiceName}.ts` - Implementation
+
+      ## What TO DO ✅
+
+      - Organize each service in its own PascalCase folder
+      - Include index.ts barrel export in each service folder
+      - Include types.ts for service-specific type definitions
       - Create service classes with clear responsibilities
       - Use dependency injection for other services
       - Implement async/await for I/O operations
       - Return typed results
       - Add proper error handling with try-catch
 
-      ❌ **What NOT TO DO:**
+      ## What NOT TO DO ❌
+
+      - Don't create flat service files (use folder structure)
       - Don't create static-only utility classes (use functions instead)
       - Don't mix multiple concerns in one service
       - Don't forget to handle edge cases
       - Don't use synchronous blocking operations
 
-      **Example:**
+      ## Examples
+
+      ### Service Folder Structure
+      ```
+      src/services/
+        UserService/
+          index.ts           # export { UserService } from './UserService';
+          types.ts           # export interface UserServiceConfig { ... }
+          UserService.ts     # export class UserService { ... }
+        DataProcessor/
+          index.ts
+          types.ts
+          DataProcessor.ts
+      ```
+
+      ### Service Implementation
       ```typescript
-      export class MyService {
-        constructor(private dependency: OtherService) {}
-        
+      // src/services/UserService/UserService.ts
+      import type { UserServiceConfig } from './types';
+
+      export class UserService {
+        constructor(private config: UserServiceConfig) {}
+
         async processData(input: string): Promise<Result> {
           try {
-            const data = await this.dependency.fetch(input);
+            const data = await this.fetchData(input);
             return { success: true, data };
           } catch (error) {
-            return { success: false, error: error.message };
+            throw new Error(`Failed to process: ${error.message}`);
           }
         }
       }
+      ```
+
+      ### Service Types
+      ```typescript
+      // src/services/UserService/types.ts
+      export interface UserServiceConfig {
+        verbose?: boolean;
+      }
+
+      export interface UserServiceResult {
+        success: boolean;
+        data?: unknown;
+        error?: string;
+      }
+      ```
+
+      ### Service Barrel Export
+      ```typescript
+      // src/services/UserService/index.ts
+      export { UserService } from './UserService';
+      export type { UserServiceConfig, UserServiceResult } from './types';
       ```
   - name: mcp-server-pattern
     design_pattern: MCP Server Setup Pattern
@@ -228,8 +280,11 @@ features:
       export { FileTool } from './tools/FileTool';
       export { CodeTool } from './tools/CodeTool';
 
-      // Services
+      // Services (import from folder barrel exports)
       export { FileService } from './services/FileService';
+      export type { FileServiceConfig } from './services/FileService';
+      export { UserService } from './services/UserService';
+      export type { UserServiceConfig, UserServiceResult } from './services/UserService';
       ```
   - name: mcp-transport-pattern
     design_pattern: MCP Transport Pattern
@@ -398,4 +453,65 @@ features:
           }
         }
       }
+      ```
+  - name: unit-test-pattern
+    design_pattern: Unit Test Pattern
+    includes:
+      - tests/unit/**/*.test.ts
+    description: |-
+      ## Pattern Overview
+      Design pattern for implementing unit tests with Vitest following folder-based organization.
+
+      ## Folder Structure
+
+      Tests mirror the source structure:
+      - `tests/unit/services/{ServiceName}/{ServiceName}.test.ts`
+      - `tests/unit/tools/{ToolName}.test.ts`
+      - `tests/unit/utils/{utilName}.test.ts`
+
+      ## What TO DO ✅
+
+      - Use descriptive test names with 'should...' pattern
+      - Follow Arrange-Act-Assert pattern
+      - Mock external dependencies
+      - Test each method independently
+      - Cover success cases, edge cases, and error handling
+      - Use beforeEach for test setup
+
+      ## What NOT TO DO ❌
+
+      - Don't test implementation details (test behavior)
+      - Don't forget to mock external services
+      - Don't write tests without assertions
+      - Don't use hardcoded paths in tests
+
+      ## Examples
+
+      ### Service Test
+      ```typescript
+      // tests/unit/services/UserService/UserService.test.ts
+      import { describe, expect, it, beforeEach } from 'vitest';
+      import { UserService } from '../../../../src/services/UserService';
+
+      describe('UserService', () => {
+        let service: UserService;
+
+        beforeEach(() => {
+          service = new UserService();
+        });
+
+        describe('processData', () => {
+          it('should process input and return result', async () => {
+            const input = 'test input';
+
+            const result = await service.processData(input);
+
+            expect(result).toBeDefined();
+          });
+
+          it('should handle errors gracefully', async () => {
+            await expect(service.processData('')).rejects.toThrow();
+          });
+        });
+      });
       ```

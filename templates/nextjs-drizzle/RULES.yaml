@@ -408,6 +408,164 @@ rules:
 
           // ✅ GOOD
           export { createUser, updateUser, deleteUser } from './userActions.js';
+  - pattern: src/components/**/index.tsx
+    description: Smart Component Standards (Container Component)
+    must_do:
+      - rule: Import and delegate rendering to the View component
+        codeExample: |-
+          import { ButtonView, type ButtonViewProps } from './ButtonView';
+
+          type ButtonProps = ButtonViewProps;
+
+          export default function Button(props: ButtonProps) {
+            // Add state and logic here
+            return <ButtonView {...props} />;
+          }
+      - rule: Handle business logic, state, and data fetching in smart component
+        codeExample: |-
+          import * as React from 'react';
+          import { UserCardView, type UserCardViewProps } from './UserCardView';
+
+          type UserCardProps = Omit<UserCardViewProps, 'isFollowing' | 'onFollow'> & {
+            userId: string;
+          };
+
+          export default function UserCard({ userId, ...props }: UserCardProps) {
+            const [isFollowing, setIsFollowing] = React.useState(false);
+
+            const handleFollow = async () => {
+              await followUser(userId);
+              setIsFollowing(true);
+            };
+
+            return <UserCardView {...props} isFollowing={isFollowing} onFollow={handleFollow} />;
+          }
+    must_not_do:
+      - rule: Never put UI rendering logic in smart component - delegate to View
+        codeExample: |-
+          // ❌ BAD - UI logic in smart component
+          export default function Button({ variant, className, children }: ButtonProps) {
+            const [loading, setLoading] = useState(false);
+            return (
+              <button className={cn('rounded px-4', variant === 'primary' && 'bg-blue-600')}>
+                {loading ? 'Loading...' : children}
+              </button>
+            );
+          }
+
+          // ✅ GOOD - Delegate to View
+          export default function Button(props: ButtonProps) {
+            const [loading, setLoading] = useState(false);
+            return <ButtonView {...props} loading={loading} />;
+          }
+  - pattern: src/components/**/*View.tsx
+    description: Dumb Component Standards (Presentational Component)
+    must_do:
+      - rule: Export props type for use in stories and smart component
+        codeExample: |-
+          export type ButtonViewProps = {
+            variant?: 'primary' | 'secondary';
+            loading?: boolean;
+          } & React.ComponentPropsWithoutRef<'button'>;
+
+          export function ButtonView({ variant = 'primary', loading, className, children, ...rest }: ButtonViewProps) {
+            return (
+              <button className={cn('rounded px-4', className)} {...rest}>
+                {loading ? 'Loading...' : children}
+              </button>
+            );
+          }
+      - rule: Keep View components as pure functions of their props
+        codeExample: |-
+          // ✅ GOOD - Pure presentational component
+          export function CardView({ title, description, className }: CardViewProps) {
+            return (
+              <div className={cn('rounded border p-4', className)}>
+                <h3>{title}</h3>
+                <p>{description}</p>
+              </div>
+            );
+          }
+      - rule: Use named export (not default) for View components
+        codeExample: |-
+          // ✅ GOOD - Named export
+          export function ButtonView(props: ButtonViewProps) { }
+
+          // ❌ BAD - Default export
+          export default function ButtonView(props: ButtonViewProps) { }
+    must_not_do:
+      - rule: Never use hooks or state in View components
+        codeExample: |-
+          // ❌ BAD - State in View component
+          export function ButtonView({ onClick }: ButtonViewProps) {
+            const [count, setCount] = useState(0); // Don't do this!
+            return <button onClick={() => setCount(c => c + 1)}>{count}</button>;
+          }
+
+          // ✅ GOOD - Receive state via props
+          export function ButtonView({ count, onIncrement }: ButtonViewProps) {
+            return <button onClick={onIncrement}>{count}</button>;
+          }
+      - rule: Never fetch data or perform side effects in View components
+        codeExample: |-
+          // ❌ BAD - Data fetching in View
+          export function UserListView() {
+            useEffect(() => {
+              fetch('/api/users').then(/* ... */); // Don't do this!
+            }, []);
+          }
+  - pattern: src/components/**/*.stories.tsx
+    description: Storybook Stories Standards
+    must_do:
+      - rule: Import and render the View component, not the smart component
+        codeExample: |-
+          import type { Meta, StoryObj } from '@storybook/react';
+          import { ButtonView } from './ButtonView';
+
+          const meta = {
+            title: 'Components/Button',
+            component: ButtonView,
+          } satisfies Meta<typeof ButtonView>;
+      - rule: Include a Playground story (REQUIRED) showing all variants
+        codeExample: |-
+          export const Playground: Story = {
+            render: () => (
+              <div className="flex flex-col gap-4">
+                <ButtonView variant="primary">Primary</ButtonView>
+                <ButtonView variant="secondary">Secondary</ButtonView>
+                <ButtonView loading>Loading</ButtonView>
+              </div>
+            ),
+          };
+      - rule: Include state stories (SUGGESTED) for different component states
+        codeExample: |-
+          export const Default: Story = {
+            args: { children: 'Click me' },
+          };
+
+          export const Loading: Story = {
+            args: { loading: true, children: 'Loading...' },
+          };
+
+          export const Disabled: Story = {
+            args: { disabled: true, children: 'Disabled' },
+          };
+    must_not_do:
+      - rule: Never import the smart component in stories
+        codeExample: |-
+          // ❌ BAD - Importing smart component
+          import Button from './index';
+
+          const meta = {
+            component: Button, // Don't do this!
+          };
+
+          // ✅ GOOD - Import View component
+          import { ButtonView } from './ButtonView';
+
+          const meta = {
+            component: ButtonView,
+          };
   - pattern: src/components/index.ts
     description: React Components Barrel Export Standards
     inherits:
@@ -415,18 +573,18 @@ rules:
     must_do:
       - rule: Export all components from index.ts using barrel exports
         codeExample: |-
-          export { Button } from './Button/index.js';
-          export { Input } from './Input/index.js';
-          export { Card } from './Card/index.js';
+          export { default as Button } from './Button/index.js';
+          export { default as Input } from './Input/index.js';
+          export { default as Card } from './Card/index.js';
       - rule: Group related components together in exports
         codeExample: |-
           // Form components
-          export { Button } from './Button/index.js';
-          export { Input } from './Input/index.js';
+          export { default as Button } from './Button/index.js';
+          export { default as Input } from './Input/index.js';
 
           // Layout components
-          export { Card } from './Card/index.js';
-          export { Container } from './Container/index.js';
+          export { default as Card } from './Card/index.js';
+          export { default as Container } from './Container/index.js';
     must_not_do:
       - rule: Include component implementation in index.ts - only exports
         codeExample: |-
@@ -434,14 +592,14 @@ rules:
           export function Button() { return <button />; }
 
           // ✅ GOOD - Only exports
-          export { Button } from './Button/index.js';
+          export { default as Button } from './Button/index.js';
       - rule: Use wildcard exports - be explicit
         codeExample: |-
           // ❌ BAD
           export * from './Button/index.js';
 
           // ✅ GOOD
-          export { Button, ButtonProps } from './Button/index.js';
+          export { default as Button } from './Button/index.js';
   - pattern: src/services/index.ts
     description: Service Layer Barrel Export Standards
     inherits:
