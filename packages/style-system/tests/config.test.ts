@@ -62,7 +62,7 @@ vi.mock('@agiflowai/aicode-utils', (): MockAicodeUtils => ({
 }));
 
 import { promises as fs } from 'node:fs';
-import { getAppDesignSystemConfig, getSharedComponentTags } from '../src/config';
+import { getAppDesignSystemConfig, getBundlerConfig, getGetCssClassesConfig, getSharedComponentTags } from '../src/config';
 
 describe('config', () => {
   beforeEach(() => {
@@ -289,6 +289,198 @@ style-system:
       const result = await getSharedComponentTags();
 
       expect(result).toEqual(['style-system']);
+    });
+  });
+
+  describe('getBundlerConfig', () => {
+    it('should return undefined when toolkit.yaml does not exist', async () => {
+      const error = new Error('ENOENT') as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      vi.mocked(fs.readFile).mockRejectedValue(error);
+
+      const result = await getBundlerConfig();
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should return bundler config when valid', async () => {
+      vi.mocked(fs.readFile).mockResolvedValue(`
+style-system:
+  bundler:
+    customService: path/to/custom-bundler.ts
+`);
+
+      const result = await getBundlerConfig();
+
+      expect(result).toEqual({ customService: 'path/to/custom-bundler.ts' });
+    });
+
+    it('should return undefined when bundler key is missing', async () => {
+      vi.mocked(fs.readFile).mockResolvedValue(`
+style-system:
+  sharedComponentTags:
+    - ui
+`);
+
+      const result = await getBundlerConfig();
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined when style-system key is missing', async () => {
+      vi.mocked(fs.readFile).mockResolvedValue(`
+other-config:
+  key: value
+`);
+
+      const result = await getBundlerConfig();
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined when toolkit.yaml is empty', async () => {
+      vi.mocked(fs.readFile).mockResolvedValue('');
+
+      const result = await getBundlerConfig();
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined and warn when customService is not a string', async () => {
+      vi.mocked(fs.readFile).mockResolvedValue(`
+style-system:
+  bundler:
+    customService: 123
+`);
+
+      const result = await getBundlerConfig();
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should return config with empty customService when not provided', async () => {
+      vi.mocked(fs.readFile).mockResolvedValue(`
+style-system:
+  bundler: {}
+`);
+
+      const result = await getBundlerConfig();
+
+      expect(result).toEqual({});
+    });
+
+    it('should handle non-ENOENT file read errors', async () => {
+      const error = new Error('Permission denied') as NodeJS.ErrnoException;
+      error.code = 'EACCES';
+      vi.mocked(fs.readFile).mockRejectedValue(error);
+
+      const result = await getBundlerConfig();
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should handle malformed YAML content', async () => {
+      vi.mocked(fs.readFile).mockResolvedValue('{ invalid: yaml: content: [}');
+
+      const result = await getBundlerConfig();
+
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('getGetCssClassesConfig', () => {
+    it('should return undefined when toolkit.yaml does not exist', async () => {
+      const error = new Error('ENOENT') as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      vi.mocked(fs.readFile).mockRejectedValue(error);
+
+      const result = await getGetCssClassesConfig();
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should return getCssClasses config when valid', async () => {
+      vi.mocked(fs.readFile).mockResolvedValue(`
+style-system:
+  getCssClasses:
+    customService: path/to/custom-css-service.ts
+`);
+
+      const result = await getGetCssClassesConfig();
+
+      expect(result).toEqual({ customService: 'path/to/custom-css-service.ts' });
+    });
+
+    it('should return undefined when getCssClasses key is missing', async () => {
+      vi.mocked(fs.readFile).mockResolvedValue(`
+style-system:
+  sharedComponentTags:
+    - ui
+`);
+
+      const result = await getGetCssClassesConfig();
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined when style-system key is missing', async () => {
+      vi.mocked(fs.readFile).mockResolvedValue(`
+other-config:
+  key: value
+`);
+
+      const result = await getGetCssClassesConfig();
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined when toolkit.yaml is empty', async () => {
+      vi.mocked(fs.readFile).mockResolvedValue('');
+
+      const result = await getGetCssClassesConfig();
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined and warn when customService is not a string', async () => {
+      vi.mocked(fs.readFile).mockResolvedValue(`
+style-system:
+  getCssClasses:
+    customService: 456
+`);
+
+      const result = await getGetCssClassesConfig();
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should return config with empty customService when not provided', async () => {
+      vi.mocked(fs.readFile).mockResolvedValue(`
+style-system:
+  getCssClasses: {}
+`);
+
+      const result = await getGetCssClassesConfig();
+
+      expect(result).toEqual({});
+    });
+
+    it('should handle non-ENOENT file read errors', async () => {
+      const error = new Error('Permission denied') as NodeJS.ErrnoException;
+      error.code = 'EACCES';
+      vi.mocked(fs.readFile).mockRejectedValue(error);
+
+      const result = await getGetCssClassesConfig();
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should handle malformed YAML content', async () => {
+      vi.mocked(fs.readFile).mockResolvedValue('{ invalid: yaml: content: [}');
+
+      const result = await getGetCssClassesConfig();
+
+      expect(result).toBeUndefined();
     });
   });
 });

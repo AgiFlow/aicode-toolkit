@@ -6,17 +6,17 @@
 
 ![AI Code Toolkit Banner](./docs/workflow.jpg)
 
-MCP servers that teach AI coding agents your team's conventions. Provides scaffolding templates, design patterns, and code review rules.
+MCP servers that teach AI coding agents your team's conventions. Provides scaffolding templates, design patterns, and style system.
 
 ---
 
 ## Why This Exists
 
-As projects go from MVP to production, you introduce new patterns, conventions, etc. Your AGENTS.md, instruction.md, or CLAUDE.md also grows bigger and bigger, eating up all the context.
+As projects grow from MVP to production, you accumulate patterns, conventions, components, and style guides. Your `AGENTS.md` or `CLAUDE.md` keeps growing — consuming precious context window.
 
-Growing from our frustration of using agents on large monorepos, this toolkit allows you to encode your team's conventions, patterns, and rules in a centralised, sharable location. Instead of preloading AI agents with docs, our tools follow a progressive discovery approach, where the AI agent can call the tool to discover pre-flight and post-check based on pattern matching.
+This toolkit encodes your team's conventions in a centralized, shareable location. Instead of preloading AI agents with documentation, our tools use **progressive discovery**: agents call tools to get relevant patterns before writing code and validate against rules after.
 
-Think Rails conventions, but for any stack, enforced by your AI agent.
+No more convention violations, design drift, or bloated instructions.
 
 ---
 
@@ -57,6 +57,10 @@ The init command configures MCP automatically. For manual setup:
         "--design-pattern-tool", "codex",
         "--review-tool", "gemini-cli"
       ]
+    },
+    "style-system": {
+      "command": "npx",
+      "args": ["-y", "@agiflowai/style-system", "mcp-serve"]
     }
   }
 }
@@ -85,17 +89,17 @@ Should call `list-boilerplates`. If not recognized, restart the agent.
 │         (Claude Code, Cursor, Gemini CLI, etc.)             │
 └─────────────────────────────────────────────────────────────┘
                               │
-              ┌───────────────┴───────────────┐
-              ▼                               ▼
-       ┌─────────────┐                 ┌──────────────┐
-       │ scaffold-mcp│                 │ architect-mcp│
-       │             │                 │              │
-       │ Generates   │                 │ Guides and   │
-       │ code from   │                 │ validates    │
-       │ templates   │                 │ code quality │
-       └─────────────┘                 └──────────────┘
-              │                               │
-              └───────────────┬───────────────┘
+       ┌──────────────────────┼──────────────────────┐
+       ▼                      ▼                      ▼
+┌─────────────┐        ┌──────────────┐       ┌─────────────┐
+│ scaffold-mcp│        │ architect-mcp│       │ style-system│
+│             │        │              │       │             │
+│ Generates   │        │ Guides and   │       │ Design      │
+│ code from   │        │ validates    │       │ system &    │
+│ templates   │        │ code quality │       │ components  │
+└─────────────┘        └──────────────┘       └─────────────┘
+       │                      │                      │
+       └──────────────────────┼──────────────────────┘
                               ▼
                     ┌─────────────────┐
                     │    templates/   │
@@ -141,6 +145,18 @@ Pre-flight suggestions to ensure AI-generated code follows best practices and de
 | `add-design-pattern` | Add to `architect.yaml` |
 | `add-rule` | Add to `RULES.yaml` |
 
+### style-system
+
+Design system operations for theme management, CSS class discovery, and component visualization. Helps AI agents use existing design tokens and components instead of creating duplicates.
+
+| Tool | Description |
+|------|-------------|
+| `list_themes` | List available theme configurations |
+| `get_css_classes` | Extract CSS classes from theme (use before styling) |
+| `get_component_visual` | Preview UI component without running the app |
+| `list_shared_components` | Find shared UI components (use before creating new ones) |
+| `list_app_components` | List app-specific and package components |
+
 ---
 
 ## Workflow
@@ -185,6 +201,18 @@ Agent:
 1. review-code-change for edited file
 2. Gets: violations (critical/warning/suggestion)
 3. Fixes violations
+```
+
+### Styling Components
+
+```
+User: "Style the button with our theme colors"
+
+Agent:
+1. get_css_classes → discovers available theme classes
+2. list_shared_components → checks for existing button components
+3. Applies existing classes or extends component
+4. get_component_visual → previews the result
 ```
 
 ---
@@ -369,6 +397,7 @@ See [@agiflowai/one-mcp](./packages/one-mcp).
 | [@agiflowai/aicode-toolkit](./apps/aicode-toolkit) | CLI for init and template management |
 | [@agiflowai/scaffold-mcp](./packages/scaffold-mcp) | Code scaffolding server |
 | [@agiflowai/architect-mcp](./packages/architect-mcp) | Patterns and review server |
+| [@agiflowai/style-system](./packages/style-system) | Design system and component server |
 | [@agiflowai/one-mcp](./packages/one-mcp) | MCP proxy for token reduction |
 
 ---

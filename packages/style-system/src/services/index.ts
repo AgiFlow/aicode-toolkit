@@ -22,7 +22,9 @@ export {
   createDefaultBundlerService,
   DEFAULT_BUNDLER_CONFIG,
   getBundlerService,
+  getBundlerServiceFromConfig,
   registerBundlerService,
+  resetBundlerServiceCache,
   ViteReactBundlerService,
 } from './BundlerService';
 export type {
@@ -52,10 +54,6 @@ export type { ComponentInfo, StoriesIndexServiceConfig, StoriesIndexServiceResul
 // ThemeService
 export { ThemeService } from './ThemeService';
 export type { AvailableThemesResult, ThemeInfo, ThemeServiceConfig, ThemeServiceResult } from './ThemeService';
-
-// VitejsService
-export { VitejsService } from './VitejsService';
-export type { BuildComponentOptions, PreRenderOptions, VitejsServiceConfig, VitejsServiceResult } from './VitejsService';
 
 // CSS Classes services
 export {

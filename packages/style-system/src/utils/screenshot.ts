@@ -48,6 +48,43 @@ const browsers: Record<string, BrowserType> = {
   webkit,
 };
 
+/**
+ * Browser launch configurations to try in order of preference.
+ * Prefers system-installed Chrome before falling back to Playwright's bundled browsers.
+ */
+const browserLaunchConfigs = [
+  { browserType: chromium, channel: 'chrome', name: 'System Chrome' },
+  { browserType: chromium, channel: undefined, name: 'Playwright Chromium' },
+  { browserType: firefox, channel: undefined, name: 'Playwright Firefox' },
+] as const;
+
+/**
+ * Attempts to launch a browser, trying multiple configurations in order of preference.
+ * @returns Launched browser instance
+ * @throws Error if no browser can be launched
+ */
+async function launchBrowserWithFallback(): Promise<Browser> {
+  const errors: string[] = [];
+
+  for (const config of browserLaunchConfigs) {
+    try {
+      const browser = await config.browserType.launch({
+        headless: true,
+        channel: config.channel,
+      });
+      console.log(`[screenshot] Using ${config.name}`);
+      return browser;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`${config.name}: ${message}`);
+    }
+  }
+
+  throw new Error(
+    `No browser available. Tried:\n${errors.join('\n')}\n\nPlease install Chrome, or run 'npx playwright install chromium'`,
+  );
+}
+
 export async function takeScreenshot(options: ScreenshotOptions): Promise<ScreenshotResult> {
   const {
     url,
@@ -65,15 +102,19 @@ export async function takeScreenshot(options: ScreenshotOptions): Promise<Screen
     base64 = false,
   } = options;
 
-  const browserType = browsers[browserName];
-  if (!browserType) {
-    throw new Error(`Unsupported browser: ${browserName}`);
-  }
-
   let browser: Browser | null = null;
 
   try {
-    browser = await browserType.launch({ headless: true });
+    // Use fallback browser detection for chromium (default)
+    if (browserName === 'chromium') {
+      browser = await launchBrowserWithFallback();
+    } else {
+      const browserType = browsers[browserName];
+      if (!browserType) {
+        throw new Error(`Unsupported browser: ${browserName}`);
+      }
+      browser = await browserType.launch({ headless: true });
+    }
 
     const context = await browser.newContext({
       viewport: { width, height },

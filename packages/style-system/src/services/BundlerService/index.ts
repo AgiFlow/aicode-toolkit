@@ -34,7 +34,9 @@ export {
   bundlerRegistry,
   createDefaultBundlerService,
   getBundlerService,
+  getBundlerServiceFromConfig,
   registerBundlerService,
+  resetBundlerServiceCache,
   type BundlerServiceFactory,
 } from './BundlerServiceFactory';
 
