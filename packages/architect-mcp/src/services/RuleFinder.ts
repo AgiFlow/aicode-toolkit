@@ -7,7 +7,13 @@ import * as fs from 'node:fs/promises';
 import * as yaml from 'js-yaml';
 import { minimatch } from 'minimatch';
 import * as path from 'node:path';
-import type { RulesYamlConfig, RuleSection, ProjectConfig } from '../types';
+import type {
+  RulesYamlConfig,
+  RuleSection,
+  ProjectConfig,
+  LayerDefinition,
+  ArchitectureDefinition,
+} from '../types';
 
 export class RuleFinder {
   private projectCache: Map<string, ProjectConfig> = new Map();
