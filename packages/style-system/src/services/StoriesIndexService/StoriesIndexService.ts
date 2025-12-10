@@ -38,10 +38,26 @@ import type { ComponentInfo, StoryMeta } from './types';
  * const button = service.findComponentByName('Button');
  * ```
  */
+/**
+ * Result of initialization with success/failure statistics.
+ */
+export interface InitializationResult {
+  /** Total number of story files found */
+  totalFiles: number;
+  /** Number of successfully indexed files */
+  successCount: number;
+  /** Number of files that failed to index */
+  failureCount: number;
+  /** List of files that failed with their error messages */
+  failures: Array<{ filePath: string; error: string }>;
+}
+
 export class StoriesIndexService {
   private componentIndex: Map<string, ComponentInfo> = new Map();
   private monorepoRoot: string;
   private initialized = false;
+  /** Last initialization result for error reporting */
+  private lastInitResult: InitializationResult | null = null;
 
   /**
    * Creates a new StoriesIndexService instance
@@ -51,11 +67,12 @@ export class StoriesIndexService {
   }
 
   /**
-   * Initialize the index by scanning all .stories files
+   * Initialize the index by scanning all .stories files.
+   * @returns Initialization result with success/failure statistics
    */
-  async initialize(): Promise<void> {
-    if (this.initialized) {
-      return;
+  async initialize(): Promise<InitializationResult> {
+    if (this.initialized && this.lastInitResult) {
+      return this.lastInitResult;
     }
 
     log.info('[StoriesIndexService] Initializing story index...');
@@ -69,17 +86,50 @@ export class StoriesIndexService {
 
     log.info(`[StoriesIndexService] Found ${storyFiles.length} story files`);
 
+    // Collect indexing results
+    const failures: Array<{ filePath: string; error: string }> = [];
+    let successCount = 0;
+
     // Process each story file
     for (const filePath of storyFiles) {
       try {
         await this.indexStoryFile(filePath);
+        successCount++;
       } catch (error) {
-        log.error(`[StoriesIndexService] Error indexing ${filePath}:`, error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        log.error(`[StoriesIndexService] Error indexing ${filePath}: ${errorMessage}`);
+        failures.push({ filePath, error: errorMessage });
       }
     }
 
     this.initialized = true;
-    log.info(`[StoriesIndexService] Indexed ${this.componentIndex.size} components`);
+
+    // Store and return result
+    this.lastInitResult = {
+      totalFiles: storyFiles.length,
+      successCount,
+      failureCount: failures.length,
+      failures,
+    };
+
+    // Log summary
+    if (failures.length > 0) {
+      log.warn(
+        `[StoriesIndexService] Indexed ${successCount}/${storyFiles.length} files successfully. ${failures.length} files failed.`,
+      );
+    } else {
+      log.info(`[StoriesIndexService] Indexed ${this.componentIndex.size} components successfully`);
+    }
+
+    return this.lastInitResult;
+  }
+
+  /**
+   * Get the last initialization result.
+   * @returns Initialization result or null if not initialized
+   */
+  getLastInitResult(): InitializationResult | null {
+    return this.lastInitResult;
   }
 
   /**
@@ -277,6 +327,7 @@ export class StoriesIndexService {
   clear(): void {
     this.componentIndex.clear();
     this.initialized = false;
+    this.lastInitResult = null;
   }
 
   /**

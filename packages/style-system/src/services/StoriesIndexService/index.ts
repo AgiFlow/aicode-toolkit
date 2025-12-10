@@ -5,6 +5,7 @@
  */
 
 export { StoriesIndexService } from './StoriesIndexService';
+export type { InitializationResult } from './StoriesIndexService';
 export type {
   ComponentInfo,
   StoriesIndexServiceConfig,

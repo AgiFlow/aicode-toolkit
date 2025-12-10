@@ -100,6 +100,20 @@ export class GetUiComponentService {
     if (input.darkMode !== undefined && typeof input.darkMode !== 'boolean') {
       throw new Error('darkMode must be a boolean');
     }
+    if (input.selector !== undefined) {
+      if (typeof input.selector !== 'string') {
+        throw new Error('selector must be a string');
+      }
+      // Validate selector to prevent CSS injection attacks
+      // Only allow safe CSS selector characters
+      if (!/^[a-zA-Z0-9_\-#.\[\]=":' ]+$/.test(input.selector)) {
+        throw new Error('selector contains invalid characters');
+      }
+      // Prevent JavaScript execution in selectors
+      if (/javascript:|expression\(|url\(/i.test(input.selector)) {
+        throw new Error('selector contains potentially malicious content');
+      }
+    }
 
     const {
       componentName,

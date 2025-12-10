@@ -47,6 +47,12 @@ const STORY_CONFIG_MAX_AGE_MS = 5 * 60 * 1000;
 const STORY_CONFIG_MAX_COUNT = 100;
 
 /**
+ * Maximum size for serialized args in bytes (1MB).
+ * Prevents memory issues with extremely large payloads.
+ */
+const MAX_ARGS_SIZE_BYTES = 1024 * 1024;
+
+/**
  * Valid pattern for story names.
  * Allows alphanumeric characters, underscores, hyphens, and spaces.
  */
@@ -91,6 +97,21 @@ function validateComponentPath(componentPath: string): void {
   // Prevent path traversal attacks
   if (componentPath.includes('..')) {
     throw new Error('Component path must not contain path traversal sequences (..)');
+  }
+}
+
+/**
+ * Validates args object size to prevent memory issues.
+ * @param args - The args object to validate
+ * @throws Error if args exceed size limit
+ */
+function validateArgsSize(args: Record<string, unknown>): void {
+  const serialized = JSON.stringify(args);
+  const sizeBytes = Buffer.byteLength(serialized, 'utf-8');
+  if (sizeBytes > MAX_ARGS_SIZE_BYTES) {
+    throw new Error(
+      `Args payload too large: ${sizeBytes} bytes exceeds maximum of ${MAX_ARGS_SIZE_BYTES} bytes (1MB)`,
+    );
   }
 }
 
@@ -162,6 +183,8 @@ export class ViteReactBundlerService extends BaseBundlerService {
   private storyConfigs = new Map<string, BuildOptions>();
   /** Timestamps for when each story config was created, used for cleanup */
   private storyConfigTimestamps = new Map<string, number>();
+  /** Promise that resolves when server startup completes, prevents race conditions */
+  private serverStartPromise: Promise<DevServerResult> | null = null;
 
   /**
    * Creates a new ViteReactBundlerService instance.
@@ -251,12 +274,43 @@ export class ViteReactBundlerService extends BaseBundlerService {
 
   /**
    * Start a Vite dev server for hot reload and caching.
+   * Handles concurrent calls by returning the same promise if server is already starting.
    * @param appPath - Absolute or relative path to the app directory
    * @returns Promise resolving to server URL and port
    * @throws Error if server fails to start
    */
   async startDevServer(appPath: string): Promise<DevServerResult> {
     const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(this.monorepoRoot, appPath);
+
+    // If server is already running for the same app, return existing info
+    if (this.isServerRunning() && this.currentAppPath === resolvedAppPath) {
+      log.info(`[ViteReactBundlerService] Server already running for ${resolvedAppPath}`);
+      return { url: this.serverUrl!, port: this.serverPort! };
+    }
+
+    // If server is currently starting, wait for it to complete (prevents race condition)
+    if (this.serverStartPromise) {
+      log.info('[ViteReactBundlerService] Server start already in progress, waiting...');
+      return this.serverStartPromise;
+    }
+
+    // Start the server and store the promise to prevent concurrent starts
+    this.serverStartPromise = this.doStartDevServer(resolvedAppPath);
+
+    try {
+      return await this.serverStartPromise;
+    } finally {
+      // Clear the promise after completion (success or failure)
+      this.serverStartPromise = null;
+    }
+  }
+
+  /**
+   * Internal method that performs the actual server startup.
+   * @param resolvedAppPath - Resolved absolute path to the app directory
+   * @returns Promise resolving to server URL and port
+   */
+  private async doStartDevServer(resolvedAppPath: string): Promise<DevServerResult> {
     const tmpDir = path.join(resolvedAppPath, '.tmp');
 
     try {
@@ -343,7 +397,7 @@ export class ViteReactBundlerService extends BaseBundlerService {
       return { url, port };
     } catch (error) {
       const err = new Error(
-        `Failed to start dev server for ${appPath}: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to start dev server for ${resolvedAppPath}: ${error instanceof Error ? error.message : String(error)}`,
       );
       err.cause = error;
       throw err;
@@ -363,9 +417,10 @@ export class ViteReactBundlerService extends BaseBundlerService {
 
     const { componentPath, storyName, args = {}, darkMode = false, appPath, cssFiles = [], rootComponent } = options;
 
-    // Validate inputs to prevent code injection
+    // Validate inputs to prevent code injection and memory issues
     validateStoryName(storyName);
     validateComponentPath(componentPath);
+    validateArgsSize(args);
 
     const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(this.monorepoRoot, appPath);
 
@@ -432,9 +487,10 @@ export class ViteReactBundlerService extends BaseBundlerService {
   async prerenderComponent(options: RenderOptions): Promise<PrerenderResult> {
     const { componentPath, storyName, args = {}, darkMode = false, appPath, cssFiles = [], rootComponent } = options;
 
-    // Validate inputs to prevent code injection
+    // Validate inputs to prevent code injection and memory issues
     validateStoryName(storyName);
     validateComponentPath(componentPath);
+    validateArgsSize(args);
 
     const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(this.monorepoRoot, appPath);
     const tmpDir = path.join(resolvedAppPath, '.tmp');
@@ -477,6 +533,7 @@ export class ViteReactBundlerService extends BaseBundlerService {
       this.serverUrl = null;
       this.serverPort = null;
       this.currentAppPath = null;
+      this.serverStartPromise = null;
       // Clear story configs to free memory
       this.storyConfigs.clear();
       this.storyConfigTimestamps.clear();
