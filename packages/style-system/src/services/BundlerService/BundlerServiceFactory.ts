@@ -17,6 +17,9 @@
  * - Breaking changes to factory interface
  */
 
+import path from 'node:path';
+import { log, TemplatesManagerService } from '@agiflowai/aicode-utils';
+import { getBundlerConfig } from '../../config';
 import type { BaseBundlerService } from './BaseBundlerService';
 import { ViteReactBundlerService } from './ViteReactBundlerService';
 
@@ -104,4 +107,108 @@ export function getBundlerService(key: string): BaseBundlerService {
  */
 export function registerBundlerService(key: string, factory: BundlerServiceFactory): void {
   bundlerRegistry.set(key, factory);
+}
+
+/** Cached bundler service instance loaded from config */
+let cachedBundlerService: BaseBundlerService | null = null;
+
+/**
+ * Get bundler service based on toolkit.yaml configuration.
+ *
+ * If a custom service is configured in toolkit.yaml under style-system.bundler.customService,
+ * it will be dynamically loaded. Otherwise, returns the default ViteReactBundlerService.
+ *
+ * The custom service module must:
+ * - Export a class that extends BaseBundlerService as default export, OR
+ * - Export an instance of BaseBundlerService as default export, OR
+ * - Export a getInstance() function that returns a BaseBundlerService
+ *
+ * @returns Promise resolving to a bundler service instance
+ *
+ * @example
+ * ```typescript
+ * // In toolkit.yaml:
+ * // style-system:
+ * //   bundler:
+ * //     customService: packages/my-app/src/bundler/CustomBundlerService.ts
+ *
+ * const bundler = await getBundlerServiceFromConfig();
+ * await bundler.startDevServer('apps/my-app');
+ * ```
+ */
+export async function getBundlerServiceFromConfig(): Promise<BaseBundlerService> {
+  // Return cached instance if available
+  if (cachedBundlerService) {
+    return cachedBundlerService;
+  }
+
+  const config = await getBundlerConfig();
+
+  if (!config?.customService) {
+    // No custom service configured, use default
+    cachedBundlerService = createDefaultBundlerService();
+    return cachedBundlerService;
+  }
+
+  const monorepoRoot = TemplatesManagerService.getWorkspaceRootSync();
+  const customServicePath = path.join(monorepoRoot, config.customService);
+
+  try {
+    log.info(`[BundlerServiceFactory] Loading custom bundler service from: ${customServicePath}`);
+
+    // Dynamic import of the custom service module
+    const module = await import(customServicePath);
+
+    // Try different export patterns
+    if (module.default) {
+      // Check if default export is a class (has prototype with constructor)
+      if (typeof module.default === 'function' && module.default.prototype) {
+        // Check for getInstance static method (singleton pattern)
+        if (typeof module.default.getInstance === 'function') {
+          cachedBundlerService = module.default.getInstance();
+        } else {
+          // Instantiate the class
+          cachedBundlerService = new module.default();
+        }
+      } else if (typeof module.default === 'object') {
+        // Default export is already an instance
+        cachedBundlerService = module.default;
+      }
+    } else if (typeof module.getInstance === 'function') {
+      // Named export getInstance function
+      cachedBundlerService = module.getInstance();
+    }
+
+    if (!cachedBundlerService) {
+      throw new Error(
+        'Custom bundler service module must export a class extending BaseBundlerService as default, ' +
+        'an instance as default, or a getInstance() function',
+      );
+    }
+
+    // Validate it's a BaseBundlerService (duck typing check)
+    if (typeof cachedBundlerService.startDevServer !== 'function' ||
+        typeof cachedBundlerService.serveComponent !== 'function' ||
+        typeof cachedBundlerService.cleanup !== 'function') {
+      throw new Error('Custom bundler service must implement BaseBundlerService interface');
+    }
+
+    log.info(`[BundlerServiceFactory] Custom bundler service loaded successfully`);
+    return cachedBundlerService;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    log.error(`[BundlerServiceFactory] Failed to load custom bundler service: ${message}`);
+    log.info('[BundlerServiceFactory] Falling back to default ViteReactBundlerService');
+
+    cachedBundlerService = createDefaultBundlerService();
+    return cachedBundlerService;
+  }
+}
+
+/**
+ * Reset the cached bundler service.
+ * Useful for testing or when config changes.
+ */
+export function resetBundlerServiceCache(): void {
+  cachedBundlerService = null;
 }

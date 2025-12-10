@@ -37,24 +37,18 @@ export interface CSSClassesResult {
 }
 
 /**
- * Style system configuration from toolkit.yaml 'style-system' key
+ * CSS classes service configuration
  *
  * Example toolkit.yaml:
  * ```yaml
- * version: "1.0"
- * templatesPath: "./templates"
  * style-system:
- *   cssFramework: tailwind
- *   themePath: packages/frontend/web-theme/src/theme.css
- *   customServicePath: ./my-custom-css-service.ts  # optional
+ *   getCssClasses:
+ *     customService: ./my-custom-css-service.ts
  * ```
  */
 export interface StyleSystemConfig {
   /** CSS framework type (tailwind, vanilla, etc.) */
   cssFramework: string;
-
-  /** Path to theme file relative to workspace root */
-  themePath?: string;
 
   /**
    * Custom service class path for CSS extraction override.
@@ -62,9 +56,6 @@ export interface StyleSystemConfig {
    * The module must export a class that extends BaseCSSClassesService.
    */
   customServicePath?: string;
-
-  /** Additional framework-specific options */
-  options?: Record<string, unknown>;
 }
 
 /**

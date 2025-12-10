@@ -21,23 +21,23 @@
 
 import { Command } from 'commander';
 import { createServer } from '../server';
-import { VitejsService } from '../services';
+import { type BaseBundlerService, getBundlerServiceFromConfig } from '../services';
 import { StdioTransportHandler } from '../transports/stdio';
 
 /**
  * Start MCP server with given transport handler
  */
-async function startServer(handler: any, viteService: VitejsService) {
+async function startServer(handler: any, bundlerService: BaseBundlerService) {
   await handler.start();
 
   // Handle graceful shutdown
   const shutdown = async (signal: string) => {
     console.error(`\nReceived ${signal}, shutting down gracefully...`);
     try {
-      // Cleanup Vite dev server if it's running
-      if (viteService.isServerRunning()) {
-        console.error('Stopping Vite dev server...');
-        await viteService.cleanup();
+      // Cleanup bundler dev server if it's running
+      if (bundlerService.isServerRunning()) {
+        console.error('Stopping bundler dev server...');
+        await bundlerService.cleanup();
       }
       await handler.stop();
       process.exit(0);
@@ -71,7 +71,10 @@ export const mcpServeCommand = new Command('mcp-serve')
     try {
       const transportType = options.type.toLowerCase();
 
-      // Start Vite dev server if --dev flag is enabled
+      // Get bundler service from config (supports custom bundler via toolkit.yaml)
+      const bundlerService = await getBundlerServiceFromConfig();
+
+      // Start dev server if --dev flag is enabled
       if (options.dev) {
         if (!options.appPath) {
           console.error('Error: --app-path is required when using --dev flag');
@@ -79,18 +82,15 @@ export const mcpServeCommand = new Command('mcp-serve')
           process.exit(1);
         }
 
-        // Get singleton instance and start dev server
-        const viteService = VitejsService.getInstance();
-        const { url, port } = await viteService.startDevServer(options.appPath);
-        console.log(`✅ Vite dev server started at ${url} (port: ${port})`);
+        const { url, port } = await bundlerService.startDevServer(options.appPath);
+        console.log(`✅ Dev server started at ${url} (port: ${port})`);
         console.log('⚡ Components will be served with hot reload support and caching');
       }
 
       if (transportType === 'stdio') {
         const server = createServer(options.themePath);
         const handler = new StdioTransportHandler(server);
-        // Pass singleton instance for cleanup
-        await startServer(handler, VitejsService.getInstance());
+        await startServer(handler, bundlerService);
       } else {
         console.error(`Unknown transport type: ${transportType}. Use: stdio`);
         process.exit(1);

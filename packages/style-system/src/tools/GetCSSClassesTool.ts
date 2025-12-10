@@ -22,7 +22,7 @@
 import path from 'node:path';
 import { TemplatesManagerService } from '@agiflowai/aicode-utils';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { getAppDesignSystemConfig } from '../config';
+import { getAppDesignSystemConfig, getGetCssClassesConfig } from '../config';
 import type { BaseCSSClassesService, CSSClassCategory } from '../services/CssClasses';
 import { CSSClassesServiceFactory } from '../services/CssClasses';
 import type { Tool, ToolDefinition } from '../types';
@@ -125,9 +125,12 @@ export class GetCSSClassesTool implements Tool<GetCSSClassesInput> {
       // Resolve theme path from config or use default
       const themePath = await this.resolveThemePath(input.appPath);
 
-      // Initialize service lazily using factory
+      // Initialize service lazily using factory with toolkit.yaml config
       if (!this.service) {
-        this.service = await this.serviceFactory.createService();
+        const toolkitConfig = await getGetCssClassesConfig();
+        this.service = await this.serviceFactory.createService({
+          customServicePath: toolkitConfig?.customService,
+        });
       }
 
       // Delegate extraction to service
@@ -159,7 +162,8 @@ export class GetCSSClassesTool implements Tool<GetCSSClassesInput> {
    *
    * Resolution strategy:
    * 1. If appPath provided, read themePath from project.json style-system config
-   * 2. Fall back to default theme path if not configured
+   * 2. themePath is resolved relative to the app directory (where project.json is)
+   * 3. Fall back to default theme path if not configured
    *
    * @param appPath - Optional app path to read config from
    * @returns Absolute path to the theme file
@@ -171,11 +175,13 @@ export class GetCSSClassesTool implements Tool<GetCSSClassesInput> {
       // Read theme path from app's project.json style-system config
       const config = await getAppDesignSystemConfig(appPath);
       if (config.themePath) {
-        return path.resolve(workspaceRoot, config.themePath);
+        // Resolve themePath relative to app directory
+        const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(workspaceRoot, appPath);
+        return path.resolve(resolvedAppPath, config.themePath);
       }
     }
 
-    // Use default theme path
+    // Use default theme path (relative to workspace root)
     return path.resolve(workspaceRoot, this.defaultThemePath);
   }
 }

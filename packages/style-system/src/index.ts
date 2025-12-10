@@ -26,7 +26,14 @@ export { createServer } from './server';
 export { ComponentRendererService } from './services/ComponentRendererService';
 export { StoriesIndexService } from './services/StoriesIndexService';
 export { ThemeService } from './services/ThemeService';
-export { VitejsService } from './services/VitejsService';
+
+// BundlerService
+export {
+  BaseBundlerService,
+  createDefaultBundlerService,
+  getBundlerServiceFromConfig,
+  ViteReactBundlerService,
+} from './services/BundlerService';
 
 // CSS Classes services
 export {
