@@ -13,7 +13,6 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import type { DesignSystemConfig } from '../config';
 
 // Import Tool classes
 import {
@@ -23,14 +22,6 @@ import {
   ListSharedComponentsTool,
   ListThemesTool,
 } from '../tools';
-
-/**
- * Default configuration for tools
- */
-const DEFAULT_CONFIG: DesignSystemConfig = {
-  type: 'tailwind',
-  themeProvider: '@agimonai/web-ui',
-};
 
 export function createServer(themePath = 'packages/frontend/web-theme/src/agimon-theme.css'): Server {
   const server = new Server(

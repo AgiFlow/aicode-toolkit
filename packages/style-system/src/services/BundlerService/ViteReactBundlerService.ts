@@ -35,6 +35,66 @@ import type {
 } from './types';
 
 /**
+ * Maximum age for story configs in milliseconds (5 minutes).
+ * Configs older than this are cleaned up to prevent memory leaks.
+ */
+const STORY_CONFIG_MAX_AGE_MS = 5 * 60 * 1000;
+
+/**
+ * Maximum number of story configs to keep in memory.
+ * Oldest configs are removed when this limit is exceeded.
+ */
+const STORY_CONFIG_MAX_COUNT = 100;
+
+/**
+ * Valid pattern for story names.
+ * Allows alphanumeric characters, underscores, hyphens, and spaces.
+ */
+const VALID_STORY_NAME_PATTERN = /^[a-zA-Z0-9_\- ]+$/;
+
+/**
+ * Valid pattern for component paths.
+ * Must end with .stories.tsx, .stories.ts, .stories.jsx, or .stories.js
+ */
+const VALID_COMPONENT_PATH_PATTERN = /\.stories\.(tsx?|jsx?)$/;
+
+/**
+ * Validates a story name to prevent code injection.
+ * @param storyName - The story name to validate
+ * @throws Error if the story name contains invalid characters
+ */
+function validateStoryName(storyName: string): void {
+  if (!storyName || typeof storyName !== 'string') {
+    throw new Error('Story name is required and must be a string');
+  }
+  if (!VALID_STORY_NAME_PATTERN.test(storyName)) {
+    throw new Error(
+      `Story name "${storyName}" contains invalid characters. Only alphanumeric characters, underscores, hyphens, and spaces are allowed.`,
+    );
+  }
+}
+
+/**
+ * Validates a component path to prevent code injection.
+ * @param componentPath - The component path to validate
+ * @throws Error if the component path is invalid
+ */
+function validateComponentPath(componentPath: string): void {
+  if (!componentPath || typeof componentPath !== 'string') {
+    throw new Error('Component path is required and must be a string');
+  }
+  if (!VALID_COMPONENT_PATH_PATTERN.test(componentPath)) {
+    throw new Error(
+      `Component path "${componentPath}" must be a valid Storybook story file (*.stories.tsx, *.stories.ts, *.stories.jsx, or *.stories.js)`,
+    );
+  }
+  // Prevent path traversal attacks
+  if (componentPath.includes('..')) {
+    throw new Error('Component path must not contain path traversal sequences (..)');
+  }
+}
+
+/**
  * Helper to create a Vite plugin that serves story entry files from memory.
  */
 function createStoryEntryPlugin(
@@ -100,6 +160,8 @@ export class ViteReactBundlerService extends BaseBundlerService {
   private serverPort: number | null = null;
   private currentAppPath: string | null = null;
   private storyConfigs = new Map<string, BuildOptions>();
+  /** Timestamps for when each story config was created, used for cleanup */
+  private storyConfigTimestamps = new Map<string, number>();
 
   /**
    * Creates a new ViteReactBundlerService instance.
@@ -280,9 +342,11 @@ export class ViteReactBundlerService extends BaseBundlerService {
 
       return { url, port };
     } catch (error) {
-      throw new Error(
+      const err = new Error(
         `Failed to start dev server for ${appPath}: ${error instanceof Error ? error.message : String(error)}`,
       );
+      err.cause = error;
+      throw err;
     }
   }
 
@@ -298,6 +362,11 @@ export class ViteReactBundlerService extends BaseBundlerService {
     }
 
     const { componentPath, storyName, args = {}, darkMode = false, appPath, cssFiles = [], rootComponent } = options;
+
+    // Validate inputs to prevent code injection
+    validateStoryName(storyName);
+    validateComponentPath(componentPath);
+
     const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(this.monorepoRoot, appPath);
 
     if (this.currentAppPath !== resolvedAppPath) {
@@ -309,6 +378,9 @@ export class ViteReactBundlerService extends BaseBundlerService {
     const tmpDir = path.join(resolvedAppPath, '.tmp');
 
     try {
+      // Clean up stale story configs to prevent memory leaks
+      this.cleanupStaleStoryConfigs();
+
       // Create tmpDir if it doesn't exist
       await fs.mkdir(tmpDir, { recursive: true });
 
@@ -317,9 +389,10 @@ export class ViteReactBundlerService extends BaseBundlerService {
       const wrapperCssContent = this.generateWrapperCss(resolvedAppPath, cssFiles);
       await fs.writeFile(wrapperCssPath, wrapperCssContent, 'utf-8');
 
-      const storyId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const timestamp = Date.now();
+      const storyId = `${timestamp}-${Math.random().toString(36).slice(2)}`;
 
-      // Store config in memory
+      // Store config in memory with timestamp for cleanup
       this.storyConfigs.set(storyId, {
         componentPath,
         storyName,
@@ -330,6 +403,7 @@ export class ViteReactBundlerService extends BaseBundlerService {
         rootComponent,
         tmpDir,
       });
+      this.storyConfigTimestamps.set(storyId, timestamp);
 
       const url = `${this.serverUrl}/preview/${storyId}`;
       const htmlContent = this.generateHtmlTemplate(`@virtual:story-entry?id=${storyId}`, darkMode);
@@ -341,9 +415,11 @@ export class ViteReactBundlerService extends BaseBundlerService {
         htmlContent,
       };
     } catch (error) {
-      throw new Error(
+      const err = new Error(
         `Failed to serve component ${storyName}: ${error instanceof Error ? error.message : String(error)}`,
       );
+      err.cause = error;
+      throw err;
     }
   }
 
@@ -355,6 +431,11 @@ export class ViteReactBundlerService extends BaseBundlerService {
    */
   async prerenderComponent(options: RenderOptions): Promise<PrerenderResult> {
     const { componentPath, storyName, args = {}, darkMode = false, appPath, cssFiles = [], rootComponent } = options;
+
+    // Validate inputs to prevent code injection
+    validateStoryName(storyName);
+    validateComponentPath(componentPath);
+
     const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(this.monorepoRoot, appPath);
     const tmpDir = path.join(resolvedAppPath, '.tmp');
 
@@ -367,9 +448,11 @@ export class ViteReactBundlerService extends BaseBundlerService {
 
       return { htmlFilePath };
     } catch (error) {
-      throw new Error(
+      const err = new Error(
         `Failed to prerender component ${storyName}: ${error instanceof Error ? error.message : String(error)}`,
       );
+      err.cause = error;
+      throw err;
     }
   }
 
@@ -394,7 +477,51 @@ export class ViteReactBundlerService extends BaseBundlerService {
       this.serverUrl = null;
       this.serverPort = null;
       this.currentAppPath = null;
+      // Clear story configs to free memory
+      this.storyConfigs.clear();
+      this.storyConfigTimestamps.clear();
       log.info('[ViteReactBundlerService] Vite dev server closed');
+    }
+  }
+
+  /**
+   * Clean up stale story configs to prevent memory leaks.
+   * Removes configs that are older than STORY_CONFIG_MAX_AGE_MS or
+   * when the number of configs exceeds STORY_CONFIG_MAX_COUNT.
+   */
+  private cleanupStaleStoryConfigs(): void {
+    const now = Date.now();
+    const entriesToDelete: string[] = [];
+
+    // Find configs that are too old
+    for (const [storyId, timestamp] of this.storyConfigTimestamps) {
+      if (now - timestamp > STORY_CONFIG_MAX_AGE_MS) {
+        entriesToDelete.push(storyId);
+      }
+    }
+
+    // Delete stale entries
+    for (const storyId of entriesToDelete) {
+      this.storyConfigs.delete(storyId);
+      this.storyConfigTimestamps.delete(storyId);
+    }
+
+    if (entriesToDelete.length > 0) {
+      log.debug(`[ViteReactBundlerService] Cleaned up ${entriesToDelete.length} stale story configs`);
+    }
+
+    // If still over limit, remove oldest entries
+    if (this.storyConfigs.size > STORY_CONFIG_MAX_COUNT) {
+      const sortedEntries = Array.from(this.storyConfigTimestamps.entries())
+        .sort((a, b) => a[1] - b[1]); // Sort by timestamp ascending (oldest first)
+
+      const toRemove = sortedEntries.slice(0, this.storyConfigs.size - STORY_CONFIG_MAX_COUNT);
+      for (const [storyId] of toRemove) {
+        this.storyConfigs.delete(storyId);
+        this.storyConfigTimestamps.delete(storyId);
+      }
+
+      log.debug(`[ViteReactBundlerService] Removed ${toRemove.length} oldest story configs to stay under limit`);
     }
   }
 
@@ -434,7 +561,7 @@ ${cssImportStatements}
    * @returns Generated TypeScript/JSX entry file content
    */
   private generateEntryFile(options: BuildOptions): string {
-    const { componentPath, storyName, args, appPath, darkMode, cssFiles, rootComponent, tmpDir } = options;
+    const { componentPath, storyName, args, appPath, darkMode, rootComponent, tmpDir } = options;
     const argsJson = JSON.stringify(args, null, 2);
 
     // Use absolute path to wrapper CSS with @source directive for Tailwind v4
@@ -592,9 +719,11 @@ root.render(wrappedElement);
 
       return builtHtmlPath;
     } catch (error) {
-      throw new Error(
+      const err = new Error(
         `Failed to build component: ${error instanceof Error ? error.message : String(error)}`,
       );
+      err.cause = error;
+      throw err;
     }
   }
 }
