@@ -116,6 +116,36 @@ function validateArgsSize(args: Record<string, unknown>): void {
 }
 
 /**
+ * Validates CSS file paths to prevent path traversal attacks.
+ * @param cssFiles - Array of CSS file paths to validate
+ * @param workspaceRoot - The workspace root directory
+ * @throws Error if any path is invalid or escapes workspace
+ */
+function validateCssFiles(cssFiles: string[], workspaceRoot: string): void {
+  for (const cssFile of cssFiles) {
+    if (typeof cssFile !== 'string') {
+      throw new Error('CSS file path must be a string');
+    }
+    // Check for path traversal sequences
+    if (cssFile.includes('..')) {
+      throw new Error(`CSS file path "${cssFile}" must not contain path traversal sequences (..)`);
+    }
+    // Check for absolute paths that escape workspace
+    if (path.isAbsolute(cssFile)) {
+      const normalizedPath = path.normalize(cssFile);
+      if (!normalizedPath.startsWith(workspaceRoot)) {
+        throw new Error(`CSS file path "${cssFile}" must be within workspace boundaries`);
+      }
+    }
+    // Validate file extension
+    const ext = path.extname(cssFile).toLowerCase();
+    if (!['.css', '.scss', '.sass', '.less', '.pcss', '.postcss'].includes(ext)) {
+      throw new Error(`CSS file "${cssFile}" must have a valid CSS extension (.css, .scss, .sass, .less, .pcss)`);
+    }
+  }
+}
+
+/**
  * Helper to create a Vite plugin that serves story entry files from memory.
  */
 function createStoryEntryPlugin(
@@ -417,10 +447,11 @@ export class ViteReactBundlerService extends BaseBundlerService {
 
     const { componentPath, storyName, args = {}, darkMode = false, appPath, cssFiles = [], rootComponent } = options;
 
-    // Validate inputs to prevent code injection and memory issues
+    // Validate inputs to prevent code injection, memory issues, and path traversal
     validateStoryName(storyName);
     validateComponentPath(componentPath);
     validateArgsSize(args);
+    validateCssFiles(cssFiles, this.monorepoRoot);
 
     const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(this.monorepoRoot, appPath);
 
@@ -487,10 +518,11 @@ export class ViteReactBundlerService extends BaseBundlerService {
   async prerenderComponent(options: RenderOptions): Promise<PrerenderResult> {
     const { componentPath, storyName, args = {}, darkMode = false, appPath, cssFiles = [], rootComponent } = options;
 
-    // Validate inputs to prevent code injection and memory issues
+    // Validate inputs to prevent code injection, memory issues, and path traversal
     validateStoryName(storyName);
     validateComponentPath(componentPath);
     validateArgsSize(args);
+    validateCssFiles(cssFiles, this.monorepoRoot);
 
     const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(this.monorepoRoot, appPath);
     const tmpDir = path.join(resolvedAppPath, '.tmp');

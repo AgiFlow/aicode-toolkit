@@ -246,23 +246,60 @@ export class ComponentRendererService {
   }
 
   /**
-   * Clean up old rendered files
+   * Maximum number of screenshot files to keep in temp directory.
+   * Prevents disk space issues on long-running servers.
+   */
+  private static readonly MAX_TEMP_FILES = 100;
+
+  /**
+   * Clean up old rendered files.
+   * Removes files older than the specified duration and enforces a max file count.
    * @param olderThanMs - Remove files older than this duration (default: 1 hour)
    */
   async cleanup(olderThanMs: number = 3600000): Promise<void> {
     try {
       const files = await fs.readdir(this.tmpDir);
       const now = Date.now();
+      const componentFiles: Array<{ name: string; path: string; mtime: number }> = [];
 
+      // Collect component files with their modification times
       for (const file of files) {
         if (file.startsWith('component-')) {
           const filePath = path.join(this.tmpDir, file);
-          const stats = await fs.stat(filePath);
-
-          if (now - stats.mtimeMs > olderThanMs) {
-            await fs.unlink(filePath).catch((err) => log.warn('[ComponentRendererService] Failed to delete file:', filePath, err));
+          try {
+            const stats = await fs.stat(filePath);
+            componentFiles.push({ name: file, path: filePath, mtime: stats.mtimeMs });
+          } catch {
+            // File may have been deleted, skip
           }
         }
+      }
+
+      let deletedCount = 0;
+
+      // Delete files older than threshold
+      for (const file of componentFiles) {
+        if (now - file.mtime > olderThanMs) {
+          await fs.unlink(file.path).catch((err) => log.warn('[ComponentRendererService] Failed to delete file:', file.path, err));
+          deletedCount++;
+        }
+      }
+
+      // Enforce max file count by removing oldest files
+      const remainingFiles = componentFiles.filter((f) => now - f.mtime <= olderThanMs);
+      if (remainingFiles.length > ComponentRendererService.MAX_TEMP_FILES) {
+        // Sort by mtime ascending (oldest first)
+        remainingFiles.sort((a, b) => a.mtime - b.mtime);
+        const toDelete = remainingFiles.slice(0, remainingFiles.length - ComponentRendererService.MAX_TEMP_FILES);
+
+        for (const file of toDelete) {
+          await fs.unlink(file.path).catch((err) => log.warn('[ComponentRendererService] Failed to delete file:', file.path, err));
+          deletedCount++;
+        }
+      }
+
+      if (deletedCount > 0) {
+        log.info(`[ComponentRendererService] Cleaned up ${deletedCount} temp files`);
       }
     } catch (error) {
       log.error('[ComponentRendererService] Cleanup error:', error);
@@ -270,10 +307,14 @@ export class ComponentRendererService {
   }
 
   /**
-   * Cleanup bundler server (only if not using shared dev server)
+   * Cleanup bundler server and temp files.
+   * Called on service shutdown.
    */
   async dispose(): Promise<void> {
     try {
+      // Clean up temp files on dispose
+      await this.cleanup(0); // Remove all temp files
+
       const bundlerService = this.getBundlerService();
 
       // Only cleanup if it's a static build server (not the shared dev server)
