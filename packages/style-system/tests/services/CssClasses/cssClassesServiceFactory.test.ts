@@ -78,11 +78,34 @@ describe('CSSClassesServiceFactory', () => {
       const factory = new CSSClassesServiceFactory();
 
       // Test the public API behavior - providing a non-existent path should fail
+      // Use a relative path within workspace to pass security validation
+      await expect(
+        factory.createService({
+          customServicePath: './nonexistent/custom-service.ts',
+        }),
+      ).rejects.toThrow(/Failed to load custom CSS classes service/);
+    });
+
+    it('should throw security error when custom service path resolves outside workspace', async () => {
+      const factory = new CSSClassesServiceFactory();
+
+      // Test security validation - absolute paths outside workspace should be rejected
       await expect(
         factory.createService({
           customServicePath: '/nonexistent/custom-service.ts',
         }),
-      ).rejects.toThrow(/Failed to load custom CSS classes service/);
+      ).rejects.toThrow(/Security error.*resolves outside workspace root/);
+    });
+
+    it('should throw error for invalid file extension', async () => {
+      const factory = new CSSClassesServiceFactory();
+
+      // Test file extension validation
+      await expect(
+        factory.createService({
+          customServicePath: './custom-service.txt',
+        }),
+      ).rejects.toThrow(/Invalid file extension/);
     });
 
     it('should throw error when custom service path is invalid module', async () => {

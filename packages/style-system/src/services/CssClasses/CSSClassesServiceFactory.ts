@@ -15,10 +15,15 @@
  * - Hardcoded framework paths
  */
 
+import path from 'node:path';
+import { log, TemplatesManagerService } from '@agiflowai/aicode-utils';
 import { BaseCSSClassesService } from './BaseCSSClassesService';
 import { TailwindCSSClassesService } from './TailwindCSSClassesService';
 import type { StyleSystemConfig } from './types';
 import { DEFAULT_STYLE_SYSTEM_CONFIG } from './types';
+
+/** Valid file extensions for custom service modules */
+const VALID_SERVICE_EXTENSIONS = ['.ts', '.js', '.mjs', '.cjs'] as const;
 
 /**
  * Factory for creating CSS classes service instances.
@@ -91,15 +96,38 @@ export class CSSClassesServiceFactory {
       throw new Error('customServicePath is required for custom service loading');
     }
 
+    // Resolve path relative to workspace root
+    const monorepoRoot = TemplatesManagerService.getWorkspaceRootSync();
+    const resolvedPath = path.resolve(monorepoRoot, servicePath);
+
+    // Security: Validate path stays within workspace root (prevent path traversal)
+    const normalizedWorkspaceRoot = path.resolve(monorepoRoot);
+    if (!resolvedPath.startsWith(normalizedWorkspaceRoot + path.sep)) {
+      throw new Error(
+        `Security error: customServicePath "${servicePath}" resolves outside workspace root`,
+      );
+    }
+
+    // Validate file extension is a valid source file
+    const ext = path.extname(resolvedPath).toLowerCase();
+    if (!VALID_SERVICE_EXTENSIONS.includes(ext as typeof VALID_SERVICE_EXTENSIONS[number])) {
+      throw new Error(
+        `Invalid file extension "${ext}" for customServicePath. ` +
+        `Expected one of: ${VALID_SERVICE_EXTENSIONS.join(', ')}`,
+      );
+    }
+
+    log.info(`[CSSClassesServiceFactory] Loading custom CSS service from: ${resolvedPath}`);
+
     try {
-      const customModule = await import(servicePath);
+      const customModule = await import(resolvedPath);
 
       // Look for default export or named export that extends BaseCSSClassesService
       const ServiceClass = customModule.default || customModule.CSSClassesService || customModule.CustomCSSClassesService;
 
       if (!ServiceClass) {
         throw new Error(
-          `Custom service module at ${servicePath} must export a default class, ` +
+          `Custom service module at ${resolvedPath} must export a default class, ` +
             `CSSClassesService, or CustomCSSClassesService that extends BaseCSSClassesService`,
         );
       }
@@ -107,16 +135,17 @@ export class CSSClassesServiceFactory {
       const instance = new ServiceClass(config);
 
       if (!(instance instanceof BaseCSSClassesService)) {
-        throw new Error(`Custom service at ${servicePath} must extend BaseCSSClassesService`);
+        throw new Error(`Custom service at ${resolvedPath} must extend BaseCSSClassesService`);
       }
 
+      log.info(`[CSSClassesServiceFactory] Custom CSS service loaded successfully`);
       return instance;
     } catch (error) {
       if (error instanceof Error && error.message.includes('BaseCSSClassesService')) {
         throw error;
       }
       throw new Error(
-        `Failed to load custom CSS classes service from ${servicePath}: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to load custom CSS classes service from ${resolvedPath}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }

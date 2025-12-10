@@ -23,6 +23,9 @@ import { getBundlerConfig } from '../../config';
 import type { BaseBundlerService } from './BaseBundlerService';
 import { ViteReactBundlerService } from './ViteReactBundlerService';
 
+/** Valid file extensions for custom service modules */
+const VALID_SERVICE_EXTENSIONS = ['.ts', '.js', '.mjs', '.cjs'] as const;
+
 /**
  * Factory function type for creating bundler service instances.
  * Users can provide custom implementations by defining their own factory.
@@ -151,7 +154,29 @@ export async function getBundlerServiceFromConfig(): Promise<BaseBundlerService>
   }
 
   const monorepoRoot = TemplatesManagerService.getWorkspaceRootSync();
-  const customServicePath = path.join(monorepoRoot, config.customService);
+  const customServicePath = path.resolve(monorepoRoot, config.customService);
+
+  // Security: Validate path stays within workspace root (prevent path traversal)
+  const normalizedWorkspaceRoot = path.resolve(monorepoRoot);
+  if (!customServicePath.startsWith(normalizedWorkspaceRoot + path.sep)) {
+    log.error(
+      `[BundlerServiceFactory] Security error: customService path "${config.customService}" ` +
+      `resolves outside workspace root`,
+    );
+    cachedBundlerService = createDefaultBundlerService();
+    return cachedBundlerService;
+  }
+
+  // Validate file extension is a valid source file
+  const ext = path.extname(customServicePath).toLowerCase();
+  if (!VALID_SERVICE_EXTENSIONS.includes(ext as typeof VALID_SERVICE_EXTENSIONS[number])) {
+    log.error(
+      `[BundlerServiceFactory] Invalid file extension "${ext}" for customService. ` +
+      `Expected one of: ${VALID_SERVICE_EXTENSIONS.join(', ')}`,
+    );
+    cachedBundlerService = createDefaultBundlerService();
+    return cachedBundlerService;
+  }
 
   try {
     log.info(`[BundlerServiceFactory] Loading custom bundler service from: ${customServicePath}`);
@@ -186,11 +211,29 @@ export async function getBundlerServiceFromConfig(): Promise<BaseBundlerService>
       );
     }
 
-    // Validate it's a BaseBundlerService (duck typing check)
-    if (typeof cachedBundlerService.startDevServer !== 'function' ||
-        typeof cachedBundlerService.serveComponent !== 'function' ||
-        typeof cachedBundlerService.cleanup !== 'function') {
-      throw new Error('Custom bundler service must implement BaseBundlerService interface');
+    // Validate it's a BaseBundlerService (duck typing check for all required methods)
+    const requiredMethods = [
+      'getBundlerId',
+      'getFrameworkId',
+      'startDevServer',
+      'serveComponent',
+      'prerenderComponent',
+      'isServerRunning',
+      'getServerUrl',
+      'getServerPort',
+      'getCurrentAppPath',
+      'cleanup',
+    ] as const;
+
+    const missingMethods = requiredMethods.filter(
+      (method) => typeof (cachedBundlerService as Record<string, unknown>)[method] !== 'function',
+    );
+
+    if (missingMethods.length > 0) {
+      throw new Error(
+        `Custom bundler service must implement BaseBundlerService interface. ` +
+        `Missing methods: ${missingMethods.join(', ')}`,
+      );
     }
 
     log.info(`[BundlerServiceFactory] Custom bundler service loaded successfully`);
