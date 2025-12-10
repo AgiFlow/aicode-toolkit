@@ -226,7 +226,7 @@ export async function getBundlerServiceFromConfig(): Promise<BaseBundlerService>
     ] as const;
 
     const missingMethods = requiredMethods.filter(
-      (method) => typeof (cachedBundlerService as Record<string, unknown>)[method] !== 'function',
+      (method) => typeof (cachedBundlerService as unknown as Record<string, unknown>)[method] !== 'function',
     );
 
     if (missingMethods.length > 0) {
