@@ -12,11 +12,11 @@ MCP servers that teach AI coding agents your team's conventions. Provides scaffo
 
 ## Why This Exists
 
-As projects go from MVP to production, you introduce new patterns, conventions, components, style guides... Your AGENTS.md, instruction.md, or CLAUDE.md also grows bigger and bigger, eating up all the context.
+As projects grow from MVP to production, you accumulate patterns, conventions, components, and style guides. Your `AGENTS.md` or `CLAUDE.md` keeps growing — consuming precious context window.
 
-Growing from our frustration of using agents on large monorepos, this toolkit allows teams to encode your team's conventions, patterns, and rules in a centralised, sharable location. Instead of preloading AI agents with docs, our tools follow a progressive discovery approach, where the AI agent can call the tool to discover pre-flight and post-check based on pattern matching.
+This toolkit encodes your team's conventions in a centralized, shareable location. Instead of preloading AI agents with documentation, our tools use **progressive discovery**: agents call tools to get relevant patterns before writing code and validate against rules after.
 
-Think Rails conventions, but for any stack, enforced by your AI agent.
+No more convention violations, design drift, or bloated instructions.
 
 ---
 
