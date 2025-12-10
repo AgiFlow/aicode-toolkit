@@ -7,6 +7,7 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import yaml from 'js-yaml';
 import { log, TemplatesManagerService } from '@agiflowai/aicode-utils';
 
 /**
@@ -66,9 +67,76 @@ const DEFAULT_CONFIG: DesignSystemConfig = {
 };
 
 /**
- * Read design system configuration from an app's project.json
+ * Validate style-system configuration from project.json.
+ * Ensures required fields are present and have correct types.
+ *
+ * @param config - The config object to validate
+ * @param projectName - Project name for error messages
+ * @returns Validated DesignSystemConfig
+ * @throws Error if validation fails
+ */
+function validateDesignSystemConfig(config: unknown, projectName: string): DesignSystemConfig {
+  if (typeof config !== 'object' || config === null) {
+    throw new Error(`[${projectName}] style-system config must be an object`);
+  }
+
+  const cfg = config as Record<string, unknown>;
+
+  // Validate required field: type
+  if (!cfg.type || (cfg.type !== 'tailwind' && cfg.type !== 'shadcn')) {
+    throw new Error(`[${projectName}] style-system.type must be 'tailwind' or 'shadcn'`);
+  }
+
+  // Validate required field: themeProvider
+  if (!cfg.themeProvider || typeof cfg.themeProvider !== 'string') {
+    throw new Error(`[${projectName}] style-system.themeProvider is required and must be a string`);
+  }
+
+  // Validate optional fields
+  if (cfg.tailwindConfig !== undefined && typeof cfg.tailwindConfig !== 'string') {
+    throw new Error(`[${projectName}] style-system.tailwindConfig must be a string`);
+  }
+
+  if (cfg.rootComponent !== undefined && typeof cfg.rootComponent !== 'string') {
+    throw new Error(`[${projectName}] style-system.rootComponent must be a string`);
+  }
+
+  if (cfg.cssFiles !== undefined) {
+    if (!Array.isArray(cfg.cssFiles) || !cfg.cssFiles.every((f) => typeof f === 'string')) {
+      throw new Error(`[${projectName}] style-system.cssFiles must be an array of strings`);
+    }
+  }
+
+  if (cfg.componentLibrary !== undefined && typeof cfg.componentLibrary !== 'string') {
+    throw new Error(`[${projectName}] style-system.componentLibrary must be a string`);
+  }
+
+  if (cfg.themePath !== undefined && typeof cfg.themePath !== 'string') {
+    throw new Error(`[${projectName}] style-system.themePath must be a string`);
+  }
+
+  if (cfg.sharedComponentTags !== undefined) {
+    if (!Array.isArray(cfg.sharedComponentTags) || !cfg.sharedComponentTags.every((t) => typeof t === 'string')) {
+      throw new Error(`[${projectName}] style-system.sharedComponentTags must be an array of strings`);
+    }
+  }
+
+  return config as DesignSystemConfig;
+}
+
+/**
+ * Read design system configuration from an app's project.json.
+ *
+ * @param appPath - Path to the app directory (relative or absolute)
+ * @returns Validated DesignSystemConfig
+ * @throws Error if appPath is invalid, project.json cannot be read, or config validation fails
  */
 export async function getAppDesignSystemConfig(appPath: string): Promise<DesignSystemConfig> {
+  // Validate input
+  if (!appPath || typeof appPath !== 'string') {
+    throw new Error('appPath is required and must be a non-empty string');
+  }
+
   const monorepoRoot = TemplatesManagerService.getWorkspaceRootSync();
 
   // Resolve app path (could be relative or absolute)
@@ -78,14 +146,31 @@ export async function getAppDesignSystemConfig(appPath: string): Promise<DesignS
 
   try {
     const content = await fs.readFile(projectJsonPath, 'utf-8');
-    const projectJson: ProjectJson = JSON.parse(content);
+    let projectJson: unknown;
 
-    if (projectJson['style-system']) {
-      log.info(`[Config] Loaded style-system config for ${projectJson.name}`);
-      return projectJson['style-system'];
+    try {
+      projectJson = JSON.parse(content);
+    } catch (parseError) {
+      throw new Error(
+        `Invalid JSON in ${projectJsonPath}: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+      );
     }
 
-    log.info(`[Config] No style-system config found for ${projectJson.name}, using defaults`);
+    // Validate project.json has expected structure
+    if (typeof projectJson !== 'object' || projectJson === null) {
+      throw new Error(`${projectJsonPath} must contain a JSON object`);
+    }
+
+    const project = projectJson as Record<string, unknown>;
+    const projectName = typeof project.name === 'string' ? project.name : path.basename(resolvedAppPath);
+
+    if (project['style-system']) {
+      const validatedConfig = validateDesignSystemConfig(project['style-system'], projectName);
+      log.info(`[Config] Loaded and validated style-system config for ${projectName}`);
+      return validatedConfig;
+    }
+
+    log.info(`[Config] No style-system config found for ${projectName}, using defaults`);
     return DEFAULT_CONFIG;
   } catch (error) {
     throw new Error(
@@ -103,13 +188,21 @@ export async function getAppDesignSystemConfigByName(appName: string): Promise<D
   // Try common app locations
   const possiblePaths = [path.join(monorepoRoot, 'apps', appName), path.join(monorepoRoot, 'backend', 'apps', appName)];
 
+  const errors: string[] = [];
+
   for (const appPath of possiblePaths) {
     try {
       return await getAppDesignSystemConfig(appPath);
-    } catch {}
+    } catch (error) {
+      // Collect errors for debugging - file not found is expected, other errors are not
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      errors.push(`${appPath}: ${errorMessage}`);
+    }
   }
 
-  throw new Error(`Could not find app "${appName}" in common locations`);
+  throw new Error(
+    `Could not find app "${appName}" in common locations. Tried:\n${errors.map((e) => `  - ${e}`).join('\n')}`,
+  );
 }
 
 /**
@@ -140,73 +233,25 @@ export async function getSharedComponentTags(): Promise<string[]> {
 
   try {
     const content = await fs.readFile(toolkitYamlPath, 'utf-8');
-    // Simple YAML parsing for sharedComponentTags array
-    const config = parseToolkitYaml(content);
+    const config = yaml.load(content) as ToolkitYaml | null;
 
-    if (config['style-system']?.sharedComponentTags?.length) {
-      log.info(`[Config] Loaded sharedComponentTags from toolkit.yaml: ${config['style-system'].sharedComponentTags.join(', ')}`);
-      return config['style-system'].sharedComponentTags;
+    if (config?.['style-system']?.sharedComponentTags?.length) {
+      const tags = config['style-system'].sharedComponentTags;
+      // Validate that tags is an array of strings
+      if (Array.isArray(tags) && tags.every((tag) => typeof tag === 'string')) {
+        log.info(`[Config] Loaded sharedComponentTags from toolkit.yaml: ${tags.join(', ')}`);
+        return tags;
+      }
+      log.warn('[Config] sharedComponentTags in toolkit.yaml is not a valid string array, using defaults');
     }
-  } catch {
+  } catch (error) {
+    // Only log if it's not a file-not-found error (ENOENT)
+    if (error instanceof Error && 'code' in error && error.code !== 'ENOENT') {
+      log.warn(`[Config] Failed to parse toolkit.yaml: ${error.message}`);
+    }
     // toolkit.yaml doesn't exist or couldn't be read, use defaults
   }
 
   log.info(`[Config] Using default sharedComponentTags: ${DEFAULT_SHARED_COMPONENT_TAGS.join(', ')}`);
   return DEFAULT_SHARED_COMPONENT_TAGS;
-}
-
-/**
- * Simple YAML parser for toolkit.yaml style-system section.
- * Handles the specific structure we need without a full YAML library.
- */
-function parseToolkitYaml(content: string): ToolkitYaml {
-  const result: ToolkitYaml = {};
-  const lines = content.split('\n');
-
-  let inStyleSystem = false;
-  let inSharedComponentTags = false;
-  const tags: string[] = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    // Check for style-system section
-    if (trimmed === 'style-system:') {
-      inStyleSystem = true;
-      continue;
-    }
-
-    // Exit style-system section on non-indented line
-    if (inStyleSystem && !line.startsWith(' ') && !line.startsWith('\t') && trimmed !== '') {
-      inStyleSystem = false;
-      inSharedComponentTags = false;
-    }
-
-    if (inStyleSystem) {
-      // Check for sharedComponentTags key
-      if (trimmed === 'sharedComponentTags:') {
-        inSharedComponentTags = true;
-        continue;
-      }
-
-      // Exit sharedComponentTags on new key (not starting with -)
-      if (inSharedComponentTags && !trimmed.startsWith('-') && trimmed.includes(':')) {
-        inSharedComponentTags = false;
-      }
-
-      // Parse array items
-      if (inSharedComponentTags && trimmed.startsWith('-')) {
-        const tag = trimmed.slice(1).trim().replace(/^['"]|['"]$/g, '');
-        if (tag) {
-          tags.push(tag);
-        }
-      }
-    }
-  }
-
-  if (tags.length > 0) {
-    result['style-system'] = { sharedComponentTags: tags };
-  }
-
-  return result;
 }

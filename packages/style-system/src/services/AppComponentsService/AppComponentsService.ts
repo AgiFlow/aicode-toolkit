@@ -58,9 +58,20 @@ export class AppComponentsService {
    * List app-specific and package components for a given application.
    * @param input - Object containing appPath and optional cursor for pagination
    * @returns Promise resolving to paginated component list
-   * @throws Error if app path does not exist or stories index fails to initialize
+   * @throws Error if input validation fails, app path does not exist, or stories index fails to initialize
    */
   async listComponents(input: ListAppComponentsInput): Promise<AppComponentsServiceResult> {
+    // Validate required inputs
+    if (!input.appPath || typeof input.appPath !== 'string') {
+      throw new Error('appPath is required and must be a non-empty string');
+    }
+
+    // Validate optional inputs before applying defaults.
+    // This guards against incorrect types from untyped callers at runtime.
+    if (input.cursor !== undefined && typeof input.cursor !== 'string') {
+      throw new Error('cursor must be a string');
+    }
+
     const { appPath, cursor } = input;
 
     // Decode cursor to get pagination offset (offset starts at 0 for first page)

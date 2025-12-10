@@ -378,11 +378,26 @@ root.render(wrappedElement);
     const { componentPath, storyName, args, appPath, darkMode, cssFiles, rootComponent, tmpDir } = options;
     const timestamp = Date.now();
 
-    try {
-      // Create entry file for the component
-      const entryFileName = `entry-${timestamp}.tsx`;
-      const entryFilePath = path.join(tmpDir, entryFileName);
+    // Track temp files for cleanup
+    const entryFileName = `entry-${timestamp}.tsx`;
+    const entryFilePath = path.join(tmpDir, entryFileName);
+    const htmlTemplateFileName = `index-${timestamp}.html`;
+    const htmlTemplatePath = path.join(tmpDir, htmlTemplateFileName);
 
+    // Helper to clean up temp files.
+    // Cleanup errors are intentionally caught and logged as warnings rather than propagated
+    // because cleanup is non-critical - the build operation has already succeeded or failed,
+    // and failing cleanup shouldn't mask the actual result or cause additional failures.
+    const cleanupTempFiles = async (): Promise<void> => {
+      await fs.unlink(entryFilePath).catch((err) => {
+        log.warn(`[VitejsService] Non-critical: Failed to clean up entry file: ${err.message}`);
+      });
+      await fs.unlink(htmlTemplatePath).catch((err) => {
+        log.warn(`[VitejsService] Non-critical: Failed to clean up template file: ${err.message}`);
+      });
+    };
+
+    try {
       const argsJson = JSON.stringify(args, null, 2);
 
       // Generate CSS imports based on path format:
@@ -458,8 +473,6 @@ root.render(wrappedElement);
 </body>
 </html>`;
 
-      const htmlTemplateFileName = `index-${timestamp}.html`;
-      const htmlTemplatePath = path.join(tmpDir, htmlTemplateFileName);
       await fs.writeFile(htmlTemplatePath, htmlTemplate, 'utf-8');
 
       // Dynamic import to avoid loading Vite at module initialization time
@@ -497,21 +510,16 @@ root.render(wrappedElement);
       const builtHtmlPath = path.join(outDir, htmlTemplateFileName);
       log.info(`[VitejsService] Component built to: ${builtHtmlPath}`);
 
-      // Clean up temporary entry and template files (keep the built HTML)
-      // Note: Cleanup failures are non-critical - the build succeeded, so we only log warnings.
-      // These temp files will be cleaned up on next build or can be manually removed.
-      await fs.unlink(entryFilePath).catch((err) => {
-        log.warn(`[VitejsService] Non-critical: Failed to clean up entry file: ${err.message}`);
-      });
-      await fs.unlink(htmlTemplatePath).catch((err) => {
-        log.warn(`[VitejsService] Non-critical: Failed to clean up template file: ${err.message}`);
-      });
-
       return builtHtmlPath;
     } catch (error) {
       throw new Error(
         `Failed to build component ${storyName}: ${error instanceof Error ? error.message : String(error)}`,
       );
+    } finally {
+      // Clean up temporary entry and template files (keep the built HTML)
+      // Note: Cleanup failures are non-critical - the build succeeded or failed,
+      // but we should always attempt cleanup to avoid accumulating temp files.
+      await cleanupTempFiles();
     }
   }
 

@@ -81,9 +81,26 @@ export class GetUiComponentService {
    *
    * @param input - Component input parameters
    * @returns Result with image path and component metadata
-   * @throws Error if component not found or rendering fails
+   * @throws Error if input validation fails, component not found, or rendering fails
    */
   async getComponent(input: GetUiComponentInput): Promise<GetUiComponentResult> {
+    // Validate required inputs
+    if (!input.componentName || typeof input.componentName !== 'string') {
+      throw new Error('componentName is required and must be a non-empty string');
+    }
+    if (!input.appPath || typeof input.appPath !== 'string') {
+      throw new Error('appPath is required and must be a non-empty string');
+    }
+
+    // Validate optional inputs before applying defaults.
+    // This guards against incorrect types from untyped callers at runtime.
+    if (input.storyName !== undefined && typeof input.storyName !== 'string') {
+      throw new Error('storyName must be a string');
+    }
+    if (input.darkMode !== undefined && typeof input.darkMode !== 'boolean') {
+      throw new Error('darkMode must be a boolean');
+    }
+
     const {
       componentName,
       appPath,
