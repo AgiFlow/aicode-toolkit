@@ -1,0 +1,36 @@
+/**
+ * {{ serviceName }} Types
+ *
+ * Type definitions for the {{ serviceName }} service.
+ */
+
+/**
+ * Configuration options for {{ serviceName }}
+ */
+export interface {{ serviceName }}Config {
+  /**
+   * Enable verbose logging
+   * @default false
+   */
+  verbose?: boolean;
+}
+
+/**
+ * Result returned by {{ serviceName }} operations
+ */
+export interface {{ serviceName }}Result {
+  /**
+   * Whether the operation was successful
+   */
+  success: boolean;
+
+  /**
+   * Result data if successful
+   */
+  data?: unknown;
+
+  /**
+   * Error message if failed
+   */
+  error?: string;
+}

@@ -1,0 +1,540 @@
+/**
+ * VitejsService
+ *
+ * DESIGN PATTERNS:
+ * - Service pattern for business logic encapsulation
+ * - Singleton pattern for dev server management
+ * - Programmatic Vite build for component SSR
+ *
+ * CODING STANDARDS:
+ * - Use async/await for asynchronous operations
+ * - Throw descriptive errors for error cases
+ * - Keep methods focused and well-named
+ * - Document complex logic with comments
+ *
+ * AVOID:
+ * - Mixing concerns (keep focused on single domain)
+ * - Direct tool implementation (services should be tool-agnostic)
+ */
+
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { log, TemplatesManagerService } from '@agiflowai/aicode-utils';
+import tailwindcss from '@tailwindcss/vite';
+import type { ViteDevServer } from 'vite';
+import { viteSingleFile } from 'vite-plugin-singlefile';
+import type { BuildComponentOptions, PreRenderOptions } from './types';
+
+/**
+ * VitejsService handles Vite dev server and component rendering.
+ *
+ * Provides methods for starting a dev server, serving components dynamically,
+ * and pre-rendering components to static HTML files.
+ *
+ * @example
+ * ```typescript
+ * const service = VitejsService.getInstance();
+ * await service.startDevServer('apps/my-app');
+ * const { url } = await service.serveComponent({
+ *   componentPath: '/path/to/Button.stories.tsx',
+ *   storyName: 'Primary',
+ *   appPath: 'apps/my-app'
+ * });
+ * ```
+ */
+export class VitejsService {
+  private static instance: VitejsService | null = null;
+
+  private server: ViteDevServer | null = null;
+  private monorepoRoot: string;
+  private serverUrl: string | null = null;
+  private serverPort: number | null = null;
+  private currentAppPath: string | null = null;
+
+  private constructor() {
+    this.monorepoRoot = TemplatesManagerService.getWorkspaceRootSync();
+  }
+
+  /**
+   * Get the singleton instance of VitejsService
+   * @returns The singleton VitejsService instance
+   */
+  static getInstance(): VitejsService {
+    if (!VitejsService.instance) {
+      VitejsService.instance = new VitejsService();
+    }
+    return VitejsService.instance;
+  }
+
+  /**
+   * Reset the singleton instance (useful for testing)
+   */
+  static resetInstance(): void {
+    VitejsService.instance = null;
+  }
+
+  /**
+   * Get the current server URL
+   * @returns Server URL or null if not running
+   */
+  getServerUrl(): string | null {
+    return this.serverUrl;
+  }
+
+  /**
+   * Get the current server port
+   * @returns Server port or null if not running
+   */
+  getServerPort(): number | null {
+    return this.serverPort;
+  }
+
+  /**
+   * Check if the dev server is running
+   * @returns True if server is running
+   */
+  isServerRunning(): boolean {
+    return this.server !== null && this.serverUrl !== null;
+  }
+
+  /**
+   * Get the current app path being served
+   * @returns App path or null if not running
+   */
+  getCurrentAppPath(): string | null {
+    return this.currentAppPath;
+  }
+
+  /**
+   * Start a Vite dev server for hot reload and caching
+   *
+   * @param appPath - Absolute or relative path to the app directory
+   * @returns Promise resolving to server URL and port
+   * @throws Error if server fails to start or port cannot be determined
+   *
+   * @example
+   * ```typescript
+   * const service = VitejsService.getInstance();
+   * const { url, port } = await service.startDevServer('apps/agiflow-app');
+   * console.log(`Server running at ${url}`);
+   * ```
+   */
+  async startDevServer(appPath: string): Promise<{ url: string; port: number }> {
+    const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(this.monorepoRoot, appPath);
+    const tmpDir = path.join(resolvedAppPath, '.tmp');
+
+    try {
+      // Ensure tmp directory exists
+      await fs.mkdir(tmpDir, { recursive: true });
+
+      // Dynamic import to avoid loading Vite at module initialization time
+      const { createServer } = await import('vite');
+
+      this.server = await createServer({
+        root: tmpDir,
+        base: './',
+        configFile: false,
+        plugins: [tailwindcss()],
+        resolve: {
+          alias: {
+            '@': path.join(resolvedAppPath, 'src'),
+          },
+        },
+        esbuild: {
+          jsx: 'automatic',
+          jsxImportSource: 'react',
+        },
+        server: {
+          strictPort: false, // Allow Vite to find an available port
+          open: false,
+        },
+      });
+
+      await this.server.listen();
+
+      const address = this.server.httpServer?.address();
+      if (!address || typeof address === 'string') {
+        throw new Error(
+          'Failed to start Vite dev server. Ensure no other process is using the port or check if the app path is valid.',
+        );
+      }
+
+      const port = address.port;
+      const url = `http://localhost:${port}`;
+      this.serverUrl = url;
+      this.serverPort = port;
+      this.currentAppPath = resolvedAppPath;
+
+      log.info(`[VitejsService] Vite dev server started at ${url}`);
+      log.info(`[VitejsService] Serving app: ${resolvedAppPath}`);
+
+      return { url, port };
+    } catch (error) {
+      throw new Error(
+        `Failed to start dev server for ${appPath}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  /**
+   * Serve a component dynamically through the dev server
+   *
+   * @param options - Component rendering options
+   * @returns Promise resolving to the component URL and HTML file path
+   * @throws Error if dev server is not running or file operations fail
+   *
+   * @example
+   * ```typescript
+   * const service = VitejsService.getInstance();
+   * await service.startDevServer('apps/agiflow-app');
+   * const { url } = await service.serveComponent({
+   *   componentPath: 'packages/frontend/web-ui/src/Button.stories.tsx',
+   *   storyName: 'Playground',
+   *   appPath: 'apps/agiflow-app'
+   * });
+   * // Use url for screenshot: http://localhost:5173/entry-123456.html
+   * ```
+   */
+  async serveComponent(options: PreRenderOptions): Promise<{ url: string; htmlFilePath: string }> {
+    if (!this.isServerRunning()) {
+      throw new Error(
+        'Dev server is not running. Start the dev server first using startDevServer() or fall back to prerenderComponent().',
+      );
+    }
+
+    const { componentPath, storyName, args = {}, darkMode = false, appPath, cssFiles = [], rootComponent } = options;
+
+    // Resolve app path
+    const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(this.monorepoRoot, appPath);
+
+    // Verify we're serving the same app
+    if (this.currentAppPath !== resolvedAppPath) {
+      throw new Error(
+        `Dev server is running for ${this.currentAppPath} but component requested for ${resolvedAppPath}. Restart the dev server with the correct app path.`,
+      );
+    }
+
+    const tmpDir = path.join(resolvedAppPath, '.tmp');
+
+    try {
+      // Ensure tmp directory exists
+      await fs.mkdir(tmpDir, { recursive: true });
+
+      const timestamp = Date.now();
+      const entryFileName = `entry-${timestamp}.tsx`;
+      const entryFilePath = path.join(tmpDir, entryFileName);
+
+      const argsJson = JSON.stringify(args, null, 2);
+
+      // Generate CSS imports based on path format:
+      // - Paths starting with '@' or 'tailwindcss/' are treated as node_modules imports
+      // - Paths starting with 'packages/' are resolved from monorepo root
+      // - Other paths are resolved relative to the app directory
+      const cssImports = cssFiles
+        .map((cssFile) => {
+          if (cssFile.startsWith('@') || cssFile.startsWith('tailwindcss/')) {
+            return `import '${cssFile}';`;
+          }
+          if (cssFile.startsWith('packages/')) {
+            return `import '${path.join(this.monorepoRoot, cssFile)}';`;
+          }
+          return `import '${path.join(resolvedAppPath, cssFile)}';`;
+        })
+        .join('\n');
+
+      const rootComponentImport = rootComponent
+        ? `import { RootDocument } from '${path.join(resolvedAppPath, rootComponent).replace(/\\/g, '/')}';`
+        : '';
+
+      const wrapWithRoot = rootComponent ? 'RootDocument' : 'React.Fragment';
+      const wrapperProps = rootComponent ? `{ darkMode: ${darkMode} }` : '{}';
+
+      // Entry file content
+      const entryContent = `${cssImports}
+
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import * as Stories from '${componentPath}';
+${rootComponentImport}
+
+const meta = Stories.default;
+const Story = Stories['${storyName}'];
+const storyArgs = Story?.args || {};
+const args = { ...storyArgs, ...${argsJson} };
+
+let element;
+if (Story?.render) {
+  const RenderComponent = () => Story.render(args, { loaded: {}, args });
+  element = React.createElement(RenderComponent);
+} else {
+  const Component = meta.component;
+  element = React.createElement(Component, args);
+}
+
+const Wrapper = ${wrapWithRoot};
+const wrappedElement = React.createElement(Wrapper, ${wrapperProps}, element);
+
+const root = createRoot(document.getElementById('root')!);
+root.render(wrappedElement);
+`;
+
+      // Write entry file
+      await fs.writeFile(entryFilePath, entryContent, 'utf-8');
+
+      // Create index.html template
+      const htmlTemplate = `<!DOCTYPE html>
+<html class="${darkMode ? 'dark' : ''}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Component Preview</title>
+  <style>
+    body { margin: 0; padding: 0; }
+    #root { display: inline-block; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/${entryFileName}"></script>
+</body>
+</html>`;
+
+      const htmlTemplateFileName = `entry-${timestamp}.html`;
+      const htmlTemplatePath = path.join(tmpDir, htmlTemplateFileName);
+      await fs.writeFile(htmlTemplatePath, htmlTemplate, 'utf-8');
+
+      // Return the dev server URL for this component
+      const url = `${this.serverUrl}/${htmlTemplateFileName}`;
+
+      log.info(`[VitejsService] Component served at: ${url}`);
+
+      return { url, htmlFilePath: htmlTemplatePath };
+    } catch (error) {
+      throw new Error(
+        `Failed to serve component ${storyName} from ${componentPath}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  /**
+   * Build a component to a static HTML file using Vite
+   *
+   * @param options - Component rendering options
+   * @returns Promise resolving to the HTML file path
+   * @throws Error if build fails or file operations fail
+   *
+   * @example
+   * ```typescript
+   * const service = VitejsService.getInstance();
+   * const { htmlFilePath } = await service.prerenderComponent({
+   *   componentPath: '/path/to/Button.stories.tsx',
+   *   storyName: 'Primary',
+   *   appPath: 'apps/my-app'
+   * });
+   * ```
+   */
+  async prerenderComponent(options: PreRenderOptions): Promise<{ htmlFilePath: string }> {
+    const { componentPath, storyName, args = {}, darkMode = false, appPath, cssFiles = [], rootComponent } = options;
+
+    // Resolve app path
+    const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(this.monorepoRoot, appPath);
+    const tmpDir = path.join(resolvedAppPath, '.tmp');
+
+    try {
+      // Ensure tmp directory exists
+      await fs.mkdir(tmpDir, { recursive: true });
+
+      // Build the component to a static bundle
+      const htmlFilePath = await this.buildComponent({
+        componentPath,
+        storyName,
+        args,
+        appPath: resolvedAppPath,
+        darkMode,
+        cssFiles,
+        rootComponent,
+        tmpDir,
+      });
+
+      return { htmlFilePath };
+    } catch (error) {
+      throw new Error(
+        `Failed to prerender component ${storyName} from ${componentPath}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  /**
+   * Build a component to a static HTML file using Vite build
+   *
+   * This method generates an entry file that imports the story, creates an HTML template,
+   * and uses Vite's build with viteSingleFile plugin to produce a self-contained HTML file.
+   *
+   * @param options - Build configuration options from BuildComponentOptions interface
+   * @returns Promise resolving to the absolute path of the built HTML file
+   * @throws Error if the build process fails
+   */
+  private async buildComponent(options: BuildComponentOptions): Promise<string> {
+    const { componentPath, storyName, args, appPath, darkMode, cssFiles, rootComponent, tmpDir } = options;
+    const timestamp = Date.now();
+
+    // Track temp files for cleanup
+    const entryFileName = `entry-${timestamp}.tsx`;
+    const entryFilePath = path.join(tmpDir, entryFileName);
+    const htmlTemplateFileName = `index-${timestamp}.html`;
+    const htmlTemplatePath = path.join(tmpDir, htmlTemplateFileName);
+
+    // Helper to clean up temp files.
+    // Cleanup errors are intentionally caught and logged as warnings rather than propagated
+    // because cleanup is non-critical - the build operation has already succeeded or failed,
+    // and failing cleanup shouldn't mask the actual result or cause additional failures.
+    const cleanupTempFiles = async (): Promise<void> => {
+      await fs.unlink(entryFilePath).catch((err) => {
+        log.warn(`[VitejsService] Non-critical: Failed to clean up entry file: ${err.message}`);
+      });
+      await fs.unlink(htmlTemplatePath).catch((err) => {
+        log.warn(`[VitejsService] Non-critical: Failed to clean up template file: ${err.message}`);
+      });
+    };
+
+    try {
+      const argsJson = JSON.stringify(args, null, 2);
+
+      // Generate CSS imports based on path format:
+      // - Paths starting with '@' or 'tailwindcss/' are treated as node_modules imports
+      // - Paths starting with 'packages/' are resolved from monorepo root
+      // - Other paths are resolved relative to the app directory
+      const cssImports = cssFiles
+        .map((cssFile) => {
+          if (cssFile.startsWith('@') || cssFile.startsWith('tailwindcss/')) {
+            return `import '${cssFile}';`;
+          }
+          if (cssFile.startsWith('packages/')) {
+            return `import '${path.join(this.monorepoRoot, cssFile)}';`;
+          }
+          return `import '${path.join(appPath, cssFile)}';`;
+        })
+        .join('\n');
+
+      const rootComponentImport = rootComponent
+        ? `import { RootDocument } from '${path.join(appPath, rootComponent).replace(/\\/g, '/')}';`
+        : '';
+
+      const wrapWithRoot = rootComponent ? 'RootDocument' : 'React.Fragment';
+      const wrapperProps = rootComponent ? `{ darkMode: ${darkMode} }` : '{}';
+
+      // Entry file content
+      const entryContent = `${cssImports}
+
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import * as Stories from '${componentPath}';
+${rootComponentImport}
+
+const meta = Stories.default;
+const Story = Stories['${storyName}'];
+const storyArgs = Story?.args || {};
+const args = { ...storyArgs, ...${argsJson} };
+
+let element;
+if (Story?.render) {
+  const RenderComponent = () => Story.render(args, { loaded: {}, args });
+  element = React.createElement(RenderComponent);
+} else {
+  const Component = meta.component;
+  element = React.createElement(Component, args);
+}
+
+const Wrapper = ${wrapWithRoot};
+const wrappedElement = React.createElement(Wrapper, ${wrapperProps}, element);
+
+const root = createRoot(document.getElementById('root')!);
+root.render(wrappedElement);
+`;
+
+      // Write entry file
+      await fs.writeFile(entryFilePath, entryContent, 'utf-8');
+
+      // Create index.html template
+      const htmlTemplate = `<!DOCTYPE html>
+<html class="${darkMode ? 'dark' : ''}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Component Preview</title>
+  <style>
+    body { margin: 0; padding: 0; }
+    #root { display: inline-block; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/${entryFileName}"></script>
+</body>
+</html>`;
+
+      await fs.writeFile(htmlTemplatePath, htmlTemplate, 'utf-8');
+
+      // Dynamic import to avoid loading Vite at module initialization time
+      const { build } = await import('vite');
+      const outDir = path.join(tmpDir, `dist-${timestamp}`);
+
+      await build({
+        root: tmpDir,
+        base: './',
+        configFile: false,
+        plugins: [tailwindcss(), viteSingleFile()],
+        resolve: {
+          alias: {
+            '@': path.join(appPath, 'src'),
+          },
+        },
+        esbuild: {
+          jsx: 'automatic',
+          jsxImportSource: 'react',
+        },
+        build: {
+          outDir,
+          emptyOutDir: false,
+          cssCodeSplit: false,
+          rollupOptions: {
+            input: htmlTemplatePath,
+            output: {
+              inlineDynamicImports: true,
+            },
+          },
+        },
+      });
+
+      // The plugin creates a single inlined HTML file
+      const builtHtmlPath = path.join(outDir, htmlTemplateFileName);
+      log.info(`[VitejsService] Component built to: ${builtHtmlPath}`);
+
+      return builtHtmlPath;
+    } catch (error) {
+      throw new Error(
+        `Failed to build component ${storyName}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      // Clean up temporary entry and template files (keep the built HTML)
+      // Note: Cleanup failures are non-critical - the build succeeded or failed,
+      // but we should always attempt cleanup to avoid accumulating temp files.
+      await cleanupTempFiles();
+    }
+  }
+
+  /**
+   * Clean up Vite server and reset state
+   */
+  async cleanup(): Promise<void> {
+    if (this.server) {
+      log.info('[VitejsService] Closing Vite dev server...');
+      await this.server.close();
+      this.server = null;
+      this.serverUrl = null;
+      this.serverPort = null;
+      this.currentAppPath = null;
+      log.info('[VitejsService] Vite dev server closed');
+    }
+  }
+}

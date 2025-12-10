@@ -2,7 +2,13 @@
  * Services Barrel Export
  *
  * This file exports all services for convenient importing.
+ * Each service is organized in its own folder with:
+ *   - index.ts (barrel export)
+ *   - types.ts (type definitions)
+ *   - [ServiceName].ts (implementation)
+ *
  * Add new service exports here as you create them.
  */
 
-export * from './{{ serviceName }}';
+export { {{ serviceName }} } from './{{ serviceName }}';
+export type { {{ serviceName }}Config, {{ serviceName }}Result } from './{{ serviceName }}';

@@ -1,0 +1,39 @@
+/**
+ * {{ componentName }}View Component (Dumb/Presentational Component)
+ *
+ * DESIGN PATTERNS:
+ * - Presentational Component: Pure UI rendering with no business logic
+ * - Props-Driven: All data and callbacks passed via props
+ * - Composition Pattern: Build complex UIs from simple, reusable components
+ *
+ * CODING STANDARDS:
+ * - Import cn() utility from @/lib/utils for className merging
+ * - Use React.ComponentPropsWithoutRef<'element'> for type inheritance
+ * - Export props type for use in stories and smart component
+ * - No hooks or state management - pure render function
+ *
+ * USAGE:
+ * - Import: import { {{ componentName }}View } from '@/components/{{ componentName }}/{{ componentName }}View'
+ * - Used by: Smart component (index.tsx) and Stories
+ * - Testing: Stories render this component directly for visual testing
+ */
+
+import * as React from 'react';
+
+import { cn } from '@/lib/utils';
+
+export type {{ componentName }}ViewProps = {
+  // Add your custom props here
+} & React.ComponentPropsWithoutRef<'div'>;
+
+export function {{ componentName }}View({
+  className,
+  children,
+  ...rest
+}: {{ componentName }}ViewProps) {
+  return (
+    <div className={cn('', className)} {...rest}>
+      {children}
+    </div>
+  );
+}

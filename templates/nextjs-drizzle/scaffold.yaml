@@ -182,17 +182,28 @@ features:
       additionalProperties: false
     includes:
       - src/components/Example/index.tsx->src/components/{{ componentName }}/index.tsx
+      - src/components/Example/ExampleView.tsx->src/components/{{ componentName }}/{{ componentName }}View.tsx
       - src/components/Example/Example.stories.tsx->src/components/{{ componentName }}/{{ componentName }}.stories.tsx
     instruction: |-
-      Components follow a composition-based pattern with TypeScript strict typing and Tailwind CSS utility classes. Each component includes a Storybook story for isolated development and documentation.
+      Components follow a Smart/Dumb (Container/Presentational) pattern with TypeScript strict typing and Tailwind CSS utility classes. Each component includes a Storybook story for isolated development and documentation.
 
-      File organization: Each component lives in its own directory under src/components/{ComponentName}/ with index.tsx and {ComponentName}.stories.tsx files. This keeps related files colocated.
+      Component structure:
+      - index.tsx (Smart Component): Handles business logic, state, data fetching, and delegates rendering to the View component
+      - {ComponentName}View.tsx (Dumb Component): Pure presentational component with no business logic, receives all data via props
+      - {ComponentName}.stories.tsx: Stories that render the View component directly for isolated testing
 
-      Naming conventions: Component directories and exports use PascalCase. Use descriptive names that indicate purpose (Button, UserCard, Badge). Story files follow {ComponentName}.stories.tsx pattern.
+      File organization: Each component lives in its own directory under src/components/{ComponentName}/ with three files: index.tsx (smart), {ComponentName}View.tsx (dumb), and {ComponentName}.stories.tsx (stories).
 
-      Usage guidelines: Import using absolute path alias @/components/{ComponentName}. Use the cn() utility from @/lib/utils for className merging. Extend props using React.ComponentPropsWithRef or React.ComponentPropsWithoutRef for proper type inheritance. Test components in Storybook before integrating into pages.
+      Naming conventions: Component directories use PascalCase. Smart component exports as default from index.tsx. View component is named {ComponentName}View and exported as named export. Story files follow {ComponentName}.stories.tsx pattern.
 
-      Design patterns: Use forwardRef for components that need ref access. Leverage TypeScript discriminated unions for variant props. Apply Tailwind utility classes with cn() for dynamic styling. Export component as default for simpler imports. Create Playground story as default for interactive testing.
+      Story requirements:
+      - Playground story (REQUIRED): Shows all component variants in one view for quick visual testing
+      - State stories (SUGGESTED): Individual stories for each component state (Default, Loading, Error, Empty, Disabled, WithData, etc.)
+      - Stories import and render the View component, not the smart component
+
+      Usage guidelines: Import smart component using @/components/{ComponentName}. Use the cn() utility from @/lib/utils for className merging. Keep business logic in smart component, UI rendering in View component. Test components in Storybook before integrating into pages.
+
+      Design patterns: Smart/Dumb separation for testability. View components are pure functions of their props. Use forwardRef in View components when ref access is needed. Leverage TypeScript discriminated unions for variant props. Apply Tailwind utility classes with cn() for dynamic styling.
     patterns:
       - src/components/**/*.tsx
   - name: scaffold-nextjs-api-route

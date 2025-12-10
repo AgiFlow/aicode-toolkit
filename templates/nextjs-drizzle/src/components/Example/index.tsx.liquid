@@ -1,38 +1,33 @@
 /**
- * {{ componentName }} Component
+ * {{ componentName }} Component (Smart/Container Component)
  *
  * DESIGN PATTERNS:
- * - Composition Pattern: Build complex UIs from simple, reusable components
- * - Type Safety: Extend HTML element props for full TypeScript support
+ * - Smart/Container Component: Handles business logic, state, and data fetching
+ * - Delegates rendering to {{ componentName }}View (dumb/presentational component)
+ * - Separation of Concerns: Logic in smart component, UI in view component
  *
  * CODING STANDARDS:
- * - Import cn() utility from @/lib/utils for className merging
- * - Use React.ComponentPropsWithoutRef<'element'> for type inheritance
- * - Apply Tailwind utility classes with conditional logic via cn()
+ * - Import and use the View component for rendering
+ * - Handle state, effects, and callbacks here
+ * - Pass data and handlers as props to the View
  * - Export component as default export
  *
  * USAGE:
  * - Import: import {{ componentName }} from '@/components/{{ componentName }}'
- * - Props: Extend with custom props using intersection types
- * - Styling: Pass className prop, merged with default styles via cn()
+ * - This component manages logic and delegates UI to {{ componentName }}View
  */
 
 import * as React from 'react';
 
-import { cn } from '@/lib/utils';
+import { {{ componentName }}View, type {{ componentName }}ViewProps } from './{{ componentName }}View';
 
-type {{ componentName }}Props = {
-  // Add your custom props here
-} & React.ComponentPropsWithoutRef<'div'>;
+type {{ componentName }}Props = {{ componentName }}ViewProps;
 
-export default function {{ componentName }}({
-  className,
-  children,
-  ...rest
-}: {{ componentName }}Props) {
-  return (
-    <div className={cn('', className)} {...rest}>
-      {children}
-    </div>
-  );
+export default function {{ componentName }}(props: {{ componentName }}Props) {
+  // Add your state and logic here
+  // Example:
+  // const [state, setState] = React.useState(initialValue);
+  // const handleAction = () => { ... };
+
+  return <{{ componentName }}View {...props} />;
 }

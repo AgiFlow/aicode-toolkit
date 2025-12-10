@@ -114,7 +114,7 @@ rules:
           }
       - rule: Skip error handling
       - rule: Use hardcoded values - use configuration or constants
-  - pattern: src/services/**/*.ts
+  - pattern: src/services/*/*.ts
     description: Service Layer Implementation Standards
     inherits:
       - import-standards
@@ -124,6 +124,40 @@ rules:
       - documentation-standards
       - naming-conventions
     must_do:
+      - rule: Organize each service in its own folder with PascalCase naming
+        codeExample: |
+          // ✅ GOOD - Service folder structure
+          src/services/UserService/
+            index.ts           # Barrel export
+            types.ts           # Type definitions
+            UserService.ts     # Implementation
+
+          src/services/CSSClasses/
+            index.ts
+            types.ts
+            BaseCSSClassesService.ts
+            TailwindCSSClassesService.ts
+
+          // ❌ BAD - Flat files without folder structure
+          src/services/UserService.ts
+          src/services/userService.ts
+      - rule: Include index.ts barrel export in each service folder
+        codeExample: |
+          // ✅ GOOD - src/services/UserService/index.ts
+          export { UserService } from './UserService';
+          export type { UserServiceConfig, UserServiceResult } from './types';
+      - rule: Include types.ts for service type definitions
+        codeExample: |
+          // ✅ GOOD - src/services/UserService/types.ts
+          export interface UserServiceConfig {
+            verbose?: boolean;
+          }
+
+          export interface UserServiceResult {
+            success: boolean;
+            data?: unknown;
+            error?: string;
+          }
       - rule: Create service classes with clear single responsibility
         codeExample: |
           // ✅ GOOD
@@ -148,6 +182,16 @@ rules:
             return { success: true, data: processed };
           }
     must_not_do:
+      - rule: Create flat service files without folder structure
+        codeExample: |
+          // ❌ BAD - Flat file
+          src/services/UserService.ts
+
+          // ✅ GOOD - Folder structure
+          src/services/UserService/
+            index.ts
+            types.ts
+            UserService.ts
       - rule: Create static-only utility classes - use functions instead
         codeExample: |
           // ❌ BAD

@@ -2,6 +2,18 @@
 # This file configures the MCP servers for the aicode-toolkit monorepo
 
 mcpServers:
+  # Style System MCP - Design system and component rendering
+  style-system:
+    command: bun
+    args:
+      - run
+      - packages/style-system/src/cli.ts
+      - mcp-serve
+    env: {}
+    config:
+      instruction: >
+        Use this server for design system operations including theme management,
+        CSS classes extraction, component rendering, and Storybook story indexing.
   # Scaffold MCP - Code generation and boilerplate scaffolding
   scaffold-mcp:
     command: bun

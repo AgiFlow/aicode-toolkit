@@ -12,6 +12,7 @@ module.exports = {
         'scaffold-mcp',
         'architect-mcp',
         'one-mcp',
+        'style-system',
         'release', // Allow 'release' scope for nx release commits
       ],
     ],
