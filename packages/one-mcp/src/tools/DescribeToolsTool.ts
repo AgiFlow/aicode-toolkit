@@ -227,6 +227,15 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
   }
 
   /**
+   * Clears the cached auto-detected skills from prompt front-matter.
+   * Use this when prompt configurations may have changed or when
+   * the skill service cache is invalidated.
+   */
+  clearAutoDetectedSkillsCache(): void {
+    this.autoDetectedSkillsCache = null;
+  }
+
+  /**
    * Detects and caches skills from prompt front-matter across all connected MCP servers.
    * Fetches all prompts and checks their content for YAML front-matter with name/description.
    * Results are cached to avoid repeated fetches.

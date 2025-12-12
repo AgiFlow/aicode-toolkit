@@ -17,8 +17,9 @@
  * - Direct tool implementation (services should be tool-agnostic)
  */
 
-import { readFile, readdir, stat, access } from 'node:fs/promises';
+import { readFile, readdir, stat, access, watch } from 'node:fs/promises';
 import { join, dirname, isAbsolute } from 'node:path';
+import type { FSWatcher } from 'node:fs';
 import type { Skill, SkillMetadata } from '../types';
 import { parseFrontMatter } from '../utils';
 
@@ -82,15 +83,26 @@ export class SkillService {
   private skillPaths: string[];
   private cachedSkills: Skill[] | null = null;
   private skillsByName: Map<string, Skill> | null = null;
+  /** Active file watchers for skill directories */
+  private watchers: AbortController[] = [];
+  /** Callback invoked when cache is invalidated due to file changes */
+  private onCacheInvalidated?: () => void;
 
   /**
    * Creates a new SkillService instance
    * @param cwd - Current working directory for resolving relative paths
    * @param skillPaths - Array of paths to skills directories
+   * @param options - Optional configuration
+   * @param options.onCacheInvalidated - Callback invoked when cache is invalidated due to file changes
    */
-  constructor(cwd: string, skillPaths: string[]) {
+  constructor(
+    cwd: string,
+    skillPaths: string[],
+    options?: { onCacheInvalidated?: () => void }
+  ) {
     this.cwd = cwd;
     this.skillPaths = skillPaths;
+    this.onCacheInvalidated = options?.onCacheInvalidated;
   }
 
   /**
@@ -154,6 +166,72 @@ export class SkillService {
   clearCache(): void {
     this.cachedSkills = null;
     this.skillsByName = null;
+  }
+
+  /**
+   * Starts watching skill directories for changes to SKILL.md files.
+   * When changes are detected, the cache is automatically invalidated.
+   *
+   * Uses Node.js fs.watch with recursive option for efficient directory monitoring.
+   * Only invalidates cache when SKILL.md files are modified.
+   *
+   * @example
+   * const skillService = new SkillService(cwd, skillPaths, {
+   *   onCacheInvalidated: () => console.log('Skills cache invalidated')
+   * });
+   * await skillService.startWatching();
+   */
+  async startWatching(): Promise<void> {
+    // Stop any existing watchers first
+    this.stopWatching();
+
+    for (const skillPath of this.skillPaths) {
+      const skillsDir = isAbsolute(skillPath) ? skillPath : join(this.cwd, skillPath);
+
+      // Check if directory exists before watching
+      if (!(await pathExists(skillsDir))) {
+        continue;
+      }
+
+      const abortController = new AbortController();
+      this.watchers.push(abortController);
+
+      // Start watching in background (don't await)
+      this.watchDirectory(skillsDir, abortController.signal).catch((error) => {
+        // Only log if not aborted
+        if (error?.name !== 'AbortError') {
+          console.error(`[skill-watcher] Error watching ${skillsDir}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      });
+    }
+  }
+
+  /**
+   * Stops all active file watchers.
+   * Should be called when the service is being disposed.
+   */
+  stopWatching(): void {
+    for (const controller of this.watchers) {
+      controller.abort();
+    }
+    this.watchers = [];
+  }
+
+  /**
+   * Watches a directory for changes to SKILL.md files.
+   * @param dirPath - Directory path to watch
+   * @param signal - AbortSignal to stop watching
+   */
+  private async watchDirectory(dirPath: string, signal: AbortSignal): Promise<void> {
+    const watcher = watch(dirPath, { recursive: true, signal });
+
+    for await (const event of watcher) {
+      // Only invalidate cache when SKILL.md files change
+      if (event.filename && event.filename.endsWith('SKILL.md')) {
+        this.clearCache();
+        this.onCacheInvalidated?.();
+      }
+    }
   }
 
   /**
