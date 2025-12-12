@@ -1,0 +1,34 @@
+/**
+ * {{ schemaName }} Types
+ *
+ * Inferred types from Zod schemas for full type safety.
+ * These types are automatically derived from the schema definitions,
+ * ensuring runtime validation and compile-time types stay in sync.
+ */
+
+import type { z } from 'zod';
+import type {
+  {{ schemaName | camelize }}Schema,
+  {{ schemaName | camelize }}UpdateSchema,
+  {{ schemaName | camelize }}CreateSchema,
+} from './{{ schemaName }}';
+
+/**
+ * Full {{ schemaName }} type inferred from schema
+ */
+export type {{ schemaName }} = z.infer<typeof {{ schemaName | camelize }}Schema>;
+
+/**
+ * Partial type for updates
+ */
+export type {{ schemaName }}Update = z.infer<typeof {{ schemaName | camelize }}UpdateSchema>;
+
+/**
+ * Type for creating new entries
+ */
+export type {{ schemaName }}Create = z.infer<typeof {{ schemaName | camelize }}CreateSchema>;
+
+/**
+ * Validation result type for safe parsing
+ */
+export type {{ schemaName }}ParseResult = z.SafeParseReturnType<unknown, {{ schemaName }}>;

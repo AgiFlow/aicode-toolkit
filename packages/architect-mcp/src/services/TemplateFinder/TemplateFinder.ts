@@ -25,6 +25,7 @@ import {
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { TemplateMapping } from '../../types';
+import { ARCHITECT_FILENAMES } from '../../constants';
 
 export class TemplateFinder {
   private workspaceRoot: string;
@@ -84,13 +85,22 @@ export class TemplateFinder {
         return null;
       }
 
-      // Map to template path - try to find architect.yaml
+      // Map to template path - try to find architect.yaml or .architect.yaml
       const templatePath = path.join(templatesRoot, projectConfig.sourceTemplate);
 
-      try {
-        // Check if the architect.yaml file exists in the template directory
-        await fs.access(path.join(templatePath, 'architect.yaml'));
-      } catch {
+      // Check if any architect file exists in the template directory
+      let architectFileExists = false;
+      for (const filename of ARCHITECT_FILENAMES) {
+        try {
+          await fs.access(path.join(templatePath, filename));
+          architectFileExists = true;
+          break;
+        } catch {
+          // File doesn't exist, try next
+        }
+      }
+
+      if (!architectFileExists) {
         // Template not found, but that's okay - not all projects have templates
         return null;
       }

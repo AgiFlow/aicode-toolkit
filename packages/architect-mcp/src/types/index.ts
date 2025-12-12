@@ -35,24 +35,14 @@ export interface Tool<TInput = any> {
 }
 
 // ============================================================================
-// Architect-specific Types
+// Architect-specific Types (Zod-inferred)
 // ============================================================================
 
 /**
  * Template architect configuration types
+ * Re-exported from Zod schemas for type safety
  */
-export interface Feature {
-  name?: string;
-  architecture?: string;
-  design_pattern: string;
-  includes: string[];
-  description?: string;
-}
-
-export interface ArchitectConfig {
-  features?: Feature[];
-  [key: string]: any;
-}
+export type { Feature, ArchitectConfig } from '../schemas';
 
 /**
  * Design pattern matching types

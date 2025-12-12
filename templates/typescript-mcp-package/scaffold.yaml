@@ -353,3 +353,52 @@ features:
       2. Register: program.addCommand(myCommand);
 
       Testing approach: Write unit tests that verify command options, argument parsing, and action handler behavior. Mock external dependencies. Test error handling paths. Use Vitest for testing framework.
+  - name: scaffold-mcp-schema
+    description: Generate a Zod schema module with type inference, validation functions, and barrel export. Creates a folder structure with Zod schema definition, inferred types, and index file. Perfect for defining validated data structures with automatic TypeScript type inference for configuration files, API payloads, or domain models.
+    variables_schema:
+      type: object
+      properties:
+        schemaName:
+          type: string
+          description: Name of the schema in PascalCase (e.g., 'UserConfig', 'ApiResponse', 'ArchitectConfig')
+        withTest:
+          type: boolean
+          description: Generate a Vitest test file
+          default: true
+      required:
+        - schemaName
+      additionalProperties: false
+    includes:
+      - src/schemas/ExampleSchema/ExampleSchema.ts->src/schemas/{{ schemaName }}/{{ schemaName }}.ts
+      - src/schemas/ExampleSchema/types.ts->src/schemas/{{ schemaName }}/types.ts
+      - src/schemas/ExampleSchema/index.ts->src/schemas/{{ schemaName }}/index.ts
+      - src/schemas/index.ts
+      - tests/unit/schemas/ExampleSchema/ExampleSchema.test.ts->tests/unit/schemas/{{ schemaName }}/{{ schemaName }}.test.ts?withTest=true
+    instruction: |-
+      Zod schemas follow a folder-based pattern for defining validated data structures with TypeScript type inference. Each schema has its own folder with implementation, inferred types, and barrel export.
+
+      Pattern explanation: Schemas are Zod schema definitions that provide runtime validation and automatic TypeScript type inference. They define the shape of data structures with validation rules, transforms, and defaults. Types are inferred using z.infer<> for full type safety without duplication.
+
+      File organization:
+      - src/schemas/{SchemaName}/
+        - index.ts (barrel export)
+        - types.ts (inferred types using z.infer)
+        - {SchemaName}.ts (Zod schema definition)
+      - tests/unit/schemas/{SchemaName}/
+        - {SchemaName}.test.ts (unit tests)
+
+      Naming conventions: Schema files and folders use PascalCase (e.g., UserConfig, ApiResponse). Schema constants use camelCase with 'Schema' suffix (e.g., userConfigSchema). Inferred types use PascalCase matching schema name (e.g., UserConfig from userConfigSchema).
+
+      Usage guidelines: Import z from 'zod'. Define schema with validation rules (z.string(), z.number(), z.object(), etc.). Use .optional(), .default(), .transform() for flexibility. Export inferred types using z.infer<typeof schema>. Use schema.parse() or schema.safeParse() for validation.
+
+      Key Zod patterns:
+      - z.object({}) for structured objects
+      - z.array(z.string()) for typed arrays
+      - z.union([z.string(), z.number()]) for union types
+      - z.enum(['a', 'b']) for literal enums
+      - schema.extend({}) to extend existing schemas
+      - schema.pick({}) and schema.omit({}) for partial schemas
+
+      Testing approach: Write unit tests that verify schema validation with valid and invalid data. Test edge cases, optional fields, and default values. Verify type inference works correctly. Use Vitest for testing framework.
+    patterns:
+      - src/schemas/**/*.ts

@@ -34,8 +34,10 @@ vi.mock('../../src/services/TemplateFinder', () => ({
 
 vi.mock('../../src/services/ArchitectParser', () => ({
   ArchitectParser: class MockArchitectParser {
-    parseArchitectFile = vi.fn().mockResolvedValue({ patterns: [] });
-    parseGlobalArchitectFile = vi.fn().mockResolvedValue({ patterns: [] });
+    parseArchitectFile = vi.fn().mockResolvedValue({ features: [] });
+    parseGlobalArchitectFile = vi.fn().mockResolvedValue({ features: [] });
+    parseProjectArchitectFile = vi.fn().mockResolvedValue({ features: [] });
+    mergeConfigs = vi.fn().mockReturnValue({ features: [] });
   },
 }));
 

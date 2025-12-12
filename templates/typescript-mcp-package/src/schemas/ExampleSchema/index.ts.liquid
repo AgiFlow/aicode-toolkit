@@ -1,0 +1,18 @@
+/**
+ * {{ schemaName }} - Barrel Export
+ *
+ * Re-exports all public API from this schema module.
+ */
+
+export {
+  {{ schemaName | camelize }}Schema,
+  {{ schemaName | camelize }}UpdateSchema,
+  {{ schemaName | camelize }}CreateSchema,
+} from './{{ schemaName }}';
+
+export type {
+  {{ schemaName }},
+  {{ schemaName }}Update,
+  {{ schemaName }}Create,
+  {{ schemaName }}ParseResult,
+} from './types';

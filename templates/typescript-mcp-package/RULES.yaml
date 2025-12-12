@@ -10,6 +10,7 @@ rules:
       - error-handling
       - type-safety
       - documentation-standards
+      - constants-usage
     must_do:
       - rule: Implement Tool interface with getDefinition and execute
         codeExample: |
@@ -113,7 +114,6 @@ rules:
             }
           }
       - rule: Skip error handling
-      - rule: Use hardcoded values - use configuration or constants
   - pattern: src/services/*/*.ts
     description: Service Layer Implementation Standards
     inherits:
@@ -123,6 +123,7 @@ rules:
       - type-safety
       - documentation-standards
       - naming-conventions
+      - constants-usage
     must_do:
       - rule: Organize each service in its own folder with PascalCase naming
         codeExample: |

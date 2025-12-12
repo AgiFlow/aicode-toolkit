@@ -26,6 +26,7 @@ import { TemplatesManagerService } from '@agiflowai/aicode-utils';
 import * as fs from 'node:fs/promises';
 import * as yaml from 'js-yaml';
 import * as path from 'node:path';
+import { ARCHITECT_FILENAMES, ARCHITECT_FILENAME_HIDDEN } from '../constants';
 
 interface AddDesignPatternToolInput {
   template_name: string;
@@ -117,14 +118,30 @@ export class AddDesignPatternTool implements Tool<AddDesignPatternToolInput> {
         };
       }
 
-      const architectPath = path.join(templatePath, 'architect.yaml');
+      // Find existing architect file or use default for new files
+      let architectPath: string | null = null;
+      for (const filename of ARCHITECT_FILENAMES) {
+        const candidatePath = path.join(templatePath, filename);
+        try {
+          await fs.access(candidatePath);
+          architectPath = candidatePath;
+          break;
+        } catch {
+          // File doesn't exist, try next
+        }
+      }
 
-      // Read existing architect.yaml or create new structure
+      // If no existing file, use .architect.yaml as default for new files
+      if (!architectPath) {
+        architectPath = path.join(templatePath, ARCHITECT_FILENAME_HIDDEN);
+      }
+
+      // Read existing architect file or create new structure
       let architectConfig: { features?: Feature[] } = { features: [] };
 
       try {
         const content = await fs.readFile(architectPath, 'utf-8');
-        const parsed = yaml.load(content) as any;
+        const parsed = yaml.load(content) as { features?: Feature[] } | null;
         architectConfig = parsed || { features: [] };
 
         // Ensure features array exists
