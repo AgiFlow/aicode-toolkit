@@ -26,12 +26,10 @@ import {
   ARCHITECT_FILENAMES,
   ARCHITECT_FILENAME,
   ARCHITECT_FILENAME_HIDDEN,
+  MAX_ARCHITECT_FILE_SIZE,
 } from '../../constants';
 import { architectConfigSchema } from '../../schemas';
 import { ParseArchitectError, InvalidConfigError } from '../../utils/errors';
-
-/** Maximum file size for architect.yaml files (1MB) to prevent DoS via large files */
-const MAX_ARCHITECT_FILE_SIZE = 1024 * 1024;
 
 export class ArchitectParser {
   private configCache: Map<string, ArchitectConfig> = new Map();
@@ -100,15 +98,17 @@ export class ArchitectParser {
     }
 
     try {
-      // Validate file size before reading to prevent DoS
-      const stats = await fs.stat(architectPath);
-      if (stats.size > MAX_ARCHITECT_FILE_SIZE) {
+      // Read file as buffer first to check size atomically (prevents TOCTOU race condition)
+      const buffer = await fs.readFile(architectPath);
+
+      // Validate file size to prevent DoS
+      if (buffer.length > MAX_ARCHITECT_FILE_SIZE) {
         throw new ParseArchitectError(
-          `File size (${stats.size} bytes) exceeds maximum allowed size (${MAX_ARCHITECT_FILE_SIZE} bytes)`,
+          `File size (${buffer.length} bytes) exceeds maximum allowed size (${MAX_ARCHITECT_FILE_SIZE} bytes)`,
         );
       }
 
-      const content = await fs.readFile(architectPath, 'utf-8');
+      const content = buffer.toString('utf-8');
 
       // Handle empty file
       if (!content || content.trim() === '') {

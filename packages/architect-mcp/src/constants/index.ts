@@ -47,6 +47,10 @@ export const FILE_PATTERNS = {
 // Default values
 export const DEFAULT_PATTERN_NAME = 'unnamed pattern';
 
+// File size limits
+/** Maximum file size for architect.yaml files (1MB) to prevent DoS via large files */
+export const MAX_ARCHITECT_FILE_SIZE = 1024 * 1024;
+
 // Common naming patterns for similarity matching
 export const COMMON_NAMING_PATTERNS = [
   'Controller',
