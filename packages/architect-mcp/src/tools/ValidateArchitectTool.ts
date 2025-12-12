@@ -20,13 +20,13 @@
  */
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type { Tool, ToolDefinition } from '../types/index.js';
+import type { Tool, ToolDefinition } from '../types';
 import { ArchitectParser } from '../services/ArchitectParser';
 import { TemplatesManagerService } from '@agiflowai/aicode-utils';
 import { ParseArchitectError, InvalidConfigError } from '../utils/errors';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { ARCHITECT_FILENAMES } from '../constants';
+import { ARCHITECT_FILENAMES, PARENT_DIR_PREFIX } from '../constants';
 
 interface ValidateArchitectToolInput {
   file_path?: string;
@@ -69,6 +69,10 @@ export class ValidateArchitectTool implements Tool<ValidateArchitectToolInput> {
     this.architectParser = new ArchitectParser();
   }
 
+  /**
+   * Returns the tool definition including name, description and input schema
+   * @returns ToolDefinition object for MCP registration
+   */
   getDefinition(): ToolDefinition {
     return {
       name: ValidateArchitectTool.TOOL_NAME,
@@ -93,6 +97,11 @@ export class ValidateArchitectTool implements Tool<ValidateArchitectToolInput> {
     };
   }
 
+  /**
+   * Execute the validation tool with the provided input
+   * @param input - Tool input containing file_path or template_name
+   * @returns CallToolResult with validation results or errors
+   */
   async execute(input: ValidateArchitectToolInput): Promise<CallToolResult> {
     const result = await this.validate(input);
 
@@ -189,32 +198,45 @@ export class ValidateArchitectTool implements Tool<ValidateArchitectToolInput> {
 
     // Direct file path
     if (input.file_path) {
-      const absolutePath = path.isAbsolute(input.file_path)
-        ? input.file_path
-        : path.join(process.cwd(), input.file_path);
+      // Use path.resolve() for cross-platform safe absolute path resolution
+      // This handles '..' sequences properly on all platforms
+      const resolvedPath = path.resolve(process.cwd(), input.file_path);
 
-      // Normalize path to prevent traversal attacks (e.g., ../../etc/passwd)
-      const normalizedPath = path.normalize(absolutePath);
+      // Validate using path.relative() - if it starts with '..', target is outside base
+      // This approach works correctly on Windows (case-insensitive) and Unix (case-sensitive)
+      // Note: symlinks are resolved by path.resolve(), so linked files outside workspace will be rejected
+      const workspaceRoot = path.resolve(process.cwd());
+      const relativeToWorkspace = path.relative(workspaceRoot, resolvedPath);
+      // Edge case: empty relative path means the file is at workspace root (valid)
+      const isWithinWorkspace =
+        !relativeToWorkspace.startsWith(PARENT_DIR_PREFIX) && !path.isAbsolute(relativeToWorkspace);
 
-      // Validate the path is within the workspace directory
-      const workspaceRoot = process.cwd();
-      if (!normalizedPath.startsWith(workspaceRoot)) {
+      if (!isWithinWorkspace) {
         // Check if it's within a templates directory
         const templatesRoot = await TemplatesManagerService.findTemplatesPath();
-        if (!templatesRoot || !normalizedPath.startsWith(templatesRoot)) {
-          return {
-            success: false,
-            error: {
-              type: 'file_not_found',
-              message: `Path "${input.file_path}" is outside the workspace directory`,
-              fix_suggestion:
-                'Provide a file path within the current workspace or use template_name to reference a template.',
-            },
-          };
+        if (templatesRoot) {
+          const resolvedTemplatesRoot = path.resolve(templatesRoot);
+          const relativeToTemplates = path.relative(resolvedTemplatesRoot, resolvedPath);
+          const isWithinTemplates =
+            !relativeToTemplates.startsWith(PARENT_DIR_PREFIX) && !path.isAbsolute(relativeToTemplates);
+
+          if (isWithinTemplates) {
+            return { success: true, path: resolvedPath };
+          }
         }
+
+        return {
+          success: false,
+          error: {
+            type: 'file_not_found',
+            message: `Path "${input.file_path}" is outside the workspace directory`,
+            fix_suggestion:
+              'Provide a file path within the current workspace or use template_name to reference a template.',
+          },
+        };
       }
 
-      return { success: true, path: normalizedPath };
+      return { success: true, path: resolvedPath };
     }
 
     // Template name - find templates directory
