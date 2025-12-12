@@ -25,7 +25,7 @@ import {
   DECISION_ALLOW,
 } from '@agiflowai/hooks-adapter';
 import { CLAUDE_CODE, isValidLlmTool, type LlmToolId } from '@agiflowai/coding-agent-bridge';
-import { CodeReviewService } from '../../services/CodeReviewService';
+import { CodeReviewService } from '../../services/CodeReview';
 import { TemplateFinder } from '../../services/TemplateFinder';
 import { ArchitectParser } from '../../services/ArchitectParser';
 import { PatternMatcher } from '../../services/PatternMatcher';

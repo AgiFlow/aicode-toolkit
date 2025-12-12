@@ -1,3 +1,22 @@
+/**
+ * PatternMatcher
+ *
+ * DESIGN PATTERNS:
+ * - Service pattern for business logic encapsulation
+ * - Single responsibility principle
+ * - Strategy pattern for matching algorithms
+ *
+ * CODING STANDARDS:
+ * - Use async/await for asynchronous operations
+ * - Throw descriptive errors for error cases
+ * - Keep methods focused and well-named
+ * - Document complex logic with comments
+ *
+ * AVOID:
+ * - Mixing concerns (keep focused on single domain)
+ * - Direct tool implementation (services should be tool-agnostic)
+ */
+
 import { minimatch } from 'minimatch';
 import * as path from 'node:path';
 import type {
@@ -5,7 +24,7 @@ import type {
   FileDesignPatternResult,
   ArchitectConfig,
   Feature,
-} from '../types';
+} from '../../types';
 
 export class PatternMatcher {
   /**

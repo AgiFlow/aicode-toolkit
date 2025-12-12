@@ -1,3 +1,22 @@
+/**
+ * CodeReviewService
+ *
+ * DESIGN PATTERNS:
+ * - Service pattern for business logic encapsulation
+ * - Single responsibility principle
+ * - LLM integration for intelligent code review
+ *
+ * CODING STANDARDS:
+ * - Use async/await for asynchronous operations
+ * - Throw descriptive errors for error cases
+ * - Keep methods focused and well-named
+ * - Document complex logic with comments
+ *
+ * AVOID:
+ * - Mixing concerns (keep focused on single domain)
+ * - Direct tool implementation (services should be tool-agnostic)
+ */
+
 import { log } from '@agiflowai/aicode-utils';
 import {
   LlmProxyService,
@@ -8,8 +27,8 @@ import {
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { execa } from 'execa';
-import { RuleFinder } from './RuleFinder.js';
-import type { CodeReviewResult, RuleSection, RulesYamlConfig } from '../types';
+import { RuleFinder } from '../RuleFinder';
+import type { CodeReviewResult, RuleSection, RulesYamlConfig } from '../../types';
 
 interface CodeReviewServiceOptions {
   llmTool?: LlmToolId;

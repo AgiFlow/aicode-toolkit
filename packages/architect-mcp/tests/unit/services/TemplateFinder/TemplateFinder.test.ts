@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { TemplateFinder } from '../../src/services/TemplateFinder';
+import { TemplateFinder } from '../../../../src/services/TemplateFinder';
 
 describe('TemplateFinder', () => {
   const service = new TemplateFinder();
