@@ -192,7 +192,29 @@ export class ValidateArchitectTool implements Tool<ValidateArchitectToolInput> {
       const absolutePath = path.isAbsolute(input.file_path)
         ? input.file_path
         : path.join(process.cwd(), input.file_path);
-      return { success: true, path: absolutePath };
+
+      // Normalize path to prevent traversal attacks (e.g., ../../etc/passwd)
+      const normalizedPath = path.normalize(absolutePath);
+
+      // Validate the path is within the workspace directory
+      const workspaceRoot = process.cwd();
+      if (!normalizedPath.startsWith(workspaceRoot)) {
+        // Check if it's within a templates directory
+        const templatesRoot = await TemplatesManagerService.findTemplatesPath();
+        if (!templatesRoot || !normalizedPath.startsWith(templatesRoot)) {
+          return {
+            success: false,
+            error: {
+              type: 'file_not_found',
+              message: `Path "${input.file_path}" is outside the workspace directory`,
+              fix_suggestion:
+                'Provide a file path within the current workspace or use template_name to reference a template.',
+            },
+          };
+        }
+      }
+
+      return { success: true, path: normalizedPath };
     }
 
     // Template name - find templates directory
@@ -273,16 +295,28 @@ export class ValidateArchitectTool implements Tool<ValidateArchitectToolInput> {
         fix_suggestion: this.getYamlFixSuggestion(message),
       });
     } else if (error instanceof InvalidConfigError) {
-      // Schema validation error
-      const zodErrors = this.parseZodErrorMessage(error.message);
-
-      for (const zodError of zodErrors) {
-        errors.push({
-          type: 'schema_validation',
-          message: zodError.message,
-          location: zodError.path,
-          fix_suggestion: this.getSchemaFixSuggestion(zodError.path, zodError.message),
-        });
+      // Schema validation error - use structured issues directly
+      if (error.issues && error.issues.length > 0) {
+        for (const issue of error.issues) {
+          const fieldPath = issue.path.join('.');
+          errors.push({
+            type: 'schema_validation',
+            message: issue.message,
+            location: fieldPath,
+            fix_suggestion: this.getSchemaFixSuggestion(fieldPath, issue.message),
+          });
+        }
+      } else {
+        // Fallback to parsing error message for backward compatibility
+        const zodErrors = this.parseZodErrorMessage(error.message);
+        for (const zodError of zodErrors) {
+          errors.push({
+            type: 'schema_validation',
+            message: zodError.message,
+            location: zodError.path,
+            fix_suggestion: this.getSchemaFixSuggestion(zodError.path, zodError.message),
+          });
+        }
       }
     } else {
       // Unknown error

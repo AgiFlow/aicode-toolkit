@@ -30,6 +30,9 @@ import {
 import { architectConfigSchema } from '../../schemas';
 import { ParseArchitectError, InvalidConfigError } from '../../utils/errors';
 
+/** Maximum file size for architect.yaml files (1MB) to prevent DoS via large files */
+const MAX_ARCHITECT_FILE_SIZE = 1024 * 1024;
+
 export class ArchitectParser {
   private configCache: Map<string, ArchitectConfig> = new Map();
   private workspaceRoot: string;
@@ -97,6 +100,14 @@ export class ArchitectParser {
     }
 
     try {
+      // Validate file size before reading to prevent DoS
+      const stats = await fs.stat(architectPath);
+      if (stats.size > MAX_ARCHITECT_FILE_SIZE) {
+        throw new ParseArchitectError(
+          `File size (${stats.size} bytes) exceeds maximum allowed size (${MAX_ARCHITECT_FILE_SIZE} bytes)`,
+        );
+      }
+
       const content = await fs.readFile(architectPath, 'utf-8');
 
       // Handle empty file
@@ -117,10 +128,13 @@ export class ArchitectParser {
       const parseResult = architectConfigSchema.safeParse(rawConfig || {});
 
       if (!parseResult.success) {
-        const errorMessages = parseResult.error.issues
-          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
-          .join(', ');
-        throw new InvalidConfigError(errorMessages);
+        const issues = parseResult.error.issues.map((issue) => ({
+          path: issue.path,
+          message: issue.message,
+          code: issue.code,
+        }));
+        const errorMessages = issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+        throw new InvalidConfigError(errorMessages, issues);
       }
 
       const validatedConfig: ArchitectConfig = parseResult.data;

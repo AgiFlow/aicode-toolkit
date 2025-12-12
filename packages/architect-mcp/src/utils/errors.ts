@@ -24,12 +24,23 @@ export class ParseArchitectError extends ArchitectError {
   }
 }
 
+/** Structured validation issue from Zod */
+export interface ValidationIssue {
+  path: (string | number)[];
+  message: string;
+  code?: string;
+}
+
 /**
  * Error thrown when architect config validation fails
  */
 export class InvalidConfigError extends ArchitectError {
-  constructor(message: string) {
+  /** Structured validation issues from Zod */
+  readonly issues: ValidationIssue[];
+
+  constructor(message: string, issues?: ValidationIssue[]) {
     super(message);
     this.name = 'InvalidConfigError';
+    this.issues = issues || [];
   }
 }
