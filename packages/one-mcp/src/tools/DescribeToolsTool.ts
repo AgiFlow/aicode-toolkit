@@ -525,30 +525,37 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
     const rawSkills = this.skillService ? await this.skillService.getSkills() : [];
     const promptSkills = await this.collectPromptSkills();
 
-    const allSkillsData: SkillTemplateData[] = [
-      ...rawSkills.map((skill) => ({
-        name: skill.name,
-        displayName: skill.name,
-        description: skill.description,
-      })),
-      ...promptSkills,
-    ];
+    // Combine and deduplicate skills (file-based skills take precedence)
+    const seenSkillNames = new Set<string>();
+    const allSkillsData: SkillTemplateData[] = [];
 
-    // Track skill names to detect clashes between skills
-    const skillNameCounts = new Map<string, number>();
-    for (const skill of allSkillsData) {
-      skillNameCounts.set(skill.name, (skillNameCounts.get(skill.name) || 0) + 1);
+    // Add file-based skills first (they take precedence)
+    for (const skill of rawSkills) {
+      if (!seenSkillNames.has(skill.name)) {
+        seenSkillNames.add(skill.name);
+        allSkillsData.push({
+          name: skill.name,
+          displayName: skill.name,
+          description: skill.description,
+        });
+      }
     }
 
-    // Format skills with prefix only when clashing with MCP tools or other skills
+    // Add prompt-based skills (skip duplicates)
+    for (const skill of promptSkills) {
+      if (!seenSkillNames.has(skill.name)) {
+        seenSkillNames.add(skill.name);
+        allSkillsData.push(skill);
+      }
+    }
+
+    // Format skills with prefix only when clashing with MCP tools
     const skills: SkillTemplateData[] = allSkillsData.map((skill) => {
       const clashesWithMcpTool = allToolNames.has(skill.name);
-      const clashesWithOtherSkill = (skillNameCounts.get(skill.name) || 0) > 1;
-      const needsPrefix = clashesWithMcpTool || clashesWithOtherSkill;
 
       return {
         name: skill.name,
-        displayName: needsPrefix ? `${SKILL_PREFIX}${skill.name}` : skill.name,
+        displayName: clashesWithMcpTool ? `${SKILL_PREFIX}${skill.name}` : skill.name,
         description: skill.description,
       };
     });
