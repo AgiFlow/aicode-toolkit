@@ -11,8 +11,12 @@ export const generateFeatureScaffoldPromptOptionsSchema = z.object({
   promptAsSkill: z.boolean().default(false).describe('Render prompt with skill front matter'),
 });
 
-export type GenerateFeatureScaffoldPromptOptions = z.input<typeof generateFeatureScaffoldPromptOptionsSchema>;
-type GenerateFeatureScaffoldPromptParsedOptions = z.output<typeof generateFeatureScaffoldPromptOptionsSchema>;
+export type GenerateFeatureScaffoldPromptOptions = z.input<
+  typeof generateFeatureScaffoldPromptOptionsSchema
+>;
+type GenerateFeatureScaffoldPromptParsedOptions = z.output<
+  typeof generateFeatureScaffoldPromptOptionsSchema
+>;
 
 /**
  * Prompt for generating feature scaffolds

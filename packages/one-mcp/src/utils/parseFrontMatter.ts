@@ -16,6 +16,13 @@
  * AVOID:
  * - Throwing errors for missing front matter (it's optional)
  * - Using external YAML parsing libraries (keep it simple)
+ *
+ * MULTI-LINE BLOCK INDENTATION RULES:
+ * - Base indentation is determined from the first content line after | or >
+ * - All content lines must maintain at least the base indentation
+ * - Empty lines are preserved within blocks
+ * - A non-empty line with less indentation than base terminates the block
+ *   (per YAML spec - indicates end of the block scalar)
  */
 
 /**
@@ -166,10 +173,21 @@ export function parseFrontMatter(content: string): ParseFrontMatterResult {
       // Check if line is indented (part of multi-line block)
       const lineIndent = line.match(/^(\s*)/)?.[1].length || 0;
 
-      if (lineIndent >= baseIndent || trimmedLine === '') {
-        // Remove base indentation
-        const unindentedLine = lineIndent >= baseIndent ? line.slice(baseIndent) : trimmedLine;
+      // Empty lines are always included in multi-line blocks
+      if (trimmedLine === '') {
+        currentValue.push('');
+      } else if (lineIndent >= baseIndent) {
+        // Line has sufficient indentation - remove base indentation and include
+        const unindentedLine = line.slice(baseIndent);
         currentValue.push(unindentedLine);
+      } else {
+        // Non-empty line with less indentation than base terminates the block
+        // (per YAML spec - this indicates the end of the block scalar)
+        // Save current key and stop processing this line as multi-line content
+        saveCurrentKey();
+        // Note: This line could be a new key, but since it has some indentation
+        // and isn't a valid key format (no colon at start), we skip it.
+        // This matches YAML behavior where dedented content ends the block.
       }
     }
   }

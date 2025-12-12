@@ -198,6 +198,59 @@ Content`;
 
       expect(result.frontMatter?.description).toBe('Normal line\n  Indented line\nNormal again');
     });
+
+    it('should terminate block when line has less indentation than base', () => {
+      // Per YAML spec, a non-empty line with less indentation terminates the block
+      const content = `---
+name: test
+description: |
+  Line 1
+  Line 2
+ Less indented line
+---
+Content`;
+
+      const result = parseFrontMatter(content);
+
+      // The block should terminate at "Less indented line" (only 1 space vs base of 2)
+      // The dedented line is discarded (not a valid key:value format)
+      expect(result.frontMatter?.description).toBe('Line 1\nLine 2');
+      expect(result.frontMatter?.name).toBe('test');
+      // Verify the dedented line didn't create a spurious key
+      expect(Object.keys(result.frontMatter || {})).toEqual(['name', 'description']);
+      expect(result.content).toBe('Content');
+    });
+
+    it('should handle block scalar with no content lines', () => {
+      // Edge case: block indicator followed immediately by closing delimiter
+      const content = `---
+name: test
+description: |
+---
+Content`;
+
+      const result = parseFrontMatter(content);
+
+      // Empty block scalar should result in empty string or be omitted
+      expect(result.frontMatter?.name).toBe('test');
+      // description key exists but value is empty (no content lines)
+      expect(result.frontMatter?.description).toBeUndefined();
+    });
+
+    it('should preserve empty lines within multi-line blocks', () => {
+      const content = `---
+name: test
+description: |
+  Line 1
+
+  Line 3
+---
+Content`;
+
+      const result = parseFrontMatter(content);
+
+      expect(result.frontMatter?.description).toBe('Line 1\n\nLine 3');
+    });
   });
 
   describe('isValidSkillFrontMatter', () => {

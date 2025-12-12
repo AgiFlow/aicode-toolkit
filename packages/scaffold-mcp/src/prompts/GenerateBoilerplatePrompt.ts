@@ -11,8 +11,12 @@ export const generateBoilerplatePromptOptionsSchema = z.object({
   promptAsSkill: z.boolean().default(false).describe('Render prompt with skill front matter'),
 });
 
-export type GenerateBoilerplatePromptOptions = z.input<typeof generateBoilerplatePromptOptionsSchema>;
-type GenerateBoilerplatePromptParsedOptions = z.output<typeof generateBoilerplatePromptOptionsSchema>;
+export type GenerateBoilerplatePromptOptions = z.input<
+  typeof generateBoilerplatePromptOptionsSchema
+>;
+type GenerateBoilerplatePromptParsedOptions = z.output<
+  typeof generateBoilerplatePromptOptionsSchema
+>;
 
 /**
  * Prompt for generating boilerplates
