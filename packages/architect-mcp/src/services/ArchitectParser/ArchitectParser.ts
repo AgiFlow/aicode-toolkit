@@ -22,6 +22,11 @@ import * as yaml from 'js-yaml';
 import * as path from 'node:path';
 import type { ArchitectConfig, Feature } from '../../types';
 import { TemplatesManagerService } from '@agiflowai/aicode-utils';
+import {
+  ARCHITECT_FILENAMES,
+  ARCHITECT_FILENAME,
+  ARCHITECT_FILENAME_HIDDEN,
+} from '../../constants';
 
 export class ArchitectParser {
   private configCache: Map<string, ArchitectConfig> = new Map();
@@ -32,12 +37,42 @@ export class ArchitectParser {
   }
 
   /**
-   * Parse architect.yaml from a template directory
+   * Find the architect file in a directory, checking both .architect.yaml and architect.yaml
+   * Returns the full path if found, null otherwise
+   */
+  async findArchitectFile(dirPath: string): Promise<string | null> {
+    for (const filename of ARCHITECT_FILENAMES) {
+      const filePath = path.join(dirPath, filename);
+      try {
+        await fs.access(filePath);
+        return filePath;
+      } catch {
+        // File doesn't exist, try next
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Parse architect.yaml or .architect.yaml from a template directory
    */
   async parseArchitectFile(templatePath: string): Promise<ArchitectConfig | null> {
-    const architectPath = templatePath.includes('architect.yaml')
-      ? templatePath
-      : path.join(templatePath, 'architect.yaml');
+    let architectPath: string;
+
+    // Check if templatePath is already a full file path
+    if (
+      templatePath.endsWith(ARCHITECT_FILENAME_HIDDEN) ||
+      templatePath.endsWith(ARCHITECT_FILENAME)
+    ) {
+      architectPath = templatePath;
+    } else {
+      // Find the architect file in the directory
+      const foundPath = await this.findArchitectFile(templatePath);
+      if (!foundPath) {
+        return null;
+      }
+      architectPath = foundPath;
+    }
 
     // Check cache first
     if (this.configCache.has(architectPath)) {
@@ -78,11 +113,11 @@ export class ArchitectParser {
   }
 
   /**
-   * Parse the global architect.yaml
+   * Parse the global architect.yaml or .architect.yaml
    */
   async parseGlobalArchitectFile(globalPath?: string): Promise<ArchitectConfig | null> {
-    // Default to the architect.yaml in the templates directory
-    let resolvedPath: string;
+    // Default to the architect file in the templates directory
+    let resolvedPath: string | null;
     if (globalPath) {
       resolvedPath = globalPath;
     } else {
@@ -91,7 +126,10 @@ export class ArchitectParser {
         // No templates directory found, return null
         return null;
       }
-      resolvedPath = path.join(templatesRoot, 'architect.yaml');
+      resolvedPath = await this.findArchitectFile(templatesRoot);
+      if (!resolvedPath) {
+        return null;
+      }
     }
     // Check cache first
     if (this.configCache.has(resolvedPath)) {

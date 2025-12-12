@@ -223,6 +223,98 @@ rules:
           // ✅ GOOD
           const userName = 'John';
           function getUserById() {}
+  - pattern: constants-usage
+    description: Avoid magic strings and hardcoded values - use constants for maintainability
+    must_do:
+      - rule: Define constants in a dedicated constants file or folder
+        codeExample: |
+          // ✅ GOOD - Constants in dedicated file
+          // src/constants/index.ts
+          export const CONFIG_FILENAME = 'config.yaml';
+          export const CONFIG_FILENAME_HIDDEN = '.config.yaml';
+          export const CONFIG_FILENAMES = [CONFIG_FILENAME_HIDDEN, CONFIG_FILENAME] as const;
+
+          export const DEFAULT_TIMEOUT = 30000;
+          export const MAX_RETRIES = 3;
+      - rule: Import and use constants instead of inline magic strings
+        codeExample: |
+          // ✅ GOOD - Using constants
+          import { CONFIG_FILENAME, DEFAULT_TIMEOUT } from '../constants';
+
+          const configPath = path.join(dir, CONFIG_FILENAME);
+          const timeout = options.timeout ?? DEFAULT_TIMEOUT;
+
+          // ❌ BAD - Magic strings inline
+          const configPath = path.join(dir, 'config.yaml');
+          const timeout = options.timeout ?? 30000;
+      - rule: Use constants for repeated string literals (filenames, keys, messages)
+        codeExample: |
+          // ✅ GOOD - Constants for filenames
+          export const ARCHITECT_FILENAME = 'architect.yaml';
+          export const RULES_FILENAME = 'RULES.yaml';
+          export const SCAFFOLD_FILENAME = 'scaffold.yaml';
+
+          // Then use everywhere
+          if (file.endsWith(ARCHITECT_FILENAME)) { }
+          const rulesPath = path.join(dir, RULES_FILENAME);
+      - rule: Group related constants together
+        codeExample: |
+          // ✅ GOOD - Related constants grouped
+          // File patterns
+          export const ARCHITECT_FILENAME = 'architect.yaml';
+          export const ARCHITECT_FILENAME_HIDDEN = '.architect.yaml';
+          export const ARCHITECT_FILENAMES = [ARCHITECT_FILENAME_HIDDEN, ARCHITECT_FILENAME] as const;
+
+          // Timeouts
+          export const DEFAULT_TIMEOUT_MS = 30000;
+          export const MAX_TIMEOUT_MS = 600000;
+
+          // Limits
+          export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+          export const MAX_RESULTS = 100;
+    must_not_do:
+      - rule: Never use magic strings - inline string literals that have special meaning
+        codeExample: |
+          // ❌ BAD - Magic strings
+          if (filename === 'architect.yaml') { }
+          const path = join(dir, 'RULES.yaml');
+          await fs.readFile('config.json');
+
+          // ✅ GOOD - Use constants
+          import { ARCHITECT_FILENAME, RULES_FILENAME, CONFIG_FILENAME } from '../constants';
+
+          if (filename === ARCHITECT_FILENAME) { }
+          const path = join(dir, RULES_FILENAME);
+          await fs.readFile(CONFIG_FILENAME);
+      - rule: Never use magic numbers - inline numeric literals with special meaning
+        codeExample: |
+          // ❌ BAD - Magic numbers
+          setTimeout(callback, 30000);
+          if (retries > 3) { }
+          const maxSize = 10485760;
+
+          // ✅ GOOD - Named constants
+          import { DEFAULT_TIMEOUT_MS, MAX_RETRIES, MAX_FILE_SIZE_BYTES } from '../constants';
+
+          setTimeout(callback, DEFAULT_TIMEOUT_MS);
+          if (retries > MAX_RETRIES) { }
+          const maxSize = MAX_FILE_SIZE_BYTES;
+      - rule: Never duplicate the same literal value across multiple files
+        codeExample: |
+          // ❌ BAD - Same string in multiple files
+          // file1.ts
+          const config = path.join(dir, 'architect.yaml');
+          // file2.ts
+          if (name.endsWith('architect.yaml')) { }
+          // file3.ts
+          await fs.access(path.join(root, 'architect.yaml'));
+
+          // ✅ GOOD - Single source of truth
+          // constants/index.ts
+          export const ARCHITECT_FILENAME = 'architect.yaml';
+
+          // All files import from constants
+          import { ARCHITECT_FILENAME } from '../constants';
   - pattern: type-safety
     description: Strong type safety standards for TypeScript code
     must_do:
