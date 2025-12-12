@@ -77,6 +77,16 @@ export const mcpServeCommand = new Command('mcp-serve')
     `LLM tool for code review. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
     undefined,
   )
+  .option(
+    '--design-pattern-tool-config <json>',
+    'JSON config for design pattern tool (e.g., \'{"model":"claude-opus-4"}\')',
+    undefined,
+  )
+  .option(
+    '--review-tool-config <json>',
+    'JSON config for review tool (e.g., \'{"model":"gpt-5.2-high"}\')',
+    undefined,
+  )
   .option('--admin-enable', 'Enable admin tools (add_design_pattern, add_rule)', false)
   .action(async (options) => {
     try {
@@ -107,9 +117,36 @@ export const mcpServeCommand = new Command('mcp-serve')
         reviewTool = options.reviewTool as LlmToolId;
       }
 
+      // Parse tool config JSON options
+      let designPatternToolConfig: Record<string, unknown> | undefined;
+      if (options.designPatternToolConfig) {
+        try {
+          designPatternToolConfig = JSON.parse(options.designPatternToolConfig);
+        } catch (error) {
+          print.error(
+            `Invalid JSON for --design-pattern-tool-config: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          process.exit(1);
+        }
+      }
+
+      let reviewToolConfig: Record<string, unknown> | undefined;
+      if (options.reviewToolConfig) {
+        try {
+          reviewToolConfig = JSON.parse(options.reviewToolConfig);
+        } catch (error) {
+          print.error(
+            `Invalid JSON for --review-tool-config: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          process.exit(1);
+        }
+      }
+
       const serverOptions = {
         designPatternTool,
+        designPatternToolConfig,
         reviewTool,
+        reviewToolConfig,
         adminEnabled,
       };
 

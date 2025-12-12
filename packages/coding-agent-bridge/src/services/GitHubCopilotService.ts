@@ -28,13 +28,13 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { pathExists, ensureDir } from '@agiflowai/aicode-utils';
 import type {
-  CodingAgentService,
   LlmInvocationParams,
   LlmInvocationResponse,
   McpSettings,
   PromptConfig,
 } from '../types';
 import { appendUniqueToFile, appendUniqueWithMarkers, writeFileEnsureDir } from '../utils/file';
+import { BaseCodingAgentService } from './BaseCodingAgentService';
 
 /**
  * GitHub Copilot MCP server configuration format
@@ -64,6 +64,14 @@ interface GitHubCopilotMcpServerConfig {
   url?: string;
   /** Headers for requests (for http/sse servers) - can reference secrets with $COPILOT_MCP_ prefix */
   headers?: Record<string, string>;
+}
+
+/**
+ * GitHub Copilot CLI config.json format
+ */
+interface CopilotCliConfig {
+  mcpServers?: Record<string, GitHubCopilotMcpServerConfig>;
+  [key: string]: unknown;
 }
 
 /**
@@ -101,14 +109,22 @@ interface GitHubCopilotMcpServerConfig {
  * @see https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/extend-coding-agent-with-mcp
  * @see https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli
  */
-export class GitHubCopilotService implements CodingAgentService {
+interface GitHubCopilotServiceOptions {
+  workspaceRoot?: string;
+  copilotPath?: string;
+  defaultTimeout?: number;
+  toolConfig?: Record<string, unknown>;
+}
+
+export class GitHubCopilotService extends BaseCodingAgentService {
   private mcpSettings: McpSettings = {};
   private promptConfig: PromptConfig = {};
   private readonly workspaceRoot: string;
   private readonly copilotPath: string;
   private readonly defaultTimeout: number;
 
-  constructor(options?: { workspaceRoot?: string; copilotPath?: string; defaultTimeout?: number }) {
+  constructor(options?: GitHubCopilotServiceOptions) {
+    super({ toolConfig: options?.toolConfig });
     this.workspaceRoot = options?.workspaceRoot || process.cwd();
     this.copilotPath = options?.copilotPath || 'copilot';
     this.defaultTimeout = options?.defaultTimeout || 120000; // 2 minutes default
@@ -286,10 +302,10 @@ export class GitHubCopilotService implements CodingAgentService {
     await ensureDir(configDir);
 
     // Read existing config or create new
-    let config: any = {};
+    let config: CopilotCliConfig = {};
     if (await pathExists(configPath)) {
       const content = await fs.readFile(configPath, 'utf-8');
-      config = JSON.parse(content);
+      config = JSON.parse(content) as CopilotCliConfig;
     }
 
     // Ensure mcpServers key exists
@@ -484,6 +500,9 @@ Respond with ONLY the raw JSON object.`;
       // Build command arguments for programmatic mode (LLM-only, no tools)
       // -s for silent output (response only, no stats)
       const args = ['-p', fullPrompt, '-s'];
+
+      // Add toolConfig as CLI args (e.g., { model: "claude-opus-4" } -> ["--model", "claude-opus-4"])
+      args.push(...this.buildToolConfigArgs());
 
       // Execute GitHub Copilot CLI
       const timeout = (params.timeout as number | undefined) || this.defaultTimeout;

@@ -21,7 +21,9 @@ import type { LlmToolId } from '@agiflowai/coding-agent-bridge';
 
 export function createServer(options?: {
   designPatternTool?: LlmToolId;
+  designPatternToolConfig?: Record<string, unknown>;
   reviewTool?: LlmToolId;
+  reviewToolConfig?: Record<string, unknown>;
   adminEnabled?: boolean;
 }): Server {
   const adminEnabled = options?.adminEnabled ?? false;
@@ -91,11 +93,15 @@ Example workflow:
     },
   );
 
-  // Initialize core tools with optional LLM support
+  // Initialize core tools with optional LLM support and tool config
   const getFileDesignPatternTool = new GetFileDesignPatternTool({
     llmTool: options?.designPatternTool,
+    toolConfig: options?.designPatternToolConfig,
   });
-  const reviewCodeChangeTool = new ReviewCodeChangeTool({ llmTool: options?.reviewTool });
+  const reviewCodeChangeTool = new ReviewCodeChangeTool({
+    llmTool: options?.reviewTool,
+    toolConfig: options?.reviewToolConfig,
+  });
 
   // Initialize admin tools if enabled
   const addDesignPatternTool = adminEnabled ? new AddDesignPatternTool() : null;

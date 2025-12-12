@@ -28,12 +28,12 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { pathExists, ensureDir } from '@agiflowai/aicode-utils';
 import type {
-  CodingAgentService,
   LlmInvocationParams,
   LlmInvocationResponse,
   McpSettings,
   PromptConfig,
 } from '../types';
+import { BaseCodingAgentService } from './BaseCodingAgentService';
 
 /**
  * Gemini CLI JSON response format (headless mode)
@@ -131,17 +131,24 @@ interface GeminiSettingsConfig {
   [key: string]: unknown;
 }
 
+interface GeminiCliServiceOptions {
+  workspaceRoot?: string;
+  geminiPath?: string;
+  toolConfig?: Record<string, unknown>;
+}
+
 /**
  * Service for interacting with Gemini CLI as a coding agent
  * Provides standard LLM interface using Gemini's headless mode with JSON output
  */
-export class GeminiCliService implements CodingAgentService {
+export class GeminiCliService extends BaseCodingAgentService {
   private mcpSettings: McpSettings = {};
   private promptConfig: PromptConfig = {};
   private readonly workspaceRoot: string;
   private readonly geminiPath: string;
 
-  constructor(options?: { workspaceRoot?: string; geminiPath?: string }) {
+  constructor(options?: GeminiCliServiceOptions) {
+    super({ toolConfig: options?.toolConfig });
     this.workspaceRoot = options?.workspaceRoot || process.cwd();
     this.geminiPath = options?.geminiPath || 'gemini';
   }
@@ -440,6 +447,9 @@ export class GeminiCliService implements CodingAgentService {
       'json',
       '--sandbox', // Run in sandbox mode to prevent tool usage
     ];
+
+    // Add toolConfig as CLI args (e.g., { model: "gemini-2.5-pro" } -> ["--model", "gemini-2.5-pro"])
+    args.push(...this.buildToolConfigArgs());
 
     // Use provided model or default to gemini-3-pro-preview for better JSON adherence
     const model = params.model || 'gemini-3-pro-preview';

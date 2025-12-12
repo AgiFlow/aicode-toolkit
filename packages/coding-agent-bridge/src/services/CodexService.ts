@@ -29,13 +29,13 @@ import * as path from 'node:path';
 import { pathExists, ensureDir } from '@agiflowai/aicode-utils';
 import * as readline from 'node:readline';
 import type {
-  CodingAgentService,
   LlmInvocationParams,
   LlmInvocationResponse,
   McpSettings,
   PromptConfig,
 } from '../types';
 import { appendUniqueToFile, appendUniqueWithMarkers, writeFileEnsureDir } from '../utils/file';
+import { BaseCodingAgentService } from './BaseCodingAgentService';
 
 /**
  * Internal message types for parsing JSONL output from Codex CLI
@@ -62,11 +62,20 @@ interface CodexStreamEvent {
   };
 }
 
+interface CodexServiceOptions {
+  workspaceRoot?: string;
+  codexPath?: string;
+  defaultTimeout?: number;
+  defaultModel?: string;
+  defaultEnv?: Record<string, string>;
+  toolConfig?: Record<string, unknown>;
+}
+
 /**
  * Service for interacting with Codex CLI as a coding agent
  * Provides standard LLM interface using Codex's exec mode with JSON output
  */
-export class CodexService implements CodingAgentService {
+export class CodexService extends BaseCodingAgentService {
   private mcpSettings: McpSettings = {};
   private promptConfig: PromptConfig = {};
   private readonly workspaceRoot: string;
@@ -75,13 +84,8 @@ export class CodexService implements CodingAgentService {
   private readonly defaultModel: string;
   private readonly defaultEnv: Record<string, string>;
 
-  constructor(options?: {
-    workspaceRoot?: string;
-    codexPath?: string;
-    defaultTimeout?: number;
-    defaultModel?: string;
-    defaultEnv?: Record<string, string>;
-  }) {
+  constructor(options?: CodexServiceOptions) {
+    super({ toolConfig: options?.toolConfig });
     this.workspaceRoot = options?.workspaceRoot || process.cwd();
     this.codexPath = options?.codexPath || 'codex';
     this.defaultTimeout = options?.defaultTimeout || 60000; // 1 minute default
@@ -272,6 +276,9 @@ export class CodexService implements CodingAgentService {
       '--skip-git-repo-check', // Allow running outside git repos
       fullPrompt,
     ];
+
+    // Add toolConfig as CLI args (e.g., { model: "gpt-5.2-high" } -> ["--model", "gpt-5.2-high"])
+    args.push(...this.buildToolConfigArgs());
 
     if (params.model) {
       args.push('--model', params.model);

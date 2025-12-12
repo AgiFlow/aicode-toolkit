@@ -39,6 +39,8 @@ interface LlmProxyServiceOptions {
   workspaceRoot?: string;
   /** Default timeout in milliseconds */
   defaultTimeout?: number;
+  /** Tool-specific configuration (spread to service constructor) */
+  toolConfig?: Record<string, unknown>;
 }
 
 /**
@@ -94,30 +96,34 @@ export class LlmProxyService {
    * Create the appropriate service based on the tool type
    */
   private createService(options: LlmProxyServiceOptions): CodingAgentService {
-    const { llmTool, workspaceRoot, defaultTimeout } = options;
+    const { llmTool, workspaceRoot, defaultTimeout, toolConfig } = options;
 
     switch (llmTool) {
       case LLM_TOOL_CLAUDE_CODE:
         return new ClaudeCodeService({
           workspaceRoot,
           defaultTimeout,
+          toolConfig,
         });
 
       case LLM_TOOL_CODEX:
         return new CodexService({
           workspaceRoot,
           defaultTimeout,
+          toolConfig,
         });
 
       case LLM_TOOL_GEMINI_CLI:
         return new GeminiCliService({
           workspaceRoot,
+          toolConfig,
         });
 
       case LLM_TOOL_GITHUB_COPILOT:
         return new GitHubCopilotService({
           workspaceRoot,
           defaultTimeout,
+          toolConfig,
         });
 
       default: {

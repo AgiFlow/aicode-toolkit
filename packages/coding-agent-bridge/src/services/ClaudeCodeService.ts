@@ -29,13 +29,13 @@ import { pathExists } from '@agiflowai/aicode-utils';
 import * as readline from 'node:readline';
 import { v4 as uuidv4 } from 'uuid';
 import type {
-  CodingAgentService,
   LlmInvocationParams,
   LlmInvocationResponse,
   McpSettings,
   PromptConfig,
 } from '../types';
 import { appendUniqueToFile, appendUniqueWithMarkers, writeFileEnsureDir } from '../utils/file';
+import { BaseCodingAgentService } from './BaseCodingAgentService';
 
 /**
  * Internal message types for parsing stream-json output from Claude Code CLI
@@ -91,11 +91,20 @@ const CLAUDE_CODE_BUILTIN_TOOLS = [
   'WebSearch',
 ].join(',');
 
+interface ClaudeCodeServiceOptions {
+  workspaceRoot?: string;
+  claudePath?: string;
+  defaultTimeout?: number;
+  defaultModel?: string;
+  defaultEnv?: Record<string, string>;
+  toolConfig?: Record<string, unknown>;
+}
+
 /**
  * Service for interacting with Claude Code CLI as a coding agent
  * Provides standard LLM interface using Claude Code's stream-json output format
  */
-export class ClaudeCodeService implements CodingAgentService {
+export class ClaudeCodeService extends BaseCodingAgentService {
   private mcpSettings: McpSettings = {};
   private promptConfig: PromptConfig = {};
   private readonly workspaceRoot: string;
@@ -104,13 +113,8 @@ export class ClaudeCodeService implements CodingAgentService {
   private readonly defaultModel: string;
   private readonly defaultEnv: Record<string, string>;
 
-  constructor(options?: {
-    workspaceRoot?: string;
-    claudePath?: string;
-    defaultTimeout?: number;
-    defaultModel?: string;
-    defaultEnv?: Record<string, string>;
-  }) {
+  constructor(options?: ClaudeCodeServiceOptions) {
+    super({ toolConfig: options?.toolConfig });
     this.workspaceRoot = options?.workspaceRoot || process.cwd();
     this.claudePath = options?.claudePath || 'claude';
     this.defaultTimeout = options?.defaultTimeout || 60000; // 1 minute default
@@ -296,6 +300,9 @@ export class ClaudeCodeService implements CodingAgentService {
       '--disallowedTools',
       CLAUDE_CODE_BUILTIN_TOOLS,
     ];
+
+    // Add toolConfig as CLI args (e.g., { model: "claude-opus-4" } -> ["--model", "claude-opus-4"])
+    args.push(...this.buildToolConfigArgs());
 
     if (params.model) {
       args.push('--model', params.model);
