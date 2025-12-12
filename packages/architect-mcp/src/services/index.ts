@@ -2,7 +2,8 @@
  * Services Barrel Exports
  *
  * Re-exports all services from their respective folder modules.
- * Types should be imported directly from '../types'.
+ * Types are available from each service folder (e.g., './ArchitectParser')
+ * or directly from '../types'.
  */
 
 export { ArchitectParser } from './ArchitectParser';
