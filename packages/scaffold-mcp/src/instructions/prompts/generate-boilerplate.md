@@ -1,4 +1,9 @@
-You are helping create a new boilerplate template configuration using the scaffold-mcp MCP tools.
+{% if promptAsSkill %}---
+name: generate-boilerplate
+description: Create a new boilerplate template configuration for scaffolding new projects. Use this skill when the user wants to define a reusable project template (e.g., React app, Express API, Next.js starter) that can be used to bootstrap future projects. This is an admin/developer tool for creating the template definitions themselves, not for using existing templates. It generates scaffold.yaml configuration and template files with Liquid syntax for variable substitution.
+---
+
+{% endif %}You are helping create a new boilerplate template configuration using the scaffold-mcp MCP tools.
 
 {% if request %}User request: {{ request }}
 {% endif %}

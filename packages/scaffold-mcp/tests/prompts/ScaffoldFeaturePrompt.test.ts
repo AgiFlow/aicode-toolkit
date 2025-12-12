@@ -87,7 +87,7 @@ describe('ScaffoldFeaturePrompt', () => {
     let monolithPrompt: ScaffoldFeaturePrompt;
 
     beforeEach(() => {
-      monolithPrompt = new ScaffoldFeaturePrompt(true);
+      monolithPrompt = new ScaffoldFeaturePrompt({ isMonolith: true });
     });
 
     it('should adjust instructions for monolith mode', () => {

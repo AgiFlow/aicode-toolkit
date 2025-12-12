@@ -29,15 +29,22 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Tool, ToolDefinition } from '../types';
 import type { McpClientManagerService } from '../services/McpClientManagerService';
 import type { SkillService } from '../services/SkillService';
-import { parseToolName } from '../utils';
+import { parseToolName, extractSkillFrontMatter } from '../utils';
+import { SKILL_PREFIX, LOG_PREFIX_SKILL_DETECTION, PROMPT_LOCATION_PREFIX } from '../constants';
 import { Liquid } from 'liquidjs';
-import skillsDescriptionTemplate from '../templates/skills-description.liquid?raw';
-import mcpServersDescriptionTemplate from '../templates/mcp-servers-description.liquid?raw';
+import toolkitDescriptionTemplate from '../templates/toolkit-description.liquid?raw';
 
 /**
- * Prefix used to identify skill invocations
+ * Formats skill instructions with the loading command message prefix.
+ * This message is used by Claude Code to indicate that a skill is being loaded.
+ *
+ * @param name - The skill name
+ * @param instructions - The raw skill instructions/content
+ * @returns Formatted instructions with command message prefix
  */
-const SKILL_PREFIX = 'skill__';
+function formatSkillInstructions(name: string, instructions: string): string {
+  return `<command-message>The "${name}" skill is loading</command-message>\n${instructions}`;
+}
 
 /**
  * Input schema for the DescribeToolsTool
@@ -146,6 +153,7 @@ interface SkillTemplateData {
  * @property serverName - The MCP server that owns this prompt
  * @property promptName - The prompt name used to fetch content
  * @property skill - The skill configuration from the prompt
+ * @property autoDetected - Whether the skill was auto-detected from front-matter
  */
 interface PromptSkillMatch {
   serverName: string;
@@ -154,6 +162,22 @@ interface PromptSkillMatch {
     name: string;
     description: string;
     folder?: string;
+  };
+  autoDetected?: boolean;
+}
+
+/**
+ * Cache entry for auto-detected skills from prompt front-matter
+ * @property serverName - The MCP server that owns this prompt
+ * @property promptName - The prompt name
+ * @property skill - The skill metadata extracted from front-matter
+ */
+interface AutoDetectedSkill {
+  serverName: string;
+  promptName: string;
+  skill: {
+    name: string;
+    description: string;
   };
 }
 
@@ -189,6 +213,8 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
   private clientManager: McpClientManagerService;
   private skillService: SkillService | undefined;
   private readonly liquid = new Liquid();
+  /** Cache for auto-detected skills from prompt front-matter */
+  private autoDetectedSkillsCache: AutoDetectedSkill[] | null = null;
 
   /**
    * Creates a new DescribeToolsTool instance
@@ -201,15 +227,133 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
   }
 
   /**
+   * Clears the cached auto-detected skills from prompt front-matter.
+   * Use this when prompt configurations may have changed or when
+   * the skill service cache is invalidated.
+   */
+  clearAutoDetectedSkillsCache(): void {
+    this.autoDetectedSkillsCache = null;
+  }
+
+  /**
+   * Detects and caches skills from prompt front-matter across all connected MCP servers.
+   * Fetches all prompts and checks their content for YAML front-matter with name/description.
+   * Results are cached to avoid repeated fetches.
+   *
+   * Error Handling Strategy:
+   * - Errors are logged to stderr but do not fail the overall detection process
+   * - This ensures partial results are returned even if some servers/prompts fail
+   * - Common failure reasons: server temporarily unavailable, prompt requires arguments,
+   *   network timeout, or server doesn't support listPrompts
+   * - Errors are prefixed with [skill-detection] for easy filtering in logs
+   *
+   * @returns Array of auto-detected skills from prompt front-matter
+   */
+  private async detectSkillsFromPromptFrontMatter(): Promise<AutoDetectedSkill[]> {
+    // Return cached results if available
+    if (this.autoDetectedSkillsCache !== null) {
+      return this.autoDetectedSkillsCache;
+    }
+
+    const clients = this.clientManager.getAllClients();
+    const autoDetectedSkills: AutoDetectedSkill[] = [];
+
+    // Track failures for debugging (not exposed to callers, but logged)
+    let listPromptsFailures = 0;
+    let fetchPromptFailures = 0;
+
+    // Collect all prompt fetches in parallel
+    const fetchPromises: Promise<void>[] = [];
+
+    for (const client of clients) {
+      // Skip if this prompt is already configured with a skill (explicit config takes precedence)
+      const configuredPromptNames = new Set(
+        client.prompts ? Object.keys(client.prompts) : []
+      );
+
+      // List prompts from the server
+      const listPromptsPromise = (async () => {
+        try {
+          const prompts = await client.listPrompts();
+          if (!prompts || prompts.length === 0) return;
+
+          // Fetch each prompt to check for front-matter
+          const promptFetchPromises = prompts.map(async (promptInfo: { name: string }) => {
+            // Skip if already configured
+            if (configuredPromptNames.has(promptInfo.name)) return;
+
+            try {
+              const promptResult = await client.getPrompt(promptInfo.name);
+              const messages = promptResult.messages || [];
+
+              // Extract text content from messages
+              const textContent = messages
+                .map((m: { content: unknown }) => {
+                  const content = m.content;
+                  if (typeof content === 'string') return content;
+                  if (content && typeof content === 'object' && 'text' in content) {
+                    return String((content as { text: string }).text);
+                  }
+                  return '';
+                })
+                .join('\n');
+
+              // Check for skill front-matter
+              const skillExtraction = extractSkillFrontMatter(textContent);
+              if (skillExtraction) {
+                autoDetectedSkills.push({
+                  serverName: client.serverName,
+                  promptName: promptInfo.name,
+                  skill: skillExtraction.skill,
+                });
+              }
+            } catch (error) {
+              // Log but continue - this prompt may require arguments or be temporarily unavailable
+              fetchPromptFailures++;
+              console.error(
+                `${LOG_PREFIX_SKILL_DETECTION} Failed to fetch prompt '${promptInfo.name}' from ${client.serverName}: ${error instanceof Error ? error.message : 'Unknown error'}`
+              );
+            }
+          });
+
+          await Promise.all(promptFetchPromises);
+        } catch (error) {
+          // Log but continue - server may not support listPrompts or be temporarily unavailable
+          listPromptsFailures++;
+          console.error(
+            `${LOG_PREFIX_SKILL_DETECTION} Failed to list prompts from ${client.serverName}: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
+        }
+      })();
+
+      fetchPromises.push(listPromptsPromise);
+    }
+
+    await Promise.all(fetchPromises);
+
+    // Log summary if there were any failures (helps with debugging)
+    if (listPromptsFailures > 0 || fetchPromptFailures > 0) {
+      console.error(
+        `${LOG_PREFIX_SKILL_DETECTION} Completed with ${listPromptsFailures} server failure(s) and ${fetchPromptFailures} prompt failure(s). Detected ${autoDetectedSkills.length} skill(s).`
+      );
+    }
+
+    // Cache the results
+    this.autoDetectedSkillsCache = autoDetectedSkills;
+    return autoDetectedSkills;
+  }
+
+  /**
    * Collects skills derived from prompt configurations across all connected MCP servers.
-   * Prompts with a skill configuration are converted to skill format for display.
+   * Includes both explicitly configured prompts and auto-detected skills from front-matter.
    *
    * @returns Array of skill template data derived from prompts
    */
-  private collectPromptSkills(): SkillTemplateData[] {
+  private async collectPromptSkills(): Promise<SkillTemplateData[]> {
     const clients = this.clientManager.getAllClients();
     const promptSkills: SkillTemplateData[] = [];
 
+    // Collect explicitly configured prompt skills
     for (const client of clients) {
       if (!client.prompts) continue;
 
@@ -224,21 +368,32 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
       }
     }
 
+    // Collect auto-detected skills from prompt front-matter
+    const autoDetectedSkills = await this.detectSkillsFromPromptFrontMatter();
+    for (const autoSkill of autoDetectedSkills) {
+      promptSkills.push({
+        name: autoSkill.skill.name,
+        displayName: autoSkill.skill.name,
+        description: autoSkill.skill.description,
+      });
+    }
+
     return promptSkills;
   }
 
   /**
    * Finds a prompt-based skill by name from all connected MCP servers.
-   * Returns the prompt name and skill config for fetching the prompt content.
+   * Searches both explicitly configured prompts and auto-detected skills from front-matter.
    *
    * @param skillName - The skill name to search for
    * @returns Object with serverName, promptName, and skill config, or undefined if not found
    */
-  private findPromptSkill(skillName: string): PromptSkillMatch | undefined {
+  private async findPromptSkill(skillName: string): Promise<PromptSkillMatch | undefined> {
     if (!skillName) return undefined;
 
     const clients = this.clientManager.getAllClients();
 
+    // First, search explicitly configured prompt skills
     for (const client of clients) {
       if (!client.prompts) continue;
 
@@ -253,18 +408,32 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
       }
     }
 
+    // Then, search auto-detected skills from front-matter
+    const autoDetectedSkills = await this.detectSkillsFromPromptFrontMatter();
+    for (const autoSkill of autoDetectedSkills) {
+      if (autoSkill.skill.name === skillName) {
+        return {
+          serverName: autoSkill.serverName,
+          promptName: autoSkill.promptName,
+          skill: autoSkill.skill,
+          autoDetected: true,
+        };
+      }
+    }
+
     return undefined;
   }
 
   /**
    * Retrieves skill content from a prompt-based skill configuration.
    * Fetches the prompt from the MCP server and extracts text content.
+   * Handles both explicitly configured prompts and auto-detected skills from front-matter.
    *
    * @param skillName - The skill name being requested
    * @returns SkillDescription if found and successfully fetched, undefined otherwise
    */
   private async getPromptSkillContent(skillName: string): Promise<SkillDescription | undefined> {
-    const promptSkill = this.findPromptSkill(skillName);
+    const promptSkill = await this.findPromptSkill(skillName);
     if (!promptSkill) return undefined;
 
     const client = this.clientManager.getClient(promptSkill.serverName);
@@ -276,7 +445,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
     try {
       const promptResult = await client.getPrompt(promptSkill.promptName);
       // Prompt messages can contain either string content or TextContent objects with text field
-      const instructions = promptResult.messages
+      const rawInstructions = promptResult.messages
         ?.map((m) => {
           const content = m.content;
           if (typeof content === 'string') return content;
@@ -290,8 +459,8 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
       return {
         name: promptSkill.skill.name,
         // Location is either the configured folder or a prompt reference
-        location: promptSkill.skill.folder || `prompt:${promptSkill.serverName}/${promptSkill.promptName}`,
-        instructions,
+        location: promptSkill.skill.folder || `${PROMPT_LOCATION_PREFIX}${promptSkill.serverName}/${promptSkill.promptName}`,
+        instructions: formatSkillInstructions(promptSkill.skill.name, rawInstructions),
       };
     } catch (error) {
       console.error(
@@ -302,65 +471,18 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
   }
 
   /**
-   * Builds the skills section of the tool description using a Liquid template.
+   * Builds the combined toolkit description using a single Liquid template.
    *
-   * Retrieves all available skills from the SkillService and prompt-based skills,
-   * then renders them using the skills-description.liquid template. Skills are only
-   * prefixed with skill__ when their name clashes with an MCP tool or another skill.
-   *
-   * @param mcpToolNames - Set of MCP tool names to check for clashes
-   * @returns Rendered skills section string with available skills list
-   */
-  private async buildSkillsSection(mcpToolNames: Set<string>): Promise<string> {
-    const rawSkills = this.skillService ? await this.skillService.getSkills() : [];
-
-    // Collect skills from prompt configurations
-    const promptSkills = this.collectPromptSkills();
-
-    // Combine file-based skills and prompt-based skills
-    const allSkillsData: SkillTemplateData[] = [
-      ...rawSkills.map((skill) => ({
-        name: skill.name,
-        displayName: skill.name,
-        description: skill.description,
-      })),
-      ...promptSkills,
-    ];
-
-    // Track skill names to detect clashes between skills
-    const skillNameCounts = new Map<string, number>();
-    for (const skill of allSkillsData) {
-      skillNameCounts.set(skill.name, (skillNameCounts.get(skill.name) || 0) + 1);
-    }
-
-    // Format skills with prefix only when clashing with MCP tools or other skills
-    const skills: SkillTemplateData[] = allSkillsData.map((skill) => {
-      const clashesWithMcpTool = mcpToolNames.has(skill.name);
-      const clashesWithOtherSkill = (skillNameCounts.get(skill.name) || 0) > 1;
-      const needsPrefix = clashesWithMcpTool || clashesWithOtherSkill;
-
-      return {
-        name: skill.name,
-        displayName: needsPrefix ? `${SKILL_PREFIX}${skill.name}` : skill.name,
-        description: skill.description,
-      };
-    });
-
-    return this.liquid.parseAndRender(skillsDescriptionTemplate, { skills });
-  }
-
-  /**
-   * Builds the MCP servers section of the tool description using a Liquid template.
-   *
-   * Collects all tools from connected MCP servers, detects name clashes,
-   * and renders them using the mcp-servers-description.liquid template.
+   * Collects all tools from connected MCP servers and all skills, then renders
+   * them together using the toolkit-description.liquid template.
    *
    * Tool names are prefixed with serverName__ when the same tool exists
-   * on multiple servers to avoid ambiguity.
+   * on multiple servers. Skill names are prefixed with skill__ when they
+   * clash with MCP tools or other skills.
    *
-   * @returns Object with rendered servers section and set of all tool names for skill clash detection
+   * @returns Object with rendered description and set of all tool names
    */
-  private async buildServersSection(): Promise<ServersSectionResult> {
+  private async buildToolkitDescription(): Promise<{ content: string; toolNames: Set<string> }> {
     const clients = this.clientManager.getAllClients();
 
     // First pass: collect all tools from all servers to detect name clashes
@@ -393,9 +515,6 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
 
     /**
      * Formats tool name with server prefix if the tool exists on multiple servers
-     * @param toolName - The original tool name
-     * @param serverName - The server providing this tool
-     * @returns Tool name prefixed with serverName__ if clashing, otherwise plain name
      */
     const formatToolName = (toolName: string, serverName: string): string => {
       const servers = toolToServers.get(toolName) || [];
@@ -425,34 +544,68 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
       };
     });
 
-    const content = await this.liquid.parseAndRender(mcpServersDescriptionTemplate, { servers });
+    // Collect skills
+    const rawSkills = this.skillService ? await this.skillService.getSkills() : [];
+    const promptSkills = await this.collectPromptSkills();
+
+    // Combine and deduplicate skills (file-based skills take precedence)
+    const seenSkillNames = new Set<string>();
+    const allSkillsData: SkillTemplateData[] = [];
+
+    // Add file-based skills first (they take precedence)
+    for (const skill of rawSkills) {
+      if (!seenSkillNames.has(skill.name)) {
+        seenSkillNames.add(skill.name);
+        allSkillsData.push({
+          name: skill.name,
+          displayName: skill.name,
+          description: skill.description,
+        });
+      }
+    }
+
+    // Add prompt-based skills (skip duplicates)
+    for (const skill of promptSkills) {
+      if (!seenSkillNames.has(skill.name)) {
+        seenSkillNames.add(skill.name);
+        allSkillsData.push(skill);
+      }
+    }
+
+    // Format skills with prefix only when clashing with MCP tools
+    const skills: SkillTemplateData[] = allSkillsData.map((skill) => {
+      const clashesWithMcpTool = allToolNames.has(skill.name);
+
+      return {
+        name: skill.name,
+        displayName: clashesWithMcpTool ? `${SKILL_PREFIX}${skill.name}` : skill.name,
+        description: skill.description,
+      };
+    });
+
+    const content = await this.liquid.parseAndRender(toolkitDescriptionTemplate, { servers, skills });
     return { content, toolNames: allToolNames };
   }
 
   /**
-   * Gets the tool definition including available servers, tools, and skills.
+   * Gets the tool definition including available tools and skills in a unified format.
    *
    * The definition includes:
-   * - List of all connected MCP servers with their available tools
-   * - List of available skills with skill__ prefix
-   * - Usage instructions for querying tool/skill details
+   * - All MCP tools from connected servers
+   * - All available skills (file-based and prompt-based)
+   * - Unified instructions for querying capability details
    *
-   * Tool names are prefixed with serverName__ when the same tool name
-   * exists on multiple servers to avoid ambiguity.
+   * Tool names are prefixed with serverName__ when clashing.
+   * Skill names are prefixed with skill__ when clashing.
    *
    * @returns Tool definition with description and input schema
    */
   async getDefinition(): Promise<ToolDefinition> {
-    // Build servers section first to get tool names for skill clash detection
-    const serversResult = await this.buildServersSection();
-
-    // Build skills section with knowledge of MCP tool names to detect clashes
-    const skillsSection = await this.buildSkillsSection(serversResult.toolNames);
+    const { content } = await this.buildToolkitDescription();
 
     return {
       name: DescribeToolsTool.TOOL_NAME,
-      description: `${serversResult.content}
-${skillsSection}`,
+      description: content,
       inputSchema: {
         type: 'object',
         properties: {
@@ -551,7 +704,7 @@ ${skillsSection}`,
               foundSkills.push({
                 name: skill.name,
                 location: skill.basePath,
-                instructions: skill.content,
+                instructions: formatSkillInstructions(skill.name, skill.content),
               });
               continue;
             }
@@ -608,7 +761,7 @@ ${skillsSection}`,
                 foundSkills.push({
                   name: skill.name,
                   location: skill.basePath,
-                  instructions: skill.content,
+                  instructions: formatSkillInstructions(skill.name, skill.content),
                 });
                 continue;
               }

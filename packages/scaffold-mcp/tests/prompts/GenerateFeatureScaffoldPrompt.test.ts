@@ -80,7 +80,7 @@ describe('GenerateFeatureScaffoldPrompt', () => {
     let monolithPrompt: GenerateFeatureScaffoldPrompt;
 
     beforeEach(() => {
-      monolithPrompt = new GenerateFeatureScaffoldPrompt(true);
+      monolithPrompt = new GenerateFeatureScaffoldPrompt({ isMonolith: true });
     });
 
     it('should adjust instructions for monolith mode', () => {

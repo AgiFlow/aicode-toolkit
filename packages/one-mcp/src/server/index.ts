@@ -114,13 +114,34 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
   // Initialize skill service only if skills are explicitly configured
   // Skills are disabled by default since Claude Code already handles skills natively
   const skillsConfig = options?.skills || configSkills;
+
+  // Use a reference object to safely capture describeTools in the callback closure
+  // This avoids the temporal dead zone issue with forward references
+  const toolsRef: { describeTools: DescribeToolsTool | null } = { describeTools: null };
+
   const skillService = skillsConfig && skillsConfig.paths.length > 0
-    ? new SkillService(process.cwd(), skillsConfig.paths)
+    ? new SkillService(process.cwd(), skillsConfig.paths, {
+        // When skill files change, also invalidate the auto-detected skills cache
+        onCacheInvalidated: () => {
+          toolsRef.describeTools?.clearAutoDetectedSkillsCache();
+        },
+      })
     : undefined;
 
   // Initialize tools with dependencies
   const describeTools = new DescribeToolsTool(clientManager, skillService);
   const useTool = new UseToolTool(clientManager, skillService);
+
+  // Assign to reference for cache invalidation callback
+  toolsRef.describeTools = describeTools;
+
+  // Start watching skill directories for changes (non-critical - cache still works without watcher)
+  if (skillService) {
+    skillService.startWatching().catch((error) => {
+      // Watcher failure is non-critical: skills still work, just won't auto-refresh on file changes
+      console.error(`[skill-watcher] File watcher failed (non-critical): ${error instanceof Error ? error.message : 'Unknown error'}`);
+    });
+  }
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [

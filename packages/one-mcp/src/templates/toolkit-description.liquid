@@ -1,0 +1,39 @@
+<toolkit>
+<instruction>
+Before you use any capabilities below, you MUST call this tool with a list of names to learn how to use them properly; this includes:
+- For tools: Arguments schema needed to pass to use_tool
+- For skills: Detailed instructions that will expand when invoked (Prefer to be explored first when relevant)
+
+This tool is optimized for batch queries - you can request multiple capabilities at once for better performance.
+
+How to invoke:
+- For MCP tools: Use use_tool with toolName and toolArgs based on the schema
+- For skills: Use this tool with the skill name to get expanded instructions
+</instruction>
+
+<available_capabilities>
+{% for server in servers -%}
+<group name="{{ server.name }}">
+{% if server.instruction -%}
+<group_instruction>{{ server.instruction }}</group_instruction>
+{% endif -%}
+{% if server.omitToolDescription -%}
+{% for toolName in server.toolNames -%}
+<item name="{{ toolName }}"></item>
+{% endfor -%}
+{% else -%}
+{% for tool in server.tools -%}
+<item name="{{ tool.displayName }}"><description>{{ tool.description | default: "No description" }}</description></item>
+{% endfor -%}
+{% endif -%}
+</group>
+{% endfor -%}
+{% if skills.size > 0 -%}
+<group name="skills">
+{% for skill in skills -%}
+<item name="{{ skill.displayName }}"><description>{{ skill.description }}</description></item>
+{% endfor -%}
+</group>
+{% endif -%}
+</available_capabilities>
+</toolkit>

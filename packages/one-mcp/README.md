@@ -259,9 +259,51 @@ When multiple paths are configured, skills from earlier paths take precedence ov
 
 You can also convert MCP server prompts into skills. This allows you to expose prompts from MCP servers as executable skills that AI agents can invoke.
 
-#### Configuration
+#### Auto-Detection from Front-Matter (Recommended)
 
-Add a `prompts` section under a server's `config`:
+The easiest way to create prompt-based skills is to add YAML front-matter directly in your prompt content. one-mcp automatically detects prompts with `name` and `description` front-matter and exposes them as skills.
+
+**Prompt content with front-matter:**
+```markdown
+---
+name: code-reviewer
+description: Review code for best practices and potential issues
+---
+
+# Code Review Instructions
+
+When reviewing code, follow these guidelines...
+```
+
+MCP servers like `@agiflowai/scaffold-mcp` support the `--prompt-as-skill` flag to automatically add front-matter to prompts:
+
+```yaml
+mcpServers:
+  scaffold-mcp:
+    command: npx
+    args:
+      - -y
+      - "@agiflowai/scaffold-mcp"
+      - "mcp-serve"
+      - "--prompt-as-skill"  # Enables front-matter in prompts
+```
+
+**Multi-line descriptions** are supported using YAML block scalars:
+
+```markdown
+---
+name: complex-skill
+description: |
+  A skill that does multiple things:
+  - First capability
+  - Second capability
+  - Third capability
+---
+```
+
+#### Explicit Configuration (Alternative)
+
+You can also explicitly configure which prompts should be exposed as skills:
 
 ```yaml
 mcpServers:
@@ -286,20 +328,26 @@ mcpServers:
 
 #### How Prompt-Based Skills Work
 
-1. **Configuration**: Define which prompts should be exposed as skills in the server config
-2. **Discovery**: Prompt-based skills appear alongside file-based skills in `describe_tools`
+1. **Discovery**: one-mcp scans all prompts from connected servers for front-matter with `name` and `description`
+2. **Fallback**: Explicitly configured prompts (in `config.prompts`) take precedence over auto-detected ones
 3. **Invocation**: When an AI agent requests a prompt-based skill, one-mcp:
    - Fetches the prompt content from the MCP server
    - Returns the prompt messages as skill instructions
 4. **Execution**: The AI agent follows the skill instructions
 
-#### Skill Configuration Fields
+#### Skill Configuration Fields (Explicit Config)
 
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | Yes | Unique skill identifier shown to AI agents |
 | `description` | Yes | Brief description of what the skill does |
 | `folder` | No | Optional folder path for skill resources |
+
+#### Skill Naming and Precedence
+
+- **File-based skills** take precedence over prompt-based skills with the same name
+- Skills are only prefixed with `skill__` when they clash with MCP tool names
+- Skills that only clash with other skills are deduplicated (first one wins, no prefix)
 
 #### Example Use Case
 

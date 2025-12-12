@@ -1,6 +1,22 @@
+import { z } from 'zod';
 import scaffoldApplicationTemplate from '../instructions/prompts/scaffold-application.md?raw';
 import { TemplateService } from '../services/TemplateService';
 import type { PromptDefinition, PromptMessage } from './types';
+
+/**
+ * Schema for ScaffoldApplicationPrompt constructor options
+ */
+export const scaffoldApplicationPromptOptionsSchema = z.object({
+  isMonolith: z.boolean().default(false).describe('Whether the project is a monolith'),
+  promptAsSkill: z.boolean().default(false).describe('Render prompt with skill front matter'),
+});
+
+export type ScaffoldApplicationPromptOptions = z.input<
+  typeof scaffoldApplicationPromptOptionsSchema
+>;
+type ScaffoldApplicationPromptParsedOptions = z.output<
+  typeof scaffoldApplicationPromptOptionsSchema
+>;
 
 /**
  * Prompt for scaffolding a new application using boilerplate templates
@@ -8,8 +24,17 @@ import type { PromptDefinition, PromptMessage } from './types';
 export class ScaffoldApplicationPrompt {
   static readonly PROMPT_NAME = 'scaffold-application';
   private templateService = new TemplateService();
+  private options: ScaffoldApplicationPromptParsedOptions;
 
-  constructor(private isMonolith = false) {}
+  constructor(options: ScaffoldApplicationPromptOptions = {}) {
+    try {
+      this.options = scaffoldApplicationPromptOptionsSchema.parse(options);
+    } catch (error) {
+      throw new Error(
+        `Invalid ScaffoldApplicationPrompt options: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
 
   /**
    * Get the prompt definition for MCP
@@ -36,7 +61,8 @@ export class ScaffoldApplicationPrompt {
 
     const text = this.templateService.renderString(scaffoldApplicationTemplate, {
       request,
-      isMonolith: this.isMonolith,
+      isMonolith: this.options.isMonolith,
+      promptAsSkill: this.options.promptAsSkill,
     });
 
     return [

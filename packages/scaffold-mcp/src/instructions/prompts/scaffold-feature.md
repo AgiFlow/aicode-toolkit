@@ -1,4 +1,9 @@
-You are helping add a new feature to an existing project using the scaffold-mcp MCP tools.
+{% if promptAsSkill %}---
+name: scaffold-feature
+description: Add a new feature to an existing project such as service, route, page, component, or API endpoint. Use this skill when the user wants to add functionality to an existing codebase using predefined scaffolding templates. This skill lists available scaffolding methods for the project's template type, gathers required variables, generates boilerplate files, and guides implementation of the actual business logic.
+---
+
+{% endif %}You are helping add a new feature to an existing project using the scaffold-mcp MCP tools.
 
 {% if request %}User request: {{ request }}
 {% endif %}{% if projectPath %}Project path: {{ projectPath }}

@@ -22,17 +22,13 @@ mcpServers:
       - packages/scaffold-mcp/src/cli.ts
       - mcp-serve
       - --admin-enable
+      - --prompt-as-skill
     env: {}
     config:
       instruction: >
         Use this server for generating boilerplate code, scaffolding new projects,
         and adding features to existing projects. Supports multiple templates and
         custom code generation patterns.
-      prompts:
-        scaffold-feature:
-          skill:
-            name: scaffold-feature
-            description: Add a new feature to an existing project such as service, route, page.
 
   # Architect MCP - Design patterns and code review
   architect-mcp:
@@ -78,4 +74,4 @@ mcpServers:
 
 skills:
   paths:
-    - .claude/skills
+    - docs/skills

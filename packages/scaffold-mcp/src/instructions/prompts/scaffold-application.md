@@ -1,4 +1,9 @@
-You are helping create a new {% if isMonolith %}monolith application{% else %}application{% endif %} using the scaffold-mcp MCP tools.
+{% if promptAsSkill %}---
+name: scaffold-application
+description: Create a new application or project from a boilerplate template. Use this skill when the user wants to start a new project, create a new app, or bootstrap a new codebase from scratch. This skill lists available boilerplate templates (React, Next.js, Express, etc.), gathers required configuration variables, generates the complete project structure, and provides guidance on next steps including adding features.
+---
+
+{% endif %}You are helping create a new {% if isMonolith %}monolith application{% else %}application{% endif %} using the scaffold-mcp MCP tools.
 
 {% if request %}User request: {{ request }}
 {% endif %}

@@ -1,6 +1,18 @@
+import { z } from 'zod';
 import scaffoldFeatureTemplate from '../instructions/prompts/scaffold-feature.md?raw';
 import { TemplateService } from '../services/TemplateService';
 import type { PromptDefinition, PromptMessage } from './types';
+
+/**
+ * Schema for ScaffoldFeaturePrompt constructor options
+ */
+export const scaffoldFeaturePromptOptionsSchema = z.object({
+  isMonolith: z.boolean().default(false).describe('Whether the project is a monolith'),
+  promptAsSkill: z.boolean().default(false).describe('Render prompt with skill front matter'),
+});
+
+export type ScaffoldFeaturePromptOptions = z.input<typeof scaffoldFeaturePromptOptionsSchema>;
+type ScaffoldFeaturePromptParsedOptions = z.output<typeof scaffoldFeaturePromptOptionsSchema>;
 
 /**
  * Prompt for scaffolding a new feature in an existing project
@@ -8,8 +20,17 @@ import type { PromptDefinition, PromptMessage } from './types';
 export class ScaffoldFeaturePrompt {
   static readonly PROMPT_NAME = 'scaffold-feature';
   private templateService = new TemplateService();
+  private options: ScaffoldFeaturePromptParsedOptions;
 
-  constructor(private isMonolith = false) {}
+  constructor(options: ScaffoldFeaturePromptOptions = {}) {
+    try {
+      this.options = scaffoldFeaturePromptOptionsSchema.parse(options);
+    } catch (error) {
+      throw new Error(
+        `Invalid ScaffoldFeaturePrompt options: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
 
   /**
    * Get the prompt definition for MCP
@@ -43,7 +64,8 @@ export class ScaffoldFeaturePrompt {
     const text = this.templateService.renderString(scaffoldFeatureTemplate, {
       request,
       projectPath,
-      isMonolith: this.isMonolith,
+      isMonolith: this.options.isMonolith,
+      promptAsSkill: this.options.promptAsSkill,
     });
 
     return [

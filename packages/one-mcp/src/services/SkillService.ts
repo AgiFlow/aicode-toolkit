@@ -17,9 +17,11 @@
  * - Direct tool implementation (services should be tool-agnostic)
  */
 
-import { readFile, readdir, stat, access } from 'node:fs/promises';
+import { readFile, readdir, stat, access, watch } from 'node:fs/promises';
 import { join, dirname, isAbsolute } from 'node:path';
+import type { FSWatcher } from 'node:fs';
 import type { Skill, SkillMetadata } from '../types';
+import { parseFrontMatter } from '../utils';
 
 /**
  * Error thrown when skill loading fails
@@ -81,15 +83,26 @@ export class SkillService {
   private skillPaths: string[];
   private cachedSkills: Skill[] | null = null;
   private skillsByName: Map<string, Skill> | null = null;
+  /** Active file watchers for skill directories */
+  private watchers: AbortController[] = [];
+  /** Callback invoked when cache is invalidated due to file changes */
+  private onCacheInvalidated?: () => void;
 
   /**
    * Creates a new SkillService instance
    * @param cwd - Current working directory for resolving relative paths
    * @param skillPaths - Array of paths to skills directories
+   * @param options - Optional configuration
+   * @param options.onCacheInvalidated - Callback invoked when cache is invalidated due to file changes
    */
-  constructor(cwd: string, skillPaths: string[]) {
+  constructor(
+    cwd: string,
+    skillPaths: string[],
+    options?: { onCacheInvalidated?: () => void }
+  ) {
     this.cwd = cwd;
     this.skillPaths = skillPaths;
+    this.onCacheInvalidated = options?.onCacheInvalidated;
   }
 
   /**
@@ -153,6 +166,72 @@ export class SkillService {
   clearCache(): void {
     this.cachedSkills = null;
     this.skillsByName = null;
+  }
+
+  /**
+   * Starts watching skill directories for changes to SKILL.md files.
+   * When changes are detected, the cache is automatically invalidated.
+   *
+   * Uses Node.js fs.watch with recursive option for efficient directory monitoring.
+   * Only invalidates cache when SKILL.md files are modified.
+   *
+   * @example
+   * const skillService = new SkillService(cwd, skillPaths, {
+   *   onCacheInvalidated: () => console.log('Skills cache invalidated')
+   * });
+   * await skillService.startWatching();
+   */
+  async startWatching(): Promise<void> {
+    // Stop any existing watchers first
+    this.stopWatching();
+
+    for (const skillPath of this.skillPaths) {
+      const skillsDir = isAbsolute(skillPath) ? skillPath : join(this.cwd, skillPath);
+
+      // Check if directory exists before watching
+      if (!(await pathExists(skillsDir))) {
+        continue;
+      }
+
+      const abortController = new AbortController();
+      this.watchers.push(abortController);
+
+      // Start watching in background (don't await)
+      this.watchDirectory(skillsDir, abortController.signal).catch((error) => {
+        // Only log if not aborted
+        if (error?.name !== 'AbortError') {
+          console.error(`[skill-watcher] Error watching ${skillsDir}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      });
+    }
+  }
+
+  /**
+   * Stops all active file watchers.
+   * Should be called when the service is being disposed.
+   */
+  stopWatching(): void {
+    for (const controller of this.watchers) {
+      controller.abort();
+    }
+    this.watchers = [];
+  }
+
+  /**
+   * Watches a directory for changes to SKILL.md files.
+   * @param dirPath - Directory path to watch
+   * @param signal - AbortSignal to stop watching
+   */
+  private async watchDirectory(dirPath: string, signal: AbortSignal): Promise<void> {
+    const watcher = watch(dirPath, { recursive: true, signal });
+
+    for await (const event of watcher) {
+      // Only invalidate cache when SKILL.md files change
+      if (event.filename && event.filename.endsWith('SKILL.md')) {
+        this.clearCache();
+        this.onCacheInvalidated?.();
+      }
+    }
   }
 
   /**
@@ -246,6 +325,7 @@ export class SkillService {
 
   /**
    * Load a single skill file and parse its frontmatter.
+   * Supports multi-line YAML values using literal (|) and folded (>) block scalars.
    *
    * @param filePath - Path to the SKILL.md file
    * @param location - Whether this is a 'project' or 'user' skill
@@ -262,9 +342,9 @@ export class SkillService {
     filePath: string,
     location: 'project' | 'user'
   ): Promise<Skill | null> {
-    let content: string;
+    let fileContent: string;
     try {
-      content = await readFile(filePath, 'utf-8');
+      fileContent = await readFile(filePath, 'utf-8');
     } catch (error) {
       throw new SkillLoadError(
         `Failed to read skill file: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -273,74 +353,21 @@ export class SkillService {
       );
     }
 
-    const { metadata, body } = this.parseFrontmatter(content);
+    // Use shared front-matter parser (supports multi-line YAML values)
+    const { frontMatter, content } = parseFrontMatter(fileContent);
 
-    if (!metadata.name || !metadata.description) {
+    if (!frontMatter || !frontMatter.name || !frontMatter.description) {
       // Return null for invalid skills - this is expected for malformed files
       // The caller can decide how to handle this (skip or report)
       return null;
     }
 
     return {
-      name: metadata.name,
-      description: metadata.description,
+      name: frontMatter.name,
+      description: frontMatter.description,
       location,
-      content: body,
+      content,
       basePath: dirname(filePath),
     };
-  }
-
-  /**
-   * Parse YAML frontmatter from markdown content.
-   * Frontmatter is delimited by --- at start and end.
-   *
-   * @param content - Full markdown content with frontmatter
-   * @returns Parsed metadata and body content
-   *
-   * @example
-   * // Input content:
-   * // ---
-   * // name: my-skill
-   * // description: A sample skill
-   * // ---
-   * // # Skill Content
-   * // This is the skill body.
-   *
-   * const result = parseFrontmatter(content);
-   * // result.metadata = { name: 'my-skill', description: 'A sample skill' }
-   * // result.body = '# Skill Content\nThis is the skill body.'
-   */
-  private parseFrontmatter(content: string): { metadata: Partial<SkillMetadata>; body: string } {
-    const frontmatterRegex = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/;
-    const match = content.match(frontmatterRegex);
-
-    if (!match) {
-      return { metadata: {}, body: content };
-    }
-
-    const [, frontmatter, body] = match;
-    const metadata: Partial<SkillMetadata> = {};
-
-    // Simple YAML parsing for key: value pairs
-    const lines = frontmatter.split('\n');
-    for (const line of lines) {
-      const colonIndex = line.indexOf(':');
-      if (colonIndex > 0) {
-        const key = line.slice(0, colonIndex).trim();
-        let value = line.slice(colonIndex + 1).trim();
-
-        // Remove quotes if present
-        if ((value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'"))) {
-          value = value.slice(1, -1);
-        }
-
-        if (key === 'name' || key === 'description' || key === 'license') {
-          metadata[key] = value;
-        }
-      }
-    }
-
-    return { metadata, body: body.trim() };
   }
 }

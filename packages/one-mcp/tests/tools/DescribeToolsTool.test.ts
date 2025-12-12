@@ -276,7 +276,7 @@ describe('DescribeToolsTool', () => {
       expect(definition.description).toContain('skill__shared-name');
     });
 
-    it('should prefix skills when multiple skills have the same name', async () => {
+    it('should NOT prefix skills when multiple skills have the same name (first wins)', async () => {
       vi.mocked(mockSkillService.getSkills).mockResolvedValue([
         createMockSkill('duplicate-skill', 'First duplicate skill', 'project'),
         createMockSkill('duplicate-skill', 'Second duplicate skill', 'user'),
@@ -285,8 +285,9 @@ describe('DescribeToolsTool', () => {
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
       const definition = await tool.getDefinition();
 
-      // Both skills should be prefixed since they clash with each other
-      expect(definition.description).toContain('skill__duplicate-skill');
+      // Skills are de-duplicated (first wins) and NOT prefixed since no MCP tool clash
+      expect(definition.description).toContain('name="duplicate-skill"');
+      expect(definition.description).not.toContain('skill__duplicate-skill');
     });
 
     it('should handle mix of clashing and non-clashing skills', async () => {
@@ -506,6 +507,8 @@ describe('DescribeToolsTool', () => {
       expect(parsed.skills).toHaveLength(1);
       expect(parsed.skills[0].name).toBe('code-reviewer');
       expect(parsed.skills[0].instructions).toContain('Instructions for prompt: code-review');
+      // Should include command message prefix
+      expect(parsed.skills[0].instructions).toContain('<command-message>The "code-reviewer" skill is loading</command-message>');
     });
 
     it('should return prompt-based skill content when executing with plain name', async () => {
@@ -720,7 +723,7 @@ describe('DescribeToolsTool', () => {
       expect(parsed.skills[0].location).toContain('prompt:');
     });
 
-    it('should prefix skill names when they clash with each other', async () => {
+    it('should NOT prefix skill names when they only clash with each other (first wins)', async () => {
       // File-based skill and prompt-based skill with same name
       vi.mocked(mockSkillService.getSkills).mockResolvedValue([
         createMockSkill('duplicate-name', 'File-based duplicate'),
@@ -739,13 +742,14 @@ describe('DescribeToolsTool', () => {
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
       const definition = await tool.getDefinition();
 
-      // Both should be prefixed since they clash
-      expect(definition.description).toContain('skill__duplicate-name');
+      // Skills are de-duplicated (file-based wins) and NOT prefixed since no MCP tool clash
+      expect(definition.description).toContain('name="duplicate-name"');
+      expect(definition.description).not.toContain('skill__duplicate-name');
     });
   });
 
   describe('prompt name collision with file-based skill', () => {
-    it('should handle collision where file skill and prompt skill have same name', async () => {
+    it('should handle collision where file skill and prompt skill have same name (first wins, no prefix)', async () => {
       // Set up file-based skill
       vi.mocked(mockSkillService.getSkills).mockResolvedValue([
         createMockSkill('pdf', 'Generate PDF documents from file'),
@@ -765,10 +769,12 @@ describe('DescribeToolsTool', () => {
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
       const definition = await tool.getDefinition();
 
-      // Both skills should be prefixed due to name collision
-      // Count occurrences of skill__pdf
-      const matches = definition.description.match(/skill__pdf/g) || [];
-      expect(matches.length).toBe(2);
+      // Skills are de-duplicated (file-based wins) and NOT prefixed since no MCP tool clash
+      expect(definition.description).toContain('name="pdf"');
+      expect(definition.description).not.toContain('skill__pdf');
+      // Only one 'pdf' skill should appear (first wins)
+      const matches = definition.description.match(/name="pdf"/g) || [];
+      expect(matches.length).toBe(1);
     });
 
     it('should handle collision where prompt skill clashes with MCP tool name', async () => {
@@ -803,12 +809,12 @@ describe('DescribeToolsTool', () => {
       const definition = await tool.getDefinition();
 
       // The skill should be prefixed since it clashes with MCP tool
-      expect(definition.description).toContain('skill__analyze');
+      expect(definition.description).toContain('name="skill__analyze"');
       // But the tool should NOT be prefixed (it's unique)
-      expect(definition.description).toContain('>analyze</');
+      expect(definition.description).toContain('name="analyze"');
     });
 
-    it('should correctly count collisions across file skills, prompt skills, and MCP tools', async () => {
+    it('should correctly handle collisions across file skills, prompt skills, and MCP tools', async () => {
       // Set up file-based skill
       vi.mocked(mockSkillService.getSkills).mockResolvedValue([
         createMockSkill('unique-file-skill', 'Unique file skill'),
@@ -852,12 +858,14 @@ describe('DescribeToolsTool', () => {
       const definition = await tool.getDefinition();
 
       // Unique names should NOT be prefixed
-      expect(definition.description).toContain('>unique-file-skill<');
-      expect(definition.description).toContain('>unique-prompt-skill<');
-      expect(definition.description).toContain('>unique-tool<');
+      expect(definition.description).toContain('name="unique-file-skill"');
+      expect(definition.description).toContain('name="unique-prompt-skill"');
+      expect(definition.description).toContain('name="unique-tool"');
 
-      // Shared name should be prefixed
-      expect(definition.description).toContain('skill__shared-name');
+      // Shared name between skills should NOT be prefixed (only MCP tool clashes trigger prefix)
+      // File-based skill wins (first), prompt-based is de-duplicated
+      expect(definition.description).toContain('name="shared-name"');
+      expect(definition.description).not.toContain('skill__shared-name');
     });
   });
 });
