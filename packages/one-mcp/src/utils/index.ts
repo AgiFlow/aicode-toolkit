@@ -8,3 +8,4 @@
 export * from './mcpConfigSchema';
 export * from './findConfigFile';
 export * from './parseToolName';
+export * from './parseFrontMatter';

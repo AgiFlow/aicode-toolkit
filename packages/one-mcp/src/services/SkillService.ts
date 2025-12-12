@@ -20,6 +20,7 @@
 import { readFile, readdir, stat, access } from 'node:fs/promises';
 import { join, dirname, isAbsolute } from 'node:path';
 import type { Skill, SkillMetadata } from '../types';
+import { parseFrontMatter } from '../utils';
 
 /**
  * Error thrown when skill loading fails
@@ -246,6 +247,7 @@ export class SkillService {
 
   /**
    * Load a single skill file and parse its frontmatter.
+   * Supports multi-line YAML values using literal (|) and folded (>) block scalars.
    *
    * @param filePath - Path to the SKILL.md file
    * @param location - Whether this is a 'project' or 'user' skill
@@ -262,9 +264,9 @@ export class SkillService {
     filePath: string,
     location: 'project' | 'user'
   ): Promise<Skill | null> {
-    let content: string;
+    let fileContent: string;
     try {
-      content = await readFile(filePath, 'utf-8');
+      fileContent = await readFile(filePath, 'utf-8');
     } catch (error) {
       throw new SkillLoadError(
         `Failed to read skill file: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -273,74 +275,21 @@ export class SkillService {
       );
     }
 
-    const { metadata, body } = this.parseFrontmatter(content);
+    // Use shared front-matter parser (supports multi-line YAML values)
+    const { frontMatter, content } = parseFrontMatter(fileContent);
 
-    if (!metadata.name || !metadata.description) {
+    if (!frontMatter || !frontMatter.name || !frontMatter.description) {
       // Return null for invalid skills - this is expected for malformed files
       // The caller can decide how to handle this (skip or report)
       return null;
     }
 
     return {
-      name: metadata.name,
-      description: metadata.description,
+      name: frontMatter.name,
+      description: frontMatter.description,
       location,
-      content: body,
+      content,
       basePath: dirname(filePath),
     };
-  }
-
-  /**
-   * Parse YAML frontmatter from markdown content.
-   * Frontmatter is delimited by --- at start and end.
-   *
-   * @param content - Full markdown content with frontmatter
-   * @returns Parsed metadata and body content
-   *
-   * @example
-   * // Input content:
-   * // ---
-   * // name: my-skill
-   * // description: A sample skill
-   * // ---
-   * // # Skill Content
-   * // This is the skill body.
-   *
-   * const result = parseFrontmatter(content);
-   * // result.metadata = { name: 'my-skill', description: 'A sample skill' }
-   * // result.body = '# Skill Content\nThis is the skill body.'
-   */
-  private parseFrontmatter(content: string): { metadata: Partial<SkillMetadata>; body: string } {
-    const frontmatterRegex = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/;
-    const match = content.match(frontmatterRegex);
-
-    if (!match) {
-      return { metadata: {}, body: content };
-    }
-
-    const [, frontmatter, body] = match;
-    const metadata: Partial<SkillMetadata> = {};
-
-    // Simple YAML parsing for key: value pairs
-    const lines = frontmatter.split('\n');
-    for (const line of lines) {
-      const colonIndex = line.indexOf(':');
-      if (colonIndex > 0) {
-        const key = line.slice(0, colonIndex).trim();
-        let value = line.slice(colonIndex + 1).trim();
-
-        // Remove quotes if present
-        if ((value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'"))) {
-          value = value.slice(1, -1);
-        }
-
-        if (key === 'name' || key === 'description' || key === 'license') {
-          metadata[key] = value;
-        }
-      }
-    }
-
-    return { metadata, body: body.trim() };
   }
 }

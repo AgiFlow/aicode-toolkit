@@ -506,6 +506,8 @@ describe('DescribeToolsTool', () => {
       expect(parsed.skills).toHaveLength(1);
       expect(parsed.skills[0].name).toBe('code-reviewer');
       expect(parsed.skills[0].instructions).toContain('Instructions for prompt: code-review');
+      // Should include command message prefix
+      expect(parsed.skills[0].instructions).toContain('<command-message>The "code-reviewer" skill is loading</command-message>');
     });
 
     it('should return prompt-based skill content when executing with plain name', async () => {
@@ -803,9 +805,9 @@ describe('DescribeToolsTool', () => {
       const definition = await tool.getDefinition();
 
       // The skill should be prefixed since it clashes with MCP tool
-      expect(definition.description).toContain('skill__analyze');
+      expect(definition.description).toContain('name="skill__analyze"');
       // But the tool should NOT be prefixed (it's unique)
-      expect(definition.description).toContain('>analyze</');
+      expect(definition.description).toContain('name="analyze"');
     });
 
     it('should correctly count collisions across file skills, prompt skills, and MCP tools', async () => {
@@ -852,12 +854,12 @@ describe('DescribeToolsTool', () => {
       const definition = await tool.getDefinition();
 
       // Unique names should NOT be prefixed
-      expect(definition.description).toContain('>unique-file-skill<');
-      expect(definition.description).toContain('>unique-prompt-skill<');
-      expect(definition.description).toContain('>unique-tool<');
+      expect(definition.description).toContain('name="unique-file-skill"');
+      expect(definition.description).toContain('name="unique-prompt-skill"');
+      expect(definition.description).toContain('name="unique-tool"');
 
       // Shared name should be prefixed
-      expect(definition.description).toContain('skill__shared-name');
+      expect(definition.description).toContain('name="skill__shared-name"');
     });
   });
 });
