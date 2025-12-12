@@ -187,8 +187,18 @@ architect-mcp also works as a standalone CLI:
 # Get design patterns for a file
 npx @agiflowai/architect-mcp get-file-design-pattern src/services/UserService.ts
 
+# Get design patterns with LLM filtering
+npx @agiflowai/architect-mcp get-file-design-pattern src/services/UserService.ts \
+  --llm-tool codex \
+  --tool-config '{"model":"gpt-5.2"}'
+
 # Review code against rules
 npx @agiflowai/architect-mcp review-code-change src/services/UserService.ts
+
+# Review code with LLM-powered analysis
+npx @agiflowai/architect-mcp review-code-change src/services/UserService.ts \
+  --llm-tool codex \
+  --tool-config '{"model":"gpt-5.2"}'
 
 # Add a design pattern
 npx @agiflowai/architect-mcp add-pattern "Service Layer" "DI pattern" \
@@ -265,6 +275,13 @@ npx @agiflowai/architect-mcp mcp-serve \
   --admin-enable \
   --design-pattern-tool claude-code \
   --review-tool claude-code
+
+# With custom tool configuration (e.g., specific model)
+npx @agiflowai/architect-mcp mcp-serve \
+  --design-pattern-tool codex \
+  --design-pattern-tool-config '{"model":"gpt-5.2"}' \
+  --review-tool codex \
+  --review-tool-config '{"model":"gpt-5.2"}'
 ```
 
 | Option | Description | Default |
@@ -273,7 +290,9 @@ npx @agiflowai/architect-mcp mcp-serve \
 | `-p, --port` | Port for HTTP/SSE | `3000` |
 | `--admin-enable` | Enable pattern/rule creation tools | `false` |
 | `--design-pattern-tool` | LLM for pattern filtering (`claude-code`, `gemini-cli`, `codex`) | disabled |
+| `--design-pattern-tool-config` | JSON config for design pattern LLM tool (e.g., `{"model":"gpt-5.2"}`) | `{}` |
 | `--review-tool` | LLM for code review (`claude-code`, `gemini-cli`, `codex`) | disabled |
+| `--review-tool-config` | JSON config for review LLM tool (e.g., `{"model":"gpt-5.2"}`) | `{}` |
 
 ---
 
