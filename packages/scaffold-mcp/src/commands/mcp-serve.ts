@@ -1,6 +1,6 @@
 import { ProjectConfigResolver } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
-import { createServer } from '../server/index';
+import { createServer } from '../server';
 import { HttpTransportHandler } from '../transports/http';
 import { SseTransportHandler } from '../transports/sse';
 import { StdioTransportHandler } from '../transports/stdio';
@@ -9,17 +9,20 @@ import { type TransportConfig, type TransportHandler, TransportMode } from '../t
 /**
  * Start MCP server with given transport handler
  */
-async function startServer(handler: TransportHandler) {
+async function startServer(handler: TransportHandler): Promise<void> {
   await handler.start();
 
   // Handle graceful shutdown
-  const shutdown = async (signal: string) => {
+  const shutdown = async (signal: string): Promise<void> => {
     console.error(`\nReceived ${signal}, shutting down gracefully...`);
     try {
       await handler.stop();
       process.exit(0);
     } catch (error) {
-      console.error('Error during shutdown:', error);
+      console.error(
+        'Error during shutdown:',
+        error instanceof Error ? error.message : String(error),
+      );
       process.exit(1);
     }
   };
@@ -42,6 +45,11 @@ export const mcpServeCommand = new Command('mcp-serve')
   )
   .option('--host <host>', 'Host to bind to (http/sse only)', 'localhost')
   .option('--admin-enable', 'Enable admin tools (generate-boilerplate)', false)
+  .option(
+    '--prompt-as-skill',
+    'Render prompts with skill front matter for Claude Code skills',
+    false,
+  )
   .action(async (options) => {
     try {
       const transportType = options.type.toLowerCase();
@@ -59,6 +67,7 @@ export const mcpServeCommand = new Command('mcp-serve')
       const serverOptions = {
         adminEnabled: options.adminEnable,
         isMonolith,
+        promptAsSkill: options.promptAsSkill,
       };
 
       if (transportType === 'stdio') {

@@ -75,7 +75,7 @@ describe('GenerateBoilerplatePrompt', () => {
     let monolithPrompt: GenerateBoilerplatePrompt;
 
     beforeEach(() => {
-      monolithPrompt = new GenerateBoilerplatePrompt(true);
+      monolithPrompt = new GenerateBoilerplatePrompt({ isMonolith: true });
     });
 
     it('should adjust instructions for monolith mode', () => {

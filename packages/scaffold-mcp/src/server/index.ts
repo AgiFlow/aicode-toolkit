@@ -29,10 +29,11 @@ import {
 export interface ServerOptions {
   adminEnabled?: boolean;
   isMonolith?: boolean;
+  promptAsSkill?: boolean;
 }
 
 export function createServer(options: ServerOptions = {}) {
-  const { adminEnabled = false, isMonolith = false } = options;
+  const { adminEnabled = false, isMonolith = false, promptAsSkill = false } = options;
 
   // Find templates folder by searching upwards from current directory
   const templatesPath = TemplatesManagerService.findTemplatesPathSync();
@@ -59,12 +60,16 @@ export function createServer(options: ServerOptions = {}) {
     : null;
 
   // Initialize prompts (admin only)
-  const generateBoilerplatePrompt = adminEnabled ? new GenerateBoilerplatePrompt(isMonolith) : null;
-  const generateFeatureScaffoldPrompt = adminEnabled ? new GenerateFeatureScaffoldPrompt(isMonolith) : null;
+  const generateBoilerplatePrompt = adminEnabled
+    ? new GenerateBoilerplatePrompt({ isMonolith, promptAsSkill })
+    : null;
+  const generateFeatureScaffoldPrompt = adminEnabled
+    ? new GenerateFeatureScaffoldPrompt({ isMonolith, promptAsSkill })
+    : null;
 
   // Initialize user-facing prompts (always available)
-  const scaffoldApplicationPrompt = new ScaffoldApplicationPrompt(isMonolith);
-  const scaffoldFeaturePrompt = new ScaffoldFeaturePrompt(isMonolith);
+  const scaffoldApplicationPrompt = new ScaffoldApplicationPrompt({ isMonolith, promptAsSkill });
+  const scaffoldFeaturePrompt = new ScaffoldFeaturePrompt({ isMonolith, promptAsSkill });
 
   // Render instructions from template
   const templateService = new TemplateService();

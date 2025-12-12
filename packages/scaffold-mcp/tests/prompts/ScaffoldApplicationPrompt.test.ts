@@ -73,7 +73,7 @@ describe('ScaffoldApplicationPrompt', () => {
     let monolithPrompt: ScaffoldApplicationPrompt;
 
     beforeEach(() => {
-      monolithPrompt = new ScaffoldApplicationPrompt(true);
+      monolithPrompt = new ScaffoldApplicationPrompt({ isMonolith: true });
     });
 
     it('should adjust instructions for monolith mode', () => {

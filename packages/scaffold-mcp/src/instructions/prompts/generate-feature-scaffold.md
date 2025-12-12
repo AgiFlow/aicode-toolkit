@@ -1,4 +1,9 @@
-You are helping create a new feature scaffold configuration using the scaffold-mcp MCP tools.
+{% if promptAsSkill %}---
+name: generate-feature-scaffold
+description: Create a new feature scaffold configuration for adding features to existing projects. Use this skill when the user wants to define a reusable feature template (e.g., page, component, service, API route) that can be used to add functionality to projects of a specific type. This is an admin/developer tool for creating the feature scaffold definitions themselves, not for using existing scaffolds. It generates feature configurations in scaffold.yaml and template files with Liquid syntax and conditional includes.
+---
+
+{% endif %}You are helping create a new feature scaffold configuration using the scaffold-mcp MCP tools.
 
 {% if request %}User request: {{ request }}
 {% endif %}
