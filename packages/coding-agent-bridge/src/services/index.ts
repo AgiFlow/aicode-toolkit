@@ -15,6 +15,7 @@
  * - Re-exporting types (types should come from '../types')
  */
 
+export * from './BaseCodingAgentService';
 export * from './ClaudeCodeService';
 export * from './CodexService';
 export * from './CursorService';

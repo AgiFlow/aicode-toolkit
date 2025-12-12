@@ -43,6 +43,11 @@ interface GetFileDesignPatternToolInput {
   file_path: string;
 }
 
+interface GetFileDesignPatternToolOptions {
+  llmTool?: LlmToolId;
+  toolConfig?: Record<string, unknown>;
+}
+
 export class GetFileDesignPatternTool implements Tool<GetFileDesignPatternToolInput> {
   static readonly TOOL_NAME = 'get-file-design-pattern';
 
@@ -51,14 +56,17 @@ export class GetFileDesignPatternTool implements Tool<GetFileDesignPatternToolIn
   private patternMatcher: PatternMatcher;
   private llmService?: LlmProxyService;
 
-  constructor(options?: { llmTool?: LlmToolId }) {
+  constructor(options?: GetFileDesignPatternToolOptions) {
     this.templateFinder = new TemplateFinder();
     this.architectParser = new ArchitectParser();
     this.patternMatcher = new PatternMatcher();
 
     // Initialize LLM service if a valid llm_tool is specified
     if (options?.llmTool && isValidLlmTool(options.llmTool)) {
-      this.llmService = new LlmProxyService({ llmTool: options.llmTool });
+      this.llmService = new LlmProxyService({
+        llmTool: options.llmTool,
+        toolConfig: options?.toolConfig,
+      });
     }
   }
 

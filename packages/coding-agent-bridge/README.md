@@ -164,6 +164,10 @@ const service = new ClaudeCodeService({
     DISABLE_TELEMETRY: '1',
     IS_SANDBOX: '1',
   },
+  toolConfig: {
+    model: 'claude-sonnet-4-20250514',
+    timeout: 120000,
+  },
 });
 ```
 
@@ -178,6 +182,9 @@ const service = new ClaudeCodeService({
 ```typescript
 const service = new CodexService({
   workspaceRoot: '/path/to/workspace',
+  toolConfig: {
+    model: 'gpt-5.2',
+  },
 });
 ```
 
@@ -186,6 +193,9 @@ const service = new CodexService({
 ```typescript
 const service = new GeminiCliService({
   workspaceRoot: '/path/to/workspace',
+  toolConfig: {
+    model: 'gemini-2.5-pro',
+  },
 });
 ```
 
@@ -256,11 +266,29 @@ pnpm test
 pnpm typecheck
 ```
 
+## Tool Configuration
+
+All services support a `toolConfig` option that passes CLI arguments to the underlying coding agent. Configuration keys are converted from camelCase to kebab-case CLI flags:
+
+```typescript
+const service = new ClaudeCodeService({
+  workspaceRoot: '/path/to/workspace',
+  toolConfig: {
+    model: 'claude-sonnet-4-20250514',  // becomes --model claude-sonnet-4-20250514
+    maxTokens: 4000,                     // becomes --max-tokens 4000
+    timeout: 120000,                     // becomes --timeout 120000
+  },
+});
+```
+
+This enables tool-specific customization like model selection, timeouts, and other CLI options without modifying the service code.
+
 ## Architecture
 
 **Design patterns**:
 - Interface-based abstraction for multiple coding agents
 - Service class pattern with dependency injection
+- Base class (`BaseCodingAgentService`) for shared functionality
 - Standardized MCP configuration format
 - Type-safe constants with `as const` assertions
 

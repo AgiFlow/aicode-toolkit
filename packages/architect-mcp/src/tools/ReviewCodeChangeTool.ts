@@ -30,6 +30,7 @@ interface ReviewCodeChangeToolInput {
 
 interface ReviewCodeChangeToolOptions {
   llmTool?: LlmToolId;
+  toolConfig?: Record<string, unknown>;
 }
 
 export class ReviewCodeChangeTool implements Tool<ReviewCodeChangeToolInput> {
@@ -38,7 +39,10 @@ export class ReviewCodeChangeTool implements Tool<ReviewCodeChangeToolInput> {
   private codeReviewService: CodeReviewService;
 
   constructor(options?: ReviewCodeChangeToolOptions) {
-    this.codeReviewService = new CodeReviewService(options);
+    this.codeReviewService = new CodeReviewService({
+      llmTool: options?.llmTool,
+      toolConfig: options?.toolConfig,
+    });
   }
 
   getDefinition(): ToolDefinition {

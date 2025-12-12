@@ -33,6 +33,7 @@ interface ReviewCodeChangeOptions {
   verbose?: boolean;
   json?: boolean;
   llmTool?: string;
+  toolConfig?: string;
 }
 
 /**
@@ -50,11 +51,16 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
     `LLM tool to use for code review. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
     'claude-code',
   )
+  .option(
+    '--tool-config <json>',
+    'JSON config for the LLM tool (e.g., \'{"model":"gpt-5.2-high"}\')',
+    undefined,
+  )
   .action(async (filePath: string, options: ReviewCodeChangeOptions): Promise<void> => {
     try {
       if (options.verbose) {
-        log.info('Reviewing file:', filePath);
-        log.info('Using LLM tool:', options.llmTool);
+        print.info(`Reviewing file: ${filePath}`);
+        print.info(`Using LLM tool: ${options.llmTool}`);
       }
 
       // Validate llm-tool option
@@ -65,9 +71,26 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
         process.exit(1);
       }
 
+      // Parse tool config JSON
+      let toolConfig: Record<string, unknown> | undefined;
+      if (options.toolConfig) {
+        try {
+          toolConfig = JSON.parse(options.toolConfig);
+          if (options.verbose) {
+            print.info(`Tool config: ${JSON.stringify(toolConfig)}`);
+          }
+        } catch (error) {
+          print.error(
+            `❌ Error: Invalid JSON for --tool-config: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          process.exit(1);
+        }
+      }
+
       // Create tool instance
       const tool = new ReviewCodeChangeTool({
         llmTool: options.llmTool as LlmToolId | undefined,
+        toolConfig,
       });
 
       // Execute the tool

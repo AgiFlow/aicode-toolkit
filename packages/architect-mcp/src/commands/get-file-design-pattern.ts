@@ -33,6 +33,7 @@ interface GetFileDesignPatternOptions {
   verbose?: boolean;
   json?: boolean;
   llmTool?: string;
+  toolConfig?: string;
 }
 
 /**
@@ -46,6 +47,11 @@ export const getFileDesignPatternCommand = new Command('get-file-design-pattern'
   .option(
     '--llm-tool <tool>',
     `Use LLM to filter relevant patterns. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
+    undefined,
+  )
+  .option(
+    '--tool-config <json>',
+    'JSON config for the LLM tool (e.g., \'{"model":"gpt-5.2"}\')',
     undefined,
   )
   .action(async (filePath: string, options: GetFileDesignPatternOptions): Promise<void> => {
@@ -65,10 +71,26 @@ export const getFileDesignPatternCommand = new Command('get-file-design-pattern'
         process.exit(1);
       }
 
+      // Parse tool config JSON
+      let toolConfig: Record<string, unknown> | undefined;
+      if (options.toolConfig) {
+        try {
+          toolConfig = JSON.parse(options.toolConfig);
+          if (options.verbose) {
+            print.info(`Tool config: ${JSON.stringify(toolConfig)}`);
+          }
+        } catch (error) {
+          print.error(
+            `Invalid JSON for --tool-config: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          process.exit(1);
+        }
+      }
+
       const llmTool = options.llmTool as LlmToolId | undefined;
 
       // Create tool instance with optional LLM support
-      const tool = new GetFileDesignPatternTool({ llmTool });
+      const tool = new GetFileDesignPatternTool({ llmTool, toolConfig });
 
       // Execute the tool
       const result = await tool.execute({

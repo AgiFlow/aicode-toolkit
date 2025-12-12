@@ -13,6 +13,7 @@ import type { CodeReviewResult, RuleSection, RulesYamlConfig } from '../types';
 
 interface CodeReviewServiceOptions {
   llmTool?: LlmToolId;
+  toolConfig?: Record<string, unknown>;
 }
 
 export class CodeReviewService {
@@ -27,7 +28,8 @@ export class CodeReviewService {
     if (this.llmTool && isValidLlmTool(this.llmTool)) {
       this.llmService = new LlmProxyService({
         llmTool: this.llmTool,
-        defaultTimeout: 180000, // 2 minutes for code review
+        defaultTimeout: 180000, // 3 minutes for code review
+        toolConfig: options?.toolConfig,
       });
     }
     this.ruleFinder = new RuleFinder();
@@ -185,8 +187,9 @@ export class CodeReviewService {
       return this.parseReviewResponse(response.content);
     } catch (error) {
       log.error('Code review failed:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       return {
-        feedback: 'Code review failed due to an error.',
+        feedback: `Code review failed: ${errorMessage}`,
         fix_required: false,
         identified_issues: [],
       };
