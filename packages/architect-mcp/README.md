@@ -85,6 +85,7 @@ Agent:
 |------|---------|-------------|
 | `add-design-pattern` | Add pattern to architect.yaml | Documenting new patterns |
 | `add-rule` | Add rule to RULES.yaml | Adding coding standards |
+| `validate-architect` | Validate architect.yaml syntax and schema | Debugging configuration issues |
 
 ---
 
@@ -128,6 +129,50 @@ features:
       Services contain business logic and are injected into tools.
       They should be stateless and delegate to repositories.
 ```
+
+### Pattern Inheritance & Override
+
+architect-mcp supports a three-level configuration hierarchy:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. Project architect.yaml (highest priority)               │
+│     packages/my-app/.architect.yaml                         │
+│     → Project-specific patterns that override template      │
+├─────────────────────────────────────────────────────────────┤
+│  2. Template architect.yaml                                 │
+│     templates/nextjs-15/architect.yaml                      │
+│     → Framework-specific patterns                           │
+├─────────────────────────────────────────────────────────────┤
+│  3. Global architect.yaml (lowest priority)                 │
+│     templates/architect.yaml                                │
+│     → Shared patterns across all templates                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Example: Override template pattern for a specific project**
+
+Template pattern (`templates/typescript-mcp-package/architect.yaml`):
+```yaml
+features:
+  - name: tool-pattern
+    design_pattern: Standard MCP Tool
+    includes:
+      - src/tools/**/*.ts
+```
+
+Project override (`packages/my-custom-mcp/.architect.yaml`):
+```yaml
+features:
+  - name: tool-pattern
+    design_pattern: Custom Tool with Extended Validation
+    includes:
+      - src/tools/**/*.ts
+    description: |
+      This project requires additional input validation...
+```
+
+When a file in `packages/my-custom-mcp/src/tools/` is checked, the project-level pattern takes precedence.
 
 ### RULES.yaml - Coding Standards
 
@@ -211,6 +256,15 @@ npx @agiflowai/architect-mcp add-rule error-handling "Error handling standards" 
   --template-name typescript-mcp-package \
   --must-do "Use try-catch blocks" \
   --must-not-do "Never use empty catch blocks"
+
+# Validate architect.yaml file
+npx @agiflowai/architect-mcp validate-architect templates/nextjs-15/architect.yaml
+
+# Validate by template name
+npx @agiflowai/architect-mcp validate-architect -t typescript-mcp-package
+
+# Verbose output showing all features
+npx @agiflowai/architect-mcp validate-architect -t nextjs-15 -v
 ```
 
 ---
