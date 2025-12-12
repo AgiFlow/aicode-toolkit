@@ -22,9 +22,11 @@ import type { ChildProcess } from 'node:child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type {
   McpServerConfig,
   McpStdioConfig,
+  McpHttpConfig,
   McpSseConfig,
   McpClientConnection,
   McpServerTransportType,
@@ -243,6 +245,8 @@ export class McpClientManagerService {
   private async performConnection(mcpClient: McpClient, config: McpServerConfig): Promise<void> {
     if (config.transport === 'stdio') {
       await this.connectStdioClient(mcpClient, config.config as McpStdioConfig);
+    } else if (config.transport === 'http') {
+      await this.connectHttpClient(mcpClient, config.config as McpHttpConfig);
     } else if (config.transport === 'sse') {
       await this.connectSseClient(mcpClient, config.config as McpSseConfig);
     } else {
@@ -266,6 +270,15 @@ export class McpClientManagerService {
     if (childProcess) {
       mcpClient.setChildProcess(childProcess);
     }
+  }
+
+  private async connectHttpClient(mcpClient: McpClient, config: McpHttpConfig): Promise<void> {
+    const transport = new StreamableHTTPClientTransport(new URL(config.url), {
+      requestInit: config.headers ? { headers: config.headers } : undefined,
+    });
+
+    // biome-ignore lint/complexity/useLiteralKeys: accessing private property intentionally
+    await mcpClient['client'].connect(transport);
   }
 
   private async connectSseClient(mcpClient: McpClient, config: McpSseConfig): Promise<void> {
