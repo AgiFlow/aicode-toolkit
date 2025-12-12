@@ -1,3 +1,20 @@
+## 0.2.7 (2025-12-12)
+
+### 🚀 Features
+
+- **one-mcp:** add file watcher for SKILL.md cache invalidation ([689041e](https://github.com/AgiFlow/aicode-toolkit/commit/689041e))
+- **one-mcp:** auto-detect skills from prompt front-matter and unify toolkit description ([f1bbcca](https://github.com/AgiFlow/aicode-toolkit/commit/f1bbcca))
+- **one-mcp:** add HTTP streamable transport support ([ecced5c](https://github.com/AgiFlow/aicode-toolkit/commit/ecced5c))
+
+### 🩹 Fixes
+
+- **one-mcp:** improve front-matter parser edge case handling ([44a4eae](https://github.com/AgiFlow/aicode-toolkit/commit/44a4eae))
+- **one-mcp:** only prefix skills with skill__ when clashing with MCP tools ([a4944f2](https://github.com/AgiFlow/aicode-toolkit/commit/a4944f2))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.2.6 (2025-12-08)
 
 ### 🚀 Features
