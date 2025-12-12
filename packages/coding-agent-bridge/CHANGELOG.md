@@ -1,3 +1,13 @@
+## 1.0.10 (2025-12-12)
+
+### 🚀 Features
+
+- **coding-agent-bridge:** add toolConfig support for LLM services ([d286734](https://github.com/AgiFlow/aicode-toolkit/commit/d286734))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.9 (2025-12-08)
 
 ### 🧱 Updated Dependencies
