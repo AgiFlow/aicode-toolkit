@@ -207,7 +207,11 @@ export class ValidateArchitectTool implements Tool<ValidateArchitectToolInput> {
       // Note: symlinks are resolved by path.resolve(), so linked files outside workspace will be rejected
       const workspaceRoot = path.resolve(process.cwd());
       const relativeToWorkspace = path.relative(workspaceRoot, resolvedPath);
-      // Edge case: empty relative path means the file is at workspace root (valid)
+      // Path validation checks:
+      // 1. Starts with '..' means target is in a parent directory (outside workspace)
+      // 2. isAbsolute check handles Windows cross-drive case: path.relative('C:\\workspace', 'D:\\file')
+      //    returns 'D:\\file' (absolute) since no relative path exists between drives
+      // 3. Empty relative path means file is at workspace root (valid)
       const isWithinWorkspace =
         !relativeToWorkspace.startsWith(PARENT_DIR_PREFIX) && !path.isAbsolute(relativeToWorkspace);
 

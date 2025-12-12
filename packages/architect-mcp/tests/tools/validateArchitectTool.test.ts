@@ -514,4 +514,81 @@ features:
       }
     });
   });
+
+  describe('path traversal security', () => {
+    it('should reject paths outside workspace directory', async () => {
+      // Path traversal attempt using ..
+      const result = await tool.execute({ file_path: '../../../etc/passwd' });
+
+      expect(result.isError).toBe(true);
+      const content = result.content[0];
+      if (content.type === 'text') {
+        const data: ValidationResult = JSON.parse(content.text);
+        expect(data.valid).toBe(false);
+        expect(data.errors?.[0].message).toContain('outside the workspace');
+      }
+    });
+
+    it('should reject absolute paths outside workspace', async () => {
+      // Attempt to access file outside workspace using absolute path
+      const result = await tool.execute({ file_path: '/etc/passwd' });
+
+      expect(result.isError).toBe(true);
+      const content = result.content[0];
+      if (content.type === 'text') {
+        const data: ValidationResult = JSON.parse(content.text);
+        expect(data.valid).toBe(false);
+        expect(data.errors?.[0].message).toContain('outside the workspace');
+      }
+    });
+
+    it('should allow paths within templates directory even outside workspace', async () => {
+      // Mock templates in a different location
+      mockFindTemplatesPath.mockResolvedValue('/different/templates');
+      mockAccess.mockResolvedValue(undefined);
+      mockStat.mockResolvedValue({ isFile: (): boolean => true });
+      mockReadFile.mockResolvedValue('features: []');
+
+      const result = await tool.execute({ file_path: '/different/templates/nextjs/architect.yaml' });
+
+      expect(result.isError).toBeFalsy();
+      const content = result.content[0];
+      if (content.type === 'text') {
+        const data: ValidationResult = JSON.parse(content.text);
+        expect(data.valid).toBe(true);
+      }
+    });
+
+    it('should reject nested path traversal attempts', async () => {
+      // Multiple levels of .. to escape workspace
+      const result = await tool.execute({ file_path: 'foo/../../bar/../../../etc/passwd' });
+
+      expect(result.isError).toBe(true);
+      const content = result.content[0];
+      if (content.type === 'text') {
+        const data: ValidationResult = JSON.parse(content.text);
+        expect(data.valid).toBe(false);
+        expect(data.errors?.[0].message).toContain('outside the workspace');
+      }
+    });
+
+    it('should reject paths that start inside but escape workspace', async () => {
+      // Starts with valid directory but escapes via ..
+      const result = await tool.execute({ file_path: 'templates/../../../etc/passwd' });
+
+      expect(result.isError).toBe(true);
+      const content = result.content[0];
+      if (content.type === 'text') {
+        const data: ValidationResult = JSON.parse(content.text);
+        expect(data.valid).toBe(false);
+        expect(data.errors?.[0].message).toContain('outside the workspace');
+      }
+    });
+
+    // Note: Windows-specific path tests (D:\, UNC paths) are platform-dependent:
+    // - On Unix: backslashes are valid filename characters, so 'D:\file' is a relative path
+    // - On Windows: backslashes are separators, so 'D:\file' is absolute on D: drive
+    // The path.isAbsolute() check in the implementation handles both cases correctly,
+    // but we can only test the Unix behavior here. Windows CI would test Windows behavior.
+  });
 });
