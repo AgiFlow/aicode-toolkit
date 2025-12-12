@@ -30,13 +30,9 @@ import type { Tool, ToolDefinition } from '../types';
 import type { McpClientManagerService } from '../services/McpClientManagerService';
 import type { SkillService } from '../services/SkillService';
 import { parseToolName, extractSkillFrontMatter } from '../utils';
+import { SKILL_PREFIX, LOG_PREFIX_SKILL_DETECTION, PROMPT_LOCATION_PREFIX } from '../constants';
 import { Liquid } from 'liquidjs';
 import toolkitDescriptionTemplate from '../templates/toolkit-description.liquid?raw';
-
-/**
- * Prefix used to identify skill invocations
- */
-const SKILL_PREFIX = 'skill__';
 
 /**
  * Formats skill instructions with the loading command message prefix.
@@ -235,6 +231,13 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
    * Fetches all prompts and checks their content for YAML front-matter with name/description.
    * Results are cached to avoid repeated fetches.
    *
+   * Error Handling Strategy:
+   * - Errors are logged to stderr but do not fail the overall detection process
+   * - This ensures partial results are returned even if some servers/prompts fail
+   * - Common failure reasons: server temporarily unavailable, prompt requires arguments,
+   *   network timeout, or server doesn't support listPrompts
+   * - Errors are prefixed with [skill-detection] for easy filtering in logs
+   *
    * @returns Array of auto-detected skills from prompt front-matter
    */
   private async detectSkillsFromPromptFrontMatter(): Promise<AutoDetectedSkill[]> {
@@ -245,6 +248,10 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
 
     const clients = this.clientManager.getAllClients();
     const autoDetectedSkills: AutoDetectedSkill[] = [];
+
+    // Track failures for debugging (not exposed to callers, but logged)
+    let listPromptsFailures = 0;
+    let fetchPromptFailures = 0;
 
     // Collect all prompt fetches in parallel
     const fetchPromises: Promise<void>[] = [];
@@ -292,20 +299,20 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
                 });
               }
             } catch (error) {
-              // Ignore errors fetching individual prompts
+              // Log but continue - this prompt may require arguments or be temporarily unavailable
+              fetchPromptFailures++;
               console.error(
-                `Failed to fetch prompt '${promptInfo.name}' from ${client.serverName}:`,
-                error instanceof Error ? error.message : 'Unknown error'
+                `${LOG_PREFIX_SKILL_DETECTION} Failed to fetch prompt '${promptInfo.name}' from ${client.serverName}: ${error instanceof Error ? error.message : 'Unknown error'}`
               );
             }
           });
 
           await Promise.all(promptFetchPromises);
         } catch (error) {
-          // Ignore errors listing prompts from a server
+          // Log but continue - server may not support listPrompts or be temporarily unavailable
+          listPromptsFailures++;
           console.error(
-            `Failed to list prompts from ${client.serverName}:`,
-            error instanceof Error ? error.message : 'Unknown error'
+            `${LOG_PREFIX_SKILL_DETECTION} Failed to list prompts from ${client.serverName}: ${error instanceof Error ? error.message : 'Unknown error'}`
           );
         }
       })();
@@ -314,6 +321,13 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
     }
 
     await Promise.all(fetchPromises);
+
+    // Log summary if there were any failures (helps with debugging)
+    if (listPromptsFailures > 0 || fetchPromptFailures > 0) {
+      console.error(
+        `${LOG_PREFIX_SKILL_DETECTION} Completed with ${listPromptsFailures} server failure(s) and ${fetchPromptFailures} prompt failure(s). Detected ${autoDetectedSkills.length} skill(s).`
+      );
+    }
 
     // Cache the results
     this.autoDetectedSkillsCache = autoDetectedSkills;
@@ -436,7 +450,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
       return {
         name: promptSkill.skill.name,
         // Location is either the configured folder or a prompt reference
-        location: promptSkill.skill.folder || `prompt:${promptSkill.serverName}/${promptSkill.promptName}`,
+        location: promptSkill.skill.folder || `${PROMPT_LOCATION_PREFIX}${promptSkill.serverName}/${promptSkill.promptName}`,
         instructions: formatSkillInstructions(promptSkill.skill.name, rawInstructions),
       };
     } catch (error) {
