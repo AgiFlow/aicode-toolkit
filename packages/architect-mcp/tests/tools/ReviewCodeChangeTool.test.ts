@@ -20,8 +20,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ReviewCodeChangeTool } from '../../src/tools';
 
-// Mock the CodeReviewService using the direct import path that the tool uses
-vi.mock('../../src/services/CodeReviewService', () => ({
+// Mock the CodeReviewService using the barrel export
+vi.mock('../../src/services', () => ({
   CodeReviewService: class MockCodeReviewService {
     reviewCodeChange = vi.fn().mockResolvedValue({
       file_path: '/mock/file.ts',

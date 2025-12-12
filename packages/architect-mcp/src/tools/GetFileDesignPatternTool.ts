@@ -27,9 +27,9 @@ import type {
   FileDesignPatternResult,
   DesignPatternMatch,
 } from '../types/index.js';
-import { TemplateFinder } from '../services/TemplateFinder.js';
-import { ArchitectParser } from '../services/ArchitectParser.js';
-import { PatternMatcher } from '../services/PatternMatcher.js';
+import { TemplateFinder } from '../services/TemplateFinder';
+import { ArchitectParser } from '../services/ArchitectParser';
+import { PatternMatcher } from '../services/PatternMatcher';
 import {
   LlmProxyService,
   type LlmToolId,

@@ -1,7 +1,26 @@
+/**
+ * ArchitectParser
+ *
+ * DESIGN PATTERNS:
+ * - Service pattern for business logic encapsulation
+ * - Single responsibility principle
+ * - Caching for performance optimization
+ *
+ * CODING STANDARDS:
+ * - Use async/await for asynchronous operations
+ * - Throw descriptive errors for error cases
+ * - Keep methods focused and well-named
+ * - Document complex logic with comments
+ *
+ * AVOID:
+ * - Mixing concerns (keep focused on single domain)
+ * - Direct tool implementation (services should be tool-agnostic)
+ */
+
 import * as fs from 'node:fs/promises';
 import * as yaml from 'js-yaml';
 import * as path from 'node:path';
-import type { ArchitectConfig, Feature } from '../types';
+import type { ArchitectConfig, Feature } from '../../types';
 import { TemplatesManagerService } from '@agiflowai/aicode-utils';
 
 export class ArchitectParser {

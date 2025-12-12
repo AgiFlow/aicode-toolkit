@@ -24,7 +24,7 @@ import {
 } from '@agiflowai/aicode-utils';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import type { TemplateMapping } from '../types';
+import type { TemplateMapping } from '../../types';
 
 export class TemplateFinder {
   private workspaceRoot: string;
