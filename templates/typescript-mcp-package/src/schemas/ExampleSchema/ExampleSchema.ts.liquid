@@ -1,0 +1,88 @@
+/**
+ * {{ schemaName }} Schema
+ *
+ * DESIGN PATTERNS:
+ * - Zod schema for runtime validation with TypeScript inference
+ * - Single source of truth for data structure and types
+ * - Composable schema design for extensibility
+ *
+ * CODING STANDARDS:
+ * - Use z.object() for structured data
+ * - Use .optional() and .default() for flexible fields
+ * - Export schema constant with camelCase + 'Schema' suffix
+ * - Keep schemas focused on single domain
+ *
+ * AVOID:
+ * - Duplicating type definitions (use z.infer instead)
+ * - Complex transforms that hide validation logic
+ * - Circular schema references
+ */
+
+import { z } from 'zod';
+
+/**
+ * {{ schemaName }} schema definition
+ *
+ * Validates [describe what this schema validates].
+ *
+ * @example
+ * ```typescript
+ * import { {{ schemaName | camelize }}Schema } from './{{ schemaName }}';
+ *
+ * const result = {{ schemaName | camelize }}Schema.safeParse(data);
+ * if (result.success) {
+ *   console.log(result.data);
+ * } else {
+ *   console.error(result.error.issues);
+ * }
+ * ```
+ */
+export const {{ schemaName | camelize }}Schema = z.object({
+  /**
+   * Unique identifier
+   */
+  id: z.string().min(1, 'ID is required'),
+
+  /**
+   * Display name
+   */
+  name: z.string().min(1, 'Name is required'),
+
+  /**
+   * Optional description
+   */
+  description: z.string().optional(),
+
+  /**
+   * Configuration options
+   */
+  options: z
+    .object({
+      enabled: z.boolean().default(true),
+      timeout: z.number().positive().default(30000),
+    })
+    .optional(),
+
+  /**
+   * List of tags for categorization
+   */
+  tags: z.array(z.string()).default([]),
+
+  /**
+   * Creation timestamp
+   */
+  createdAt: z.coerce.date().optional(),
+});
+
+/**
+ * Partial schema for updates (all fields optional)
+ */
+export const {{ schemaName | camelize }}UpdateSchema = {{ schemaName | camelize }}Schema.partial();
+
+/**
+ * Schema for creating new entries (without auto-generated fields)
+ */
+export const {{ schemaName | camelize }}CreateSchema = {{ schemaName | camelize }}Schema.omit({
+  id: true,
+  createdAt: true,
+});

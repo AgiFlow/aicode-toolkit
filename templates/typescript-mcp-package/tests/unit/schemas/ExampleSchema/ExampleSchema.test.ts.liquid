@@ -1,0 +1,207 @@
+/**
+ * {{ schemaName }} Schema Tests
+ *
+ * TESTING PATTERNS:
+ * - Test valid data passes validation
+ * - Test invalid data fails with correct errors
+ * - Test optional fields and defaults
+ * - Test edge cases and boundary values
+ *
+ * CODING STANDARDS:
+ * - Use describe blocks to group related tests
+ * - Use it with 'should...' naming pattern
+ * - Test both parse() and safeParse() behaviors
+ * - Verify error messages are descriptive
+ */
+
+import { describe, it, expect } from 'vitest';
+import {
+  {{ schemaName | camelize }}Schema,
+  {{ schemaName | camelize }}UpdateSchema,
+  {{ schemaName | camelize }}CreateSchema,
+} from '../../../../src/schemas/{{ schemaName }}';
+
+describe('{{ schemaName }}Schema', () => {
+  describe('valid data', () => {
+    it('should validate complete valid data', () => {
+      const validData = {
+        id: 'test-id-123',
+        name: 'Test Name',
+        description: 'A test description',
+        options: {
+          enabled: true,
+          timeout: 5000,
+        },
+        tags: ['tag1', 'tag2'],
+        createdAt: new Date(),
+      };
+
+      const result = {{ schemaName | camelize }}Schema.safeParse(validData);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.id).toBe('test-id-123');
+        expect(result.data.name).toBe('Test Name');
+      }
+    });
+
+    it('should validate minimal required data', () => {
+      const minimalData = {
+        id: 'min-id',
+        name: 'Minimal',
+      };
+
+      const result = {{ schemaName | camelize }}Schema.safeParse(minimalData);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.tags).toEqual([]);
+        expect(result.data.description).toBeUndefined();
+      }
+    });
+
+    it('should apply default values', () => {
+      const dataWithDefaults = {
+        id: 'default-id',
+        name: 'With Defaults',
+        options: {},
+      };
+
+      const result = {{ schemaName | camelize }}Schema.safeParse(dataWithDefaults);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.options?.enabled).toBe(true);
+        expect(result.data.options?.timeout).toBe(30000);
+        expect(result.data.tags).toEqual([]);
+      }
+    });
+  });
+
+  describe('invalid data', () => {
+    it('should fail when id is missing', () => {
+      const invalidData = {
+        name: 'No ID',
+      };
+
+      const result = {{ schemaName | camelize }}Schema.safeParse(invalidData);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].path).toContain('id');
+      }
+    });
+
+    it('should fail when id is empty', () => {
+      const invalidData = {
+        id: '',
+        name: 'Empty ID',
+      };
+
+      const result = {{ schemaName | camelize }}Schema.safeParse(invalidData);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toBe('ID is required');
+      }
+    });
+
+    it('should fail when name is missing', () => {
+      const invalidData = {
+        id: 'valid-id',
+      };
+
+      const result = {{ schemaName | camelize }}Schema.safeParse(invalidData);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].path).toContain('name');
+      }
+    });
+
+    it('should fail when timeout is negative', () => {
+      const invalidData = {
+        id: 'valid-id',
+        name: 'Valid Name',
+        options: {
+          timeout: -100,
+        },
+      };
+
+      const result = {{ schemaName | camelize }}Schema.safeParse(invalidData);
+
+      expect(result.success).toBe(false);
+    });
+
+    it('should fail when tags is not an array', () => {
+      const invalidData = {
+        id: 'valid-id',
+        name: 'Valid Name',
+        tags: 'not-an-array',
+      };
+
+      const result = {{ schemaName | camelize }}Schema.safeParse(invalidData);
+
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('date coercion', () => {
+    it('should coerce string dates', () => {
+      const dataWithStringDate = {
+        id: 'date-id',
+        name: 'With Date',
+        createdAt: '2024-01-15T10:30:00Z',
+      };
+
+      const result = {{ schemaName | camelize }}Schema.safeParse(dataWithStringDate);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.createdAt).toBeInstanceOf(Date);
+      }
+    });
+  });
+});
+
+describe('{{ schemaName }}UpdateSchema', () => {
+  it('should allow partial updates', () => {
+    const partialUpdate = {
+      name: 'Updated Name',
+    };
+
+    const result = {{ schemaName | camelize }}UpdateSchema.safeParse(partialUpdate);
+
+    expect(result.success).toBe(true);
+  });
+
+  it('should allow empty updates', () => {
+    const emptyUpdate = {};
+
+    const result = {{ schemaName | camelize }}UpdateSchema.safeParse(emptyUpdate);
+
+    expect(result.success).toBe(true);
+  });
+});
+
+describe('{{ schemaName }}CreateSchema', () => {
+  it('should not require id or createdAt', () => {
+    const createData = {
+      name: 'New Entry',
+    };
+
+    const result = {{ schemaName | camelize }}CreateSchema.safeParse(createData);
+
+    expect(result.success).toBe(true);
+  });
+
+  it('should still require name', () => {
+    const invalidCreate = {
+      description: 'Missing name',
+    };
+
+    const result = {{ schemaName | camelize }}CreateSchema.safeParse(invalidCreate);
+
+    expect(result.success).toBe(false);
+  });
+});

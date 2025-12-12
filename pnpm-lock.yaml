@@ -175,7 +175,7 @@ importers:
         version: link:../hooks-adapter
       '@modelcontextprotocol/sdk':
         specifier: 1.24.0
-        version: 1.24.0(zod@3.25.76)
+        version: 1.24.0(zod@4.1.13)
       '@types/express':
         specifier: ^5.0.3
         version: 5.0.6
@@ -200,6 +200,9 @@ importers:
       uuid:
         specifier: ^11.0.5
         version: 11.1.0
+      zod:
+        specifier: ^4.1.13
+        version: 4.1.13
     devDependencies:
       '@types/js-yaml':
         specifier: ^4.0.9
@@ -408,7 +411,7 @@ importers:
         version: link:../aicode-utils
       '@modelcontextprotocol/sdk':
         specifier: 1.24.0
-        version: 1.24.0(zod@3.25.76)
+        version: 1.24.0(zod@4.1.13)
       '@storybook/csf-tools':
         specifier: ^8.6.14
         version: 8.6.14(storybook@8.6.14(prettier@3.7.4))
@@ -4869,6 +4872,9 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
+  zod@4.1.13:
+    resolution: {integrity: sha512-AvvthqfqrAhNH9dnfmrfKzX5upOdjUVJYFqNSlkmGf64gRaTzlPwz99IHYnVs28qYAybvAlBV+H7pn0saFY4Ig==}
+
 snapshots:
 
   '@ampproject/remapping@2.3.0':
@@ -6217,6 +6223,25 @@ snapshots:
       raw-body: 3.0.2
       zod: 3.25.76
       zod-to-json-schema: 3.25.0(zod@3.25.76)
+    transitivePeerDependencies:
+      - supports-color
+
+  '@modelcontextprotocol/sdk@1.24.0(zod@4.1.13)':
+    dependencies:
+      ajv: 8.17.1
+      ajv-formats: 3.0.1(ajv@8.17.1)
+      content-type: 1.0.5
+      cors: 2.8.5
+      cross-spawn: 7.0.6
+      eventsource: 3.0.7
+      eventsource-parser: 3.0.6
+      express: 5.2.1
+      express-rate-limit: 7.5.1(express@5.2.1)
+      jose: 6.1.3
+      pkce-challenge: 5.0.1
+      raw-body: 3.0.2
+      zod: 4.1.13
+      zod-to-json-schema: 3.25.0(zod@4.1.13)
     transitivePeerDependencies:
       - supports-color
 
@@ -9258,4 +9283,10 @@ snapshots:
     dependencies:
       zod: 3.25.76
 
+  zod-to-json-schema@3.25.0(zod@4.1.13):
+    dependencies:
+      zod: 4.1.13
+
   zod@3.25.76: {}
+
+  zod@4.1.13: {}

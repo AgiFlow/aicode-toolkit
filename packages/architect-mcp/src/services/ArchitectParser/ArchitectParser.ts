@@ -27,6 +27,8 @@ import {
   ARCHITECT_FILENAME,
   ARCHITECT_FILENAME_HIDDEN,
 } from '../../constants';
+import { architectConfigSchema } from '../../schemas';
+import { ParseArchitectError, InvalidConfigError } from '../../utils/errors';
 
 export class ArchitectParser {
   private configCache: Map<string, ArchitectConfig> = new Map();
@@ -59,19 +61,34 @@ export class ArchitectParser {
   async parseArchitectFile(templatePath: string): Promise<ArchitectConfig | null> {
     let architectPath: string;
 
-    // Check if templatePath is already a full file path
+    // Check if templatePath is already a full file path to an architect file
     if (
       templatePath.endsWith(ARCHITECT_FILENAME_HIDDEN) ||
       templatePath.endsWith(ARCHITECT_FILENAME)
     ) {
       architectPath = templatePath;
     } else {
-      // Find the architect file in the directory
-      const foundPath = await this.findArchitectFile(templatePath);
-      if (!foundPath) {
-        return null;
+      // Check if templatePath is an existing file (for arbitrary YAML validation)
+      try {
+        const stat = await fs.stat(templatePath);
+        if (stat.isFile()) {
+          architectPath = templatePath;
+        } else {
+          // It's a directory, find the architect file in it
+          const foundPath = await this.findArchitectFile(templatePath);
+          if (!foundPath) {
+            return null;
+          }
+          architectPath = foundPath;
+        }
+      } catch {
+        // Path doesn't exist or can't be accessed, try as directory
+        const foundPath = await this.findArchitectFile(templatePath);
+        if (!foundPath) {
+          return null;
+        }
+        architectPath = foundPath;
       }
-      architectPath = foundPath;
     }
 
     // Check cache first
@@ -84,36 +101,47 @@ export class ArchitectParser {
 
       // Handle empty file
       if (!content || content.trim() === '') {
-        const emptyConfig: ArchitectConfig = {};
+        const emptyConfig: ArchitectConfig = { features: [] };
         this.configCache.set(architectPath, emptyConfig);
         return emptyConfig;
       }
 
-      let config: any;
+      let rawConfig: unknown;
       try {
-        config = yaml.load(content);
+        rawConfig = yaml.load(content);
       } catch (yamlError) {
-        throw new Error(`Failed to parse architect file: ${yamlError}`);
+        throw new ParseArchitectError(String(yamlError));
       }
 
-      // Return the parsed config as-is (could be any valid YAML structure)
-      const validatedConfig: ArchitectConfig = config || {};
+      // Validate and parse using Zod schema
+      const parseResult = architectConfigSchema.safeParse(rawConfig || {});
+
+      if (!parseResult.success) {
+        const errorMessages = parseResult.error.issues
+          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          .join(', ');
+        throw new InvalidConfigError(errorMessages);
+      }
+
+      const validatedConfig: ArchitectConfig = parseResult.data;
 
       // Cache the result
       this.configCache.set(architectPath, validatedConfig);
 
       return validatedConfig;
     } catch (error) {
-      // Re-throw errors with a consistent message
-      if (error instanceof Error && error.message.includes('Failed to parse architect file')) {
+      // Re-throw our custom errors
+      if (error instanceof ParseArchitectError || error instanceof InvalidConfigError) {
         throw error;
       }
-      throw new Error(`Failed to parse architect file: ${error}`);
+      throw new ParseArchitectError(String(error));
     }
   }
 
   /**
    * Parse the global architect.yaml or .architect.yaml
+   * @param globalPath - Optional path to global architect file
+   * @returns Parsed config or null if not found
    */
   async parseGlobalArchitectFile(globalPath?: string): Promise<ArchitectConfig | null> {
     // Default to the architect file in the templates directory
@@ -123,7 +151,6 @@ export class ArchitectParser {
     } else {
       const templatesRoot = await TemplatesManagerService.findTemplatesPath(this.workspaceRoot);
       if (!templatesRoot) {
-        // No templates directory found, return null
         return null;
       }
       resolvedPath = await this.findArchitectFile(templatesRoot);
@@ -131,6 +158,7 @@ export class ArchitectParser {
         return null;
       }
     }
+
     // Check cache first
     if (this.configCache.has(resolvedPath)) {
       return this.configCache.get(resolvedPath)!;
@@ -138,29 +166,41 @@ export class ArchitectParser {
 
     try {
       const content = await fs.readFile(resolvedPath, 'utf-8');
-      const config = yaml.load(content) as any;
+      const rawConfig: unknown = yaml.load(content);
 
-      // Check if this is a standard architect.yaml format with features
-      if (config?.features && Array.isArray(config.features)) {
-        const globalConfig: ArchitectConfig = config;
-        this.configCache.set(resolvedPath, globalConfig);
-        return globalConfig;
+      // Try standard architect.yaml format first (with features array)
+      const parseResult = architectConfigSchema.safeParse(rawConfig);
+      if (parseResult.success && parseResult.data.features.length > 0) {
+        this.configCache.set(resolvedPath, parseResult.data);
+        return parseResult.data;
       }
 
-      // Otherwise, handle the global architect.yaml with different structure
+      // Legacy format: global architect.yaml with prompts/examples structure
+      // This format extracts patterns from a prompts array for backward compatibility
       const features: Feature[] = [];
-
-      if (config?.prompts && Array.isArray(config.prompts)) {
-        for (const prompt of config.prompts) {
-          if (prompt.examples && Array.isArray(prompt.examples)) {
-            for (const example of prompt.examples) {
-              if (example.pattern) {
-                features.push({
-                  name: example.pattern,
-                  design_pattern: example.pattern,
-                  includes: example.files || [],
-                  description: example.description || prompt.description || '',
-                });
+      if (
+        rawConfig &&
+        typeof rawConfig === 'object' &&
+        'prompts' in rawConfig &&
+        Array.isArray((rawConfig as Record<string, unknown>).prompts)
+      ) {
+        const prompts = (rawConfig as Record<string, unknown>).prompts as unknown[];
+        for (const prompt of prompts) {
+          if (prompt && typeof prompt === 'object' && 'examples' in prompt) {
+            const examples = (prompt as Record<string, unknown>).examples;
+            if (Array.isArray(examples)) {
+              for (const example of examples) {
+                if (example && typeof example === 'object' && 'pattern' in example) {
+                  const ex = example as Record<string, unknown>;
+                  features.push({
+                    name: String(ex.pattern || ''),
+                    design_pattern: String(ex.pattern || ''),
+                    includes: Array.isArray(ex.files) ? (ex.files as string[]) : [],
+                    description: String(
+                      ex.description || (prompt as Record<string, unknown>).description || '',
+                    ),
+                  });
+                }
               }
             }
           }
@@ -168,13 +208,10 @@ export class ArchitectParser {
       }
 
       const globalConfig: ArchitectConfig = { features };
-
-      // Cache the result
       this.configCache.set(resolvedPath, globalConfig);
-
       return globalConfig;
     } catch {
-      // Global architect.yaml is optional, return null if not found
+      // Global architect.yaml is optional, return null if file read fails
       return null;
     }
   }

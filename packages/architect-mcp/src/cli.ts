@@ -24,6 +24,7 @@ import { addRuleCommand } from './commands/add-rule';
 import { getFileDesignPatternCommand } from './commands/get-file-design-pattern';
 import { reviewCodeChangeCommand } from './commands/review-code-change';
 import { hookCommand } from './commands/hook';
+import { validateArchitectCommand } from './commands/validate-architect';
 import packageJson from '../package.json' assert { type: 'json' };
 
 /**
@@ -44,6 +45,7 @@ async function main() {
   program.addCommand(getFileDesignPatternCommand);
   program.addCommand(reviewCodeChangeCommand);
   program.addCommand(hookCommand);
+  program.addCommand(validateArchitectCommand);
 
   // Parse arguments
   await program.parseAsync(process.argv);

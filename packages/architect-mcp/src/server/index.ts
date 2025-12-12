@@ -17,6 +17,7 @@ import { GetFileDesignPatternTool } from '../tools/GetFileDesignPatternTool';
 import { ReviewCodeChangeTool } from '../tools/ReviewCodeChangeTool';
 import { AddDesignPatternTool } from '../tools/AddDesignPatternTool';
 import { AddRuleTool } from '../tools/AddRuleTool';
+import { ValidateArchitectTool } from '../tools/ValidateArchitectTool';
 import type { LlmToolId } from '@agiflowai/coding-agent-bridge';
 
 export function createServer(options?: {
@@ -106,14 +107,16 @@ Example workflow:
   // Initialize admin tools if enabled
   const addDesignPatternTool = adminEnabled ? new AddDesignPatternTool() : null;
   const addRuleTool = adminEnabled ? new AddRuleTool() : null;
+  const validateArchitectTool = adminEnabled ? new ValidateArchitectTool() : null;
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     const tools = [getFileDesignPatternTool.getDefinition(), reviewCodeChangeTool.getDefinition()];
 
     // Add admin tools if enabled
-    if (adminEnabled && addDesignPatternTool && addRuleTool) {
+    if (adminEnabled && addDesignPatternTool && addRuleTool && validateArchitectTool) {
       tools.push(addDesignPatternTool.getDefinition());
       tools.push(addRuleTool.getDefinition());
+      tools.push(validateArchitectTool.getDefinition());
     }
 
     return { tools };
@@ -138,6 +141,10 @@ Example workflow:
 
       if (name === AddRuleTool.TOOL_NAME && addRuleTool) {
         return await addRuleTool.execute(args as any);
+      }
+
+      if (name === ValidateArchitectTool.TOOL_NAME && validateArchitectTool) {
+        return await validateArchitectTool.execute(args as any);
       }
     }
 
