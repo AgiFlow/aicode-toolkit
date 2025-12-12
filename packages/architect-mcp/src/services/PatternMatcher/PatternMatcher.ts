@@ -25,7 +25,23 @@ import type {
   ArchitectConfig,
   Feature,
 } from '../../types';
+import {
+  PATTERN_SOURCE,
+  GLOB_DOUBLE_STAR,
+  PATH_SEPARATOR,
+  PARENT_DIR_PREFIX,
+  MATCH_CONFIDENCE,
+  DIR_PATTERNS,
+  FILE_PATTERNS,
+  COMMON_NAMING_PATTERNS,
+  EXT_TSX,
+  DEFAULT_PATTERN_NAME,
+} from '../../constants';
 
+/**
+ * Service for matching files against architect design patterns.
+ * Supports exact, partial, and inferred matching strategies.
+ */
 export class PatternMatcher {
   /**
    * Quickly find matched file patterns (includes) for a file
@@ -100,7 +116,7 @@ export class PatternMatcher {
       const templateMatches = this.findMatchingPatterns(
         normalizedPath,
         templateConfig.features,
-        'template',
+        PATTERN_SOURCE.TEMPLATE,
       );
       matchedPatterns.push(...templateMatches);
     }
@@ -110,7 +126,7 @@ export class PatternMatcher {
       const globalMatches = this.findMatchingPatterns(
         normalizedPath,
         globalConfig.features,
-        'global',
+        PATTERN_SOURCE.GLOBAL,
       );
       matchedPatterns.push(...globalMatches);
     }
@@ -149,7 +165,7 @@ export class PatternMatcher {
     const relativePath = path.relative(projectRoot, filePath);
 
     // If the file is outside project root, return original path
-    if (relativePath.startsWith('..')) {
+    if (relativePath.startsWith(PARENT_DIR_PREFIX)) {
       return filePath;
     }
 
@@ -162,7 +178,7 @@ export class PatternMatcher {
   private findMatchingPatterns(
     filePath: string,
     features: Feature[] | undefined,
-    source: 'template' | 'global',
+    source: (typeof PATTERN_SOURCE)[keyof typeof PATTERN_SOURCE],
   ): DesignPatternMatch[] {
     const matches: DesignPatternMatch[] = [];
 
@@ -174,24 +190,11 @@ export class PatternMatcher {
       const matchType = this.calculateMatchConfidence(filePath, feature.includes);
 
       if (matchType !== null) {
-        // Map internal confidence to API confidence levels
-        let confidence: 'exact' | 'partial' | 'inferred';
-
-        if (source === 'template') {
-          // Template matches have higher confidence
-          confidence =
-            matchType === 'exact' ? 'exact' : matchType === 'partial' ? 'partial' : 'inferred';
-        } else {
-          // Global matches have lower confidence
-          confidence =
-            matchType === 'exact' ? 'exact' : matchType === 'partial' ? 'partial' : 'inferred';
-        }
-
         matches.push({
-          name: feature.name || feature.architecture || 'unnamed pattern',
+          name: feature.name || feature.architecture || DEFAULT_PATTERN_NAME,
           design_pattern: feature.design_pattern,
           description: feature.description || '',
-          confidence,
+          confidence: matchType,
           source,
         });
       }
@@ -206,7 +209,7 @@ export class PatternMatcher {
   private calculateMatchConfidence(
     filePath: string,
     includes: string[],
-  ): 'exact' | 'partial' | 'inferred' | null {
+  ): (typeof MATCH_CONFIDENCE)[keyof typeof MATCH_CONFIDENCE] | null {
     if (!includes || includes.length === 0) {
       return null;
     }
@@ -214,20 +217,26 @@ export class PatternMatcher {
     for (const pattern of includes) {
       // Check for exact match
       if (minimatch(filePath, pattern)) {
-        return 'exact';
+        return MATCH_CONFIDENCE.EXACT;
       }
 
       // Check for partial match (same directory structure)
-      const fileDir = path.dirname(filePath);
-      const patternDir = path.dirname(pattern);
+      // Only match if pattern uses ** glob and file is in a subdirectory
+      if (pattern.includes(GLOB_DOUBLE_STAR)) {
+        const patternDir = pattern.split(GLOB_DOUBLE_STAR)[0].replace(/\/$/, '');
+        const fileDir = path.dirname(filePath);
 
-      if (fileDir === patternDir || fileDir.includes(patternDir)) {
-        // Check file extension match
-        const fileExt = path.extname(filePath);
-        const patternExt = path.extname(pattern);
+        // Check if file is in the pattern's directory tree
+        if (fileDir === patternDir || fileDir.startsWith(patternDir + PATH_SEPARATOR)) {
+          // Extract filename pattern after **/ (e.g., "*.ts" from "src/**/*.ts")
+          const globWithSeparator = GLOB_DOUBLE_STAR + PATH_SEPARATOR;
+          const patternAfterGlob = pattern.split(globWithSeparator)[1] || '';
+          const fileName = path.basename(filePath);
 
-        if (fileExt === patternExt || pattern.includes('**')) {
-          return 'partial';
+          // Check if filename matches the pattern (e.g., *.ts matches Tool.ts, but index.ts doesn't match Tool.ts)
+          if (patternAfterGlob && minimatch(fileName, patternAfterGlob)) {
+            return MATCH_CONFIDENCE.PARTIAL;
+          }
         }
       }
 
@@ -236,7 +245,7 @@ export class PatternMatcher {
       const patternName = path.basename(pattern);
 
       if (this.isSimilarNaming(fileName, patternName)) {
-        return 'inferred';
+        return MATCH_CONFIDENCE.INFERRED;
       }
     }
 
@@ -252,22 +261,8 @@ export class PatternMatcher {
     const patternBase = patternName.replace(/\.[^.]+$/, '').replace(/\*/g, '');
 
     // Check for common suffixes/prefixes
-    const commonPatterns = [
-      'Controller',
-      'Service',
-      'Repository',
-      'Component',
-      'Hook',
-      'Route',
-      'Model',
-      'Schema',
-      'Validator',
-      'Middleware',
-      'Agent',
-    ];
-
-    for (const pattern of commonPatterns) {
-      if (fileBase.includes(pattern) && patternBase.includes(pattern)) {
+    for (const namingPattern of COMMON_NAMING_PATTERNS) {
+      if (fileBase.includes(namingPattern) && patternBase.includes(namingPattern)) {
         return true;
       }
     }
@@ -285,19 +280,19 @@ export class PatternMatcher {
 
     // Recommendations based on file location and matches
     for (const match of matches) {
-      if (match.confidence === 'exact') {
+      if (match.confidence === MATCH_CONFIDENCE.EXACT) {
         // File matches pattern exactly
         recommendations.push(
           `This file follows the "${match.name}" pattern.`,
           `Ensure it adheres to the pattern guidelines described above.`,
         );
-      } else if (match.confidence === 'partial') {
+      } else if (match.confidence === MATCH_CONFIDENCE.PARTIAL) {
         // File partially matches pattern
         recommendations.push(
           `This file appears to be related to the "${match.name}" pattern.`,
           `Review the pattern guidelines to ensure consistency.`,
         );
-      } else if (match.confidence === 'inferred') {
+      } else if (match.confidence === MATCH_CONFIDENCE.INFERRED) {
         // Pattern inferred from naming
         recommendations.push(
           `Based on naming, this file might follow the "${match.name}" pattern.`,
@@ -307,19 +302,19 @@ export class PatternMatcher {
     }
 
     // Additional specific recommendations
-    if (fileDir.includes('routes') && !fileName.includes('test')) {
+    if (fileDir.includes(DIR_PATTERNS.ROUTES) && !fileName.includes(FILE_PATTERNS.TEST)) {
       recommendations.push('Consider implementing proper error handling and validation.');
     }
 
-    if (fileDir.includes('services')) {
+    if (fileDir.includes(DIR_PATTERNS.SERVICES)) {
       recommendations.push('Ensure business logic is properly encapsulated and testable.');
     }
 
-    if (fileDir.includes('components') && fileName.endsWith('.tsx')) {
+    if (fileDir.includes(DIR_PATTERNS.COMPONENTS) && fileName.endsWith(EXT_TSX)) {
       recommendations.push('Remember to handle loading and error states appropriately.');
     }
 
-    if (fileName.includes('hook') || fileName.startsWith('use')) {
+    if (fileName.includes(FILE_PATTERNS.HOOK) || fileName.startsWith(FILE_PATTERNS.USE_PREFIX)) {
       recommendations.push('Follow React hooks rules and naming conventions.');
     }
 

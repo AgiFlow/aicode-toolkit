@@ -180,6 +180,14 @@ export class ArchitectParser {
   }
 
   /**
+   * Parse architect.yaml or .architect.yaml from a project directory
+   * (same directory as project.json)
+   */
+  async parseProjectArchitectFile(projectPath: string): Promise<ArchitectConfig | null> {
+    return this.parseArchitectFile(projectPath);
+  }
+
+  /**
    * Merge multiple architect configs (template-specific and global)
    */
   mergeConfigs(...configs: (ArchitectConfig | null)[]): ArchitectConfig {
