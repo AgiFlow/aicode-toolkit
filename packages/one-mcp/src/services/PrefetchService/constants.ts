@@ -60,6 +60,17 @@ export const FLAG_PACKAGE_SHORT = '-p';
 /** Equals delimiter used in flag=value patterns */
 export const EQUALS_DELIMITER = '=';
 
+// Validation patterns
+/**
+ * Regex pattern for valid package names (npm, pnpm, uvx, uv)
+ * Allows: @scope/package-name@version, package-name, package_name
+ * Prevents shell metacharacters that could enable command injection
+ * @example
+ * // Valid: '@scope/package@1.0.0', 'my-package', 'my_package', '@org/pkg'
+ * // Invalid: 'pkg; rm -rf /', 'pkg$(cmd)', 'pkg`whoami`', 'pkg|cat /etc/passwd'
+ */
+export const VALID_PACKAGE_NAME_PATTERN = /^(@[a-zA-Z0-9_-]+\/)?[a-zA-Z0-9._-]+(@[a-zA-Z0-9._-]+)?$/;
+
 // Platform identifiers
 /** Windows platform identifier */
 export const PLATFORM_WIN32 = 'win32';

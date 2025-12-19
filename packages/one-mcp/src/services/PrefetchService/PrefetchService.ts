@@ -42,6 +42,7 @@ import {
   FLAG_PACKAGE_LONG,
   FLAG_PACKAGE_SHORT,
   EQUALS_DELIMITER,
+  VALID_PACKAGE_NAME_PATTERN,
   PLATFORM_WIN32,
   EXIT_CODE_SUCCESS,
   STDIO_IGNORE,
@@ -185,6 +186,21 @@ export class PrefetchService {
   }
 
   /**
+   * Validate package name to prevent command injection
+   * @param packageName - Package name to validate
+   * @returns True if package name is safe, false otherwise
+   * @remarks Rejects package names containing shell metacharacters
+   * @example
+   * isValidPackageName('@scope/package') // true
+   * isValidPackageName('my-package@1.0.0') // true
+   * isValidPackageName('pkg; rm -rf /') // false (shell injection)
+   * isValidPackageName('pkg$(whoami)') // false (command substitution)
+   */
+  private isValidPackageName(packageName: string): boolean {
+    return VALID_PACKAGE_NAME_PATTERN.test(packageName);
+  }
+
+  /**
    * Extract package info from a server's stdio config
    * @param serverName - Name of the MCP server
    * @param config - Stdio configuration for the server
@@ -197,7 +213,7 @@ export class PrefetchService {
     // Check for npx
     if (command === COMMAND_NPX || command.endsWith(COMMAND_NPX_SUFFIX)) {
       const packageName = this.extractNpxPackage(args);
-      if (packageName) {
+      if (packageName && this.isValidPackageName(packageName)) {
         return {
           serverName,
           packageManager: COMMAND_NPX,
@@ -210,7 +226,7 @@ export class PrefetchService {
     // Check for pnpx (pnpm's npx equivalent)
     if (command === COMMAND_PNPX || command.endsWith(COMMAND_PNPX_SUFFIX)) {
       const packageName = this.extractNpxPackage(args);
-      if (packageName) {
+      if (packageName && this.isValidPackageName(packageName)) {
         return {
           serverName,
           packageManager: COMMAND_PNPX,
@@ -224,7 +240,7 @@ export class PrefetchService {
     // Check for uvx
     if (command === COMMAND_UVX || command.endsWith(COMMAND_UVX_SUFFIX)) {
       const packageName = this.extractUvxPackage(args);
-      if (packageName) {
+      if (packageName && this.isValidPackageName(packageName)) {
         return {
           serverName,
           packageManager: COMMAND_UVX,
@@ -237,7 +253,7 @@ export class PrefetchService {
     // Check for uv run
     if ((command === COMMAND_UV || command.endsWith(COMMAND_UV_SUFFIX)) && args.includes(ARG_RUN)) {
       const packageName = this.extractUvRunPackage(args);
-      if (packageName) {
+      if (packageName && this.isValidPackageName(packageName)) {
         return {
           serverName,
           packageManager: COMMAND_UV,

@@ -247,6 +247,86 @@ describe('PrefetchService', () => {
       expect(packages[0].packageName).toBe('enabled-package');
     });
 
+    it('should reject package names with shell injection characters', () => {
+      const config: RemoteMcpConfiguration = {
+        mcpServers: {
+          'injection-server': {
+            name: 'injection-server',
+            transport: 'stdio',
+            config: {
+              command: 'npx',
+              args: ['package; rm -rf /'],
+            },
+          },
+        },
+      };
+
+      const service = new PrefetchService({ mcpConfig: config });
+      const packages = service.extractPackages();
+
+      expect(packages).toHaveLength(0);
+    });
+
+    it('should reject package names with command substitution', () => {
+      const config: RemoteMcpConfiguration = {
+        mcpServers: {
+          'cmd-sub-server': {
+            name: 'cmd-sub-server',
+            transport: 'stdio',
+            config: {
+              command: 'npx',
+              args: ['pkg$(whoami)'],
+            },
+          },
+        },
+      };
+
+      const service = new PrefetchService({ mcpConfig: config });
+      const packages = service.extractPackages();
+
+      expect(packages).toHaveLength(0);
+    });
+
+    it('should reject package names with backtick command substitution', () => {
+      const config: RemoteMcpConfiguration = {
+        mcpServers: {
+          'backtick-server': {
+            name: 'backtick-server',
+            transport: 'stdio',
+            config: {
+              command: 'npx',
+              args: ['pkg`id`'],
+            },
+          },
+        },
+      };
+
+      const service = new PrefetchService({ mcpConfig: config });
+      const packages = service.extractPackages();
+
+      expect(packages).toHaveLength(0);
+    });
+
+    it('should reject package names with pipe characters', () => {
+      const config: RemoteMcpConfiguration = {
+        mcpServers: {
+          'pipe-server': {
+            name: 'pipe-server',
+            transport: 'stdio',
+            config: {
+              command: 'npx',
+              args: ['pkg|cat /etc/passwd'],
+            },
+          },
+        },
+      };
+
+      const service = new PrefetchService({ mcpConfig: config });
+      const packages = service.extractPackages();
+
+      expect(packages).toHaveLength(0);
+    });
+
     it('should skip unsupported commands', () => {
       const config: RemoteMcpConfiguration = {
         mcpServers: {
