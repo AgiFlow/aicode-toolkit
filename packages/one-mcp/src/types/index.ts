@@ -138,6 +138,7 @@ export type McpServerTransportConfig = McpStdioConfig | McpHttpConfig | McpSseCo
  * @property prompts - Optional prompts configuration for skill conversion
  * @property transport - The transport type (stdio, http, or sse)
  * @property config - Transport-specific configuration options
+ * @property timeout - Optional connection timeout in milliseconds (default: 30000)
  */
 export interface McpServerConfig {
   name: string;
@@ -147,6 +148,7 @@ export interface McpServerConfig {
   prompts?: Record<string, PromptConfig>;
   transport: McpServerTransportType;
   config: McpServerTransportConfig;
+  timeout?: number;
 }
 
 /**

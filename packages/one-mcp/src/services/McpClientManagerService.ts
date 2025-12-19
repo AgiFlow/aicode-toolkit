@@ -33,6 +33,9 @@ import type {
   PromptConfig,
 } from '../types';
 
+/** Default connection timeout in milliseconds (30 seconds) */
+const DEFAULT_CONNECTION_TIMEOUT_MS = 30000;
+
 /**
  * MCP Client wrapper for managing individual server connections
  * This is an internal class used by McpClientManagerService
@@ -180,12 +183,13 @@ export class McpClientManagerService {
 
   /**
    * Connect to an MCP server based on its configuration with timeout
+   * Uses the timeout from server config, falling back to default (30s)
    */
   async connectToServer(
     serverName: string,
     config: McpServerConfig,
-    timeoutMs: number = 10000,
   ): Promise<void> {
+    const timeoutMs = config.timeout ?? DEFAULT_CONNECTION_TIMEOUT_MS;
     if (this.clients.has(serverName)) {
       throw new Error(`Client for ${serverName} is already connected`);
     }
