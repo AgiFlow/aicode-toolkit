@@ -278,6 +278,7 @@ const ClaudeCodeStdioServerSchema = z.object({
   env: z.record(z.string(), z.string()).optional(),
   disabled: z.boolean().optional(),
   instruction: z.string().optional(), // Top-level instruction (user override)
+  timeout: z.number().positive().optional(), // Connection timeout in milliseconds
   config: AdditionalConfigSchema, // Nested config with server's default instruction
 });
 
@@ -288,6 +289,7 @@ const ClaudeCodeHttpServerSchema = z.object({
   type: z.enum(['http', 'sse']).optional(),
   disabled: z.boolean().optional(),
   instruction: z.string().optional(), // Top-level instruction (user override)
+  timeout: z.number().positive().optional(), // Connection timeout in milliseconds
   config: AdditionalConfigSchema, // Nested config with server's default instruction
 });
 
@@ -386,6 +388,7 @@ const McpServerConfigSchema = z.discriminatedUnion('transport', [
     toolBlacklist: z.array(z.string()).optional(),
     omitToolDescription: z.boolean().optional(),
     prompts: z.record(z.string(), InternalPromptConfigSchema).optional(),
+    timeout: z.number().positive().optional(),
     transport: z.literal('stdio'),
     config: McpStdioConfigSchema,
   }),
@@ -395,6 +398,7 @@ const McpServerConfigSchema = z.discriminatedUnion('transport', [
     toolBlacklist: z.array(z.string()).optional(),
     omitToolDescription: z.boolean().optional(),
     prompts: z.record(z.string(), InternalPromptConfigSchema).optional(),
+    timeout: z.number().positive().optional(),
     transport: z.literal('http'),
     config: McpHttpConfigSchema,
   }),
@@ -404,6 +408,7 @@ const McpServerConfigSchema = z.discriminatedUnion('transport', [
     toolBlacklist: z.array(z.string()).optional(),
     omitToolDescription: z.boolean().optional(),
     prompts: z.record(z.string(), InternalPromptConfigSchema).optional(),
+    timeout: z.number().positive().optional(),
     transport: z.literal('sse'),
     config: McpSseConfigSchema,
   }),
@@ -455,6 +460,7 @@ export function transformClaudeCodeConfig(claudeConfig: ClaudeCodeMcpConfig): In
       const toolBlacklist = stdioConfig.config?.toolBlacklist;
       const omitToolDescription = stdioConfig.config?.omitToolDescription;
       const prompts = stdioConfig.config?.prompts;
+      const timeout = stdioConfig.timeout;
 
       transformedServers[serverName] = {
         name: serverName,
@@ -462,6 +468,7 @@ export function transformClaudeCodeConfig(claudeConfig: ClaudeCodeMcpConfig): In
         toolBlacklist,
         omitToolDescription,
         prompts,
+        timeout,
         transport: 'stdio' as const,
         config: {
           command: interpolatedCommand,
@@ -485,6 +492,7 @@ export function transformClaudeCodeConfig(claudeConfig: ClaudeCodeMcpConfig): In
       const toolBlacklist = httpConfig.config?.toolBlacklist;
       const omitToolDescription = httpConfig.config?.omitToolDescription;
       const prompts = httpConfig.config?.prompts;
+      const timeout = httpConfig.timeout;
 
       transformedServers[serverName] = {
         name: serverName,
@@ -492,6 +500,7 @@ export function transformClaudeCodeConfig(claudeConfig: ClaudeCodeMcpConfig): In
         toolBlacklist,
         omitToolDescription,
         prompts,
+        timeout,
         transport,
         config: {
           url: interpolatedUrl,

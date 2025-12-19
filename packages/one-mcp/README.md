@@ -128,6 +128,12 @@ mcpServers:
     command: node
     args: ["server.js"]
     disabled: true
+
+  # Custom timeout for slow servers
+  slow-server:
+    command: npx
+    args: ["-y", "@heavy/mcp-package"]
+    timeout: 60000  # 60 seconds (default: 30000)
 ```
 
 ### Environment Variables
@@ -414,6 +420,9 @@ npx @agiflowai/one-mcp mcp-serve --config ./mcp-config.yaml --type http --port 3
 # Initialize config file
 npx @agiflowai/one-mcp init --output mcp-config.yaml
 
+# Pre-download packages for faster startup
+npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml
+
 # List all tools from configured servers
 npx @agiflowai/one-mcp list-tools --config ./mcp-config.yaml
 
@@ -423,6 +432,31 @@ npx @agiflowai/one-mcp describe-tools --config ./mcp-config.yaml --tools read_fi
 # Execute a tool directly
 npx @agiflowai/one-mcp use-tool --config ./mcp-config.yaml --tool-name read_file --args '{"path": "/tmp/test.txt"}'
 ```
+
+### Prefetch Command
+
+Pre-download packages used by MCP servers (npx, pnpx, uvx, uv) to speed up initial connections:
+
+```bash
+# Prefetch all packages
+npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml
+
+# Dry run - see what would be prefetched
+npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --dry-run
+
+# Run prefetch in parallel (faster)
+npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --parallel
+
+# Filter by package manager
+npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --filter npx
+```
+
+| Option | Description |
+|--------|-------------|
+| `-c, --config` | Path to config file |
+| `-p, --parallel` | Run prefetch commands in parallel |
+| `-d, --dry-run` | Show what would be prefetched without executing |
+| `-f, --filter` | Filter by package manager: `npx`, `pnpx`, `uvx`, or `uv` |
 
 ### Server Options
 

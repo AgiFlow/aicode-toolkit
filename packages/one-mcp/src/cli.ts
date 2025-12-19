@@ -23,28 +23,38 @@ import { listToolsCommand } from './commands/list-tools';
 import { describeToolsCommand } from './commands/describe-tools';
 import { useToolCommand } from './commands/use-tool';
 import { initCommand } from './commands/init';
+import { prefetchCommand } from './commands/prefetch';
 import packageJson from '../package.json' assert { type: 'json' };
 
 /**
  * Main entry point
  */
 async function main() {
-  const program = new Command();
+  try {
+    const program = new Command();
 
-  program
-    .name('one-mcp')
-    .description('One MCP server package')
-    .version(packageJson.version);
+    program
+      .name('one-mcp')
+      .description('One MCP server package')
+      .version(packageJson.version);
 
-  // Add all commands
-  program.addCommand(initCommand);
-  program.addCommand(mcpServeCommand);
-  program.addCommand(listToolsCommand);
-  program.addCommand(describeToolsCommand);
-  program.addCommand(useToolCommand);
+    // Add all commands
+    program.addCommand(initCommand);
+    program.addCommand(mcpServeCommand);
+    program.addCommand(listToolsCommand);
+    program.addCommand(describeToolsCommand);
+    program.addCommand(useToolCommand);
+    program.addCommand(prefetchCommand);
 
-  // Parse arguments
-  await program.parseAsync(process.argv);
+    // Parse arguments
+    await program.parseAsync(process.argv);
+  } catch (error) {
+    console.error(`CLI execution failed: ${error instanceof Error ? error.message : error}`);
+    process.exit(1);
+  }
 }
 
-main();
+main().catch((error) => {
+  console.error(`Fatal error: ${error instanceof Error ? error.message : error}`);
+  process.exit(1);
+});
