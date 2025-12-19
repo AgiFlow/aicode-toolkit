@@ -91,6 +91,9 @@ export class PrefetchService {
     const { mcpConfig, filter } = this.config;
 
     for (const [serverName, serverConfig] of Object.entries(mcpConfig.mcpServers)) {
+      // Skip disabled servers
+      if (serverConfig.disabled) continue;
+
       // Only process stdio transport servers
       if (serverConfig.transport !== TRANSPORT_STDIO) continue;
 

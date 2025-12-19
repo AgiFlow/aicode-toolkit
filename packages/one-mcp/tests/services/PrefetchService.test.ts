@@ -217,6 +217,36 @@ describe('PrefetchService', () => {
       expect(packages).toHaveLength(0);
     });
 
+    it('should skip disabled servers', () => {
+      const config: RemoteMcpConfiguration = {
+        mcpServers: {
+          'enabled-server': {
+            name: 'enabled-server',
+            transport: 'stdio',
+            config: {
+              command: 'npx',
+              args: ['enabled-package'],
+            },
+          },
+          'disabled-server': {
+            name: 'disabled-server',
+            transport: 'stdio',
+            disabled: true,
+            config: {
+              command: 'npx',
+              args: ['disabled-package'],
+            },
+          },
+        },
+      };
+
+      const service = new PrefetchService({ mcpConfig: config });
+      const packages = service.extractPackages();
+
+      expect(packages).toHaveLength(1);
+      expect(packages[0].packageName).toBe('enabled-package');
+    });
+
     it('should skip unsupported commands', () => {
       const config: RemoteMcpConfiguration = {
         mcpServers: {
