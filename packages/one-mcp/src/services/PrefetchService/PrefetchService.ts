@@ -39,6 +39,9 @@ import {
   ARG_TOOL,
   ARG_INSTALL,
   FLAG_PREFIX,
+  FLAG_PACKAGE_LONG,
+  FLAG_PACKAGE_SHORT,
+  EQUALS_DELIMITER,
   PLATFORM_WIN32,
   EXIT_CODE_SUCCESS,
   STDIO_IGNORE,
@@ -248,14 +251,47 @@ export class PrefetchService {
    * Extract package name from npx command args
    * @param args - Command arguments
    * @returns Package name or null
-   * @remarks Assumes the first non-flag argument is the package name.
-   *          Does not handle scoped packages with version specifiers like @scope/pkg@version
+   * @remarks Handles --package=value, --package value, -p value patterns.
+   *          Falls back to first non-flag argument if no --package/-p flag found.
+   *          Returns null if flag has no value or is followed by another flag.
+   *          When multiple --package flags exist, returns the first valid one.
+   * @example
+   * extractNpxPackage(['--package=@scope/pkg']) // returns '@scope/pkg'
+   * extractNpxPackage(['--package', 'pkg-name']) // returns 'pkg-name'
+   * extractNpxPackage(['-p', 'pkg']) // returns 'pkg'
+   * extractNpxPackage(['-y', 'pkg-name', '--flag']) // returns 'pkg-name' (fallback)
+   * extractNpxPackage(['--package=']) // returns null (empty value)
    */
   private extractNpxPackage(args: string[]): string | null {
+    for (let i = 0; i < args.length; i++) {
+      const arg = args[i];
+
+      // Handle --package=value pattern
+      if (arg.startsWith(FLAG_PACKAGE_LONG + EQUALS_DELIMITER)) {
+        return arg.slice(FLAG_PACKAGE_LONG.length + EQUALS_DELIMITER.length) || null;
+      }
+
+      // Handle --package value pattern (value in next arg)
+      if (arg === FLAG_PACKAGE_LONG && i + 1 < args.length) {
+        const nextArg = args[i + 1];
+        if (!nextArg.startsWith(FLAG_PREFIX)) {
+          return nextArg;
+        }
+      }
+
+      // Handle -p value pattern (short form)
+      if (arg === FLAG_PACKAGE_SHORT && i + 1 < args.length) {
+        const nextArg = args[i + 1];
+        if (!nextArg.startsWith(FLAG_PREFIX)) {
+          return nextArg;
+        }
+      }
+    }
+
+    // Fallback for simple npx patterns like: npx -y package-name
+    // where the package is the first positional argument
     for (const arg of args) {
-      // Skip flags
       if (arg.startsWith(FLAG_PREFIX)) continue;
-      // Return the first non-flag argument as package name
       return arg;
     }
     return null;
@@ -267,6 +303,9 @@ export class PrefetchService {
    * @returns Package name or null
    * @remarks Assumes the first non-flag argument is the package name.
    *          Handles both single (-) and double (--) dash flags.
+   * @example
+   * extractUvxPackage(['mcp-server-fetch']) // returns 'mcp-server-fetch'
+   * extractUvxPackage(['--quiet', 'pkg-name']) // returns 'pkg-name'
    */
   private extractUvxPackage(args: string[]): string | null {
     for (const arg of args) {
@@ -284,6 +323,10 @@ export class PrefetchService {
    * @returns Package name or null
    * @remarks Looks for the first non-flag argument after the 'run' subcommand.
    *          Returns null if 'run' is not found in args.
+   * @example
+   * extractUvRunPackage(['run', 'mcp-server']) // returns 'mcp-server'
+   * extractUvRunPackage(['run', '--verbose', 'pkg']) // returns 'pkg'
+   * extractUvRunPackage(['install', 'pkg']) // returns null (no 'run')
    */
   private extractUvRunPackage(args: string[]): string | null {
     const runIndex = args.indexOf(ARG_RUN);

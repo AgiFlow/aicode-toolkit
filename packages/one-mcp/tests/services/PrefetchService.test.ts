@@ -26,10 +26,22 @@ import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 
 /**
- * Helper to create a mock child process
+ * Interface for mock child process used in tests
  */
-function createMockProcess(exitCode: number, stdout = '', stderr = '') {
-  const proc = new EventEmitter() as any;
+interface MockChildProcess extends EventEmitter {
+  stdout: EventEmitter;
+  stderr: EventEmitter;
+}
+
+/**
+ * Helper to create a mock child process
+ * @param exitCode - Exit code to emit on close
+ * @param stdout - Optional stdout output
+ * @param stderr - Optional stderr output
+ * @returns Mock child process with stdout/stderr emitters
+ */
+function createMockProcess(exitCode: number, stdout = '', stderr = ''): MockChildProcess {
+  const proc = new EventEmitter() as MockChildProcess;
   proc.stdout = new EventEmitter();
   proc.stderr = new EventEmitter();
 
@@ -311,6 +323,131 @@ describe('PrefetchService', () => {
       expect(packages[0].packageName).toBe('actual-package');
     });
 
+    it('should extract package from --package=value pattern', () => {
+      const config: RemoteMcpConfiguration = {
+        mcpServers: {
+          'package-flag-server': {
+            name: 'package-flag-server',
+            transport: 'stdio',
+            config: {
+              command: 'npx',
+              args: ['--package=@scope/my-package', 'run-command'],
+            },
+          },
+        },
+      };
+
+      const service = new PrefetchService({ mcpConfig: config });
+      const packages = service.extractPackages();
+
+      expect(packages).toHaveLength(1);
+      expect(packages[0].packageName).toBe('@scope/my-package');
+    });
+
+    it('should extract package from --package value pattern', () => {
+      const config: RemoteMcpConfiguration = {
+        mcpServers: {
+          'package-flag-space-server': {
+            name: 'package-flag-space-server',
+            transport: 'stdio',
+            config: {
+              command: 'npx',
+              args: ['--package', 'my-package', 'run-command'],
+            },
+          },
+        },
+      };
+
+      const service = new PrefetchService({ mcpConfig: config });
+      const packages = service.extractPackages();
+
+      expect(packages).toHaveLength(1);
+      expect(packages[0].packageName).toBe('my-package');
+    });
+
+    it('should extract package from -p value pattern (short form)', () => {
+      const config: RemoteMcpConfiguration = {
+        mcpServers: {
+          'short-flag-server': {
+            name: 'short-flag-server',
+            transport: 'stdio',
+            config: {
+              command: 'npx',
+              args: ['-p', '@org/package', 'script'],
+            },
+          },
+        },
+      };
+
+      const service = new PrefetchService({ mcpConfig: config });
+      const packages = service.extractPackages();
+
+      expect(packages).toHaveLength(1);
+      expect(packages[0].packageName).toBe('@org/package');
+    });
+
+    it('should handle scoped packages with version specifiers', () => {
+      const config: RemoteMcpConfiguration = {
+        mcpServers: {
+          'versioned-server': {
+            name: 'versioned-server',
+            transport: 'stdio',
+            config: {
+              command: 'npx',
+              args: ['-y', '@scope/package@1.2.3'],
+            },
+          },
+        },
+      };
+
+      const service = new PrefetchService({ mcpConfig: config });
+      const packages = service.extractPackages();
+
+      expect(packages).toHaveLength(1);
+      expect(packages[0].packageName).toBe('@scope/package@1.2.3');
+    });
+
+    it('should return null for --package= with empty value', () => {
+      const config: RemoteMcpConfiguration = {
+        mcpServers: {
+          'empty-package-server': {
+            name: 'empty-package-server',
+            transport: 'stdio',
+            config: {
+              command: 'npx',
+              args: ['--package='],
+            },
+          },
+        },
+      };
+
+      const service = new PrefetchService({ mcpConfig: config });
+      const packages = service.extractPackages();
+
+      expect(packages).toHaveLength(0);
+    });
+
+    it('should fallback when --package flag has no value (followed by another flag)', () => {
+      const config: RemoteMcpConfiguration = {
+        mcpServers: {
+          'flag-no-value-server': {
+            name: 'flag-no-value-server',
+            transport: 'stdio',
+            config: {
+              command: 'npx',
+              args: ['--package', '--yes', 'fallback-package'],
+            },
+          },
+        },
+      };
+
+      const service = new PrefetchService({ mcpConfig: config });
+      const packages = service.extractPackages();
+
+      expect(packages).toHaveLength(1);
+      expect(packages[0].packageName).toBe('fallback-package');
+    });
+
     it('should return empty array when no packages found', () => {
       const config: RemoteMcpConfiguration = {
         mcpServers: {},
@@ -437,7 +574,7 @@ describe('PrefetchService', () => {
     it('should handle spawn errors', async () => {
       const mockSpawn = vi.mocked(spawn);
       mockSpawn.mockImplementation(() => {
-        const proc = new EventEmitter() as any;
+        const proc = new EventEmitter() as MockChildProcess;
         proc.stdout = new EventEmitter();
         proc.stderr = new EventEmitter();
         setTimeout(() => {

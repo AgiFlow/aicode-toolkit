@@ -47,8 +47,18 @@ export const ARG_TOOL = 'tool';
 /** Install subcommand for uv tool */
 export const ARG_INSTALL = 'install';
 
+// Command flags
 /** Flag prefix for command arguments */
 export const FLAG_PREFIX = '-';
+
+/** npx --package flag (long form) */
+export const FLAG_PACKAGE_LONG = '--package';
+
+/** npx -p flag (short form) */
+export const FLAG_PACKAGE_SHORT = '-p';
+
+/** Equals delimiter used in flag=value patterns */
+export const EQUALS_DELIMITER = '=';
 
 // Platform identifiers
 /** Windows platform identifier */
