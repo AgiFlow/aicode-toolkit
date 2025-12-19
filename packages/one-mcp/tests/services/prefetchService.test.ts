@@ -87,7 +87,7 @@ describe('PrefetchService', () => {
         serverName: 'mcp-server',
         packageManager: 'npx',
         packageName: '@modelcontextprotocol/server-filesystem',
-        fullCommand: ['npx', '--yes', '@modelcontextprotocol/server-filesystem'],
+        fullCommand: ['npm', 'install', '-g', '@modelcontextprotocol/server-filesystem'],
       });
     });
 
@@ -113,7 +113,7 @@ describe('PrefetchService', () => {
         serverName: 'pnpm-server',
         packageManager: 'pnpx',
         packageName: 'some-package',
-        fullCommand: ['pnpx', '--yes', 'some-package'],
+        fullCommand: ['pnpm', 'add', '-g', 'some-package'],
       });
     });
 
@@ -738,7 +738,7 @@ describe('PrefetchService', () => {
         serverName: 'test-server',
         packageManager: 'npx',
         packageName: 'test-package',
-        fullCommand: ['npx', '--yes', 'test-package'],
+        fullCommand: ['npm', 'install', '-g', 'test-package'],
       });
     });
   });

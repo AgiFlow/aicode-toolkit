@@ -12,8 +12,14 @@ export const TRANSPORT_STDIO = 'stdio';
 /** npx command name */
 export const COMMAND_NPX = 'npx';
 
+/** npm command name */
+export const COMMAND_NPM = 'npm';
+
 /** pnpx command name (pnpm's npx equivalent) */
 export const COMMAND_PNPX = 'pnpx';
+
+/** pnpm command name */
+export const COMMAND_PNPM = 'pnpm';
 
 /** uvx command name */
 export const COMMAND_UVX = 'uvx';
@@ -44,8 +50,14 @@ export const ARG_YES = '--yes';
 /** Tool subcommand for uv */
 export const ARG_TOOL = 'tool';
 
-/** Install subcommand for uv tool */
+/** Install subcommand for uv tool and npm/pnpm */
 export const ARG_INSTALL = 'install';
+
+/** Add subcommand for pnpm */
+export const ARG_ADD = 'add';
+
+/** Global flag for npm/pnpm install */
+export const ARG_GLOBAL = '-g';
 
 // Command flags
 /** Flag prefix for command arguments */

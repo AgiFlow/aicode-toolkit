@@ -27,7 +27,9 @@ import type {
 import {
   TRANSPORT_STDIO,
   COMMAND_NPX,
+  COMMAND_NPM,
   COMMAND_PNPX,
+  COMMAND_PNPM,
   COMMAND_UVX,
   COMMAND_UV,
   COMMAND_NPX_SUFFIX,
@@ -35,9 +37,10 @@ import {
   COMMAND_UVX_SUFFIX,
   COMMAND_UV_SUFFIX,
   ARG_RUN,
-  ARG_YES,
   ARG_TOOL,
   ARG_INSTALL,
+  ARG_ADD,
+  ARG_GLOBAL,
   FLAG_PREFIX,
   FLAG_PACKAGE_LONG,
   FLAG_PACKAGE_SHORT,
@@ -210,7 +213,7 @@ export class PrefetchService {
     const command = config.command.toLowerCase();
     const args = config.args || [];
 
-    // Check for npx
+    // Check for npx - use npm install -g to prefetch without running
     if (command === COMMAND_NPX || command.endsWith(COMMAND_NPX_SUFFIX)) {
       const packageName = this.extractNpxPackage(args);
       if (packageName && this.isValidPackageName(packageName)) {
@@ -218,12 +221,12 @@ export class PrefetchService {
           serverName,
           packageManager: COMMAND_NPX,
           packageName,
-          fullCommand: [COMMAND_NPX, ARG_YES, packageName],
+          fullCommand: [COMMAND_NPM, ARG_INSTALL, ARG_GLOBAL, packageName],
         };
       }
     }
 
-    // Check for pnpx (pnpm's npx equivalent)
+    // Check for pnpx (pnpm's npx equivalent) - use pnpm add -g to prefetch without running
     if (command === COMMAND_PNPX || command.endsWith(COMMAND_PNPX_SUFFIX)) {
       const packageName = this.extractNpxPackage(args);
       if (packageName && this.isValidPackageName(packageName)) {
@@ -231,8 +234,7 @@ export class PrefetchService {
           serverName,
           packageManager: COMMAND_PNPX,
           packageName,
-          // pnpx uses the same flags as npx
-          fullCommand: [COMMAND_PNPX, ARG_YES, packageName],
+          fullCommand: [COMMAND_PNPM, ARG_ADD, ARG_GLOBAL, packageName],
         };
       }
     }

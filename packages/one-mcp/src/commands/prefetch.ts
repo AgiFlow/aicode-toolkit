@@ -21,7 +21,7 @@
  */
 
 import { Command } from 'commander';
-import { log } from '@agiflowai/aicode-utils';
+import { print } from '@agiflowai/aicode-utils';
 import { ConfigFetcherService, PrefetchService, type PackageManager } from '../services';
 import { findConfigFile } from '../utils';
 
@@ -44,18 +44,18 @@ export const prefetchCommand = new Command('prefetch')
   .option('-p, --parallel', 'Run prefetch commands in parallel', false)
   .option('-d, --dry-run', 'Show what would be prefetched without executing', false)
   .option('-f, --filter <type>', 'Filter by package manager type: npx, pnpx, uvx, or uv')
-  .action(async (options: PrefetchOptions) => {
+  .action(async (options: PrefetchOptions): Promise<void> => {
     try {
       // Find config file: use provided path, or search PROJECT_PATH then cwd
       const configFilePath = options.config || findConfigFile();
 
       if (!configFilePath) {
-        log.error('No MCP configuration file found.');
-        log.info('Use --config <path> to specify a config file, or run "one-mcp init" to create one.');
+        print.error('No MCP configuration file found.');
+        print.info('Use --config <path> to specify a config file, or run "one-mcp init" to create one.');
         process.exit(1);
       }
 
-      log.info(`Loading configuration from: ${configFilePath}`);
+      print.info(`Loading configuration from: ${configFilePath}`);
 
       // Load configuration using ConfigFetcherService
       const configService = new ConfigFetcherService({
@@ -76,41 +76,49 @@ export const prefetchCommand = new Command('prefetch')
       const packages = prefetchService.extractPackages();
 
       if (packages.length === 0) {
-        log.info('No packages found to prefetch.');
-        log.info('Prefetch supports: npx, pnpx, uvx, and uv run commands');
+        print.warning('No packages found to prefetch.');
+        print.info('Prefetch supports: npx, pnpx, uvx, and uv run commands');
         return;
       }
 
-      log.info(`Found ${packages.length} package(s) to prefetch:`);
+      print.info(`Found ${packages.length} package(s) to prefetch:`);
       for (const pkg of packages) {
-        log.info(`  - ${pkg.serverName}: ${pkg.packageManager} ${pkg.packageName}`);
+        print.item(`${pkg.serverName}: ${pkg.packageManager} ${pkg.packageName}`);
       }
 
       if (options.dryRun) {
-        log.info('\nDry run mode - commands that would be executed:');
+        print.newline();
+        print.header('Dry run mode - commands that would be executed:');
         for (const pkg of packages) {
-          log.info(`  ${pkg.fullCommand.join(' ')}`);
+          print.indent(pkg.fullCommand.join(' '));
         }
         return;
       }
 
-      log.info('\nPrefetching packages...');
+      print.newline();
+      print.info('Prefetching packages...');
 
       // Run prefetch
       const summary = await prefetchService.prefetch();
 
       // Report results
-      log.info(`\nPrefetch complete: ${summary.successful} succeeded, ${summary.failed} failed`);
+      print.newline();
+      if (summary.failed === 0) {
+        print.success(`Prefetch complete: ${summary.successful} succeeded, ${summary.failed} failed`);
+      } else {
+        print.warning(`Prefetch complete: ${summary.successful} succeeded, ${summary.failed} failed`);
+      }
 
       if (summary.failed > 0) {
-        log.error('\nFailed packages:');
+        print.newline();
+        print.error('Failed packages:');
         for (const result of summary.results.filter((r) => !r.success)) {
-          log.error(`  - ${result.package.serverName} (${result.package.packageName}): ${result.output.trim()}`);
+          print.item(`${result.package.serverName} (${result.package.packageName}): ${result.output.trim()}`);
         }
         process.exit(1);
       }
     } catch (error) {
-      log.error('Error executing prefetch:', error instanceof Error ? error.message : String(error));
+      print.error('Error executing prefetch:', error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
   });
