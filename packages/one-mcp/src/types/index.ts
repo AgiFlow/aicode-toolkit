@@ -183,10 +183,12 @@ export interface PromptConfig {
 
 /**
  * Remote configuration response containing MCP server definitions
+ * @property id - Optional unique server identifier
  * @property mcpServers - Map of server names to their configurations
  * @property skills - Optional skills configuration with paths
  */
 export interface RemoteMcpConfiguration {
+  id?: string;
   mcpServers: Record<string, McpServerConfig>;
   skills?: SkillsConfig;
 }

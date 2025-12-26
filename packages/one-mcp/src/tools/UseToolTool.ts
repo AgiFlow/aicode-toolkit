@@ -28,6 +28,7 @@ import type { Tool, ToolDefinition, Skill, PromptSkillConfig } from '../types';
 import type { McpClientManagerService } from '../services/McpClientManagerService';
 import type { SkillService } from '../services/SkillService';
 import { parseToolName } from '../utils';
+import { DEFAULT_SERVER_ID, SKILL_PREFIX } from '../constants';
 
 /**
  * Result of finding a prompt-based skill configuration
@@ -40,11 +41,6 @@ interface PromptSkillMatch {
   promptName: string;
   skill: PromptSkillConfig;
 }
-
-/**
- * Prefix used to identify skill invocations (e.g., skill__pdf)
- */
-const SKILL_PREFIX = 'skill__';
 
 /**
  * Input schema for UseToolTool
@@ -73,15 +69,19 @@ export class UseToolTool implements Tool<UseToolToolInput> {
   static readonly TOOL_NAME = 'use_tool';
   private clientManager: McpClientManagerService;
   private skillService: SkillService | undefined;
+  /** Unique server identifier for this one-mcp instance */
+  private serverId: string;
 
   /**
    * Creates a new UseToolTool instance
    * @param clientManager - The MCP client manager for accessing remote servers
    * @param skillService - Optional skill service for loading and executing skills
+   * @param serverId - Unique server identifier for this one-mcp instance
    */
-  constructor(clientManager: McpClientManagerService, skillService?: SkillService) {
+  constructor(clientManager: McpClientManagerService, skillService?: SkillService, serverId?: string) {
     this.clientManager = clientManager;
     this.skillService = skillService;
+    this.serverId = serverId || DEFAULT_SERVER_ID;
   }
 
   /**
@@ -98,6 +98,8 @@ export class UseToolTool implements Tool<UseToolToolInput> {
       description: `Execute an MCP tool (NOT Skill) with provided arguments. You MUST call describe_tools first to discover the tool's correct arguments. Then to use tool:
 - Provide toolName and toolArgs based on the schema
 - If multiple servers provide the same tool, specify serverName
+
+IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverId}".
 `,
       inputSchema: {
         type: 'object',

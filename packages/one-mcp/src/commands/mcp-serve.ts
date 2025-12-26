@@ -50,6 +50,7 @@ interface McpServeOptions {
   host: string;
   config?: string;
   cache: boolean;
+  id?: string;
 }
 
 /**
@@ -90,6 +91,7 @@ export const mcpServeCommand = new Command('mcp-serve')
   .option('--host <host>', 'Host to bind to (http/sse only)', 'localhost')
   .option('-c, --config <path>', 'Path to MCP server configuration file')
   .option('--no-cache', 'Disable configuration caching, always reload from config file')
+  .option('--id <id>', 'Unique server identifier (overrides config file id, auto-generated if not provided)')
   .action(async (options: McpServeOptions): Promise<void> => {
     const transportType = options.type.toLowerCase();
 
@@ -106,6 +108,7 @@ export const mcpServeCommand = new Command('mcp-serve')
       const serverOptions = {
         configFilePath,
         noCache: options.cache === false, // Commander transforms --no-cache to cache: false
+        serverId: options.id, // CLI ID takes precedence over config file
       };
 
       if (transportType === 'stdio') {

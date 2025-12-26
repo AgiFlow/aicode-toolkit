@@ -333,6 +333,7 @@ const SkillsConfigSchema = z.object({
  * Full Claude Code MCP configuration schema
  */
 export const ClaudeCodeMcpConfigSchema = z.object({
+  id: z.string().optional(), // Optional unique server identifier
   mcpServers: z.record(z.string(), ClaudeCodeServerConfigSchema),
   remoteConfigs: z.array(RemoteConfigSourceSchema).optional(), // Optional remote config sources
   skills: SkillsConfigSchema.optional(), // Optional skills configuration
@@ -418,6 +419,7 @@ const McpServerConfigSchema = z.discriminatedUnion('transport', [
  * Full internal MCP configuration schema
  */
 export const InternalMcpConfigSchema = z.object({
+  id: z.string().optional(), // Optional unique server identifier
   mcpServers: z.record(z.string(), McpServerConfigSchema),
   skills: SkillsConfigSchema.optional(), // Optional skills configuration
 });
@@ -511,6 +513,7 @@ export function transformClaudeCodeConfig(claudeConfig: ClaudeCodeMcpConfig): In
   }
 
   return {
+    id: claudeConfig.id,
     mcpServers: transformedServers,
     skills: claudeConfig.skills,
   };

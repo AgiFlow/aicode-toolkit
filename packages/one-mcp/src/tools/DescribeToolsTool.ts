@@ -30,7 +30,7 @@ import type { Tool, ToolDefinition } from '../types';
 import type { McpClientManagerService } from '../services/McpClientManagerService';
 import type { SkillService } from '../services/SkillService';
 import { parseToolName, extractSkillFrontMatter } from '../utils';
-import { SKILL_PREFIX, LOG_PREFIX_SKILL_DETECTION, PROMPT_LOCATION_PREFIX } from '../constants';
+import { SKILL_PREFIX, LOG_PREFIX_SKILL_DETECTION, PROMPT_LOCATION_PREFIX, DEFAULT_SERVER_ID } from '../constants';
 import { Liquid } from 'liquidjs';
 import toolkitDescriptionTemplate from '../templates/toolkit-description.liquid?raw';
 
@@ -215,15 +215,19 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
   private readonly liquid = new Liquid();
   /** Cache for auto-detected skills from prompt front-matter */
   private autoDetectedSkillsCache: AutoDetectedSkill[] | null = null;
+  /** Unique server identifier for this one-mcp instance */
+  private serverId: string;
 
   /**
    * Creates a new DescribeToolsTool instance
    * @param clientManager - The MCP client manager for accessing remote servers
    * @param skillService - Optional skill service for loading skills
+   * @param serverId - Unique server identifier for this one-mcp instance
    */
-  constructor(clientManager: McpClientManagerService, skillService?: SkillService) {
+  constructor(clientManager: McpClientManagerService, skillService?: SkillService, serverId?: string) {
     this.clientManager = clientManager;
     this.skillService = skillService;
+    this.serverId = serverId || DEFAULT_SERVER_ID;
   }
 
   /**
@@ -583,7 +587,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
       };
     });
 
-    const content = await this.liquid.parseAndRender(toolkitDescriptionTemplate, { servers, skills });
+    const content = await this.liquid.parseAndRender(toolkitDescriptionTemplate, { servers, skills, serverId: this.serverId });
     return { content, toolNames: allToolNames };
   }
 
