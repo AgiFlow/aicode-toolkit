@@ -90,13 +90,14 @@ export class StoriesIndexService {
     const failures: Array<{ filePath: string; error: string }> = [];
     let successCount = 0;
 
-    // Process each story file
-    for (const filePath of storyFiles) {
-      try {
-        await this.indexStoryFile(filePath);
+    // Process all story files in parallel
+    const results = await Promise.allSettled(storyFiles.map((filePath) => this.indexStoryFile(filePath)));
+    for (const [index, result] of results.entries()) {
+      if (result.status === 'fulfilled') {
         successCount++;
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+      } else {
+        const filePath = storyFiles[index];
+        const errorMessage = result.reason instanceof Error ? result.reason.message : String(result.reason);
         log.error(`[StoriesIndexService] Error indexing ${filePath}: ${errorMessage}`);
         failures.push({ filePath, error: errorMessage });
       }

@@ -190,23 +190,30 @@ export default WrappedComponent;
       const themes: ThemeInfo[] = [];
       let activeBrand: string | undefined;
 
-      for (const file of themeFiles) {
-        const filePath = path.join(configsPath, file);
-        const content = await fs.readFile(filePath, 'utf-8');
-        const themeData = JSON.parse(content);
-
-        const themeName = file.replace('.json', '');
-
-        themes.push({
-          name: themeName,
-          fileName: file,
-          path: filePath,
-          colors: themeData.colors || themeData,
-        });
-
-        // Check if this is the active theme based on common patterns
-        if (themeName === 'lightTheme' || themeName === 'agimonTheme') {
-          activeBrand = themeName;
+      // Process all theme files in parallel
+      const results = await Promise.allSettled(
+        themeFiles.map(async (file) => {
+          const filePath = path.join(configsPath, file);
+          const content = await fs.readFile(filePath, 'utf-8');
+          const themeData = JSON.parse(content);
+          const themeName = file.replace('.json', '');
+          return {
+            name: themeName,
+            fileName: file,
+            path: filePath,
+            colors: themeData.colors || themeData,
+          };
+        }),
+      );
+      for (const [index, result] of results.entries()) {
+        if (result.status === 'fulfilled') {
+          themes.push(result.value);
+          // Check if this is the active theme based on common patterns
+          if (result.value.name === 'lightTheme' || result.value.name === 'agimonTheme') {
+            activeBrand = result.value.name;
+          }
+        } else {
+          log.warn(`[ThemeService] Failed to process theme file ${themeFiles[index]}:`, result.reason);
         }
       }
 
