@@ -52,7 +52,7 @@ export interface DesignPatternMatch {
   design_pattern: string;
   description: string;
   confidence: 'exact' | 'partial' | 'inferred';
-  source: 'template' | 'global';
+  source: 'project' | 'template' | 'global';
 }
 
 export interface FileDesignPatternResult {
@@ -90,7 +90,7 @@ export interface Pattern {
   name: string;
   design_pattern: string;
   description: string;
-  source: 'template' | 'global';
+  source: 'project' | 'template' | 'global';
   confidence: 'high' | 'medium' | 'low';
   includes?: string[];
 }

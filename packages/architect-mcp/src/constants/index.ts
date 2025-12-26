@@ -20,6 +20,7 @@ export const UTF8_ENCODING = 'utf-8';
 
 // Pattern source types
 export const PATTERN_SOURCE = {
+  PROJECT: 'project',
   TEMPLATE: 'template',
   GLOBAL: 'global',
 } as const;
