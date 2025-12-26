@@ -34,7 +34,9 @@ const DEFAULT_ID_LENGTH = 6;
 /**
  * Generate a short, human-readable server ID.
  *
- * Uses Node.js crypto.randomBytes for cryptographically secure randomness.
+ * Uses Node.js crypto.randomBytes for cryptographically secure randomness
+ * with rejection sampling to avoid modulo bias.
+ *
  * The generated ID:
  * - Is 6 characters long by default
  * - Uses only lowercase alphanumeric characters
@@ -48,11 +50,29 @@ const DEFAULT_ID_LENGTH = 6;
  * generateServerId(4) // "x7mn"
  */
 export function generateServerId(length: number = DEFAULT_ID_LENGTH): string {
-  const bytes = randomBytes(length);
-  let result = '';
+  const charsetLength = CHARSET.length;
+  // Compute the largest value we can safely accept without introducing modulo bias.
+  // For a single random byte (0-255), we only accept values up to the highest
+  // multiple of charsetLength that is <= 255.
+  const maxUnbiased = Math.floor(256 / charsetLength) * charsetLength - 1;
 
-  for (let i = 0; i < length; i++) {
-    result += CHARSET[bytes[i] % CHARSET.length];
+  let result = '';
+  let remaining = length;
+
+  while (remaining > 0) {
+    const bytes = randomBytes(remaining);
+
+    for (let i = 0; i < bytes.length && remaining > 0; i++) {
+      const byte = bytes[i];
+
+      // Discard values that would introduce bias when using modulo.
+      if (byte > maxUnbiased) {
+        continue;
+      }
+
+      result += CHARSET[byte % charsetLength];
+      remaining--;
+    }
   }
 
   return result;
