@@ -29,6 +29,7 @@ import { CodeReviewService } from '../../services/CodeReview';
 import { TemplateFinder } from '../../services/TemplateFinder';
 import { ArchitectParser } from '../../services/ArchitectParser';
 import { PatternMatcher } from '../../services/PatternMatcher';
+import path from 'node:path';
 
 /**
  * ReviewCodeChange Hook class for Claude Code
@@ -68,6 +69,18 @@ export class ReviewCodeChangeHook {
       return {
         decision: DECISION_SKIP,
         message: 'Not a file operation',
+      };
+    }
+
+    // Only review files within the working directory
+    const absoluteFilePath = path.isAbsolute(filePath)
+      ? filePath
+      : path.join(context.cwd, filePath);
+
+    if (!absoluteFilePath.startsWith(context.cwd + path.sep) && absoluteFilePath !== context.cwd) {
+      return {
+        decision: DECISION_SKIP,
+        message: 'File is outside working directory - skipping code review',
       };
     }
 
