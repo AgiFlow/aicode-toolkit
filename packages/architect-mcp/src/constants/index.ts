@@ -7,6 +7,17 @@ export const ARCHITECT_FILENAME = 'architect.yaml';
 export const ARCHITECT_FILENAME_HIDDEN = '.architect.yaml';
 export const ARCHITECT_FILENAMES = [ARCHITECT_FILENAME_HIDDEN, ARCHITECT_FILENAME] as const;
 
+// Rules file names
+export const RULES_FILENAME = 'RULES.yaml';
+export const GLOBAL_TEMPLATE_REF = 'shared';
+export const DEFAULT_RULES_VERSION = '1.0';
+
+// Path prefixes
+export const SRC_PREFIX = 'src/';
+
+// File encoding
+export const UTF8_ENCODING = 'utf-8';
+
 // Pattern source types
 export const PATTERN_SOURCE = {
   TEMPLATE: 'template',

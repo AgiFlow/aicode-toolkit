@@ -27,6 +27,7 @@ import * as yaml from 'js-yaml';
 import { minimatch } from 'minimatch';
 import * as path from 'node:path';
 import type { RulesYamlConfig, RuleSection, ProjectConfig } from '../../types';
+import { RULES_FILENAME, SRC_PREFIX, UTF8_ENCODING } from '../../constants';
 
 export class RuleFinder {
   private projectCache: Map<string, ProjectConfig> = new Map();
@@ -53,8 +54,8 @@ export class RuleFinder {
       if (!templatesRoot) {
         return null;
       }
-      const globalRulesPath = path.join(templatesRoot, 'RULES.yaml');
-      const globalRulesContent = await fs.readFile(globalRulesPath, 'utf-8');
+      const globalRulesPath = path.join(templatesRoot, RULES_FILENAME);
+      const globalRulesContent = await fs.readFile(globalRulesPath, UTF8_ENCODING);
       this.globalRulesCache = yaml.load(globalRulesContent) as RulesYamlConfig;
       return this.globalRulesCache;
     } catch (_error) {
@@ -100,6 +101,7 @@ export class RuleFinder {
   private mergeRules(baseRule: RuleSection, overrideRule: RuleSection): RuleSection {
     return {
       pattern: overrideRule.pattern,
+      globs: overrideRule.globs || baseRule.globs,
       description: overrideRule.description || baseRule.description,
       inherits: overrideRule.inherits || baseRule.inherits,
       must_do: [...(baseRule.must_do || []), ...(overrideRule.must_do || [])],
@@ -230,9 +232,9 @@ export class RuleFinder {
         return { rulesConfig: null, templatePath: null };
       }
       const templatePath = path.join(templatesRoot, sourceTemplate);
-      const rulesPath = path.join(templatePath, 'RULES.yaml');
+      const rulesPath = path.join(templatePath, RULES_FILENAME);
 
-      const rulesContent = await fs.readFile(rulesPath, 'utf-8');
+      const rulesContent = await fs.readFile(rulesPath, UTF8_ENCODING);
       const rulesConfig = yaml.load(rulesContent) as RulesYamlConfig;
 
       // Cache the result
@@ -256,22 +258,32 @@ export class RuleFinder {
     // Get the file path relative to the project root
     const projectRelativePath = path.relative(projectRoot, filePath);
 
-    // Try different path variations
+    // Try different path variations to handle both src-prefixed and non-prefixed patterns in RULES.yaml
     const pathVariations = [
       projectRelativePath,
       // Also try with src/ prefix if not present
-      projectRelativePath.startsWith('src/') ? projectRelativePath : `src/${projectRelativePath}`,
+      projectRelativePath.startsWith(SRC_PREFIX)
+        ? projectRelativePath
+        : `${SRC_PREFIX}${projectRelativePath}`,
       // Try without src/ prefix if present
-      projectRelativePath.startsWith('src/') ? projectRelativePath.slice(4) : projectRelativePath,
+      projectRelativePath.startsWith(SRC_PREFIX)
+        ? projectRelativePath.slice(SRC_PREFIX.length)
+        : projectRelativePath,
     ];
 
     for (const ruleSection of rulesConfig.rules) {
-      const pattern = ruleSection.pattern;
+      // Get patterns: prefer globs array, fallback to single pattern
+      const patterns =
+        ruleSection.globs && ruleSection.globs.length > 0
+          ? ruleSection.globs
+          : [ruleSection.pattern];
 
-      // Check if any path variation matches the pattern
-      for (const pathVariant of pathVariations) {
-        if (minimatch(pathVariant, pattern)) {
-          return ruleSection;
+      // Check if any path variation matches any pattern
+      for (const pattern of patterns) {
+        for (const pathVariant of pathVariations) {
+          if (minimatch(pathVariant, pattern)) {
+            return ruleSection;
+          }
         }
       }
     }
@@ -289,7 +301,11 @@ export class RuleFinder {
       // For monolith: ProjectConfigResolver will find toolkit.yaml at workspace root
       const project = await this.projectFinder.findProjectForFile(filePath);
 
-      let projectConfig: any;
+      let projectConfig: {
+        sourceTemplate?: string;
+        workspaceRoot?: string;
+        type?: string;
+      };
       let projectRoot: string;
       let projectName: string;
 

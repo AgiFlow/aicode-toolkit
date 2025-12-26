@@ -20,7 +20,7 @@ export interface ToolDefinition {
   description: string;
   inputSchema: {
     type: string;
-    properties: Record<string, any>;
+    properties: Record<string, unknown>;
     required?: string[];
     additionalProperties?: boolean;
   };
@@ -29,7 +29,7 @@ export interface ToolDefinition {
 /**
  * Base tool interface following MCP SDK patterns
  */
-export interface Tool<TInput = any> {
+export interface Tool<TInput = unknown> {
   getDefinition(): ToolDefinition;
   execute(input: TInput): Promise<CallToolResult>;
 }
@@ -109,8 +109,14 @@ export interface RuleItem {
   codeExample?: string;
 }
 
+/**
+ * Represents a section of coding rules for a specific file pattern
+ */
 export interface RuleSection {
+  /** Pattern identifier - used for inheritance lookups and fallback file matching */
   pattern: string;
+  /** Array of glob patterns for file matching. Takes precedence over pattern when provided; pattern is used as fallback */
+  globs?: string[];
   description: string;
   inherits?: string[];
   must_do?: RuleItem[];

@@ -26,15 +26,22 @@ import type {
   RulesYamlConfig,
   RuleSection,
   RuleItem,
-} from '../types/index.js';
+} from '../types';
 import { TemplatesManagerService } from '@agiflowai/aicode-utils';
 import * as fs from 'node:fs/promises';
 import * as yaml from 'js-yaml';
 import * as path from 'node:path';
+import {
+  RULES_FILENAME,
+  UTF8_ENCODING,
+  GLOBAL_TEMPLATE_REF,
+  DEFAULT_RULES_VERSION,
+} from '../constants';
 
 interface AddRuleToolInput {
   template_name?: string;
   pattern: string;
+  globs?: string[];
   description: string;
   inherits?: string[];
   must_do?: RuleItem[];
@@ -46,6 +53,10 @@ interface AddRuleToolInput {
 export class AddRuleTool implements Tool<AddRuleToolInput> {
   static readonly TOOL_NAME = 'add_rule';
 
+  /**
+   * Returns the tool definition for MCP registration
+   * @returns ToolDefinition with name, description, and input schema
+   */
   getDefinition(): ToolDefinition {
     return {
       name: AddRuleTool.TOOL_NAME,
@@ -62,6 +73,12 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
           pattern: {
             type: 'string',
             description: 'Pattern identifier (e.g., "src/index.ts", "export-standards")',
+          },
+          globs: {
+            type: 'array',
+            items: { type: 'string' },
+            description:
+              'Array of glob patterns for matching files (e.g., ["src/actions/**/*.ts"]). Takes precedence over pattern for file matching.',
           },
           description: {
             type: 'string',
@@ -124,6 +141,11 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
     };
   }
 
+  /**
+   * Executes the add rule operation
+   * @param input - The input parameters for adding a rule
+   * @returns Promise<CallToolResult> with success message or error details
+   */
   async execute(input: AddRuleToolInput): Promise<CallToolResult> {
     try {
       // Determine if this is global or template-specific
@@ -149,8 +171,8 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
       let templateRef: string;
 
       if (isGlobal) {
-        rulesPath = path.join(templatesRoot, 'RULES.yaml');
-        templateRef = 'shared';
+        rulesPath = path.join(templatesRoot, RULES_FILENAME);
+        templateRef = GLOBAL_TEMPLATE_REF;
       } else {
         const templatePath = path.join(templatesRoot, input.template_name!);
 
@@ -176,7 +198,7 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
           };
         }
 
-        rulesPath = path.join(templatePath, 'RULES.yaml');
+        rulesPath = path.join(templatePath, RULES_FILENAME);
         templateRef = input.template_name!;
       }
 
@@ -184,7 +206,7 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
       let rulesConfig: RulesYamlConfig;
 
       try {
-        const content = await fs.readFile(rulesPath, 'utf-8');
+        const content = await fs.readFile(rulesPath, UTF8_ENCODING);
         const parsed = yaml.load(content) as RulesYamlConfig;
         rulesConfig = parsed || this.createDefaultConfig(templateRef, isGlobal);
 
@@ -225,6 +247,10 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
         description: input.description,
       };
 
+      if (input.globs && input.globs.length > 0) {
+        newRule.globs = input.globs;
+      }
+
       if (input.inherits && input.inherits.length > 0) {
         newRule.inherits = input.inherits;
       }
@@ -250,7 +276,7 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
         noRefs: true,
       });
 
-      await fs.writeFile(rulesPath, yamlContent, 'utf-8');
+      await fs.writeFile(rulesPath, yamlContent, UTF8_ENCODING);
 
       return {
         content: [
@@ -290,9 +316,15 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
     }
   }
 
+  /**
+   * Creates default RULES.yaml configuration structure
+   * @param templateRef - Template reference name
+   * @param isGlobal - Whether this is a global rules config
+   * @returns Default RulesYamlConfig object
+   */
   private createDefaultConfig(templateRef: string, isGlobal: boolean): RulesYamlConfig {
     return {
-      version: '1.0',
+      version: DEFAULT_RULES_VERSION,
       template: templateRef,
       description: isGlobal
         ? 'Shared rules and patterns for all templates'
