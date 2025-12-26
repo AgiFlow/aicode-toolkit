@@ -446,6 +446,7 @@ export class GeminiCliService extends BaseCodingAgentService {
       '--output-format',
       'json',
       '--sandbox', // Run in sandbox mode to prevent tool usage
+      '--yolo', // Enables OAuth auth with --sandbox (avoids GEMINI_API_KEY requirement)
     ];
 
     // Add toolConfig as CLI args (e.g., { model: "gemini-2.5-pro" } -> ["--model", "gemini-2.5-pro"])
