@@ -20,13 +20,9 @@
  */
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type {
-  Tool,
-  ToolDefinition,
-  RulesYamlConfig,
-  RuleSection,
-  RuleItem,
-} from '../types';
+import type { Tool, ToolDefinition } from '../types';
+import type { RulesYamlConfig, RuleSection, AddRuleInput } from '../schemas';
+import { addRuleInputSchema } from '../schemas';
 import { TemplatesManagerService } from '@agiflowai/aicode-utils';
 import * as fs from 'node:fs/promises';
 import * as yaml from 'js-yaml';
@@ -38,19 +34,7 @@ import {
   DEFAULT_RULES_VERSION,
 } from '../constants';
 
-interface AddRuleToolInput {
-  template_name?: string;
-  pattern: string;
-  globs?: string[];
-  description: string;
-  inherits?: string[];
-  must_do?: RuleItem[];
-  should_do?: RuleItem[];
-  must_not_do?: RuleItem[];
-  is_global?: boolean;
-}
-
-export class AddRuleTool implements Tool<AddRuleToolInput> {
+export class AddRuleTool implements Tool<AddRuleInput> {
   static readonly TOOL_NAME = 'add_rule';
 
   /**
@@ -146,10 +130,36 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
    * @param input - The input parameters for adding a rule
    * @returns Promise<CallToolResult> with success message or error details
    */
-  async execute(input: AddRuleToolInput): Promise<CallToolResult> {
+  async execute(input: AddRuleInput): Promise<CallToolResult> {
+    // Validate input using Zod schema
+    const validationResult = addRuleInputSchema.safeParse(input);
+    if (!validationResult.success) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              {
+                error: 'Input validation failed',
+                issues: validationResult.error.issues.map((issue) => ({
+                  path: issue.path.join('.'),
+                  message: issue.message,
+                })),
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const validatedInput = validationResult.data;
+
     try {
       // Determine if this is global or template-specific
-      const isGlobal = input.is_global || !input.template_name;
+      const isGlobal = validatedInput.is_global || !validatedInput.template_name;
 
       // Get templates root
       const templatesRoot = await TemplatesManagerService.findTemplatesPath();
@@ -174,7 +184,7 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
         rulesPath = path.join(templatesRoot, RULES_FILENAME);
         templateRef = GLOBAL_TEMPLATE_REF;
       } else {
-        const templatePath = path.join(templatesRoot, input.template_name!);
+        const templatePath = path.join(templatesRoot, validatedInput.template_name!);
 
         // Check if template exists
         try {
@@ -186,7 +196,7 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
                 type: 'text',
                 text: JSON.stringify(
                   {
-                    error: `Template "${input.template_name}" not found at ${templatePath}`,
+                    error: `Template "${validatedInput.template_name}" not found at ${templatePath}`,
                     available_hint: 'Check templates directory for available templates',
                   },
                   null,
@@ -199,7 +209,7 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
         }
 
         rulesPath = path.join(templatePath, RULES_FILENAME);
-        templateRef = input.template_name!;
+        templateRef = validatedInput.template_name!;
       }
 
       // Read existing RULES.yaml or create new structure
@@ -220,7 +230,9 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
       }
 
       // Check if rule pattern already exists
-      const existingRule = rulesConfig.rules.find((r) => r.pattern === input.pattern);
+      const existingRule = rulesConfig.rules.find(
+        (r) => r.pattern === validatedInput.pattern,
+      );
 
       if (existingRule) {
         return {
@@ -229,7 +241,7 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
               type: 'text',
               text: JSON.stringify(
                 {
-                  error: `Rule pattern "${input.pattern}" already exists in ${isGlobal ? 'global' : input.template_name} RULES.yaml`,
+                  error: `Rule pattern "${validatedInput.pattern}" already exists in ${isGlobal ? 'global' : validatedInput.template_name} RULES.yaml`,
                   existing_rule: existingRule,
                 },
                 null,
@@ -243,28 +255,28 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
 
       // Create new rule section
       const newRule: RuleSection = {
-        pattern: input.pattern,
-        description: input.description,
+        pattern: validatedInput.pattern,
+        description: validatedInput.description,
       };
 
-      if (input.globs && input.globs.length > 0) {
-        newRule.globs = input.globs;
+      if (validatedInput.globs && validatedInput.globs.length > 0) {
+        newRule.globs = validatedInput.globs;
       }
 
-      if (input.inherits && input.inherits.length > 0) {
-        newRule.inherits = input.inherits;
+      if (validatedInput.inherits && validatedInput.inherits.length > 0) {
+        newRule.inherits = validatedInput.inherits;
       }
 
-      if (input.must_do && input.must_do.length > 0) {
-        newRule.must_do = input.must_do;
+      if (validatedInput.must_do && validatedInput.must_do.length > 0) {
+        newRule.must_do = validatedInput.must_do;
       }
 
-      if (input.should_do && input.should_do.length > 0) {
-        newRule.should_do = input.should_do;
+      if (validatedInput.should_do && validatedInput.should_do.length > 0) {
+        newRule.should_do = validatedInput.should_do;
       }
 
-      if (input.must_not_do && input.must_not_do.length > 0) {
-        newRule.must_not_do = input.must_not_do;
+      if (validatedInput.must_not_do && validatedInput.must_not_do.length > 0) {
+        newRule.must_not_do = validatedInput.must_not_do;
       }
 
       rulesConfig.rules.push(newRule);
@@ -285,7 +297,7 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
             text: JSON.stringify(
               {
                 success: true,
-                message: `Added rule pattern "${input.pattern}" to ${isGlobal ? 'global' : input.template_name} RULES.yaml`,
+                message: `Added rule pattern "${validatedInput.pattern}" to ${isGlobal ? 'global' : validatedInput.template_name} RULES.yaml`,
                 file: rulesPath,
                 rule: newRule,
               },
@@ -303,8 +315,8 @@ export class AddRuleTool implements Tool<AddRuleToolInput> {
             text: JSON.stringify(
               {
                 error: error instanceof Error ? error.message : 'Unknown error',
-                template_name: input.template_name,
-                pattern: input.pattern,
+                template_name: validatedInput.template_name,
+                pattern: validatedInput.pattern,
               },
               null,
               2,

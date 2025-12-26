@@ -101,38 +101,9 @@ export interface MatchResult {
 }
 
 /**
- * Code review types
+ * Code review types - re-exported from Zod schemas for type safety
  */
-export interface RuleItem {
-  rule: string;
-  example?: string;
-  codeExample?: string;
-}
-
-/**
- * Represents a section of coding rules for a specific file pattern
- */
-export interface RuleSection {
-  /** Pattern identifier - used for inheritance lookups and fallback file matching */
-  pattern: string;
-  /** Array of glob patterns for file matching. Takes precedence over pattern when provided; pattern is used as fallback */
-  globs?: string[];
-  description: string;
-  inherits?: string[];
-  must_do?: RuleItem[];
-  should_do?: RuleItem[];
-  must_not_do?: RuleItem[];
-}
-
-export interface RulesYamlConfig {
-  version: string;
-  template: string;
-  description: string;
-  source_template_ref?: string;
-  rules: RuleSection[];
-  documentation_refs?: string[];
-  integration_notes?: string[];
-}
+export type { RuleItem, RuleSection, RulesYamlConfig, AddRuleInput } from '../schemas';
 
 export interface CodeReviewResult {
   file_path: string;
