@@ -451,9 +451,11 @@ export class GeminiCliService extends BaseCodingAgentService {
 
     // Add toolConfig merged with defaults as CLI args
     // toolConfig values take precedence over defaults
-    args.push(...this.buildToolConfigArgs({
-      model: params.model || 'gemini-3-pro-preview', // Default model for better JSON adherence
-    }));
+    args.push(
+      ...this.buildToolConfigArgs({
+        model: params.model || 'gemini-3-pro-preview', // Default model for better JSON adherence
+      }),
+    );
 
     // Execute Gemini CLI
     try {
