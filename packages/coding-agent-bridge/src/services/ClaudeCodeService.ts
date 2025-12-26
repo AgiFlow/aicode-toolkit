@@ -301,12 +301,11 @@ export class ClaudeCodeService extends BaseCodingAgentService {
       CLAUDE_CODE_BUILTIN_TOOLS,
     ];
 
-    // Add toolConfig as CLI args (e.g., { model: "claude-opus-4" } -> ["--model", "claude-opus-4"])
-    args.push(...this.buildToolConfigArgs());
-
-    if (params.model) {
-      args.push('--model', params.model);
-    }
+    // Add toolConfig merged with defaults as CLI args
+    // toolConfig values take precedence over defaults
+    args.push(...this.buildToolConfigArgs({
+      ...(params.model && { model: params.model }),
+    }));
 
     // Apply system prompt from params (priority) or promptConfig (fallback)
     const systemPrompt = params.systemPrompt ?? this.promptConfig.systemPrompt;

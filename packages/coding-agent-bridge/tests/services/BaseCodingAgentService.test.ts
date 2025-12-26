@@ -51,8 +51,13 @@ class TestCodingAgentService extends BaseCodingAgentService {
   }
 
   // Expose protected method for testing base class contract
-  public testBuildToolConfigArgs(): string[] {
-    return this.buildToolConfigArgs();
+  public testBuildToolConfigArgs(defaults?: Record<string, unknown>): string[] {
+    return this.buildToolConfigArgs(defaults);
+  }
+
+  // Expose protected method for testing merge logic
+  public testMergeWithDefaults(defaults: Record<string, unknown>): Record<string, unknown> {
+    return this.mergeWithDefaults(defaults);
   }
 
   // Expose toolConfig for testing initialization
@@ -178,6 +183,102 @@ describe('BaseCodingAgentService', () => {
       const args = service.testBuildToolConfigArgs();
       expect(args).toContain('--items');
       expect(args).toContain('a,b,c');
+    });
+  });
+
+  describe('mergeWithDefaults', () => {
+    test('returns defaults when toolConfig is empty', () => {
+      const service = new TestCodingAgentService();
+      const defaults = { model: 'default-model', timeout: 5000 };
+      const merged = service.testMergeWithDefaults(defaults);
+      expect(merged).toEqual(defaults);
+    });
+
+    test('toolConfig overrides defaults', () => {
+      const service = new TestCodingAgentService({
+        toolConfig: { model: 'custom-model' },
+      });
+      const defaults = { model: 'default-model', timeout: 5000 };
+      const merged = service.testMergeWithDefaults(defaults);
+      expect(merged).toEqual({ model: 'custom-model', timeout: 5000 });
+    });
+
+    test('preserves toolConfig values not in defaults', () => {
+      const service = new TestCodingAgentService({
+        toolConfig: { customKey: 'custom-value' },
+      });
+      const defaults = { model: 'default-model' };
+      const merged = service.testMergeWithDefaults(defaults);
+      expect(merged).toEqual({ model: 'default-model', customKey: 'custom-value' });
+    });
+
+    test('toolConfig completely overrides matching default keys', () => {
+      const service = new TestCodingAgentService({
+        toolConfig: { model: 'gemini-flash', maxTokens: 8000 },
+      });
+      const defaults = { model: 'gemini-pro', maxTokens: 4000, timeout: 60000 };
+      const merged = service.testMergeWithDefaults(defaults);
+      expect(merged).toEqual({
+        model: 'gemini-flash',
+        maxTokens: 8000,
+        timeout: 60000,
+      });
+    });
+
+    test('handles empty defaults', () => {
+      const service = new TestCodingAgentService({
+        toolConfig: { model: 'custom-model' },
+      });
+      const merged = service.testMergeWithDefaults({});
+      expect(merged).toEqual({ model: 'custom-model' });
+    });
+  });
+
+  describe('buildToolConfigArgs with defaults', () => {
+    test('uses defaults when toolConfig is empty', () => {
+      const service = new TestCodingAgentService();
+      const args = service.testBuildToolConfigArgs({ model: 'default-model' });
+      expect(args).toEqual(['--model', 'default-model']);
+    });
+
+    test('toolConfig overrides defaults in args', () => {
+      const service = new TestCodingAgentService({
+        toolConfig: { model: 'custom-model' },
+      });
+      const args = service.testBuildToolConfigArgs({ model: 'default-model' });
+      expect(args).toEqual(['--model', 'custom-model']);
+    });
+
+    test('merges defaults and toolConfig in args', () => {
+      const service = new TestCodingAgentService({
+        toolConfig: { model: 'custom-model' },
+      });
+      const args = service.testBuildToolConfigArgs({ model: 'default-model', timeout: 5000 });
+      expect(args).toHaveLength(4);
+      expect(args).toContain('--model');
+      expect(args).toContain('custom-model');
+      expect(args).toContain('--timeout');
+      expect(args).toContain('5000');
+    });
+
+    test('no duplicate flags when toolConfig overrides defaults', () => {
+      const service = new TestCodingAgentService({
+        toolConfig: { model: 'gemini-flash' },
+      });
+      const args = service.testBuildToolConfigArgs({ model: 'gemini-pro' });
+      const modelFlags = args.filter((arg) => arg === '--model');
+      expect(modelFlags).toHaveLength(1);
+      expect(args).toContain('gemini-flash');
+      expect(args).not.toContain('gemini-pro');
+    });
+
+    test('uses only toolConfig when no defaults provided', () => {
+      const service = new TestCodingAgentService({
+        toolConfig: { model: 'custom-model', timeout: 3000 },
+      });
+      const argsWithoutDefaults = service.testBuildToolConfigArgs();
+      const argsWithEmptyDefaults = service.testBuildToolConfigArgs({});
+      expect(argsWithoutDefaults).toEqual(argsWithEmptyDefaults);
     });
   });
 });
