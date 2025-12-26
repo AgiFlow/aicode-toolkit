@@ -131,16 +131,20 @@ export const describeToolsCommand = new Command('describe-tools')
         }
       }
 
-      // Search for skills in remaining not found tools
+      // Search for skills in remaining not found tools (in parallel)
       if (skillService && notFoundTools.length > 0) {
         const skillsToCheck = [...notFoundTools];
-        for (const toolName of skillsToCheck) {
-          // Handle skill__ prefix
-          const skillName = toolName.startsWith('skill__')
-            ? toolName.slice('skill__'.length)
-            : toolName;
+        const skillResults = await Promise.all(
+          skillsToCheck.map(async (toolName) => {
+            const skillName = toolName.startsWith('skill__')
+              ? toolName.slice('skill__'.length)
+              : toolName;
+            const skill = await skillService.getSkill(skillName);
+            return { toolName, skill };
+          })
+        );
 
-          const skill = await skillService.getSkill(skillName);
+        for (const { toolName, skill } of skillResults) {
           if (skill) {
             foundSkills.push({
               name: skill.name,
