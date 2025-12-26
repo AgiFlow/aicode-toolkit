@@ -111,7 +111,10 @@ rules:
           export default function Page({ params }: { params: { id: string } }) {
             return <div>{params.id}</div>; // Error in Next.js 15
           }
-  - pattern: src/actions/**/*.ts
+  - pattern: server-actions
+    globs:
+      - src/actions/**/*.ts
+      - src/server-actions/**/*.ts
     description: Server Action Standards with Zod Validation
     inherits:
       - export-standards
@@ -408,7 +411,10 @@ rules:
 
           // ✅ GOOD
           export { createUser, updateUser, deleteUser } from './userActions.js';
-  - pattern: src/components/**/index.tsx
+  - pattern: smart-components
+    globs:
+      - src/components/**/index.tsx
+      - src/components/**/index.ts
     description: Smart Component Standards (Container Component)
     must_do:
       - rule: Import and delegate rendering to the View component
@@ -458,7 +464,10 @@ rules:
             const [loading, setLoading] = useState(false);
             return <ButtonView {...props} loading={loading} />;
           }
-  - pattern: src/components/**/*View.tsx
+  - pattern: view-components
+    globs:
+      - src/components/**/*View.tsx
+      - src/components/**/*View.ts
     description: Dumb Component Standards (Presentational Component)
     must_do:
       - rule: Export props type for use in stories and smart component

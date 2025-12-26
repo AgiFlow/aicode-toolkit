@@ -27,6 +27,12 @@ import * as yaml from 'js-yaml';
 import { minimatch } from 'minimatch';
 import * as path from 'node:path';
 import type { RulesYamlConfig, RuleSection, ProjectConfig } from '../../types';
+import {
+  RULES_FILENAME,
+  SRC_PREFIX,
+  UTF8_ENCODING,
+  GLOB_NEGATION_PREFIX,
+} from '../../constants';
 
 export class RuleFinder {
   private projectCache: Map<string, ProjectConfig> = new Map();
@@ -53,8 +59,8 @@ export class RuleFinder {
       if (!templatesRoot) {
         return null;
       }
-      const globalRulesPath = path.join(templatesRoot, 'RULES.yaml');
-      const globalRulesContent = await fs.readFile(globalRulesPath, 'utf-8');
+      const globalRulesPath = path.join(templatesRoot, RULES_FILENAME);
+      const globalRulesContent = await fs.readFile(globalRulesPath, UTF8_ENCODING);
       this.globalRulesCache = yaml.load(globalRulesContent) as RulesYamlConfig;
       return this.globalRulesCache;
     } catch (_error) {
@@ -100,6 +106,7 @@ export class RuleFinder {
   private mergeRules(baseRule: RuleSection, overrideRule: RuleSection): RuleSection {
     return {
       pattern: overrideRule.pattern,
+      globs: overrideRule.globs || baseRule.globs,
       description: overrideRule.description || baseRule.description,
       inherits: overrideRule.inherits || baseRule.inherits,
       must_do: [...(baseRule.must_do || []), ...(overrideRule.must_do || [])],
@@ -230,9 +237,9 @@ export class RuleFinder {
         return { rulesConfig: null, templatePath: null };
       }
       const templatePath = path.join(templatesRoot, sourceTemplate);
-      const rulesPath = path.join(templatePath, 'RULES.yaml');
+      const rulesPath = path.join(templatePath, RULES_FILENAME);
 
-      const rulesContent = await fs.readFile(rulesPath, 'utf-8');
+      const rulesContent = await fs.readFile(rulesPath, UTF8_ENCODING);
       const rulesConfig = yaml.load(rulesContent) as RulesYamlConfig;
 
       // Cache the result
@@ -247,6 +254,18 @@ export class RuleFinder {
 
   /**
    * Find matching rule for a file path
+   *
+   * Supports both positive and negated glob patterns:
+   * - Positive patterns (e.g., 'src/*.ts') include files
+   * - Negated patterns (e.g., '!src/*.test.ts') exclude files
+   *
+   * A file matches a rule if:
+   * 1. It matches at least one positive pattern (or there are no positive patterns)
+   * 2. AND it does NOT match any negated pattern
+   *
+   * Example: globs: ['src/*.ts', '!src/*.test.ts', '!src/*.spec.ts']
+   * - 'src/utils/helper.ts' → matches (positive match, no negative match)
+   * - 'src/utils/helper.test.ts' → no match (excluded by negated pattern)
    */
   private findMatchingRule(
     filePath: string,
@@ -256,21 +275,49 @@ export class RuleFinder {
     // Get the file path relative to the project root
     const projectRelativePath = path.relative(projectRoot, filePath);
 
-    // Try different path variations
+    // Try different path variations to handle both src-prefixed and non-prefixed patterns in RULES.yaml
     const pathVariations = [
       projectRelativePath,
       // Also try with src/ prefix if not present
-      projectRelativePath.startsWith('src/') ? projectRelativePath : `src/${projectRelativePath}`,
+      projectRelativePath.startsWith(SRC_PREFIX)
+        ? projectRelativePath
+        : `${SRC_PREFIX}${projectRelativePath}`,
       // Try without src/ prefix if present
-      projectRelativePath.startsWith('src/') ? projectRelativePath.slice(4) : projectRelativePath,
+      projectRelativePath.startsWith(SRC_PREFIX)
+        ? projectRelativePath.slice(SRC_PREFIX.length)
+        : projectRelativePath,
     ];
 
     for (const ruleSection of rulesConfig.rules) {
-      const pattern = ruleSection.pattern;
+      // Get patterns: prefer globs array, fallback to single pattern
+      const patterns =
+        ruleSection.globs && ruleSection.globs.length > 0
+          ? ruleSection.globs
+          : [ruleSection.pattern];
 
-      // Check if any path variation matches the pattern
+      // Separate positive and negative (negated) patterns
+      const positivePatterns = patterns.filter(
+        (p) => !p.startsWith(GLOB_NEGATION_PREFIX),
+      );
+      const negativePatterns = patterns
+        .filter((p) => p.startsWith(GLOB_NEGATION_PREFIX))
+        .map((p) => p.slice(GLOB_NEGATION_PREFIX.length)); // Remove the negation prefix
+
+      // Check if any path variation matches the rule
       for (const pathVariant of pathVariations) {
-        if (minimatch(pathVariant, pattern)) {
+        // Must match at least one positive pattern.
+        // If no positive patterns exist, treat as implicit match for any file -
+        // negated patterns become the primary filter (useful for exclusion-only rules)
+        const matchesPositive =
+          positivePatterns.length === 0 ||
+          positivePatterns.some((pattern) => minimatch(pathVariant, pattern));
+
+        // Must NOT match any negative pattern
+        const matchesNegative = negativePatterns.some((pattern) =>
+          minimatch(pathVariant, pattern),
+        );
+
+        if (matchesPositive && !matchesNegative) {
           return ruleSection;
         }
       }
@@ -289,7 +336,11 @@ export class RuleFinder {
       // For monolith: ProjectConfigResolver will find toolkit.yaml at workspace root
       const project = await this.projectFinder.findProjectForFile(filePath);
 
-      let projectConfig: any;
+      let projectConfig: {
+        sourceTemplate?: string;
+        workspaceRoot?: string;
+        type?: string;
+      };
       let projectRoot: string;
       let projectName: string;
 

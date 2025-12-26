@@ -10,4 +10,5 @@ export { ArchitectParser } from './ArchitectParser';
 export { CodeReviewService } from './CodeReview';
 export { PatternMatcher } from './PatternMatcher';
 export { RuleFinder } from './RuleFinder';
+export { RulesWriter } from './RulesWriter';
 export { TemplateFinder } from './TemplateFinder';

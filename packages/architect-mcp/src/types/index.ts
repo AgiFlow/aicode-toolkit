@@ -20,7 +20,7 @@ export interface ToolDefinition {
   description: string;
   inputSchema: {
     type: string;
-    properties: Record<string, any>;
+    properties: Record<string, unknown>;
     required?: string[];
     additionalProperties?: boolean;
   };
@@ -29,7 +29,7 @@ export interface ToolDefinition {
 /**
  * Base tool interface following MCP SDK patterns
  */
-export interface Tool<TInput = any> {
+export interface Tool<TInput = unknown> {
   getDefinition(): ToolDefinition;
   execute(input: TInput): Promise<CallToolResult>;
 }
@@ -101,32 +101,9 @@ export interface MatchResult {
 }
 
 /**
- * Code review types
+ * Code review types - re-exported from Zod schemas for type safety
  */
-export interface RuleItem {
-  rule: string;
-  example?: string;
-  codeExample?: string;
-}
-
-export interface RuleSection {
-  pattern: string;
-  description: string;
-  inherits?: string[];
-  must_do?: RuleItem[];
-  should_do?: RuleItem[];
-  must_not_do?: RuleItem[];
-}
-
-export interface RulesYamlConfig {
-  version: string;
-  template: string;
-  description: string;
-  source_template_ref?: string;
-  rules: RuleSection[];
-  documentation_refs?: string[];
-  integration_notes?: string[];
-}
+export type { RuleItem, RuleSection, RulesYamlConfig, AddRuleInput } from '../schemas';
 
 export interface CodeReviewResult {
   file_path: string;

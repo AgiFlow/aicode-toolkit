@@ -2,7 +2,10 @@ version: '1.0'
 template: typescript-lib
 description: Rules and patterns for typescript-lib template
 rules:
-  - pattern: src/services/**/*.ts
+  - pattern: service-implementation
+    globs:
+      - src/services/**/*.ts
+      - src/services/**/*Service.ts
     description: Service Layer Implementation Standards
     inherits:
       - export-standards
@@ -58,7 +61,10 @@ rules:
             saveToDb() {}
           }
       - rule: Use synchronous blocking operations for I/O
-  - pattern: src/utils/**/*.ts
+  - pattern: utility-functions
+    globs:
+      - src/utils/**/*.ts
+      - src/helpers/**/*.ts
     description: Utility Functions Standards
     inherits:
       - export-standards
@@ -119,7 +125,10 @@ rules:
           export function formatMessage(msg: string): string {
             return `[LOG] ${msg}`;
           }
-  - pattern: src/types/**/*.ts
+  - pattern: type-definitions
+    globs:
+      - src/types/**/*.ts
+      - src/**/*.types.ts
     description: Type Definitions Standards
     inherits:
       - export-standards
@@ -185,7 +194,12 @@ rules:
           // ✅ GOOD - Only types
           export interface MyInterface {}
           export type MyType = {};
-  - pattern: tests/**/*.test.ts
+  - pattern: test-files
+    globs:
+      - tests/**/*.test.ts
+      - tests/**/*.spec.ts
+      - src/**/*.test.ts
+      - src/**/*.spec.ts
     description: Test Standards with Vitest
     inherits:
       - type-safety
@@ -336,7 +350,10 @@ rules:
 
           // ✅ GOOD
           export type { User, UserRole } from './user';
-  - pattern: src/constants/**/*.constants.ts
+  - pattern: constants-module
+    globs:
+      - src/constants/**/*.ts
+      - src/constants/**/*.constants.ts
     description: Constants Module Standards
     inherits:
       - export-standards
