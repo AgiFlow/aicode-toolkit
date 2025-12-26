@@ -45,23 +45,39 @@ export class VariableReplacementService implements IVariableReplacementService {
       return;
     }
 
-    for (const item of items) {
-      if (!item) continue; // Skip empty items
+    const validItems = items.filter((item) => item);
+    const itemPaths = validItems.map((item) => path.join(dirPath, item));
 
-      const itemPath = path.join(dirPath, item);
-
-      try {
-        const stat = await this.fileSystem.stat(itemPath);
-
-        if (stat.isDirectory()) {
-          await this.processFilesForVariableReplacement(itemPath, variables);
-        } else if (stat.isFile()) {
-          await this.replaceVariablesInFile(itemPath, variables);
+    // Batch stat calls in parallel
+    const statResults = await Promise.all(
+      itemPaths.map(async (itemPath) => {
+        try {
+          const stat = await this.fileSystem.stat(itemPath);
+          return { itemPath, stat, error: null };
+        } catch (error) {
+          log.warn(`Skipping item ${itemPath}: ${error}`);
+          return { itemPath, stat: null, error };
         }
-      } catch (error) {
-        log.warn(`Skipping item ${itemPath}: ${error}`);
+      }),
+    );
+
+    // Collect files and directories to process
+    const directories: string[] = [];
+    const files: string[] = [];
+    for (const { itemPath, stat } of statResults) {
+      if (!stat) continue;
+      if (stat.isDirectory()) {
+        directories.push(itemPath);
+      } else if (stat.isFile()) {
+        files.push(itemPath);
       }
     }
+
+    // Process files and directories in parallel
+    await Promise.all([
+      ...files.map((file) => this.replaceVariablesInFile(file, variables)),
+      ...directories.map((dir) => this.processFilesForVariableReplacement(dir, variables)),
+    ]);
   }
 
   async replaceVariablesInFile(filePath: string, variables: Record<string, any>): Promise<void> {

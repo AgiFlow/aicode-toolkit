@@ -121,23 +121,35 @@ export class ScaffoldProcessingService {
       return;
     }
 
-    for (const item of items) {
-      if (!item) continue;
+    const validItems = items.filter((item) => item);
+    const itemPaths = validItems.map((item) => path.join(dirPath, item));
 
-      const itemPath = path.join(dirPath, item);
-
-      try {
-        const stat = await this.fileSystem.stat(itemPath);
-
-        if (stat.isDirectory()) {
-          await this.trackCreatedFilesRecursive(itemPath, createdFiles);
-        } else if (stat.isFile()) {
-          createdFiles.push(itemPath);
+    // Batch stat calls in parallel
+    const statResults = await Promise.all(
+      itemPaths.map(async (itemPath) => {
+        try {
+          const stat = await this.fileSystem.stat(itemPath);
+          return { itemPath, stat, error: null };
+        } catch (error) {
+          log.warn(`Cannot stat ${itemPath}: ${error}`);
+          return { itemPath, stat: null, error };
         }
-      } catch (error) {
-        log.warn(`Cannot stat ${itemPath}: ${error}`);
+      }),
+    );
+
+    // Collect files and directories to process
+    const directories: string[] = [];
+    for (const { itemPath, stat } of statResults) {
+      if (!stat) continue;
+      if (stat.isDirectory()) {
+        directories.push(itemPath);
+      } else if (stat.isFile()) {
+        createdFiles.push(itemPath);
       }
     }
+
+    // Process directories in parallel
+    await Promise.all(directories.map((dir) => this.trackCreatedFilesRecursive(dir, createdFiles)));
   }
 
   /**
@@ -155,22 +167,36 @@ export class ScaffoldProcessingService {
       return;
     }
 
-    for (const item of items) {
-      if (!item) continue;
+    const validItems = items.filter((item) => item);
+    const itemPaths = validItems.map((item) => path.join(dirPath, item));
 
-      const itemPath = path.join(dirPath, item);
-
-      try {
-        const stat = await this.fileSystem.stat(itemPath);
-
-        if (stat.isDirectory()) {
-          await this.trackExistingFilesRecursive(itemPath, existingFiles);
-        } else if (stat.isFile()) {
-          existingFiles.push(itemPath);
+    // Batch stat calls in parallel
+    const statResults = await Promise.all(
+      itemPaths.map(async (itemPath) => {
+        try {
+          const stat = await this.fileSystem.stat(itemPath);
+          return { itemPath, stat, error: null };
+        } catch (error) {
+          log.warn(`Cannot stat ${itemPath}: ${error}`);
+          return { itemPath, stat: null, error };
         }
-      } catch (error) {
-        log.warn(`Cannot stat ${itemPath}: ${error}`);
+      }),
+    );
+
+    // Collect files and directories to process
+    const directories: string[] = [];
+    for (const { itemPath, stat } of statResults) {
+      if (!stat) continue;
+      if (stat.isDirectory()) {
+        directories.push(itemPath);
+      } else if (stat.isFile()) {
+        existingFiles.push(itemPath);
       }
     }
+
+    // Process directories in parallel
+    await Promise.all(
+      directories.map((dir) => this.trackExistingFilesRecursive(dir, existingFiles)),
+    );
   }
 }

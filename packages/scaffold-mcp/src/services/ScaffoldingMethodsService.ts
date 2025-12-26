@@ -4,7 +4,10 @@ import yaml from 'js-yaml';
 import type { IFileSystemService } from '../types/interfaces';
 import type { ScaffoldResult } from '../types/scaffold';
 import { PaginationHelper } from '../utils/pagination';
+import { ScaffoldConfigLoader } from './ScaffoldConfigLoader';
+import { ScaffoldService } from './ScaffoldService';
 import { TemplateService } from './TemplateService';
+import { VariableReplacementService } from './VariableReplacementService';
 
 export interface ScaffoldMethod {
   name: string;
@@ -213,42 +216,78 @@ export class ScaffoldingMethodsService {
 
     try {
       const items = await this.fileSystem.readdir(this.templatesRootPath);
+      const itemPaths = items.map((item) => ({
+        item,
+        itemPath: path.join(this.templatesRootPath, item),
+      }));
 
-      for (const item of items) {
-        const itemPath = path.join(this.templatesRootPath, item);
+      // Batch stat and pathExists checks in parallel for all items
+      const itemResults = await Promise.all(
+        itemPaths.map(async ({ item, itemPath }) => {
+          try {
+            const itemStats = await this.fileSystem.stat(itemPath);
+            if (!itemStats.isDirectory())
+              return { item, itemPath, isDir: false, hasScaffold: false };
 
-        // Skip files, only process directories
-        const itemStats = await this.fileSystem.stat(itemPath);
-        if (!itemStats.isDirectory()) continue;
-
-        // Check if this directory has scaffold.yaml (flat structure)
-        const scaffoldYamlPath = path.join(itemPath, 'scaffold.yaml');
-        if (await this.fileSystem.pathExists(scaffoldYamlPath)) {
-          templateDirs.push(item);
-          continue;
-        }
-
-        // If no scaffold.yaml, it might be a category directory (nested structure)
-        // Check subdirectories for templates
-        try {
-          const subItems = await this.fileSystem.readdir(itemPath);
-
-          for (const subItem of subItems) {
-            const subItemPath = path.join(itemPath, subItem);
-
-            const subItemStats = await this.fileSystem.stat(subItemPath);
-            if (!subItemStats.isDirectory()) continue;
-
-            const subScaffoldYamlPath = path.join(subItemPath, 'scaffold.yaml');
-            if (await this.fileSystem.pathExists(subScaffoldYamlPath)) {
-              // Add the relative path from templates root (e.g., "apps/nextjs-15")
-              const relativePath = path.join(item, subItem);
-              templateDirs.push(relativePath);
-            }
+            const scaffoldYamlPath = path.join(itemPath, 'scaffold.yaml');
+            const hasScaffold = await this.fileSystem.pathExists(scaffoldYamlPath);
+            return { item, itemPath, isDir: true, hasScaffold };
+          } catch {
+            return { item, itemPath, isDir: false, hasScaffold: false };
           }
-        } catch (error) {
-          log.warn(`Failed to read subdirectories in ${itemPath}:`, error);
+        }),
+      );
+
+      // Collect flat structure templates and identify category directories
+      const categoryDirs: { item: string; itemPath: string }[] = [];
+      for (const result of itemResults) {
+        if (!result.isDir) continue;
+        if (result.hasScaffold) {
+          templateDirs.push(result.item);
+        } else {
+          categoryDirs.push({ item: result.item, itemPath: result.itemPath });
         }
+      }
+
+      // Process category directories in parallel (nested structure)
+      const nestedResults = await Promise.all(
+        categoryDirs.map(async ({ item, itemPath }) => {
+          const found: string[] = [];
+          try {
+            const subItems = await this.fileSystem.readdir(itemPath);
+
+            // Check all subdirectories in parallel
+            const subResults = await Promise.all(
+              subItems.map(async (subItem) => {
+                const subItemPath = path.join(itemPath, subItem);
+                try {
+                  const subItemStats = await this.fileSystem.stat(subItemPath);
+                  if (!subItemStats.isDirectory()) return null;
+
+                  const subScaffoldYamlPath = path.join(subItemPath, 'scaffold.yaml');
+                  if (await this.fileSystem.pathExists(subScaffoldYamlPath)) {
+                    return path.join(item, subItem);
+                  }
+                } catch {
+                  return null;
+                }
+                return null;
+              }),
+            );
+
+            for (const relativePath of subResults) {
+              if (relativePath) found.push(relativePath);
+            }
+          } catch (error) {
+            log.warn(`Failed to read subdirectories in ${itemPath}:`, error);
+          }
+          return found;
+        }),
+      );
+
+      // Flatten nested results
+      for (const dirs of nestedResults) {
+        templateDirs.push(...dirs);
       }
     } catch (error) {
       log.warn(`Failed to read templates root directory ${this.templatesRootPath}:`, error);
@@ -273,12 +312,6 @@ export class ScaffoldingMethodsService {
         `Scaffold method '${scaffold_feature_name}' not found. Available methods: ${availableMethods}`,
       );
     }
-
-    const ScaffoldService = (await import('./ScaffoldService')).ScaffoldService;
-    const ScaffoldConfigLoader = (await import('./ScaffoldConfigLoader')).ScaffoldConfigLoader;
-    const VariableReplacementService = (await import('./VariableReplacementService'))
-      .VariableReplacementService;
-    const TemplateService = (await import('./TemplateService')).TemplateService;
 
     const templateService = new TemplateService();
     const scaffoldConfigLoader = new ScaffoldConfigLoader(this.fileSystem, templateService);

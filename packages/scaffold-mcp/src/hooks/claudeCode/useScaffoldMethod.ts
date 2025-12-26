@@ -96,7 +96,10 @@ export class UseScaffoldMethodHook {
         ? filePath
         : path.join(context.cwd, filePath);
 
-      if (!absoluteFilePath.startsWith(context.cwd + path.sep) && absoluteFilePath !== context.cwd) {
+      if (
+        !absoluteFilePath.startsWith(context.cwd + path.sep) &&
+        absoluteFilePath !== context.cwd
+      ) {
         return {
           decision: DECISION_SKIP,
           message: 'File is outside working directory - skipping scaffold method check',
