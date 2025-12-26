@@ -75,10 +75,12 @@ export class GetFileDesignPatternHook {
       const patternMatcher = new PatternMatcher();
 
       const templateMapping = await templateFinder.findTemplateForFile(filePath);
-      const templateConfig = templateMapping
-        ? await architectParser.parseArchitectFile(templateMapping.templatePath)
-        : null;
-      const globalConfig = await architectParser.parseGlobalArchitectFile();
+      const [templateConfig, globalConfig] = await Promise.all([
+        templateMapping
+          ? architectParser.parseArchitectFile(templateMapping.templatePath)
+          : Promise.resolve(null),
+        architectParser.parseGlobalArchitectFile(),
+      ]);
 
       const filePatterns = patternMatcher.getMatchedFilePatterns(
         filePath,

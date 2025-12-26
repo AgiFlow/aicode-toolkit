@@ -95,16 +95,16 @@ export class GetFileDesignPatternTool implements Tool<GetFileDesignPatternToolIn
       // Find the template for this file
       const templateMapping = await this.templateFinder.findTemplateForFile(input.file_path);
 
-      // Parse architect.yaml files from project, template, and global
-      const projectConfig = templateMapping?.projectPath
-        ? await this.architectParser.parseProjectArchitectFile(templateMapping.projectPath)
-        : null;
-
-      const templateConfig = templateMapping
-        ? await this.architectParser.parseArchitectFile(templateMapping.templatePath)
-        : null;
-
-      const globalConfig = await this.architectParser.parseGlobalArchitectFile();
+      // Parse architect.yaml files from project, template, and global (in parallel)
+      const [projectConfig, templateConfig, globalConfig] = await Promise.all([
+        templateMapping?.projectPath
+          ? this.architectParser.parseProjectArchitectFile(templateMapping.projectPath)
+          : Promise.resolve(null),
+        templateMapping
+          ? this.architectParser.parseArchitectFile(templateMapping.templatePath)
+          : Promise.resolve(null),
+        this.architectParser.parseGlobalArchitectFile(),
+      ]);
 
       // Merge configs (project first = highest priority)
       const mergedConfig = this.architectParser.mergeConfigs(
