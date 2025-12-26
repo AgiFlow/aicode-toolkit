@@ -88,35 +88,45 @@ export const describeToolsCommand = new Command('describe-tools')
       const foundSkills: any[] = [];
       const notFoundTools: string[] = [...toolNames];
 
-      for (const client of clients) {
-        // Skip if server filter doesn't match
-        if (options.server && client.serverName !== options.server) {
+      // Fetch tools from all clients in parallel
+      const filteredClients = clients.filter(
+        (client) => !options.server || client.serverName === options.server
+      );
+
+      const toolResults = await Promise.all(
+        filteredClients.map(async (client) => {
+          try {
+            const tools = await client.listTools();
+            return { client, tools, error: null };
+          } catch (error) {
+            return { client, tools: [] as any[], error };
+          }
+        })
+      );
+
+      for (const { client, tools, error } of toolResults) {
+        if (error) {
+          if (!options.json) {
+            console.error(`Failed to list tools from ${client.serverName}:`, error);
+          }
           continue;
         }
 
-        try {
-          const tools = await client.listTools();
+        for (const toolName of toolNames) {
+          const tool = tools.find((t: any) => t.name === toolName);
+          if (tool) {
+            foundTools.push({
+              server: client.serverName,
+              name: tool.name,
+              description: tool.description,
+              inputSchema: tool.inputSchema,
+            });
 
-          for (const toolName of toolNames) {
-            const tool = tools.find((t: any) => t.name === toolName);
-            if (tool) {
-              foundTools.push({
-                server: client.serverName,
-                name: tool.name,
-                description: tool.description,
-                inputSchema: tool.inputSchema,
-              });
-
-              // Remove from not found list
-              const idx = notFoundTools.indexOf(toolName);
-              if (idx > -1) {
-                notFoundTools.splice(idx, 1);
-              }
+            // Remove from not found list
+            const idx = notFoundTools.indexOf(toolName);
+            if (idx > -1) {
+              notFoundTools.splice(idx, 1);
             }
-          }
-        } catch (error) {
-          if (!options.json) {
-            console.error(`Failed to list tools from ${client.serverName}:`, error);
           }
         }
       }
