@@ -169,18 +169,19 @@ export class RuleFinder {
       return { project, rulesConfig: null, matchedRule: null, templatePath: null };
     }
 
-    // Find and load RULES.yaml
-    const { rulesConfig, templatePath } = await this.loadRulesForTemplate(project.sourceTemplate);
+    // Load template rules and global rules in parallel for better performance
+    const [{ rulesConfig, templatePath }, globalRules] = await Promise.all([
+      this.loadRulesForTemplate(project.sourceTemplate),
+      this.loadGlobalRules(),
+    ]);
 
-    if (!rulesConfig) {
+    // Merge template rules with global rules (handles null cases)
+    const mergedRulesConfig = this.mergeRulesConfigs(rulesConfig, globalRules);
+
+    // If neither template nor global rules exist, return early
+    if (!mergedRulesConfig) {
       return { project, rulesConfig: null, matchedRule: null, templatePath };
     }
-
-    // Load global rules
-    const globalRules = await this.loadGlobalRules();
-
-    // Merge template rules with global rules (global rules at bottom)
-    const mergedRulesConfig = this.mergeRulesConfigs(rulesConfig, globalRules);
 
     // Find matching rule section
     const matchedRule = this.findMatchingRule(normalizedPath, project.root, mergedRulesConfig);
@@ -190,22 +191,40 @@ export class RuleFinder {
     }
 
     // Resolve inheritance for the matched rule
-    const resolvedRule = await this.resolveInheritance(matchedRule, rulesConfig, globalRules);
+    // Use empty rules config when rulesConfig is null (only global rules exist)
+    const resolvedRule = await this.resolveInheritance(
+      matchedRule,
+      rulesConfig || { rules: [] },
+      globalRules,
+    );
 
     return { project, rulesConfig: mergedRulesConfig, matchedRule: resolvedRule, templatePath };
   }
 
   /**
    * Merge template rules config with global rules config
+   * Handles cases where either or both configs may be null
    */
   private mergeRulesConfigs(
-    templateRules: RulesYamlConfig,
+    templateRules: RulesYamlConfig | null,
     globalRules: RulesYamlConfig | null,
-  ): RulesYamlConfig {
+  ): RulesYamlConfig | null {
+    // If both are null, return null
+    if (!templateRules && !globalRules) {
+      return null;
+    }
+
+    // If only global rules exist, return them
+    if (!templateRules) {
+      return globalRules;
+    }
+
+    // If only template rules exist, return them
     if (!globalRules) {
       return templateRules;
     }
 
+    // Merge both: template rules first, then global rules
     return {
       ...templateRules,
       rules: [...templateRules.rules, ...globalRules.rules],

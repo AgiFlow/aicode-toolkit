@@ -387,3 +387,116 @@ describe('RuleFinder pattern matching logic', () => {
     });
   });
 });
+
+/**
+ * Test the rules config merging logic used by RuleFinder.mergeRulesConfigs
+ * This tests combining template and global rules correctly
+ */
+describe('RuleFinder mergeRulesConfigs logic', () => {
+  // Helper function that mirrors the logic in RuleFinder.mergeRulesConfigs
+  type RulesYamlConfig = {
+    version: string;
+    template: string;
+    description: string;
+    rules: Array<{ pattern: string; globs?: string[]; description: string }>;
+  };
+
+  const mergeRulesConfigs = (
+    templateRules: RulesYamlConfig | null,
+    globalRules: RulesYamlConfig | null,
+  ): RulesYamlConfig | null => {
+    // If both are null, return null
+    if (!templateRules && !globalRules) {
+      return null;
+    }
+
+    // If only global rules exist, return them
+    if (!templateRules) {
+      return globalRules;
+    }
+
+    // If only template rules exist, return them
+    if (!globalRules) {
+      return templateRules;
+    }
+
+    // Merge both: template rules first, then global rules
+    return {
+      ...templateRules,
+      rules: [...templateRules.rules, ...globalRules.rules],
+    };
+  };
+
+  const globalRulesConfig: RulesYamlConfig = {
+    version: '1.0',
+    template: 'shared',
+    description: 'Shared rules for all templates',
+    rules: [
+      { pattern: 'import-standards', globs: ['**/*.ts'], description: 'Import standards' },
+      { pattern: 'export-standards', globs: ['**/*.ts'], description: 'Export standards' },
+    ],
+  };
+
+  const templateRulesConfig: RulesYamlConfig = {
+    version: '1.0',
+    template: 'nextjs-15',
+    description: 'Next.js 15 specific rules',
+    rules: [
+      { pattern: 'server-actions', globs: ['src/actions/**/*.ts'], description: 'Server actions' },
+      { pattern: 'page-components', globs: ['src/app/**/page.tsx'], description: 'Page components' },
+    ],
+  };
+
+  describe('when both template and global rules exist', () => {
+    it('should merge both configs with template rules first', () => {
+      const merged = mergeRulesConfigs(templateRulesConfig, globalRulesConfig);
+
+      expect(merged).not.toBeNull();
+      expect(merged?.rules).toHaveLength(4);
+      // Template rules come first
+      expect(merged?.rules[0].pattern).toBe('server-actions');
+      expect(merged?.rules[1].pattern).toBe('page-components');
+      // Global rules come after
+      expect(merged?.rules[2].pattern).toBe('import-standards');
+      expect(merged?.rules[3].pattern).toBe('export-standards');
+    });
+
+    it('should preserve template metadata in merged config', () => {
+      const merged = mergeRulesConfigs(templateRulesConfig, globalRulesConfig);
+
+      expect(merged?.version).toBe('1.0');
+      expect(merged?.template).toBe('nextjs-15');
+      expect(merged?.description).toBe('Next.js 15 specific rules');
+    });
+  });
+
+  describe('when only global rules exist', () => {
+    it('should return global rules when template rules are null', () => {
+      const merged = mergeRulesConfigs(null, globalRulesConfig);
+
+      expect(merged).not.toBeNull();
+      expect(merged?.rules).toHaveLength(2);
+      expect(merged?.template).toBe('shared');
+      expect(merged?.rules[0].pattern).toBe('import-standards');
+    });
+  });
+
+  describe('when only template rules exist', () => {
+    it('should return template rules when global rules are null', () => {
+      const merged = mergeRulesConfigs(templateRulesConfig, null);
+
+      expect(merged).not.toBeNull();
+      expect(merged?.rules).toHaveLength(2);
+      expect(merged?.template).toBe('nextjs-15');
+      expect(merged?.rules[0].pattern).toBe('server-actions');
+    });
+  });
+
+  describe('when neither template nor global rules exist', () => {
+    it('should return null when both are null', () => {
+      const merged = mergeRulesConfigs(null, null);
+
+      expect(merged).toBeNull();
+    });
+  });
+});

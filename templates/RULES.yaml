@@ -4,10 +4,15 @@ description: Shared rules and patterns for all Agiflow templates
 rules:
   - pattern: import-standards
     globs:
-      - src/**/*.ts
-      - src/**/*.tsx
-      - src/**/*.js
-      - src/**/*.jsx
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "!**/*.test.ts"
+      - "!**/*.test.tsx"
+      - "!**/*.spec.ts"
+      - "!**/*.spec.tsx"
+      - "!**/tests/**"
     description: Import organization and standards
     must_do:
       - rule: Use clean import paths without file extensions
@@ -81,10 +86,15 @@ rules:
           import hooks from './hooks';
   - pattern: export-standards
     globs:
-      - src/**/*.ts
-      - src/**/*.tsx
-      - src/**/*.js
-      - src/**/*.jsx
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "!**/*.test.ts"
+      - "!**/*.test.tsx"
+      - "!**/*.spec.ts"
+      - "!**/*.spec.tsx"
+      - "!**/tests/**"
     description: Strict export standards enforced across all TypeScript/JavaScript files
     must_do:
       - rule: Use direct exports only - export declarations at point of definition
@@ -136,8 +146,13 @@ rules:
           export * from './services';
   - pattern: error-handling
     globs:
-      - src/**/*.ts
-      - src/**/*.tsx
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "!**/*.test.ts"
+      - "!**/*.test.tsx"
+      - "!**/*.spec.ts"
+      - "!**/*.spec.tsx"
+      - "!**/tests/**"
     description: Consistent error handling patterns across all code
     must_do:
       - rule: Always use try-catch blocks for async operations
@@ -195,10 +210,15 @@ rules:
           }
   - pattern: naming-conventions
     globs:
-      - src/**/*.ts
-      - src/**/*.tsx
-      - src/**/*.js
-      - src/**/*.jsx
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "!**/*.test.ts"
+      - "!**/*.test.tsx"
+      - "!**/*.spec.ts"
+      - "!**/*.spec.tsx"
+      - "!**/tests/**"
     description: Consistent naming conventions across all code
     must_do:
       - rule: Use PascalCase for classes, interfaces, types, and enums
@@ -243,8 +263,13 @@ rules:
           function getUserById() {}
   - pattern: constants-usage
     globs:
-      - src/**/*.ts
-      - src/**/*.tsx
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "!**/*.test.ts"
+      - "!**/*.test.tsx"
+      - "!**/*.spec.ts"
+      - "!**/*.spec.tsx"
+      - "!**/tests/**"
     description: Avoid magic strings and hardcoded values - use constants for maintainability
     must_do:
       - rule: Define constants in a dedicated constants file or folder
@@ -338,8 +363,13 @@ rules:
           import { ARCHITECT_FILENAME } from '../constants';
   - pattern: type-safety
     globs:
-      - src/**/*.ts
-      - src/**/*.tsx
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "!**/*.test.ts"
+      - "!**/*.test.tsx"
+      - "!**/*.spec.ts"
+      - "!**/*.spec.tsx"
+      - "!**/tests/**"
     description: Strong type safety standards for TypeScript code
     must_do:
       - rule: Always provide explicit return types for functions
@@ -404,8 +434,13 @@ rules:
           const value = dangerousOperation();
   - pattern: documentation-standards
     globs:
-      - src/**/*.ts
-      - src/**/*.tsx
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "!**/*.test.ts"
+      - "!**/*.test.tsx"
+      - "!**/*.spec.ts"
+      - "!**/*.spec.tsx"
+      - "!**/tests/**"
     description: Code documentation standards
     must_do:
       - rule: Add JSDoc comments for all public APIs
@@ -449,8 +484,13 @@ rules:
           counter++;
   - pattern: async-await-patterns
     globs:
-      - src/**/*.ts
-      - src/**/*.tsx
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "!**/*.test.ts"
+      - "!**/*.test.tsx"
+      - "!**/*.spec.ts"
+      - "!**/*.spec.tsx"
+      - "!**/tests/**"
     description: Best practices for asynchronous code
     must_do:
       - rule: Always use async/await over raw promises
