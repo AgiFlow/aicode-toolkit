@@ -128,11 +128,18 @@ export class GetUiComponentService {
 
     // Initialize stories index using injected factory
     const storiesIndex = this.storiesIndexFactory();
+
+    // Run independent operations in parallel for better performance
+    // First element is void from initialize(), second is the config
+    let designSystemConfig: DesignSystemConfig;
     try {
-      await storiesIndex.initialize();
+      [, designSystemConfig] = await Promise.all([
+        storiesIndex.initialize(),
+        getAppDesignSystemConfig(appPath),
+      ]);
     } catch (error) {
       throw new Error(
-        `Failed to initialize stories index: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to initialize stories index or design system config: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
 
@@ -149,9 +156,6 @@ export class GetUiComponentService {
 
     // Validate story exists and get valid story name
     const validStoryName = this.resolveStoryName(storyName, componentInfo.stories);
-
-    // Get app-specific design system configuration
-    const designSystemConfig = await getAppDesignSystemConfig(appPath);
     log.info(`[GetUiComponentService] Using theme provider: ${designSystemConfig.themeProvider}`);
     log.info(`[GetUiComponentService] Design system type: ${designSystemConfig.type}`);
 

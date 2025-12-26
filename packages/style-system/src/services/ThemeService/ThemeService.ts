@@ -123,15 +123,19 @@ export default WrappedComponent;
   async getInlineStyles(darkMode = false): Promise<string> {
     const cssFiles = await this.getThemeCSS();
 
-    let styles = '';
-    for (const cssFile of cssFiles) {
-      try {
-        const content = await fs.readFile(cssFile, 'utf-8');
-        styles += content + '\n';
-      } catch (error) {
-        log.warn(`[ThemeService] Could not read CSS file ${cssFile}:`, error);
-      }
-    }
+    // Read all CSS files in parallel for better performance
+    const contents = await Promise.all(
+      cssFiles.map(async (cssFile) => {
+        try {
+          return await fs.readFile(cssFile, 'utf-8');
+        } catch (error) {
+          log.warn(`[ThemeService] Could not read CSS file ${cssFile}:`, error);
+          return '';
+        }
+      }),
+    );
+
+    let styles = contents.filter(Boolean).join('\n');
 
     // Add dark mode class wrapper if needed
     if (darkMode && styles) {

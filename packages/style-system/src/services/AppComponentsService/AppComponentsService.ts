@@ -89,20 +89,21 @@ export class AppComponentsService {
       throw new Error(`App path does not exist: ${resolvedAppPath}`);
     }
 
-    // Get app name and workspace dependencies
-    const appName = await this.getAppName(resolvedAppPath);
-    const workspaceDependencies = await this.getWorkspaceDependencies(resolvedAppPath);
+    // Initialize stories index (needed for component lookup)
+    const storiesIndex = new StoriesIndexService();
+
+    // Run independent operations in parallel for better performance
+    const [appName, workspaceDependencies, packageMap] = await Promise.all([
+      this.getAppName(resolvedAppPath),
+      this.getWorkspaceDependencies(resolvedAppPath),
+      this.buildPackageMap(monorepoRoot),
+      storiesIndex.initialize(),
+    ]);
 
     log.info(
       `[AppComponentsService] Found ${workspaceDependencies.length} workspace dependencies for ${appName}`,
     );
 
-    // Build package name → directory path map
-    const packageMap = await this.buildPackageMap(monorepoRoot);
-
-    // Initialize stories index and get all components
-    const storiesIndex = new StoriesIndexService();
-    await storiesIndex.initialize();
     const allComponents = storiesIndex.getAllComponents();
 
     // Categorize components into app-specific and package components
