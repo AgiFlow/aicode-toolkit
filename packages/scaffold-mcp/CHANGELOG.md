@@ -1,3 +1,12 @@
+## 1.0.14 (2025-12-26)
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.5
+- Updated @agiflowai/architect-mcp to 1.0.6
+- Updated @agiflowai/hooks-adapter to 0.0.8
+- Updated @agiflowai/aicode-utils to 1.0.5
+
 ## 1.0.13 (2025-12-26)
 
 ### 🚀 Features

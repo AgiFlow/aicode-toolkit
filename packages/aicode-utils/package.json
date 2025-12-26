@@ -1,7 +1,7 @@
 {
   "name": "@agiflowai/aicode-utils",
   "description": "Shared utilities and types for AI-powered code generation, scaffolding, and analysis",
-  "version": "1.0.9",
+  "version": "1.0.5",
   "license": "AGPL-3.0",
   "author": "AgiflowIO",
   "repository": {
