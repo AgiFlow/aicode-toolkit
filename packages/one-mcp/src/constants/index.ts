@@ -19,3 +19,9 @@ export const LOG_PREFIX_SKILL_DETECTION = '[skill-detection]';
  * Format: "prompt:{serverName}:{promptName}"
  */
 export const PROMPT_LOCATION_PREFIX = 'prompt:';
+
+/**
+ * Default server ID used when no ID is provided via CLI or config.
+ * This fallback is used when auto-generation also fails.
+ */
+export const DEFAULT_SERVER_ID = 'unknown';

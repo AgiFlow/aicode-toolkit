@@ -24,18 +24,20 @@ import { McpClientManagerService } from '../services/McpClientManagerService';
 import { SkillService } from '../services/SkillService';
 import { DescribeToolsTool } from '../tools/DescribeToolsTool';
 import { UseToolTool } from '../tools/UseToolTool';
-import { parseToolName } from '../utils';
+import { parseToolName, generateServerId } from '../utils';
 
 /**
  * Configuration options for creating an MCP server instance
  * @property configFilePath - Path to the MCP configuration file
  * @property noCache - Skip cache when fetching remote configuration
  * @property skills - Skills configuration with paths array (optional, skills disabled if not provided)
+ * @property serverId - CLI-provided server ID (takes precedence over config file id)
  */
 export interface ServerOptions {
   configFilePath?: string;
   noCache?: boolean;
   skills?: { paths: string[] };
+  serverId?: string;
 }
 
 export async function createServer(options?: ServerOptions): Promise<Server> {
@@ -55,8 +57,9 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
   // Initialize services
   const clientManager = new McpClientManagerService();
 
-  // Track skills config from config file (will be set if config is loaded)
+  // Track config values from config file (will be set if config is loaded)
   let configSkills: { paths: string[] } | undefined;
+  let configId: string | undefined;
 
   // Load and connect to MCP servers if config is provided
   if (options?.configFilePath) {
@@ -76,8 +79,9 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
       );
     }
 
-    // Get skills config from config file
+    // Get config values from config file
     configSkills = config.skills;
+    configId = config.id;
 
     // Connect to all configured MCP servers and track failures
     const failedConnections: Array<{ serverName: string; error: Error }> = [];
@@ -111,6 +115,10 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
     }
   }
 
+  // Resolve server ID with priority: CLI option > config file > auto-generate
+  const serverId = options?.serverId || configId || generateServerId();
+  console.error(`[one-mcp] Server ID: ${serverId}`);
+
   // Initialize skill service only if skills are explicitly configured
   // Skills are disabled by default since Claude Code already handles skills natively
   const skillsConfig = options?.skills || configSkills;
@@ -128,9 +136,9 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
       })
     : undefined;
 
-  // Initialize tools with dependencies
-  const describeTools = new DescribeToolsTool(clientManager, skillService);
-  const useTool = new UseToolTool(clientManager, skillService);
+  // Initialize tools with dependencies and server ID
+  const describeTools = new DescribeToolsTool(clientManager, skillService, serverId);
+  const useTool = new UseToolTool(clientManager, skillService, serverId);
 
   // Assign to reference for cache invalidation callback
   toolsRef.describeTools = describeTools;
