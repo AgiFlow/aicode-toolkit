@@ -3,6 +3,11 @@ template: shared
 description: Shared rules and patterns for all Agiflow templates
 rules:
   - pattern: import-standards
+    globs:
+      - src/**/*.ts
+      - src/**/*.tsx
+      - src/**/*.js
+      - src/**/*.jsx
     description: Import organization and standards
     must_do:
       - rule: Use clean import paths without file extensions
@@ -75,6 +80,11 @@ rules:
           import { listScaffoldMethods } from '../hooks/geminiCli/listScaffoldMethods';
           import hooks from './hooks';
   - pattern: export-standards
+    globs:
+      - src/**/*.ts
+      - src/**/*.tsx
+      - src/**/*.js
+      - src/**/*.jsx
     description: Strict export standards enforced across all TypeScript/JavaScript files
     must_do:
       - rule: Use direct exports only - export declarations at point of definition
@@ -125,6 +135,9 @@ rules:
           export * as UserUtils from './userUtils';
           export * from './services';
   - pattern: error-handling
+    globs:
+      - src/**/*.ts
+      - src/**/*.tsx
     description: Consistent error handling patterns across all code
     must_do:
       - rule: Always use try-catch blocks for async operations
@@ -181,6 +194,11 @@ rules:
             return { error: error.stack }; // Exposing stack trace
           }
   - pattern: naming-conventions
+    globs:
+      - src/**/*.ts
+      - src/**/*.tsx
+      - src/**/*.js
+      - src/**/*.jsx
     description: Consistent naming conventions across all code
     must_do:
       - rule: Use PascalCase for classes, interfaces, types, and enums
@@ -224,6 +242,9 @@ rules:
           const userName = 'John';
           function getUserById() {}
   - pattern: constants-usage
+    globs:
+      - src/**/*.ts
+      - src/**/*.tsx
     description: Avoid magic strings and hardcoded values - use constants for maintainability
     must_do:
       - rule: Define constants in a dedicated constants file or folder
@@ -316,6 +337,9 @@ rules:
           // All files import from constants
           import { ARCHITECT_FILENAME } from '../constants';
   - pattern: type-safety
+    globs:
+      - src/**/*.ts
+      - src/**/*.tsx
     description: Strong type safety standards for TypeScript code
     must_do:
       - rule: Always provide explicit return types for functions
@@ -379,6 +403,9 @@ rules:
           // @ts-ignore
           const value = dangerousOperation();
   - pattern: documentation-standards
+    globs:
+      - src/**/*.ts
+      - src/**/*.tsx
     description: Code documentation standards
     must_do:
       - rule: Add JSDoc comments for all public APIs
@@ -421,6 +448,9 @@ rules:
           // ✅ GOOD (no comment needed for obvious code)
           counter++;
   - pattern: async-await-patterns
+    globs:
+      - src/**/*.ts
+      - src/**/*.tsx
     description: Best practices for asynchronous code
     must_do:
       - rule: Always use async/await over raw promises
@@ -479,6 +509,63 @@ rules:
             await saveUser(user);
             return;
           }
+  - pattern: test-standards
+    globs:
+      - tests/**/*.test.ts
+      - tests/**/*.spec.ts
+      - src/**/*.test.ts
+      - src/**/*.spec.ts
+    description: Test file standards using Vitest
+    must_do:
+      - rule: Use descriptive test names with 'should' pattern
+        codeExample: |
+          // ✅ GOOD
+          describe('UserService', () => {
+            it('should return user when valid ID is provided', () => {
+              expect(service.getById('123')).resolves.toMatchObject({ id: '123' });
+            });
+
+            it('should throw error when ID is invalid', () => {
+              expect(service.getById('')).rejects.toThrow('Invalid ID');
+            });
+          });
+      - rule: Test both success and error paths
+        codeExample: |
+          // ✅ GOOD
+          it('should return data on success', async () => {
+            const result = await service.getData();
+            expect(result.success).toBe(true);
+          });
+
+          it('should handle errors gracefully', async () => {
+            mockApi.mockRejectedValue(new Error('Network error'));
+            await expect(service.getData()).rejects.toThrow('Network error');
+          });
+      - rule: Mock external dependencies
+        codeExample: |
+          // ✅ GOOD
+          import { vi } from 'vitest';
+
+          const mockApi = {
+            fetch: vi.fn().mockResolvedValue({ data: 'test' })
+          };
+
+          const service = new MyService(mockApi);
+    must_not_do:
+      - rule: Never test implementation details - test behavior
+        codeExample: |
+          // ❌ BAD - Testing implementation
+          expect(service.privateMethod).toBeDefined();
+
+          // ✅ GOOD - Testing behavior
+          expect(service.process(input)).toBe(expectedOutput);
+      - rule: Never use hardcoded IDs - use test data generators
+        codeExample: |
+          // ❌ BAD
+          const userId = '123';
+
+          // ✅ GOOD
+          const userId = crypto.randomUUID();
   - pattern: test-pattern
     description: Test pattern description
   - pattern: duplicate-pattern

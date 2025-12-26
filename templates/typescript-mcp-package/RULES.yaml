@@ -114,7 +114,10 @@ rules:
             }
           }
       - rule: Skip error handling
-  - pattern: src/services/*/*.ts
+  - pattern: service-implementation
+    globs:
+      - src/services/*/*.ts
+      - src/services/**/*Service.ts
     description: Service Layer Implementation Standards
     inherits:
       - import-standards
@@ -691,7 +694,10 @@ rules:
 
           // ✅ GOOD
           export { Service1, Service2 } from './services';
-  - pattern: src/hooks/**/*.ts
+  - pattern: hook-implementation
+    globs:
+      - src/hooks/**/*.ts
+      - src/hooks/**/*Hook.ts
     description: Hook Class Implementation Standards
     inherits:
       - import-standards
