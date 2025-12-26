@@ -1,3 +1,71 @@
+## 1.0.12 (2025-12-26)
+
+### 🚀 Features
+
+- **scaffold-mcp:** add --prompt-as-skill option for Claude Code skill front matter ([0e5b6cf](https://github.com/AgiFlow/aicode-toolkit/commit/0e5b6cf))
+- **one-mcp:** add prompt aggregation support ([cf538ff](https://github.com/AgiFlow/aicode-toolkit/commit/cf538ff))
+- **hooks-adapter:** Refactor hooks and add ExecutionLogService improvements ([7a241a3](https://github.com/AgiFlow/aicode-toolkit/commit/7a241a3))
+- **scaffold-mcp:** hooks Fix scaffold files reminder ([bdb5e48](https://github.com/AgiFlow/aicode-toolkit/commit/bdb5e48))
+- **scaffold-mcp:** hooks Add claude codes hook ([91989aa](https://github.com/AgiFlow/aicode-toolkit/commit/91989aa))
+- **scaffold-mcp:** pagination Add pagination support for list-boilerplates and list-scaffold-methods. \n Fix instruction variables replacement. ([cc80ff8](https://github.com/AgiFlow/aicode-toolkit/commit/cc80ff8))
+- **scaffold-mcp:** add monolith mode support for all MCP tools ([b6cd8eb](https://github.com/AgiFlow/aicode-toolkit/commit/b6cd8eb))
+- integrate OpenSpec and enhance init workflow UX ([a90481f](https://github.com/AgiFlow/aicode-toolkit/commit/a90481f))
+- **aicode-toolkit:** add MCP server selection to init command with conditional template copying ([fc0b466](https://github.com/AgiFlow/aicode-toolkit/commit/fc0b466))
+- ⚠️  **coding-agent-bridge:** implement coding agent abstraction layer with ClaudeCodeService ([b9f2ff9](https://github.com/AgiFlow/aicode-toolkit/commit/b9f2ff9))
+- **scaffold-mcp:** Add --name argument and refactor imports ([05d7f22](https://github.com/AgiFlow/aicode-toolkit/commit/05d7f22))
+- **scaffold-mcp:** Add interactive new project setup with @inquirer/prompts ([5d2358a](https://github.com/AgiFlow/aicode-toolkit/commit/5d2358a))
+- **scaffold-mcp:** repo-type Support monolith vs mono-repo init ([e7b7ad8](https://github.com/AgiFlow/aicode-toolkit/commit/e7b7ad8))
+- claude-code-marketplace Add support for claude-code marketplace. ([f76a779](https://github.com/AgiFlow/aicode-toolkit/commit/f76a779))
+- **architect-mcp:** rules Add AddRuleTool to add global or template RULES.yaml. And ReviewCodeChangeTool to use RULES.yaml to identify code smell. ([232a3cc](https://github.com/AgiFlow/aicode-toolkit/commit/232a3cc))
+- **aicode-utils:** shared-utils Add a new packages for shared utilities for toolkit. ([2f90e51](https://github.com/AgiFlow/aicode-toolkit/commit/2f90e51))
+- **scaffold-mcp:** cli Update `add` command to get template from git sub folder. Update `init` command to pull all default templates. ([7b2da59](https://github.com/AgiFlow/aicode-toolkit/commit/7b2da59))
+- nextjs-15-drizzle template Add completed nextjs-15 template with drizzle and better-auth integration. ([8e21344](https://github.com/AgiFlow/aicode-toolkit/commit/8e21344))
+- **scaffold-mcp:** extra prompts Add two extra prompts for slash commands: scaffold-application and scaffold-feature ([54d1991](https://github.com/AgiFlow/aicode-toolkit/commit/54d1991))
+
+### 🩹 Fixes
+
+- **one-mcp:** improve front-matter parser edge case handling ([44a4eae](https://github.com/AgiFlow/aicode-toolkit/commit/44a4eae))
+- **aicode-utils:** consolidate git utilities and prevent command injection ([ff1b6b1](https://github.com/AgiFlow/aicode-toolkit/commit/ff1b6b1))
+- resolve TypeScript errors and fix test mocks ([e7320c4](https://github.com/AgiFlow/aicode-toolkit/commit/e7320c4))
+- handle null return from findTemplatesPath in consuming code ([a00a6b3](https://github.com/AgiFlow/aicode-toolkit/commit/a00a6b3))
+- **aicode-utils:** return null instead of throwing when templates path not found ([6dd4545](https://github.com/AgiFlow/aicode-toolkit/commit/6dd4545))
+- Improve hook implementations and documentation ([dc430b2](https://github.com/AgiFlow/aicode-toolkit/commit/dc430b2))
+- hooks Fix reviewCodeChange and useScaffoldMethod hook ([396a4cc](https://github.com/AgiFlow/aicode-toolkit/commit/396a4cc))
+- hooks Fix hooks adapter ([553e358](https://github.com/AgiFlow/aicode-toolkit/commit/553e358))
+- hooks Fix scaffold-mcp hooks ([d72a669](https://github.com/AgiFlow/aicode-toolkit/commit/d72a669))
+- **architect-mcp:** Hook format Fix --hook config format ([ad18201](https://github.com/AgiFlow/aicode-toolkit/commit/ad18201))
+- resolve lint formatting issues ([ea43109](https://github.com/AgiFlow/aicode-toolkit/commit/ea43109))
+- **scaffold-mcp:** security and code quality improvements ([bf578ae](https://github.com/AgiFlow/aicode-toolkit/commit/bf578ae))
+- Address code review feedback - type safety, validation, and error handling ([f75a451](https://github.com/AgiFlow/aicode-toolkit/commit/f75a451))
+- **architect-mcp:** cli Fix wrong cli entry ([a0000c0](https://github.com/AgiFlow/aicode-toolkit/commit/a0000c0))
+- **scaffold-mcp:** template-generation Fix template formating. Add logging with pino. ([cf9084a](https://github.com/AgiFlow/aicode-toolkit/commit/cf9084a))
+- **scaffold-mcp:** mcp transport 1. HTTP Transport: Updated to use server factory pattern, creates new MCP server per ([825001c](https://github.com/AgiFlow/aicode-toolkit/commit/825001c))
+- **scaffold-mcp:** templates-path Use TemplatesManager to find the correct workspace path ([f03d3e6](https://github.com/AgiFlow/aicode-toolkit/commit/f03d3e6))
+- **scaffold-mcp:** build-output Change build output to cjs ([7b4dc81](https://github.com/AgiFlow/aicode-toolkit/commit/7b4dc81))
+
+### ⚠️  Breaking Changes
+
+- **coding-agent-bridge:** implement coding agent abstraction layer with ClaudeCodeService  ([b9f2ff9](https://github.com/AgiFlow/aicode-toolkit/commit/b9f2ff9))
+  architect-mcp now depends on coding-agent-bridge package
+  - Migrate architect-mcp to use ClaudeCodeService from coding-agent-bridge
+  - Remove ClaudeCodeLLMService (280 lines) in favor of shared implementation
+  - Update CodeReviewService and GetFileDesignPatternTool to use new API (updatePrompt + invokeAsLlm)
+  - Fix logic bugs in TemplateFinder and RuleFinder to properly validate files are within projects
+  - Fix scaffold-mcp test mocks to target correct import path (@agiflowai/aicode-utils)
+  All tests passing: 172/172 (coding-agent-bridge: 8/8, architect-mcp: 13/13, scaffold-mcp: 151/151)
+  🤖 Generated with [Claude Code](https://claude.com/claude-code)
+  Co-Authored-By: Claude <noreply@anthropic.com>
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/architect-mcp to 1.0.6
+- Updated @agiflowai/hooks-adapter to 0.0.7
+
+### ❤️ Thank You
+
+- Claude
+- Vuong Ngo @AgiFlow
+
 ## 1.0.11 (2025-12-12)
 
 ### 🧱 Updated Dependencies
