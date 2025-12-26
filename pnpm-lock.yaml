@@ -414,7 +414,7 @@ importers:
         version: 1.24.0(zod@4.1.13)
       '@storybook/csf-tools':
         specifier: ^8.6.14
-        version: 8.6.14(storybook@8.6.14(prettier@3.7.4))
+        version: 8.6.14(storybook@8.6.15(prettier@3.7.4))
       '@tailwindcss/vite':
         specifier: ^4.1.16
         version: 4.1.17(vite@7.2.7(@types/node@22.19.1)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2))
@@ -446,8 +446,8 @@ importers:
         specifier: ^0.34.1
         version: 0.34.5
       storybook:
-        specifier: ^8.6.14
-        version: 8.6.14(prettier@3.7.4)
+        specifier: ^8.6.15
+        version: 8.6.15(prettier@3.7.4)
       tailwindcss:
         specifier: ^4.1.11
         version: 4.1.17
@@ -2316,8 +2316,8 @@ packages:
   '@standard-schema/spec@1.0.0':
     resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
 
-  '@storybook/core@8.6.14':
-    resolution: {integrity: sha512-1P/w4FSNRqP8j3JQBOi3yGt8PVOgSRbP66Ok520T78eJBeqx9ukCfl912PQZ7SPbW3TIunBwLXMZOjZwBB/JmA==}
+  '@storybook/core@8.6.15':
+    resolution: {integrity: sha512-VFpKcphNurJpSC4fpUfKL3GTXVoL53oytghGR30QIw5jKWwaT50HVbTyb41BLOUuZjmMhUQA8weiQEew6RX0gw==}
     peerDependencies:
       prettier: ^2 || ^3
     peerDependenciesMeta:
@@ -2329,8 +2329,8 @@ packages:
     peerDependencies:
       storybook: ^8.2.0 || ^8.3.0-0 || ^8.4.0-0 || ^8.5.0-0 || ^8.6.0-0
 
-  '@storybook/theming@8.6.14':
-    resolution: {integrity: sha512-r4y+LsiB37V5hzpQo+BM10PaCsp7YlZ0YcZzQP1OCkPlYXmUAFy2VvDKaFRpD8IeNPKug2u4iFm/laDEbs03dg==}
+  '@storybook/theming@8.6.15':
+    resolution: {integrity: sha512-dAbL0XOekyT6XsF49R6Etj3WxQ/LpdJDIswUUeHgVJ6/yd2opZOGbPxnwA3zlmAh1c0tvpPyhSDXxSG79u8e4Q==}
     peerDependencies:
       storybook: ^8.2.0 || ^8.3.0-0 || ^8.4.0-0 || ^8.5.0-0 || ^8.6.0-0
 
@@ -4395,8 +4395,8 @@ packages:
     resolution: {integrity: sha512-UhDfHmA92YAlNnCfhmq0VeNL5bDbiZGg7sZ2IvPsXubGkiNa9EC+tUTsjBRsYUAz87btI6/1wf4XoVvQ3uRnmQ==}
     engines: {node: '>=18'}
 
-  storybook@8.6.14:
-    resolution: {integrity: sha512-sVKbCj/OTx67jhmauhxc2dcr1P+yOgz/x3h0krwjyMgdc5Oubvxyg4NYDZmzAw+ym36g/lzH8N0Ccp4dwtdfxw==}
+  storybook@8.6.15:
+    resolution: {integrity: sha512-Ob7DMlwWx8s7dMvcQ3xPc02TvUeralb+xX3oaPRk9wY9Hc6M1IBC/7cEoITkSmRS2v38DHubC+mtEKNc1u2gQg==}
     hasBin: true
     peerDependencies:
       prettier: ^2 || ^3
@@ -6602,9 +6602,9 @@ snapshots:
 
   '@standard-schema/spec@1.0.0': {}
 
-  '@storybook/core@8.6.14(prettier@3.7.4)(storybook@8.6.14(prettier@3.7.4))':
+  '@storybook/core@8.6.15(prettier@3.7.4)(storybook@8.6.15(prettier@3.7.4))':
     dependencies:
-      '@storybook/theming': 8.6.14(storybook@8.6.14(prettier@3.7.4))
+      '@storybook/theming': 8.6.15(storybook@8.6.15(prettier@3.7.4))
       better-opn: 3.0.2
       browser-assert: 1.2.1
       esbuild: 0.25.12
@@ -6623,13 +6623,13 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@storybook/csf-tools@8.6.14(storybook@8.6.14(prettier@3.7.4))':
+  '@storybook/csf-tools@8.6.14(storybook@8.6.15(prettier@3.7.4))':
     dependencies:
-      storybook: 8.6.14(prettier@3.7.4)
+      storybook: 8.6.15(prettier@3.7.4)
 
-  '@storybook/theming@8.6.14(storybook@8.6.14(prettier@3.7.4))':
+  '@storybook/theming@8.6.15(storybook@8.6.15(prettier@3.7.4))':
     dependencies:
-      storybook: 8.6.14(prettier@3.7.4)
+      storybook: 8.6.15(prettier@3.7.4)
 
   '@tailwindcss/node@4.1.17':
     dependencies:
@@ -8863,9 +8863,9 @@ snapshots:
 
   stdin-discarder@0.2.2: {}
 
-  storybook@8.6.14(prettier@3.7.4):
+  storybook@8.6.15(prettier@3.7.4):
     dependencies:
-      '@storybook/core': 8.6.14(prettier@3.7.4)(storybook@8.6.14(prettier@3.7.4))
+      '@storybook/core': 8.6.15(prettier@3.7.4)(storybook@8.6.15(prettier@3.7.4))
     optionalDependencies:
       prettier: 3.7.4
     transitivePeerDependencies:
