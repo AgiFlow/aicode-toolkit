@@ -3,15 +3,15 @@
  *
  * DESIGN PATTERNS:
  * - Tool pattern with getDefinition() and execute() methods
- * - YAML manipulation for RULES.yaml updates
- * - JSON Schema validation for inputs
+ * - Thin orchestration layer delegating to RulesWriter service
+ * - Zod schema validation for inputs
  *
  * CODING STANDARDS:
  * - Implement Tool interface from ../types
  * - Use TOOL_NAME constant with snake_case
  * - Return CallToolResult with content array
  * - Handle errors with isError flag
- * - Validate all inputs thoroughly
+ * - Delegate business logic to services
  *
  * AVOID:
  * - Complex business logic in execute method
@@ -21,21 +21,19 @@
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Tool, ToolDefinition } from '../types';
-import type { RulesYamlConfig, RuleSection, AddRuleInput } from '../schemas';
+import type { AddRuleInput } from '../schemas';
 import { addRuleInputSchema } from '../schemas';
-import { TemplatesManagerService } from '@agiflowai/aicode-utils';
-import * as fs from 'node:fs/promises';
-import * as yaml from 'js-yaml';
-import * as path from 'node:path';
-import {
-  RULES_FILENAME,
-  UTF8_ENCODING,
-  GLOBAL_TEMPLATE_REF,
-  DEFAULT_RULES_VERSION,
-} from '../constants';
+import { RulesWriter } from '../services';
+import { RULES_ERROR_MESSAGE } from '../constants';
 
 export class AddRuleTool implements Tool<AddRuleInput> {
   static readonly TOOL_NAME = 'add_rule';
+
+  private rulesWriter: RulesWriter;
+
+  constructor() {
+    this.rulesWriter = new RulesWriter();
+  }
 
   /**
    * Returns the tool definition for MCP registration
@@ -56,16 +54,18 @@ export class AddRuleTool implements Tool<AddRuleInput> {
           },
           pattern: {
             type: 'string',
+            minLength: 1,
             description: 'Pattern identifier (e.g., "src/index.ts", "export-standards")',
           },
           globs: {
             type: 'array',
             items: { type: 'string' },
             description:
-              'Array of glob patterns for matching files (e.g., ["src/actions/**/*.ts"]). Takes precedence over pattern for file matching.',
+              'Array of glob patterns for matching files. Supports negated patterns with "!" prefix (e.g., ["src/**/*.ts", "!src/**/*.test.ts"]). Takes precedence over pattern for file matching.',
           },
           description: {
             type: 'string',
+            minLength: 1,
             description: 'Description of the rule pattern',
           },
           inherits: {
@@ -131,7 +131,7 @@ export class AddRuleTool implements Tool<AddRuleInput> {
    * @returns Promise<CallToolResult> with success message or error details
    */
   async execute(input: AddRuleInput): Promise<CallToolResult> {
-    // Validate input using Zod schema
+    // Step 1: Validate input using Zod schema
     const validationResult = addRuleInputSchema.safeParse(input);
     if (!validationResult.success) {
       return {
@@ -140,7 +140,7 @@ export class AddRuleTool implements Tool<AddRuleInput> {
             type: 'text',
             text: JSON.stringify(
               {
-                error: 'Input validation failed',
+                error: RULES_ERROR_MESSAGE.INPUT_VALIDATION_FAILED,
                 issues: validationResult.error.issues.map((issue) => ({
                   path: issue.path.join('.'),
                   message: issue.message,
@@ -155,168 +155,59 @@ export class AddRuleTool implements Tool<AddRuleInput> {
       };
     }
 
-    const validatedInput = validationResult.data;
-
+    // Step 2: Delegate to RulesWriter service
     try {
-      // Determine if this is global or template-specific
-      const isGlobal = validatedInput.is_global || !validatedInput.template_name;
+      const result = await this.rulesWriter.addRule(validationResult.data);
 
-      // Get templates root
-      const templatesRoot = await TemplatesManagerService.findTemplatesPath();
-      if (!templatesRoot) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({
-                error: 'Templates directory not found',
-              }),
-            },
-          ],
-          isError: true,
-        };
-      }
-
-      let rulesPath: string;
-      let templateRef: string;
-
-      if (isGlobal) {
-        rulesPath = path.join(templatesRoot, RULES_FILENAME);
-        templateRef = GLOBAL_TEMPLATE_REF;
-      } else {
-        const templatePath = path.join(templatesRoot, validatedInput.template_name!);
-
-        // Check if template exists
-        try {
-          await fs.access(templatePath);
-        } catch {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(
-                  {
-                    error: `Template "${validatedInput.template_name}" not found at ${templatePath}`,
-                    available_hint: 'Check templates directory for available templates',
-                  },
-                  null,
-                  2,
-                ),
-              },
-            ],
-            isError: true,
-          };
-        }
-
-        rulesPath = path.join(templatePath, RULES_FILENAME);
-        templateRef = validatedInput.template_name!;
-      }
-
-      // Read existing RULES.yaml or create new structure
-      let rulesConfig: RulesYamlConfig;
-
-      try {
-        const content = await fs.readFile(rulesPath, UTF8_ENCODING);
-        const parsed = yaml.load(content) as RulesYamlConfig;
-        rulesConfig = parsed || this.createDefaultConfig(templateRef, isGlobal);
-
-        // Ensure rules array exists
-        if (!rulesConfig.rules) {
-          rulesConfig.rules = [];
-        }
-      } catch {
-        // File doesn't exist, create new one
-        rulesConfig = this.createDefaultConfig(templateRef, isGlobal);
-      }
-
-      // Check if rule pattern already exists
-      const existingRule = rulesConfig.rules.find(
-        (r) => r.pattern === validatedInput.pattern,
-      );
-
-      if (existingRule) {
+      // Step 3: Format response
+      if (result.success) {
         return {
           content: [
             {
               type: 'text',
               text: JSON.stringify(
                 {
-                  error: `Rule pattern "${validatedInput.pattern}" already exists in ${isGlobal ? 'global' : validatedInput.template_name} RULES.yaml`,
-                  existing_rule: existingRule,
+                  success: true,
+                  message: result.message,
+                  file: result.file,
+                  rule: result.rule,
                 },
                 null,
                 2,
               ),
             },
           ],
-          isError: true,
         };
       }
 
-      // Create new rule section
-      const newRule: RuleSection = {
-        pattern: validatedInput.pattern,
-        description: validatedInput.description,
-      };
-
-      if (validatedInput.globs && validatedInput.globs.length > 0) {
-        newRule.globs = validatedInput.globs;
-      }
-
-      if (validatedInput.inherits && validatedInput.inherits.length > 0) {
-        newRule.inherits = validatedInput.inherits;
-      }
-
-      if (validatedInput.must_do && validatedInput.must_do.length > 0) {
-        newRule.must_do = validatedInput.must_do;
-      }
-
-      if (validatedInput.should_do && validatedInput.should_do.length > 0) {
-        newRule.should_do = validatedInput.should_do;
-      }
-
-      if (validatedInput.must_not_do && validatedInput.must_not_do.length > 0) {
-        newRule.must_not_do = validatedInput.must_not_do;
-      }
-
-      rulesConfig.rules.push(newRule);
-
-      // Write back to file
-      const yamlContent = yaml.dump(rulesConfig, {
-        indent: 2,
-        lineWidth: -1, // Disable line wrapping
-        noRefs: true,
-      });
-
-      await fs.writeFile(rulesPath, yamlContent, UTF8_ENCODING);
-
+      // Error response from service
       return {
         content: [
           {
             type: 'text',
             text: JSON.stringify(
               {
-                success: true,
-                message: `Added rule pattern "${validatedInput.pattern}" to ${isGlobal ? 'global' : validatedInput.template_name} RULES.yaml`,
-                file: rulesPath,
-                rule: newRule,
+                error: result.error,
+                errorType: result.errorType,
+                ...(result.existingRule && { existing_rule: result.existingRule }),
+                ...(result.availableHint && { available_hint: result.availableHint }),
               },
               null,
               2,
             ),
           },
         ],
+        isError: true,
       };
     } catch (error) {
+      // Handle unexpected errors from service
       return {
         content: [
           {
             type: 'text',
             text: JSON.stringify(
               {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                template_name: validatedInput.template_name,
-                pattern: validatedInput.pattern,
+                error: error instanceof Error ? error.message : String(error),
               },
               null,
               2,
@@ -326,22 +217,5 @@ export class AddRuleTool implements Tool<AddRuleInput> {
         isError: true,
       };
     }
-  }
-
-  /**
-   * Creates default RULES.yaml configuration structure
-   * @param templateRef - Template reference name
-   * @param isGlobal - Whether this is a global rules config
-   * @returns Default RulesYamlConfig object
-   */
-  private createDefaultConfig(templateRef: string, isGlobal: boolean): RulesYamlConfig {
-    return {
-      version: DEFAULT_RULES_VERSION,
-      template: templateRef,
-      description: isGlobal
-        ? 'Shared rules and patterns for all templates'
-        : `Rules and patterns for ${templateRef} template`,
-      rules: [],
-    };
   }
 }

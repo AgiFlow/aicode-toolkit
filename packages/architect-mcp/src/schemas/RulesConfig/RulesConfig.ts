@@ -39,7 +39,10 @@ export const ruleSectionSchema = z.object({
   /** Pattern identifier - used for inheritance lookups and fallback file matching */
   pattern: z.string().min(1, 'Pattern is required'),
 
-  /** Array of glob patterns for file matching. Takes precedence over pattern when provided */
+  /** Array of glob patterns for file matching. Takes precedence over pattern when provided.
+   * Supports negated patterns (e.g., '!src/*.test.ts') to exclude files.
+   * A file matches if it matches any positive pattern AND doesn't match any negated pattern.
+   */
   globs: z.array(z.string()).optional(),
 
   /** Description of this rule section */

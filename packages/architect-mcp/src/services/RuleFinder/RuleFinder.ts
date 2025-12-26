@@ -27,7 +27,12 @@ import * as yaml from 'js-yaml';
 import { minimatch } from 'minimatch';
 import * as path from 'node:path';
 import type { RulesYamlConfig, RuleSection, ProjectConfig } from '../../types';
-import { RULES_FILENAME, SRC_PREFIX, UTF8_ENCODING } from '../../constants';
+import {
+  RULES_FILENAME,
+  SRC_PREFIX,
+  UTF8_ENCODING,
+  GLOB_NEGATION_PREFIX,
+} from '../../constants';
 
 export class RuleFinder {
   private projectCache: Map<string, ProjectConfig> = new Map();
@@ -249,6 +254,18 @@ export class RuleFinder {
 
   /**
    * Find matching rule for a file path
+   *
+   * Supports both positive and negated glob patterns:
+   * - Positive patterns (e.g., 'src/*.ts') include files
+   * - Negated patterns (e.g., '!src/*.test.ts') exclude files
+   *
+   * A file matches a rule if:
+   * 1. It matches at least one positive pattern (or there are no positive patterns)
+   * 2. AND it does NOT match any negated pattern
+   *
+   * Example: globs: ['src/*.ts', '!src/*.test.ts', '!src/*.spec.ts']
+   * - 'src/utils/helper.ts' → matches (positive match, no negative match)
+   * - 'src/utils/helper.test.ts' → no match (excluded by negated pattern)
    */
   private findMatchingRule(
     filePath: string,
@@ -278,12 +295,30 @@ export class RuleFinder {
           ? ruleSection.globs
           : [ruleSection.pattern];
 
-      // Check if any path variation matches any pattern
-      for (const pattern of patterns) {
-        for (const pathVariant of pathVariations) {
-          if (minimatch(pathVariant, pattern)) {
-            return ruleSection;
-          }
+      // Separate positive and negative (negated) patterns
+      const positivePatterns = patterns.filter(
+        (p) => !p.startsWith(GLOB_NEGATION_PREFIX),
+      );
+      const negativePatterns = patterns
+        .filter((p) => p.startsWith(GLOB_NEGATION_PREFIX))
+        .map((p) => p.slice(GLOB_NEGATION_PREFIX.length)); // Remove the negation prefix
+
+      // Check if any path variation matches the rule
+      for (const pathVariant of pathVariations) {
+        // Must match at least one positive pattern.
+        // If no positive patterns exist, treat as implicit match for any file -
+        // negated patterns become the primary filter (useful for exclusion-only rules)
+        const matchesPositive =
+          positivePatterns.length === 0 ||
+          positivePatterns.some((pattern) => minimatch(pathVariant, pattern));
+
+        // Must NOT match any negative pattern
+        const matchesNegative = negativePatterns.some((pattern) =>
+          minimatch(pathVariant, pattern),
+        );
+
+        if (matchesPositive && !matchesNegative) {
+          return ruleSection;
         }
       }
     }
