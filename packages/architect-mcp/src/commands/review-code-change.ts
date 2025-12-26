@@ -148,7 +148,7 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
         }
 
         // Display issues found
-        if (data.issues_found && data.issues_found.length > 0) {
+        if (data.identified_issues && data.identified_issues.length > 0) {
           print.info('### Issues Found\n');
 
           const groupedIssues: Record<string, any[]> = {
@@ -157,7 +157,7 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
             should_do: [],
           };
 
-          for (const issue of data.issues_found) {
+          for (const issue of data.identified_issues) {
             if (groupedIssues[issue.type]) {
               groupedIssues[issue.type].push(issue);
             }
