@@ -1,3 +1,48 @@
+## 1.0.13 (2025-12-26)
+
+### 🚀 Features
+
+- **aicode-toolkit:** add one-mcp support in MCP selection ([e731037](https://github.com/AgiFlow/aicode-toolkit/commit/e731037))
+- **scaffold-mcp:** add monolith mode support for all MCP tools ([b6cd8eb](https://github.com/AgiFlow/aicode-toolkit/commit/b6cd8eb))
+- integrate OpenSpec and enhance init workflow UX ([a90481f](https://github.com/AgiFlow/aicode-toolkit/commit/a90481f))
+- **coding-agent-bridge:** add Codex and Gemini CLI service support ([15835b7](https://github.com/AgiFlow/aicode-toolkit/commit/15835b7))
+- **aicode-toolkit:** add global RULES.yaml support and improve MCP configuration ([339179c](https://github.com/AgiFlow/aicode-toolkit/commit/339179c))
+- **coding-agent-bridge:** implement Claude Code auto-detection and standardized MCP configuration ([a3c96c4](https://github.com/AgiFlow/aicode-toolkit/commit/a3c96c4))
+- **aicode-toolkit:** add MCP server selection to init command with conditional template copying ([fc0b466](https://github.com/AgiFlow/aicode-toolkit/commit/fc0b466))
+- ⚠️  **coding-agent-bridge:** implement coding agent abstraction layer with ClaudeCodeService ([b9f2ff9](https://github.com/AgiFlow/aicode-toolkit/commit/b9f2ff9))
+- **aicode-toolkit:** implement improved init flow with template management and MCP setup ([3bb5059](https://github.com/AgiFlow/aicode-toolkit/commit/3bb5059))
+- **aicode-toolkit:** add gradient banner with theme colors ([2d16e73](https://github.com/AgiFlow/aicode-toolkit/commit/2d16e73))
+- **aicode-toolkit:** create standalone CLI application ([785c2a3](https://github.com/AgiFlow/aicode-toolkit/commit/785c2a3))
+
+### 🩹 Fixes
+
+- **aicode-utils:** consolidate git utilities and prevent command injection ([ff1b6b1](https://github.com/AgiFlow/aicode-toolkit/commit/ff1b6b1))
+- resolve TypeScript errors and fix test mocks ([e7320c4](https://github.com/AgiFlow/aicode-toolkit/commit/e7320c4))
+- handle null return from findTemplatesPath in consuming code ([a00a6b3](https://github.com/AgiFlow/aicode-toolkit/commit/a00a6b3))
+- **aicode-toolkit:** remove remaining fs-extra references ([acf8205](https://github.com/AgiFlow/aicode-toolkit/commit/acf8205))
+- resolve lint formatting issues ([ea43109](https://github.com/AgiFlow/aicode-toolkit/commit/ea43109))
+- linting Fix error in linting and typechecking ([2c8a782](https://github.com/AgiFlow/aicode-toolkit/commit/2c8a782))
+- change print.warn to print.warning and configure local Nx cache ([9685400](https://github.com/AgiFlow/aicode-toolkit/commit/9685400))
+- **aicode-toolkit:** use js-yaml for scaffold.yaml parsing ([99dbfb4](https://github.com/AgiFlow/aicode-toolkit/commit/99dbfb4))
+
+### ⚠️  Breaking Changes
+
+- **coding-agent-bridge:** implement coding agent abstraction layer with ClaudeCodeService  ([b9f2ff9](https://github.com/AgiFlow/aicode-toolkit/commit/b9f2ff9))
+  architect-mcp now depends on coding-agent-bridge package
+  - Migrate architect-mcp to use ClaudeCodeService from coding-agent-bridge
+  - Remove ClaudeCodeLLMService (280 lines) in favor of shared implementation
+  - Update CodeReviewService and GetFileDesignPatternTool to use new API (updatePrompt + invokeAsLlm)
+  - Fix logic bugs in TemplateFinder and RuleFinder to properly validate files are within projects
+  - Fix scaffold-mcp test mocks to target correct import path (@agiflowai/aicode-utils)
+  All tests passing: 172/172 (coding-agent-bridge: 8/8, architect-mcp: 13/13, scaffold-mcp: 151/151)
+  🤖 Generated with [Claude Code](https://claude.com/claude-code)
+  Co-Authored-By: Claude <noreply@anthropic.com>
+
+### ❤️ Thank You
+
+- Claude
+- Vuong Ngo @AgiFlow
+
 ## 1.0.12 (2025-12-12)
 
 ### 🧱 Updated Dependencies
