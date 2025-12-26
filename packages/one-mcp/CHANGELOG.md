@@ -1,3 +1,17 @@
+## 0.3.1 (2025-12-26)
+
+### 🚀 Features
+
+- **one-mcp:** add unique server identifier for multi-instance support ([58d7248](https://github.com/AgiFlow/aicode-toolkit/commit/58d7248))
+
+### 🩹 Fixes
+
+- **one-mcp:** use rejection sampling to avoid modulo bias in ID generation ([3b7521c](https://github.com/AgiFlow/aicode-toolkit/commit/3b7521c))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.3.0 (2025-12-19)
 
 This was a version bump only for one-mcp to align it with other projects, there were no code changes.
