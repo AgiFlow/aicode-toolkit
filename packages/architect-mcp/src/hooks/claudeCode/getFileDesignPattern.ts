@@ -125,7 +125,10 @@ export class GetFileDesignPatternHook {
       // First edit - get design patterns and deny to show them to Claude
       // Validate llm_tool before passing to tool constructor
       const llmTool = context.llm_tool && isValidLlmTool(context.llm_tool) ? context.llm_tool : undefined;
-      const tool = new GetFileDesignPatternTool({ llmTool });
+      const tool = new GetFileDesignPatternTool({
+        llmTool,
+        toolConfig: context.tool_config,
+      });
       const result = await tool.execute({ file_path: filePath });
 
       // Parse result

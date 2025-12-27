@@ -285,4 +285,109 @@ describe('BaseAdapter', () => {
       );
     });
   });
+
+  describe('executeMultiple with additionalContext', () => {
+    test('merges additionalContext into parsed context', async () => {
+      const input = {
+        tool_name: 'Edit',
+        tool_input: { file_path: '/test/file.ts' },
+        cwd: '/test',
+        session_id: 'session-123',
+      };
+
+      mockStdin(JSON.stringify(input));
+
+      const additionalContext = {
+        tool_config: { model: 'gemini-3-flash-preview' },
+      };
+
+      let receivedContext: any;
+      const callback = vi.fn(async (context: any) => {
+        receivedContext = context;
+        return {
+          decision: 'allow' as const,
+          message: 'Test',
+        };
+      });
+
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      try {
+        await adapter.executeMultiple([callback], additionalContext as any);
+      } catch (error: any) {
+        if (error.message !== 'EXIT') throw error;
+      }
+
+      expect(callback).toHaveBeenCalled();
+      expect(receivedContext).toHaveProperty('tool_config');
+      expect(receivedContext.tool_config).toEqual({ model: 'gemini-3-flash-preview' });
+    });
+
+    test('works without additionalContext', async () => {
+      const input = {
+        tool_name: 'Edit',
+        tool_input: { file_path: '/test/file.ts' },
+        cwd: '/test',
+        session_id: 'session-123',
+      };
+
+      mockStdin(JSON.stringify(input));
+
+      let receivedContext: any;
+      const callback = vi.fn(async (context: any) => {
+        receivedContext = context;
+        return {
+          decision: 'allow' as const,
+          message: 'Test',
+        };
+      });
+
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      try {
+        await adapter.executeMultiple([callback]);
+      } catch (error: any) {
+        if (error.message !== 'EXIT') throw error;
+      }
+
+      expect(callback).toHaveBeenCalled();
+      expect(receivedContext).not.toHaveProperty('tool_config');
+    });
+
+    test('additionalContext overrides parsed values', async () => {
+      const input = {
+        tool_name: 'Edit',
+        tool_input: { file_path: '/test/file.ts' },
+        cwd: '/test',
+        session_id: 'session-123',
+        llm_tool: 'claude-code',
+      };
+
+      mockStdin(JSON.stringify(input));
+
+      const additionalContext = {
+        llmTool: 'gemini-cli',
+      };
+
+      let receivedContext: any;
+      const callback = vi.fn(async (context: any) => {
+        receivedContext = context;
+        return {
+          decision: 'allow' as const,
+          message: 'Test',
+        };
+      });
+
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      try {
+        await adapter.executeMultiple([callback], additionalContext as any);
+      } catch (error: any) {
+        if (error.message !== 'EXIT') throw error;
+      }
+
+      expect(callback).toHaveBeenCalled();
+      expect(receivedContext.llmTool).toBe('gemini-cli');
+    });
+  });
 });

@@ -34,6 +34,12 @@ import { print } from '@agiflowai/aicode-utils';
 
 interface HookOptions {
   type?: string;
+  toolConfig?: string;
+}
+
+/** Type guard to validate parsed JSON is a record object */
+function isRecordObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** Type for Claude Code hook callback function */
@@ -69,6 +75,10 @@ export const hookCommand = new Command('hook')
     '--type <agentAndMethod>',
     'Hook type: <agent>.<method> (e.g., claude-code.preToolUse, gemini-cli.afterTool)',
   )
+  .option(
+    '--tool-config <json>',
+    'JSON config for the LLM tool (e.g., \'{"model":"gpt-5.2-high"}\')',
+  )
   .action(async (options: HookOptions): Promise<void> => {
     try {
       if (!options.type) {
@@ -82,6 +92,24 @@ export const hookCommand = new Command('hook')
       }
 
       const { agent, hookMethod } = parseHookType(options.type);
+
+      // Parse tool config JSON if provided
+      let toolConfig: Record<string, unknown> | undefined;
+      if (options.toolConfig) {
+        try {
+          const parsed: unknown = JSON.parse(options.toolConfig);
+          if (!isRecordObject(parsed)) {
+            print.error('--tool-config must be a JSON object, not an array or primitive value');
+            process.exit(1);
+          }
+          toolConfig = parsed;
+        } catch (error) {
+          print.error(
+            `Invalid JSON for --tool-config. Expected format: '{"key":"value"}'. Parse error: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          process.exit(1);
+        }
+      }
 
       if (agent === CLAUDE_CODE) {
         // Import hook modules (dynamic import for conditional loading based on agent type)
@@ -118,8 +146,11 @@ export const hookCommand = new Command('hook')
 
         const adapter = new ClaudeCodeAdapter();
 
-        // Execute all hooks in serial with shared stdin
-        await adapter.executeMultiple(claudeCallbacks);
+        // Execute all hooks in serial with shared stdin, passing tool_config if provided
+        await adapter.executeMultiple(
+          claudeCallbacks,
+          toolConfig ? { tool_config: toolConfig } : undefined,
+        );
 
       } else if (agent === GEMINI_CLI) {
         // Import hook modules (dynamic import for conditional loading based on agent type)
@@ -156,8 +187,11 @@ export const hookCommand = new Command('hook')
 
         const adapter = new GeminiCliAdapter();
 
-        // Execute all hooks in serial with shared stdin
-        await adapter.executeMultiple(geminiCallbacks);
+        // Execute all hooks in serial with shared stdin, passing tool_config if provided
+        await adapter.executeMultiple(
+          geminiCallbacks,
+          toolConfig ? { tool_config: toolConfig } : undefined,
+        );
 
       } else {
         print.error(`Unsupported agent: ${agent}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);
