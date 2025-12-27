@@ -1,3 +1,23 @@
+## 1.0.15 (2025-12-27)
+
+### 🩹 Fixes
+
+- **scaffold-mcp:** only block Write operations within working directory ([6c42919](https://github.com/AgiFlow/aicode-toolkit/commit/6c42919))
+
+### 🔥 Performance
+
+- **scaffold-mcp:** parallelize sequential awaits in services ([bda480e](https://github.com/AgiFlow/aicode-toolkit/commit/bda480e))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.12
+- Updated @agiflowai/architect-mcp to 1.0.13
+- Updated @agiflowai/hooks-adapter to 0.0.10
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.14 (2025-12-26)
 
 ### 🧱 Updated Dependencies

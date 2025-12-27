@@ -1,3 +1,7 @@
+## 1.0.12 (2025-12-27)
+
+This was a version bump only for @agiflowai/coding-agent-bridge to align it with other projects, there were no code changes.
+
 ## 1.0.11 (2025-12-27)
 
 ### 🩹 Fixes
