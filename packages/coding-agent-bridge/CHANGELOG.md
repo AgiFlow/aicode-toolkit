@@ -1,3 +1,14 @@
+## 1.0.13 (2025-12-27)
+
+### 🩹 Fixes
+
+- **coding-agent-bridge:** remove --yolo flag from gemini-cli sandbox mode ([fce7e95](https://github.com/AgiFlow/aicode-toolkit/commit/fce7e95))
+- **coding-agent-bridge:** pass process.env to execa version checks ([fc10940](https://github.com/AgiFlow/aicode-toolkit/commit/fc10940))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.12 (2025-12-27)
 
 This was a version bump only for @agiflowai/coding-agent-bridge to align it with other projects, there were no code changes.
