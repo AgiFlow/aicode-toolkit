@@ -89,20 +89,21 @@ export class AppComponentsService {
       throw new Error(`App path does not exist: ${resolvedAppPath}`);
     }
 
-    // Get app name and workspace dependencies
-    const appName = await this.getAppName(resolvedAppPath);
-    const workspaceDependencies = await this.getWorkspaceDependencies(resolvedAppPath);
+    // Initialize stories index (needed for component lookup)
+    const storiesIndex = new StoriesIndexService();
+
+    // Run independent operations in parallel for better performance
+    const [appName, workspaceDependencies, packageMap] = await Promise.all([
+      this.getAppName(resolvedAppPath),
+      this.getWorkspaceDependencies(resolvedAppPath),
+      this.buildPackageMap(monorepoRoot),
+      storiesIndex.initialize(),
+    ]);
 
     log.info(
       `[AppComponentsService] Found ${workspaceDependencies.length} workspace dependencies for ${appName}`,
     );
 
-    // Build package name → directory path map
-    const packageMap = await this.buildPackageMap(monorepoRoot);
-
-    // Initialize stories index and get all components
-    const storiesIndex = new StoriesIndexService();
-    await storiesIndex.initialize();
     const allComponents = storiesIndex.getAllComponents();
 
     // Categorize components into app-specific and package components
@@ -217,17 +218,20 @@ export class AppComponentsService {
       );
     }
 
-    for (const pkgJsonPath of packageJsonFiles) {
-      try {
+    // Process all package.json files in parallel
+    const results = await Promise.allSettled(
+      packageJsonFiles.map(async (pkgJsonPath) => {
         const content = await fs.readFile(pkgJsonPath, 'utf-8');
         const pkgJson = JSON.parse(content);
-
-        if (pkgJson.name) {
-          const pkgDir = path.dirname(pkgJsonPath);
-          packageMap.set(pkgJson.name, pkgDir);
-        }
-      } catch (error) {
-        log.debug(`[AppComponentsService] Skipping invalid package.json at ${pkgJsonPath}:`, error);
+        return { pkgJsonPath, name: pkgJson.name };
+      }),
+    );
+    for (const [index, result] of results.entries()) {
+      if (result.status === 'fulfilled' && result.value.name) {
+        const pkgDir = path.dirname(result.value.pkgJsonPath);
+        packageMap.set(result.value.name, pkgDir);
+      } else if (result.status === 'rejected') {
+        log.debug(`[AppComponentsService] Skipping invalid package.json at ${packageJsonFiles[index]}:`, result.reason);
       }
     }
 

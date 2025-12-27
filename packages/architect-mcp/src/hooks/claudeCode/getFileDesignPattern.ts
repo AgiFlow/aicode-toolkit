@@ -24,6 +24,7 @@ import { GetFileDesignPatternTool } from '../../tools/GetFileDesignPatternTool';
 import { TemplateFinder } from '../../services/TemplateFinder';
 import { ArchitectParser } from '../../services/ArchitectParser';
 import { PatternMatcher } from '../../services/PatternMatcher';
+import path from 'node:path';
 
 /**
  * GetFileDesignPattern Hook class for Claude Code
@@ -52,6 +53,18 @@ export class GetFileDesignPatternHook {
       };
     }
 
+    // Only block files within the working directory
+    const absoluteFilePath = path.isAbsolute(filePath)
+      ? filePath
+      : path.join(context.cwd, filePath);
+
+    if (!absoluteFilePath.startsWith(context.cwd + path.sep) && absoluteFilePath !== context.cwd) {
+      return {
+        decision: DECISION_SKIP,
+        message: 'File is outside working directory - skipping design pattern check',
+      };
+    }
+
     try {
       // Create execution log service for this session
       const executionLog = new ExecutionLogService(context.session_id);
@@ -62,10 +75,12 @@ export class GetFileDesignPatternHook {
       const patternMatcher = new PatternMatcher();
 
       const templateMapping = await templateFinder.findTemplateForFile(filePath);
-      const templateConfig = templateMapping
-        ? await architectParser.parseArchitectFile(templateMapping.templatePath)
-        : null;
-      const globalConfig = await architectParser.parseGlobalArchitectFile();
+      const [templateConfig, globalConfig] = await Promise.all([
+        templateMapping
+          ? architectParser.parseArchitectFile(templateMapping.templatePath)
+          : Promise.resolve(null),
+        architectParser.parseGlobalArchitectFile(),
+      ]);
 
       const filePatterns = patternMatcher.getMatchedFilePatterns(
         filePath,

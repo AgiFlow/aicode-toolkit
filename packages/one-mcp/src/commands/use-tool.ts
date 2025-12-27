@@ -131,20 +131,29 @@ export const useToolCommand = new Command('use-tool')
         }
       }
 
-      // Search for the tool across all servers
-      const matchingServers: string[] = [];
+      // Search for the tool across all servers in parallel
+      const searchResults = await Promise.all(
+        clients.map(async (client) => {
+          try {
+            const tools = await client.listTools();
+            const hasTool = tools.some((t: any) => t.name === toolName);
+            return { serverName: client.serverName, hasTool, error: null };
+          } catch (error) {
+            return { serverName: client.serverName, hasTool: false, error };
+          }
+        })
+      );
 
-      for (const client of clients) {
-        try {
-          const tools = await client.listTools();
-          const hasTool = tools.some((t: any) => t.name === toolName);
-          if (hasTool) {
-            matchingServers.push(client.serverName);
-          }
-        } catch (error) {
+      const matchingServers: string[] = [];
+      for (const { serverName, hasTool, error } of searchResults) {
+        if (error) {
           if (!options.json) {
-            console.error(`Failed to list tools from ${client.serverName}:`, error);
+            console.error(`Failed to list tools from ${serverName}:`, error);
           }
+          continue;
+        }
+        if (hasTool) {
+          matchingServers.push(serverName);
         }
       }
 

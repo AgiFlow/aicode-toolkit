@@ -37,6 +37,7 @@ import {
 export class RuleFinder {
   private projectCache: Map<string, ProjectConfig> = new Map();
   private rulesCache: Map<string, RulesYamlConfig> = new Map();
+  private projectRulesCache: Map<string, RulesYamlConfig | null> = new Map();
   private globalRulesCache: RulesYamlConfig | null = null;
   private workspaceRoot: string;
   private projectFinder: ProjectFinderService;
@@ -70,24 +71,59 @@ export class RuleFinder {
   }
 
   /**
-   * Find inherited rule by pattern
+   * Load project-level rules from RULES.yaml in the project root directory
+   */
+  private async loadProjectRules(projectRoot: string): Promise<RulesYamlConfig | null> {
+    // Check cache first
+    if (this.projectRulesCache.has(projectRoot)) {
+      return this.projectRulesCache.get(projectRoot) ?? null;
+    }
+
+    try {
+      const projectRulesPath = path.join(projectRoot, RULES_FILENAME);
+      const projectRulesContent = await fs.readFile(projectRulesPath, UTF8_ENCODING);
+      const rulesConfig = yaml.load(projectRulesContent) as RulesYamlConfig;
+      this.projectRulesCache.set(projectRoot, rulesConfig);
+      return rulesConfig;
+    } catch (_error) {
+      // Project rules are optional
+      this.projectRulesCache.set(projectRoot, null);
+      return null;
+    }
+  }
+
+  /**
+   * Find inherited rule by pattern.
+   * Checks in priority order: project -> template -> global
    */
   private async findInheritedRule(
     pattern: string,
-    templateRules: RulesYamlConfig,
+    projectRules: RulesYamlConfig | null,
+    templateRules: RulesYamlConfig | null,
     globalRules: RulesYamlConfig | null,
   ): Promise<RuleSection | null> {
-    // First check template rules
-    const templateMatches = templateRules.rules.filter((rule) => rule.pattern === pattern);
-
-    // If multiple matches in template, get the second one (as specified in requirements)
-    if (templateMatches.length > 1) {
-      return templateMatches[1];
-    } else if (templateMatches.length === 1) {
-      return templateMatches[0];
+    // First check project rules (highest priority)
+    if (projectRules) {
+      const projectMatches = projectRules.rules.filter((rule) => rule.pattern === pattern);
+      // If multiple matches in project, get the second one (as specified in requirements)
+      if (projectMatches.length > 1) {
+        return projectMatches[1];
+      } else if (projectMatches.length === 1) {
+        return projectMatches[0];
+      }
     }
 
-    // Then check global rules
+    // Then check template rules
+    if (templateRules) {
+      const templateMatches = templateRules.rules.filter((rule) => rule.pattern === pattern);
+      if (templateMatches.length > 1) {
+        return templateMatches[1];
+      } else if (templateMatches.length === 1) {
+        return templateMatches[0];
+      }
+    }
+
+    // Finally check global rules
     if (globalRules) {
       const globalMatches = globalRules.rules.filter((rule) => rule.pattern === pattern);
       if (globalMatches.length > 1) {
@@ -116,11 +152,13 @@ export class RuleFinder {
   }
 
   /**
-   * Resolve inheritance for a rule section
+   * Resolve inheritance for a rule section.
+   * Checks in priority order: project -> template -> global
    */
   private async resolveInheritance(
     rule: RuleSection,
-    templateRules: RulesYamlConfig,
+    projectRules: RulesYamlConfig | null,
+    templateRules: RulesYamlConfig | null,
     globalRules: RulesYamlConfig | null,
   ): Promise<RuleSection> {
     let resolvedRule = { ...rule };
@@ -130,6 +168,7 @@ export class RuleFinder {
       for (const inheritPattern of rule.inherits) {
         const inheritedRule = await this.findInheritedRule(
           inheritPattern,
+          projectRules,
           templateRules,
           globalRules,
         );
@@ -137,6 +176,7 @@ export class RuleFinder {
           // Recursively resolve inheritance for the inherited rule
           const fullyResolvedInheritedRule = await this.resolveInheritance(
             inheritedRule,
+            projectRules,
             templateRules,
             globalRules,
           );
@@ -169,18 +209,20 @@ export class RuleFinder {
       return { project, rulesConfig: null, matchedRule: null, templatePath: null };
     }
 
-    // Find and load RULES.yaml
-    const { rulesConfig, templatePath } = await this.loadRulesForTemplate(project.sourceTemplate);
+    // Load project, template, and global rules in parallel for better performance
+    const [{ rulesConfig, templatePath }, globalRules, projectRules] = await Promise.all([
+      this.loadRulesForTemplate(project.sourceTemplate),
+      this.loadGlobalRules(),
+      this.loadProjectRules(project.root),
+    ]);
 
-    if (!rulesConfig) {
+    // Merge rules in priority order: project -> template -> global
+    const mergedRulesConfig = this.mergeRulesConfigs(projectRules, rulesConfig, globalRules);
+
+    // If no rules exist at any level, return early
+    if (!mergedRulesConfig) {
       return { project, rulesConfig: null, matchedRule: null, templatePath };
     }
-
-    // Load global rules
-    const globalRules = await this.loadGlobalRules();
-
-    // Merge template rules with global rules (global rules at bottom)
-    const mergedRulesConfig = this.mergeRulesConfigs(rulesConfig, globalRules);
 
     // Find matching rule section
     const matchedRule = this.findMatchingRule(normalizedPath, project.root, mergedRulesConfig);
@@ -190,25 +232,42 @@ export class RuleFinder {
     }
 
     // Resolve inheritance for the matched rule
-    const resolvedRule = await this.resolveInheritance(matchedRule, rulesConfig, globalRules);
+    const resolvedRule = await this.resolveInheritance(
+      matchedRule,
+      projectRules,
+      rulesConfig,
+      globalRules,
+    );
 
     return { project, rulesConfig: mergedRulesConfig, matchedRule: resolvedRule, templatePath };
   }
 
   /**
-   * Merge template rules config with global rules config
+   * Merge rules configs from project, template, and global sources.
+   * Priority order: project -> template -> global (project rules come first)
+   * Handles cases where any or all configs may be null.
    */
   private mergeRulesConfigs(
-    templateRules: RulesYamlConfig,
+    projectRules: RulesYamlConfig | null,
+    templateRules: RulesYamlConfig | null,
     globalRules: RulesYamlConfig | null,
-  ): RulesYamlConfig {
-    if (!globalRules) {
-      return templateRules;
+  ): RulesYamlConfig | null {
+    // If all are null, return null
+    if (!projectRules && !templateRules && !globalRules) {
+      return null;
     }
 
+    // Find the first non-null config to use as base for metadata
+    const baseConfig = projectRules || templateRules || globalRules;
+
+    // Merge all rules in priority order: project -> template -> global
     return {
-      ...templateRules,
-      rules: [...templateRules.rules, ...globalRules.rules],
+      ...baseConfig!,
+      rules: [
+        ...(projectRules?.rules || []),
+        ...(templateRules?.rules || []),
+        ...(globalRules?.rules || []),
+      ],
     };
   }
 
@@ -384,11 +443,15 @@ export class RuleFinder {
   }
 
   /**
-   * Clear caches
+   * Clear all internal caches including project configs, template rules,
+   * project rules, and global rules. Call this when underlying RULES.yaml
+   * files may have changed on disk.
    */
   clearCache(): void {
     this.projectCache.clear();
     this.rulesCache.clear();
+    this.projectRulesCache.clear();
+    this.globalRulesCache = null;
     this.projectFinder.clearCache();
   }
 }

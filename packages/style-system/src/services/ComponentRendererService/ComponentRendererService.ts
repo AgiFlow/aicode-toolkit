@@ -262,28 +262,30 @@ export class ComponentRendererService {
       const now = Date.now();
       const componentFiles: Array<{ name: string; path: string; mtime: number }> = [];
 
-      // Collect component files with their modification times
-      for (const file of files) {
-        if (file.startsWith('component-')) {
+      // Collect component files with their modification times in parallel
+      const componentFileNames = files.filter((f) => f.startsWith('component-'));
+      const statResults = await Promise.allSettled(
+        componentFileNames.map(async (file) => {
           const filePath = path.join(this.tmpDir, file);
-          try {
-            const stats = await fs.stat(filePath);
-            componentFiles.push({ name: file, path: filePath, mtime: stats.mtimeMs });
-          } catch {
-            // File may have been deleted, skip
-          }
+          const stats = await fs.stat(filePath);
+          return { name: file, path: filePath, mtime: stats.mtimeMs };
+        }),
+      );
+      for (const result of statResults) {
+        if (result.status === 'fulfilled') {
+          componentFiles.push(result.value);
         }
+        // Silently skip files that may have been deleted
       }
 
-      let deletedCount = 0;
-
-      // Delete files older than threshold
-      for (const file of componentFiles) {
-        if (now - file.mtime > olderThanMs) {
-          await fs.unlink(file.path).catch((err) => log.warn('[ComponentRendererService] Failed to delete file:', file.path, err));
-          deletedCount++;
-        }
-      }
+      // Delete files older than threshold in parallel
+      const oldFiles = componentFiles.filter((f) => now - f.mtime > olderThanMs);
+      await Promise.all(
+        oldFiles.map((file) =>
+          fs.unlink(file.path).catch((err) => log.warn('[ComponentRendererService] Failed to delete file:', file.path, err)),
+        ),
+      );
+      let deletedCount = oldFiles.length;
 
       // Enforce max file count by removing oldest files
       const remainingFiles = componentFiles.filter((f) => now - f.mtime <= olderThanMs);
@@ -292,10 +294,13 @@ export class ComponentRendererService {
         remainingFiles.sort((a, b) => a.mtime - b.mtime);
         const toDelete = remainingFiles.slice(0, remainingFiles.length - ComponentRendererService.MAX_TEMP_FILES);
 
-        for (const file of toDelete) {
-          await fs.unlink(file.path).catch((err) => log.warn('[ComponentRendererService] Failed to delete file:', file.path, err));
-          deletedCount++;
-        }
+        // Delete excess files in parallel
+        await Promise.all(
+          toDelete.map((file) =>
+            fs.unlink(file.path).catch((err) => log.warn('[ComponentRendererService] Failed to delete file:', file.path, err)),
+          ),
+        );
+        deletedCount += toDelete.length;
       }
 
       if (deletedCount > 0) {

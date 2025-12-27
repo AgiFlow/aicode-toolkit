@@ -277,12 +277,13 @@ export class CodexService extends BaseCodingAgentService {
       fullPrompt,
     ];
 
-    // Add toolConfig as CLI args (e.g., { model: "gpt-5.2-high" } -> ["--model", "gpt-5.2-high"])
-    args.push(...this.buildToolConfigArgs());
-
-    if (params.model) {
-      args.push('--model', params.model);
-    }
+    // Add toolConfig merged with defaults as CLI args
+    // toolConfig values take precedence over defaults
+    args.push(
+      ...this.buildToolConfigArgs({
+        ...(params.model && { model: params.model }),
+      }),
+    );
 
     // Write JSON schema to temp file if provided
     // Use fs.mkdtemp for secure temporary directory creation (atomic, random suffix)

@@ -29,6 +29,7 @@ import { CodeReviewService } from '../../services/CodeReview';
 import { TemplateFinder } from '../../services/TemplateFinder';
 import { ArchitectParser } from '../../services/ArchitectParser';
 import { PatternMatcher } from '../../services/PatternMatcher';
+import path from 'node:path';
 
 /**
  * ReviewCodeChange Hook class for Claude Code
@@ -71,6 +72,18 @@ export class ReviewCodeChangeHook {
       };
     }
 
+    // Only review files within the working directory
+    const absoluteFilePath = path.isAbsolute(filePath)
+      ? filePath
+      : path.join(context.cwd, filePath);
+
+    if (!absoluteFilePath.startsWith(context.cwd + path.sep) && absoluteFilePath !== context.cwd) {
+      return {
+        decision: DECISION_SKIP,
+        message: 'File is outside working directory - skipping code review',
+      };
+    }
+
     try {
       // Create execution log service for this session
       const executionLog = new ExecutionLogService(context.session_id);
@@ -94,10 +107,12 @@ export class ReviewCodeChangeHook {
       const patternMatcher = new PatternMatcher();
 
       const templateMapping = await templateFinder.findTemplateForFile(filePath);
-      const templateConfig = templateMapping
-        ? await architectParser.parseArchitectFile(templateMapping.templatePath)
-        : null;
-      const globalConfig = await architectParser.parseGlobalArchitectFile();
+      const [templateConfig, globalConfig] = await Promise.all([
+        templateMapping
+          ? architectParser.parseArchitectFile(templateMapping.templatePath)
+          : Promise.resolve(null),
+        architectParser.parseGlobalArchitectFile(),
+      ]);
 
       const filePatterns = patternMatcher.getMatchedFilePatterns(
         filePath,

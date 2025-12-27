@@ -39,9 +39,13 @@ mcpServers:
       - mcp-serve
       - --admin-enable
       - --design-pattern-tool
-      - claude-code
+      - gemini-cli
+      - --design-pattern-tool-config
+      - '{"model":"gemini-3-flash-preview"}'
       - --review-tool
       - gemini-cli
+      - --review-tool-config
+      - '{"model":"gemini-3-flash-preview"}'
     env: {}
     config:
       instruction: >

@@ -154,14 +154,26 @@ export class BoilerplateService {
   async useBoilerplate(request: UseBoilerplateRequest): Promise<ScaffoldResult> {
     let { boilerplateName, variables, monolith, targetFolderOverride } = request;
 
+    // Load config once and reuse for both auto-detection and boilerplate name resolution
+    let projectConfig: Awaited<
+      ReturnType<typeof ProjectConfigResolver.resolveProjectConfig>
+    > | null = null;
+
     // Auto-detect project type if monolith parameter is not explicitly provided
-    if (monolith === undefined) {
+    if (monolith === undefined || (monolith && !boilerplateName)) {
       try {
-        const config = await ProjectConfigResolver.resolveProjectConfig(process.cwd());
-        monolith = config.type === 'monolith';
-        log.info(`Auto-detected project type: ${config.type}`);
+        projectConfig = await ProjectConfigResolver.resolveProjectConfig(process.cwd());
       } catch (_error) {
-        // If no config found, default to monorepo mode
+        // Config not found - will handle below
+      }
+    }
+
+    // Set monolith based on config if not explicitly provided
+    if (monolith === undefined) {
+      if (projectConfig) {
+        monolith = projectConfig.type === 'monolith';
+        log.info(`Auto-detected project type: ${projectConfig.type}`);
+      } else {
         monolith = false;
         log.info('No project configuration found, defaulting to monorepo mode');
       }
@@ -169,14 +181,14 @@ export class BoilerplateService {
 
     // In monolith mode, read boilerplateName from toolkit.yaml if not provided
     if (monolith && !boilerplateName) {
-      try {
-        const config = await ProjectConfigResolver.resolveProjectConfig(process.cwd());
-        boilerplateName = config.sourceTemplate;
+      if (projectConfig) {
+        boilerplateName = projectConfig.sourceTemplate;
         log.info(`Using boilerplate from toolkit.yaml: ${boilerplateName}`);
-      } catch (error) {
+      } else {
         return {
           success: false,
-          message: `Failed to read boilerplate name from toolkit.yaml: ${error instanceof Error ? error.message : String(error)}`,
+          message:
+            'Failed to read boilerplate name from toolkit.yaml: No project configuration found',
         };
       }
     }

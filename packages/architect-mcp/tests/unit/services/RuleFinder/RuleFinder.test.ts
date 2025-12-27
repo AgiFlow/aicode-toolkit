@@ -387,3 +387,198 @@ describe('RuleFinder pattern matching logic', () => {
     });
   });
 });
+
+/**
+ * Test the rules config merging logic used by RuleFinder.mergeRulesConfigs
+ * This tests combining project, template, and global rules with correct priority
+ * Priority order: project -> template -> global
+ */
+describe('RuleFinder mergeRulesConfigs logic', () => {
+  // Helper function that mirrors the logic in RuleFinder.mergeRulesConfigs
+  type RulesYamlConfig = {
+    version: string;
+    template: string;
+    description: string;
+    rules: Array<{ pattern: string; globs?: string[]; description: string }>;
+  };
+
+  /**
+   * Merge rules configs from project, template, and global sources.
+   * Priority order: project -> template -> global (project rules come first)
+   */
+  const mergeRulesConfigs = (
+    projectRules: RulesYamlConfig | null,
+    templateRules: RulesYamlConfig | null,
+    globalRules: RulesYamlConfig | null,
+  ): RulesYamlConfig | null => {
+    // If all are null, return null
+    if (!projectRules && !templateRules && !globalRules) {
+      return null;
+    }
+
+    // Find the first non-null config to use as base for metadata
+    const baseConfig = projectRules || templateRules || globalRules;
+
+    // Merge all rules in priority order: project -> template -> global
+    return {
+      ...baseConfig!,
+      rules: [
+        ...(projectRules?.rules || []),
+        ...(templateRules?.rules || []),
+        ...(globalRules?.rules || []),
+      ],
+    };
+  };
+
+  const globalRulesConfig: RulesYamlConfig = {
+    version: '1.0',
+    template: 'shared',
+    description: 'Shared rules for all templates',
+    rules: [
+      { pattern: 'import-standards', globs: ['**/*.ts'], description: 'Import standards' },
+      { pattern: 'export-standards', globs: ['**/*.ts'], description: 'Export standards' },
+    ],
+  };
+
+  const templateRulesConfig: RulesYamlConfig = {
+    version: '1.0',
+    template: 'nextjs-15',
+    description: 'Next.js 15 specific rules',
+    rules: [
+      { pattern: 'server-actions', globs: ['src/actions/**/*.ts'], description: 'Server actions' },
+      { pattern: 'page-components', globs: ['src/app/**/page.tsx'], description: 'Page components' },
+    ],
+  };
+
+  const projectRulesConfig: RulesYamlConfig = {
+    version: '1.0',
+    template: 'my-project',
+    description: 'Project-specific rules',
+    rules: [
+      { pattern: 'custom-api', globs: ['src/api/**/*.ts'], description: 'Custom API rules' },
+      { pattern: 'local-services', globs: ['src/services/**/*.ts'], description: 'Local service rules' },
+    ],
+  };
+
+  describe('when all three levels of rules exist', () => {
+    it('should merge all configs with project rules first, then template, then global', () => {
+      const merged = mergeRulesConfigs(projectRulesConfig, templateRulesConfig, globalRulesConfig);
+
+      expect(merged).not.toBeNull();
+      expect(merged?.rules).toHaveLength(6);
+      // Project rules come first (highest priority)
+      expect(merged?.rules[0].pattern).toBe('custom-api');
+      expect(merged?.rules[1].pattern).toBe('local-services');
+      // Template rules come second
+      expect(merged?.rules[2].pattern).toBe('server-actions');
+      expect(merged?.rules[3].pattern).toBe('page-components');
+      // Global rules come last (lowest priority)
+      expect(merged?.rules[4].pattern).toBe('import-standards');
+      expect(merged?.rules[5].pattern).toBe('export-standards');
+    });
+
+    it('should preserve project metadata in merged config when project rules exist', () => {
+      const merged = mergeRulesConfigs(projectRulesConfig, templateRulesConfig, globalRulesConfig);
+
+      expect(merged?.version).toBe('1.0');
+      expect(merged?.template).toBe('my-project');
+      expect(merged?.description).toBe('Project-specific rules');
+    });
+  });
+
+  describe('when only template and global rules exist (no project rules)', () => {
+    it('should merge with template rules first', () => {
+      const merged = mergeRulesConfigs(null, templateRulesConfig, globalRulesConfig);
+
+      expect(merged).not.toBeNull();
+      expect(merged?.rules).toHaveLength(4);
+      // Template rules come first
+      expect(merged?.rules[0].pattern).toBe('server-actions');
+      expect(merged?.rules[1].pattern).toBe('page-components');
+      // Global rules come after
+      expect(merged?.rules[2].pattern).toBe('import-standards');
+      expect(merged?.rules[3].pattern).toBe('export-standards');
+    });
+
+    it('should preserve template metadata when no project rules', () => {
+      const merged = mergeRulesConfigs(null, templateRulesConfig, globalRulesConfig);
+
+      expect(merged?.version).toBe('1.0');
+      expect(merged?.template).toBe('nextjs-15');
+      expect(merged?.description).toBe('Next.js 15 specific rules');
+    });
+  });
+
+  describe('when only project and global rules exist (no template rules)', () => {
+    it('should merge with project rules first', () => {
+      const merged = mergeRulesConfigs(projectRulesConfig, null, globalRulesConfig);
+
+      expect(merged).not.toBeNull();
+      expect(merged?.rules).toHaveLength(4);
+      // Project rules come first
+      expect(merged?.rules[0].pattern).toBe('custom-api');
+      expect(merged?.rules[1].pattern).toBe('local-services');
+      // Global rules come after
+      expect(merged?.rules[2].pattern).toBe('import-standards');
+      expect(merged?.rules[3].pattern).toBe('export-standards');
+    });
+
+    it('should preserve project metadata', () => {
+      const merged = mergeRulesConfigs(projectRulesConfig, null, globalRulesConfig);
+
+      expect(merged?.template).toBe('my-project');
+    });
+  });
+
+  describe('when only project and template rules exist (no global rules)', () => {
+    it('should merge with project rules first', () => {
+      const merged = mergeRulesConfigs(projectRulesConfig, templateRulesConfig, null);
+
+      expect(merged).not.toBeNull();
+      expect(merged?.rules).toHaveLength(4);
+      // Project rules come first
+      expect(merged?.rules[0].pattern).toBe('custom-api');
+      expect(merged?.rules[1].pattern).toBe('local-services');
+      // Template rules come after
+      expect(merged?.rules[2].pattern).toBe('server-actions');
+      expect(merged?.rules[3].pattern).toBe('page-components');
+    });
+  });
+
+  describe('when only one level of rules exists', () => {
+    it('should return project rules when only project rules exist', () => {
+      const merged = mergeRulesConfigs(projectRulesConfig, null, null);
+
+      expect(merged).not.toBeNull();
+      expect(merged?.rules).toHaveLength(2);
+      expect(merged?.template).toBe('my-project');
+      expect(merged?.rules[0].pattern).toBe('custom-api');
+    });
+
+    it('should return template rules when only template rules exist', () => {
+      const merged = mergeRulesConfigs(null, templateRulesConfig, null);
+
+      expect(merged).not.toBeNull();
+      expect(merged?.rules).toHaveLength(2);
+      expect(merged?.template).toBe('nextjs-15');
+      expect(merged?.rules[0].pattern).toBe('server-actions');
+    });
+
+    it('should return global rules when only global rules exist', () => {
+      const merged = mergeRulesConfigs(null, null, globalRulesConfig);
+
+      expect(merged).not.toBeNull();
+      expect(merged?.rules).toHaveLength(2);
+      expect(merged?.template).toBe('shared');
+      expect(merged?.rules[0].pattern).toBe('import-standards');
+    });
+  });
+
+  describe('when no rules exist', () => {
+    it('should return null when all are null', () => {
+      const merged = mergeRulesConfigs(null, null, null);
+
+      expect(merged).toBeNull();
+    });
+  });
+});
