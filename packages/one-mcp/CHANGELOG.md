@@ -1,3 +1,14 @@
+## 0.3.4 (2025-12-27)
+
+### 🩹 Fixes
+
+- **one-mcp:** add type assertion for process.env spread ([629e126](https://github.com/AgiFlow/aicode-toolkit/commit/629e126))
+- **coding-agent-bridge:** pass process.env to execa version checks ([fc10940](https://github.com/AgiFlow/aicode-toolkit/commit/fc10940))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.2.8 (2025-12-27)
 
 ### 🚀 Features
