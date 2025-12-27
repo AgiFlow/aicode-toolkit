@@ -1,3 +1,39 @@
+## 1.0.12 (2025-12-27)
+
+### 🚀 Features
+
+- **architect-mcp:** add project-level RULES.yaml support ([9ca9eff](https://github.com/AgiFlow/aicode-toolkit/commit/9ca9eff))
+- **architect-mcp:** add negated glob patterns and RulesWriter service ([81192d4](https://github.com/AgiFlow/aicode-toolkit/commit/81192d4))
+- **architect-mcp:** add Zod schemas for RULES.yaml validation ([f46bb93](https://github.com/AgiFlow/aicode-toolkit/commit/f46bb93))
+- **architect-mcp:** add multi-glob pattern support for RULES.yaml ([7b55b35](https://github.com/AgiFlow/aicode-toolkit/commit/7b55b35))
+- **architect-mcp:** add security improvements and test coverage for ValidateArchitectTool ([2e396ba](https://github.com/AgiFlow/aicode-toolkit/commit/2e396ba))
+- **architect-mcp:** add validate-architect tool and Zod schema validation ([a5f5a51](https://github.com/AgiFlow/aicode-toolkit/commit/a5f5a51))
+- **architect-mcp:** support project-level architect.yaml override ([d1bcca3](https://github.com/AgiFlow/aicode-toolkit/commit/d1bcca3))
+- **architect-mcp:** support .architect.yaml in addition to architect.yaml ([a8bf8f6](https://github.com/AgiFlow/aicode-toolkit/commit/a8bf8f6))
+
+### 🩹 Fixes
+
+- **architect-mcp:** only process files within working directory in hooks ([0315c91](https://github.com/AgiFlow/aicode-toolkit/commit/0315c91))
+- **architect-mcp:** always load global rules even when template rules are missing ([76651dd](https://github.com/AgiFlow/aicode-toolkit/commit/76651dd))
+- **architect-mcp:** fix review-code-change display showing wrong field name ([e0b9373](https://github.com/AgiFlow/aicode-toolkit/commit/e0b9373))
+- **architect-mcp:** use path.resolve/relative for cross-platform path traversal protection ([562e978](https://github.com/AgiFlow/aicode-toolkit/commit/562e978))
+- **architect-mcp:** resolve TOCTOU race condition in file size check ([7275cf1](https://github.com/AgiFlow/aicode-toolkit/commit/7275cf1))
+
+### 🔥 Performance
+
+- **architect-mcp:** parallelize sequential awaits in hooks and tools ([9d0a341](https://github.com/AgiFlow/aicode-toolkit/commit/9d0a341))
+- **architect-mcp:** parallelize git diff operations in CodeReview ([d80baf2](https://github.com/AgiFlow/aicode-toolkit/commit/d80baf2))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.11
+- Updated @agiflowai/hooks-adapter to 0.0.6
+- Updated @agiflowai/aicode-utils to 1.0.10
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.11 (2025-12-12)
 
 ### 🚀 Features

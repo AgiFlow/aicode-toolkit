@@ -1,3 +1,18 @@
+## 1.0.11 (2025-12-27)
+
+### 🩹 Fixes
+
+- **coding-agent-bridge:** merge toolConfig with default args to prevent duplicate CLI flags ([540367a](https://github.com/AgiFlow/aicode-toolkit/commit/540367a))
+- **coding-agent-bridge:** add --yolo flag to enable OAuth auth with sandbox mode ([536f87c](https://github.com/AgiFlow/aicode-toolkit/commit/536f87c))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.10
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.10 (2025-12-12)
 
 ### 🚀 Features
