@@ -279,7 +279,7 @@ export class ClaudeCodeService extends BaseCodingAgentService {
   async invokeAsLlm(params: LlmInvocationParams): Promise<LlmInvocationResponse> {
     // Check if CLI exists
     try {
-      await execa(this.claudePath, ['--version'], { timeout: 5000 });
+      await execa(this.claudePath, ['--version'], { timeout: 5000, env: process.env });
     } catch {
       throw new Error(
         `Claude Code CLI not found at path: ${this.claudePath}. Install it with: npm install -g @anthropic-ai/claude-code`,
