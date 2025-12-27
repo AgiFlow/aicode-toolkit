@@ -255,7 +255,7 @@ export class CodexService extends BaseCodingAgentService {
   async invokeAsLlm(params: LlmInvocationParams): Promise<LlmInvocationResponse> {
     // Check if CLI exists
     try {
-      await execa(this.codexPath, ['--version'], { timeout: 5000 });
+      await execa(this.codexPath, ['--version'], { timeout: 5000, env: process.env });
     } catch {
       throw new Error(
         `Codex CLI not found at path: ${this.codexPath}. Install it with: npm install -g @openai/codex`,
