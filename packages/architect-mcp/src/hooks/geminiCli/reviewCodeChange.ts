@@ -132,7 +132,10 @@ export class ReviewCodeChangeHook {
         llmTool = context.llm_tool;
       }
 
-      const service = new CodeReviewService({ llmTool });
+      const service = new CodeReviewService({
+        llmTool,
+        toolConfig: context.tool_config,
+      });
       const data = await service.reviewCodeChange(filePath);
 
       // If fixes are required (must_do or must_not_do violations), block with full response
@@ -188,7 +191,7 @@ export class ReviewCodeChangeHook {
 /**
  * Extract operation type from tool name
  */
-function extractOperation(toolName: string): string {
+function extractOperation(toolName: string): 'edit' | 'write' | 'read' | 'unknown' {
   const lowerToolName = toolName.toLowerCase();
   if (lowerToolName === 'edit' || lowerToolName === 'update') return 'edit';
   if (lowerToolName === 'write') return 'write';

@@ -31,6 +31,7 @@ export interface GeminiCliHookInput {
   session_id: string;
   event: 'BeforeTool' | 'AfterTool' | 'BeforeModel' | 'AfterModel';
   llm_tool?: string;
+  tool_config?: Record<string, unknown>;
 }
 
 /**

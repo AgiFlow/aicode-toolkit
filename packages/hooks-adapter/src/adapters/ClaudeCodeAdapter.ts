@@ -35,6 +35,7 @@ export interface ClaudeCodePreToolUseInput {
   transcript_path: string;
   permission_mode: string;
   llm_tool?: string;
+  tool_config?: Record<string, unknown>;
 }
 
 /**
@@ -51,6 +52,7 @@ export interface ClaudeCodePostToolUseInput {
   transcript_path: string;
   permission_mode: string;
   llm_tool?: string;
+  tool_config?: Record<string, unknown>;
 }
 
 /**
