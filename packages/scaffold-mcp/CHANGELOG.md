@@ -1,3 +1,14 @@
+## 1.0.16 (2025-12-29)
+
+### 🩹 Fixes
+
+- **scaffold-mcp:** fix TypeScript errors in schemaDefaults utility ([9878053](https://github.com/AgiFlow/aicode-toolkit/commit/9878053))
+- **scaffold-mcp:** fix conditional scaffold includes with schema defaults ([7d46b59](https://github.com/AgiFlow/aicode-toolkit/commit/7d46b59))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.15 (2025-12-27)
 
 ### 🩹 Fixes
