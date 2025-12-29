@@ -186,9 +186,7 @@ describe('ScaffoldService', () => {
           },
           required: ['name'],
         },
-        includes: [
-          'src/Feature.tsx->src/{{name}}Feature.tsx?withFeature=true',
-        ],
+        includes: ['src/Feature.tsx->src/{{name}}Feature.tsx?withFeature=true'],
       };
 
       const result = await (scaffoldService as any).processScaffold({

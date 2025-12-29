@@ -303,19 +303,17 @@ describe('ScaffoldConfigLoader with real TemplateService (LiquidJS)', () => {
     });
 
     it('should correctly apply Liquid filters like pascalCase', () => {
-      const result = loader.parseIncludeEntry(
-        'src/Example.tsx->src/{{ name | pascalCase }}.tsx',
-        { name: 'my-component' },
-      );
+      const result = loader.parseIncludeEntry('src/Example.tsx->src/{{ name | pascalCase }}.tsx', {
+        name: 'my-component',
+      });
 
       expect(result.targetPath).toBe('src/MyComponent.tsx');
     });
 
     it('should correctly apply Liquid filters like kebabCase', () => {
-      const result = loader.parseIncludeEntry(
-        'src/Example.tsx->src/{{ name | kebabCase }}.tsx',
-        { name: 'MyComponent' },
-      );
+      const result = loader.parseIncludeEntry('src/Example.tsx->src/{{ name | kebabCase }}.tsx', {
+        name: 'MyComponent',
+      });
 
       expect(result.targetPath).toBe('src/my-component.tsx');
     });
