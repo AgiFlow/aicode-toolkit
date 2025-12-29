@@ -1,9 +1,15 @@
+import type { JsonSchema } from '@composio/json-schema-to-zod';
 import { jsonSchemaToZod } from '@composio/json-schema-to-zod';
 import { z } from 'zod';
 
-export interface JsonSchema {
-  type: string;
-  properties?: Record<string, any>;
+export type { JsonSchema };
+
+/**
+ * Type for object schemas with properties (used for applying defaults)
+ */
+export interface ObjectSchema {
+  type?: string;
+  properties?: Record<string, { default?: unknown; [key: string]: unknown }>;
   required?: string[];
   additionalProperties?: boolean;
 }
@@ -67,7 +73,7 @@ export function parseVariablesWithDefaults(
  * @returns Variables with defaults applied for missing properties
  */
 export function applySchemaDefaults(
-  schema: JsonSchema,
+  schema: ObjectSchema,
   variables: Record<string, any>,
 ): Record<string, any> {
   const result = { ...variables };
