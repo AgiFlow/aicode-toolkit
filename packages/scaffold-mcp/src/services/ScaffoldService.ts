@@ -13,6 +13,7 @@ import type {
   ParsedInclude,
   ScaffoldResult,
 } from '../types/scaffold';
+import { applySchemaDefaults } from '../utils/schemaDefaults';
 import { ScaffoldProcessingService } from './ScaffoldProcessingService';
 
 export class ScaffoldService implements IScaffoldService {
@@ -292,15 +293,22 @@ export class ScaffoldService implements IScaffoldService {
     const parsedIncludes: ParsedInclude[] = [];
     const warnings: string[] = [];
 
+    // Apply schema defaults to variables before condition checking
+    // This ensures that conditions like ?withFeature=true work correctly
+    // when the schema has default: false for that property
+    const variablesWithDefaults = config.variables_schema
+      ? applySchemaDefaults(config.variables_schema, allVariables)
+      : allVariables;
+
     // Check if includes array exists before iterating
     if (config.includes && Array.isArray(config.includes)) {
       // Parse all includes and filter by conditions (sync operations)
       const filteredIncludes = (config.includes as string[])
         .map((includeEntry) =>
-          this.scaffoldConfigLoader.parseIncludeEntry(includeEntry, allVariables),
+          this.scaffoldConfigLoader.parseIncludeEntry(includeEntry, variablesWithDefaults),
         )
         .filter((parsed) =>
-          this.scaffoldConfigLoader.shouldIncludeFile(parsed.conditions, allVariables),
+          this.scaffoldConfigLoader.shouldIncludeFile(parsed.conditions, variablesWithDefaults),
         );
 
       // Check all target paths in parallel
@@ -335,10 +343,11 @@ export class ScaffoldService implements IScaffoldService {
         const targetFilePath = path.join(targetPath, parsed.targetPath);
 
         // Always pass existingFiles array to track and prevent overwriting existing files
+        // Use variablesWithDefaults for template processing to ensure defaults are applied
         await this.processingService.copyAndProcess(
           sourcePath,
           targetFilePath,
-          allVariables,
+          variablesWithDefaults,
           createdFiles,
           existingFiles,
         );
