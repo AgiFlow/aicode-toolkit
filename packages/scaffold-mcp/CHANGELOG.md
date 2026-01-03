@@ -1,3 +1,9 @@
+## 1.0.17 (2026-01-03)
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/architect-mcp to 1.0.15
+
 ## 1.0.16 (2025-12-29)
 
 ### 🩹 Fixes

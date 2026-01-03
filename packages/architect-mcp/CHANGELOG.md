@@ -1,3 +1,13 @@
+## 1.0.15 (2026-01-03)
+
+### 🚀 Features
+
+- **architect-mcp:** add --llm-tool option to hook command ([12c9e50](https://github.com/AgiFlow/aicode-toolkit/commit/12c9e50))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.14 (2025-12-27)
 
 This was a version bump only for @agiflowai/architect-mcp to align it with other projects, there were no code changes.
