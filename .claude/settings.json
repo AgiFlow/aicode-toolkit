@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.preToolUse --tool-config '{\"model\":\"gemini-3-flash-preview\"}'"
+            "command": "bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.preToolUse --llm-tool gemini-cli --tool-config '{\"model\":\"gemini-3-flash-preview\"}'"
           }
         ]
       }
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.postToolUse --tool-config '{\"model\":\"gemini-3-flash-preview\"}'"
+            "command": "bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.postToolUse --llm-tool gemini-cli --tool-config '{\"model\":\"gemini-3-flash-preview\"}'"
           }
         ]
       },

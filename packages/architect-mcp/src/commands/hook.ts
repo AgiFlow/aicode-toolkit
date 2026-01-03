@@ -21,7 +21,7 @@
  */
 
 import { Command } from 'commander';
-import { CLAUDE_CODE, GEMINI_CLI } from '@agiflowai/coding-agent-bridge';
+import { CLAUDE_CODE, GEMINI_CLI, isValidLlmTool } from '@agiflowai/coding-agent-bridge';
 import {
   ClaudeCodeAdapter,
   GeminiCliAdapter,
@@ -35,6 +35,7 @@ import { print } from '@agiflowai/aicode-utils';
 interface HookOptions {
   type?: string;
   toolConfig?: string;
+  llmTool?: string;
 }
 
 /** Type guard to validate parsed JSON is a record object */
@@ -78,6 +79,10 @@ export const hookCommand = new Command('hook')
   .option(
     '--tool-config <json>',
     'JSON config for the LLM tool (e.g., \'{"model":"gpt-5.2-high"}\')',
+  )
+  .option(
+    '--llm-tool <tool>',
+    'LLM tool to use for processing (e.g., claude-code, gemini-cli)',
   )
   .action(async (options: HookOptions): Promise<void> => {
     try {
@@ -146,10 +151,23 @@ export const hookCommand = new Command('hook')
 
         const adapter = new ClaudeCodeAdapter();
 
-        // Execute all hooks in serial with shared stdin, passing tool_config if provided
+        // Build config object with optional tool_config and llm_tool
+        const adapterConfig: { tool_config?: Record<string, unknown>; llm_tool?: string } = {};
+        if (toolConfig) {
+          adapterConfig.tool_config = toolConfig;
+        }
+        if (options.llmTool) {
+          if (!isValidLlmTool(options.llmTool)) {
+            print.error(`Invalid --llm-tool value: ${options.llmTool}. Supported: claude-code, gemini-cli`);
+            process.exit(1);
+          }
+          adapterConfig.llm_tool = options.llmTool;
+        }
+
+        // Execute all hooks in serial with shared stdin
         await adapter.executeMultiple(
           claudeCallbacks,
-          toolConfig ? { tool_config: toolConfig } : undefined,
+          Object.keys(adapterConfig).length > 0 ? adapterConfig : undefined,
         );
 
       } else if (agent === GEMINI_CLI) {
@@ -187,10 +205,23 @@ export const hookCommand = new Command('hook')
 
         const adapter = new GeminiCliAdapter();
 
-        // Execute all hooks in serial with shared stdin, passing tool_config if provided
+        // Build config object with optional tool_config and llm_tool
+        const geminiAdapterConfig: { tool_config?: Record<string, unknown>; llm_tool?: string } = {};
+        if (toolConfig) {
+          geminiAdapterConfig.tool_config = toolConfig;
+        }
+        if (options.llmTool) {
+          if (!isValidLlmTool(options.llmTool)) {
+            print.error(`Invalid --llm-tool value: ${options.llmTool}. Supported: claude-code, gemini-cli`);
+            process.exit(1);
+          }
+          geminiAdapterConfig.llm_tool = options.llmTool;
+        }
+
+        // Execute all hooks in serial with shared stdin
         await adapter.executeMultiple(
           geminiCallbacks,
-          toolConfig ? { tool_config: toolConfig } : undefined,
+          Object.keys(geminiAdapterConfig).length > 0 ? geminiAdapterConfig : undefined,
         );
 
       } else {
