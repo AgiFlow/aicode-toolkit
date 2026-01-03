@@ -14,6 +14,7 @@
  */
 
 import { describe, test, expect } from 'vitest';
+import { isValidLlmTool } from '@agiflowai/coding-agent-bridge';
 
 /**
  * Type guard to validate parsed JSON is a record object
@@ -133,6 +134,42 @@ describe('hook command toolConfig', () => {
       expect(() => parseToolConfig(input)).toThrow(
         '--tool-config must be a JSON object, not an array or primitive value',
       );
+    });
+  });
+});
+
+describe('hook command llmTool', () => {
+  describe('isValidLlmTool validation', () => {
+    test('returns true for valid LLM tools', () => {
+      expect(isValidLlmTool('claude-code')).toBe(true);
+      expect(isValidLlmTool('gemini-cli')).toBe(true);
+    });
+
+    test('returns false for invalid LLM tools', () => {
+      expect(isValidLlmTool('invalid-tool')).toBe(false);
+      expect(isValidLlmTool('gpt-4')).toBe(false);
+      expect(isValidLlmTool('')).toBe(false);
+      expect(isValidLlmTool('Claude-Code')).toBe(false); // case sensitive
+      expect(isValidLlmTool('CLAUDE_CODE')).toBe(false);
+    });
+
+    test('returns false for non-string values', () => {
+      expect(isValidLlmTool(null as unknown as string)).toBe(false);
+      expect(isValidLlmTool(undefined as unknown as string)).toBe(false);
+      expect(isValidLlmTool(123 as unknown as string)).toBe(false);
+      expect(isValidLlmTool({} as unknown as string)).toBe(false);
+    });
+  });
+
+  describe('llmTool integration scenarios', () => {
+    test.each([
+      ['claude-code', true],
+      ['gemini-cli', true],
+      ['invalid', false],
+      ['openai', false],
+      ['', false],
+    ])('isValidLlmTool(%s) returns %s', (input, expected) => {
+      expect(isValidLlmTool(input)).toBe(expected);
     });
   });
 });
