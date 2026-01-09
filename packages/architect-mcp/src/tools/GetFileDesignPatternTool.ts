@@ -34,7 +34,6 @@ import {
   LlmProxyService,
   type LlmToolId,
   isValidLlmTool,
-  SUPPORTED_LLM_TOOLS,
 } from '@agiflowai/coding-agent-bridge';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
