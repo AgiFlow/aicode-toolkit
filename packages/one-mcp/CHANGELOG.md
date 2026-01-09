@@ -1,3 +1,17 @@
+## 0.3.5 (2026-01-09)
+
+### 🩹 Fixes
+
+- address CodeQL security warnings ([724c9f0](https://github.com/AgiFlow/aicode-toolkit/commit/724c9f0))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.11
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.3.4 (2025-12-27)
 
 ### 🩹 Fixes

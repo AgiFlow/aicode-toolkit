@@ -1,7 +1,7 @@
 {
   "name": "@agiflowai/style-system",
   "description": "MCP server for exploring themes, Tailwind CSS classes, and UI components from Storybook with standalone component rendering capabilities",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "license": "AGPL-3.0",
   "keywords": [
     "mcp",

@@ -1,3 +1,10 @@
+## 0.0.12 (2026-01-09)
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.14
+- Updated @agiflowai/aicode-utils to 1.0.11
+
 ## 0.0.11 (2025-12-27)
 
 This was a version bump only for @agiflowai/hooks-adapter to align it with other projects, there were no code changes.

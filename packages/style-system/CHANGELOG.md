@@ -1,3 +1,22 @@
+## 0.0.4 (2026-01-09)
+
+### 🩹 Fixes
+
+- **style-system:** cache UI preview screenshots in OS temp folder ([4a4c8fe](https://github.com/AgiFlow/aicode-toolkit/commit/4a4c8fe))
+
+### 🔥 Performance
+
+- **style-system:** parallelize sequential awaits in services and tools ([9b454a3](https://github.com/AgiFlow/aicode-toolkit/commit/9b454a3))
+- **style-system:** parallelize sequential awaits in service methods ([ab6aa27](https://github.com/AgiFlow/aicode-toolkit/commit/ab6aa27))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.11
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.0.3 (2025-12-26)
 
 ### 🧱 Updated Dependencies

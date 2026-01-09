@@ -1,3 +1,20 @@
+## 1.0.16 (2026-01-09)
+
+### 🩹 Fixes
+
+- remove unused SUPPORTED_LLM_TOOLS import ([d61accc](https://github.com/AgiFlow/aicode-toolkit/commit/d61accc))
+- address CodeQL security warnings ([724c9f0](https://github.com/AgiFlow/aicode-toolkit/commit/724c9f0))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.14
+- Updated @agiflowai/hooks-adapter to 0.0.12
+- Updated @agiflowai/aicode-utils to 1.0.11
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.15 (2026-01-03)
 
 ### 🚀 Features
