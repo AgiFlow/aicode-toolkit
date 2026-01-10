@@ -50,11 +50,10 @@ export class BoilerplateService {
   }
 
   /**
-   * Scans all scaffold.yaml files and returns available boilerplates with pagination
-   * @param cursor - Optional pagination cursor
-   * @returns Paginated list of boilerplates
+   * Collects all boilerplates from scaffold.yaml files (no pagination)
+   * Used internally for lookups that need to search all boilerplates
    */
-  async listBoilerplates(cursor?: string): Promise<ListBoilerplateResponse> {
+  private async collectAllBoilerplates(): Promise<BoilerplateInfo[]> {
     const boilerplates: BoilerplateInfo[] = [];
 
     // Dynamically discover all template directories
@@ -96,6 +95,17 @@ export class BoilerplateService {
         }
       }
     }
+
+    return boilerplates;
+  }
+
+  /**
+   * Scans all scaffold.yaml files and returns available boilerplates with pagination
+   * @param cursor - Optional pagination cursor
+   * @returns Paginated list of boilerplates
+   */
+  async listBoilerplates(cursor?: string): Promise<ListBoilerplateResponse> {
+    const boilerplates = await this.collectAllBoilerplates();
 
     // Apply pagination with metadata
     const paginatedResult = PaginationHelper.paginate(boilerplates, cursor);
@@ -201,14 +211,14 @@ export class BoilerplateService {
       };
     }
 
-    // Find the boilerplate configuration
-    const boilerplateList = await this.listBoilerplates();
-    const boilerplate = boilerplateList.boilerplates.find((b) => b.name === boilerplateName);
+    // Find the boilerplate configuration (search all boilerplates, not just first page)
+    const allBoilerplates = await this.collectAllBoilerplates();
+    const boilerplate = allBoilerplates.find((b) => b.name === boilerplateName);
 
     if (!boilerplate) {
       return {
         success: false,
-        message: `Boilerplate '${boilerplateName}' not found. Available boilerplates: ${boilerplateList.boilerplates.map((b) => b.name).join(', ')}`,
+        message: `Boilerplate '${boilerplateName}' not found. Available boilerplates: ${allBoilerplates.map((b) => b.name).join(', ')}`,
       };
     }
 
@@ -312,8 +322,9 @@ export class BoilerplateService {
     name: string,
     variables?: Record<string, any>,
   ): Promise<BoilerplateInfo | null> {
-    const boilerplateList = await this.listBoilerplates();
-    const boilerplate = boilerplateList.boilerplates.find((b) => b.name === name);
+    // Search all boilerplates, not just first page
+    const allBoilerplates = await this.collectAllBoilerplates();
+    const boilerplate = allBoilerplates.find((b) => b.name === name);
 
     if (!boilerplate) {
       return null;

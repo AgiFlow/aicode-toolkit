@@ -389,4 +389,132 @@ features:
       expect(result.methods[0].instruction).toBeUndefined();
     });
   });
+
+  describe('useScaffoldMethod with >10 scaffold methods', () => {
+    it('should find scaffold method beyond first page (index > 10)', async () => {
+      const { ProjectConfigResolver } = await import('@agiflowai/aicode-utils');
+
+      (ProjectConfigResolver.resolveProjectConfig as any).mockResolvedValue({
+        sourceTemplate: 'test-template',
+      });
+
+      (mockFileSystem.readdir as any).mockResolvedValue(['test-template']);
+      (mockFileSystem.stat as any).mockResolvedValue({ isDirectory: () => true });
+      (mockFileSystem.pathExists as any).mockResolvedValue(true);
+
+      const features = Array.from({ length: 15 }, (_, i) => ({
+        name: `scaffold-feature-${i + 1}`,
+        description: `Feature ${i + 1}`,
+      }));
+
+      const scaffoldContent = `
+features:
+${features.map((f) => `  - name: ${f.name}\n    description: ${f.description}\n    variables_schema:\n      type: object\n      properties:\n        featureName:\n          type: string\n      required:\n        - featureName\n      additionalProperties: false`).join('\n')}
+`;
+
+      (mockFileSystem.readFile as any).mockResolvedValue(scaffoldContent);
+
+      const result = await service.listScaffoldingMethods('/test/apps/my-app');
+
+      expect(result.methods).toHaveLength(10);
+      expect(result.nextCursor).toBeDefined();
+      expect(result._meta?.total).toBe(15);
+    });
+
+    it('should list all scaffold methods in error when method not found', async () => {
+      const { ProjectConfigResolver } = await import('@agiflowai/aicode-utils');
+
+      (ProjectConfigResolver.resolveProjectConfig as any).mockResolvedValue({
+        sourceTemplate: 'test-template',
+      });
+
+      (mockFileSystem.readdir as any).mockResolvedValue(['test-template']);
+      (mockFileSystem.stat as any).mockResolvedValue({ isDirectory: () => true });
+      (mockFileSystem.pathExists as any).mockResolvedValue(true);
+
+      const features = Array.from({ length: 15 }, (_, i) => ({
+        name: `scaffold-feature-${i + 1}`,
+        description: `Feature ${i + 1}`,
+      }));
+
+      const scaffoldContent = `
+features:
+${features.map((f) => `  - name: ${f.name}\n    description: ${f.description}\n    variables_schema:\n      type: object\n      properties:\n        featureName:\n          type: string\n      required:\n        - featureName\n      additionalProperties: false`).join('\n')}
+`;
+
+      (mockFileSystem.readFile as any).mockResolvedValue(scaffoldContent);
+
+      await expect(
+        service.useScaffoldMethod({
+          projectPath: '/test/apps/my-app',
+          scaffold_feature_name: 'nonexistent-method',
+          variables: { featureName: 'test' },
+        }),
+      ).rejects.toThrow('not found');
+
+      try {
+        await service.useScaffoldMethod({
+          projectPath: '/test/apps/my-app',
+          scaffold_feature_name: 'nonexistent-method',
+          variables: { featureName: 'test' },
+        });
+      } catch (error: any) {
+        expect(error.message).toContain('scaffold-feature-1');
+        expect(error.message).toContain('scaffold-feature-12');
+        expect(error.message).toContain('scaffold-feature-15');
+      }
+    });
+  });
+
+  describe('listScaffoldingMethods pagination with >10 methods', () => {
+    it('should return paginated results with nextCursor', async () => {
+      const { ProjectConfigResolver } = await import('@agiflowai/aicode-utils');
+
+      (ProjectConfigResolver.resolveProjectConfig as any).mockResolvedValue({
+        sourceTemplate: 'test-template',
+      });
+
+      (mockFileSystem.readdir as any).mockResolvedValue(['test-template']);
+      (mockFileSystem.stat as any).mockResolvedValue({ isDirectory: () => true });
+      (mockFileSystem.pathExists as any).mockResolvedValue(true);
+
+      const features = Array.from({ length: 25 }, (_, i) => ({
+        name: `scaffold-feature-${i + 1}`,
+        description: `Feature ${i + 1}`,
+      }));
+
+      const scaffoldContent = `
+features:
+${features.map((f) => `  - name: ${f.name}\n    description: ${f.description}\n    variables_schema:\n      type: object\n      properties: {}\n      required: []\n      additionalProperties: false`).join('\n')}
+`;
+
+      (mockFileSystem.readFile as any).mockResolvedValue(scaffoldContent);
+
+      const firstPage = await service.listScaffoldingMethods('/test/apps/my-app');
+
+      expect(firstPage.methods).toHaveLength(10);
+      expect(firstPage.nextCursor).toBeDefined();
+      expect(firstPage._meta?.total).toBe(25);
+      expect(firstPage._meta?.offset).toBe(0);
+      expect(firstPage._meta?.limit).toBe(10);
+
+      const secondPage = await service.listScaffoldingMethods(
+        '/test/apps/my-app',
+        firstPage.nextCursor,
+      );
+
+      expect(secondPage.methods).toHaveLength(10);
+      expect(secondPage.nextCursor).toBeDefined();
+      expect(secondPage._meta?.offset).toBe(10);
+
+      const thirdPage = await service.listScaffoldingMethods(
+        '/test/apps/my-app',
+        secondPage.nextCursor,
+      );
+
+      expect(thirdPage.methods).toHaveLength(5);
+      expect(thirdPage.nextCursor).toBeUndefined();
+      expect(thirdPage._meta?.offset).toBe(20);
+    });
+  });
 });
