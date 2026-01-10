@@ -1,3 +1,13 @@
+## 1.0.18 (2026-01-10)
+
+### 🩹 Fixes
+
+- **scaffold-mcp:** search all boilerplates and scaffold methods when using them ([3333900](https://github.com/AgiFlow/aicode-toolkit/commit/3333900))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.17 (2026-01-03)
 
 ### 🧱 Updated Dependencies
