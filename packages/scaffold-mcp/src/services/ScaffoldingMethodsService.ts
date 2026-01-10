@@ -70,10 +70,13 @@ export class ScaffoldingMethodsService {
     return this.listScaffoldingMethodsByTemplate(sourceTemplate, cursor);
   }
 
-  async listScaffoldingMethodsByTemplate(
+  /**
+   * Collects all scaffold methods for a template (no pagination)
+   * Used internally for lookups that need to search all methods
+   */
+  private async collectAllMethodsByTemplate(
     templateName: string,
-    cursor?: string,
-  ): Promise<ListScaffoldingMethodsResult> {
+  ): Promise<{ templatePath: string; methods: ScaffoldMethod[] }> {
     const templatePath = await this.findTemplatePath(templateName);
 
     if (!templatePath) {
@@ -111,6 +114,15 @@ export class ScaffoldingMethodsService {
         });
       });
     }
+
+    return { templatePath, methods };
+  }
+
+  async listScaffoldingMethodsByTemplate(
+    templateName: string,
+    cursor?: string,
+  ): Promise<ListScaffoldingMethodsResult> {
+    const { templatePath, methods } = await this.collectAllMethodsByTemplate(templateName);
 
     // Apply pagination with metadata
     const paginatedResult = PaginationHelper.paginate(methods, cursor);
@@ -299,15 +311,18 @@ export class ScaffoldingMethodsService {
   async useScaffoldMethod(request: UseScaffoldMethodRequest): Promise<ScaffoldResult> {
     const { projectPath, scaffold_feature_name, variables, sessionId } = request;
 
-    // Resolve the actual project path (handle monolith vs monorepo)
     const absoluteProjectPath = await this.resolveProjectPath(projectPath);
 
-    const scaffoldingMethods = await this.listScaffoldingMethods(absoluteProjectPath);
+    const projectConfig = await ProjectConfigResolver.resolveProjectConfig(absoluteProjectPath);
+    const sourceTemplate = projectConfig.sourceTemplate;
 
-    const method = scaffoldingMethods.methods.find((m) => m.name === scaffold_feature_name);
+    const { templatePath, methods: allMethods } =
+      await this.collectAllMethodsByTemplate(sourceTemplate);
+
+    const method = allMethods.find((m) => m.name === scaffold_feature_name);
 
     if (!method) {
-      const availableMethods = scaffoldingMethods.methods.map((m) => m.name).join(', ');
+      const availableMethods = allMethods.map((m) => m.name).join(', ');
       throw new Error(
         `Scaffold method '${scaffold_feature_name}' not found. Available methods: ${availableMethods}`,
       );
@@ -327,7 +342,7 @@ export class ScaffoldingMethodsService {
 
     const result = await scaffoldService.useFeature({
       projectPath: absoluteProjectPath,
-      templateFolder: scaffoldingMethods.templatePath,
+      templateFolder: templatePath,
       featureName: scaffold_feature_name,
       variables: {
         ...variables,
