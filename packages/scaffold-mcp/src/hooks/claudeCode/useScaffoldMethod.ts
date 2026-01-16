@@ -170,15 +170,15 @@ export class UseScaffoldMethodHook {
       const data: ScaffoldMethodsResponse = JSON.parse(resultText);
 
       if (!data.methods || data.methods.length === 0) {
-        // No methods available - still deny to guide AI and log it
+        // No methods available - allow with guidance
         await executionLog.logExecution({
           filePath: filePath,
           operation: 'list-scaffold-methods',
-          decision: DECISION_DENY,
+          decision: DECISION_ALLOW,
         });
 
         return {
-          decision: DECISION_DENY,
+          decision: DECISION_ALLOW,
           message:
             'No scaffolding methods are available for this project template. You should write new files directly using the Write tool.',
         };

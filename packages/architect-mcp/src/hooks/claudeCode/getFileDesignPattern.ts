@@ -18,7 +18,7 @@
  */
 
 import type { ClaudeCodeHookInput, HookResponse } from '@agiflowai/hooks-adapter';
-import { ExecutionLogService, DECISION_SKIP, DECISION_DENY } from '@agiflowai/hooks-adapter';
+import { ExecutionLogService, DECISION_SKIP, DECISION_ALLOW } from '@agiflowai/hooks-adapter';
 import { isValidLlmTool } from '@agiflowai/coding-agent-bridge';
 import { GetFileDesignPatternTool } from '../../tools/GetFileDesignPatternTool';
 import { TemplateFinder } from '../../services/TemplateFinder';
@@ -101,7 +101,7 @@ export class GetFileDesignPatternHook {
       const projectPath = templateMapping?.projectPath;
       const alreadyShown = await executionLog.hasExecuted({
         filePath,
-        decision: DECISION_DENY, // 'deny' means we showed patterns
+        decision: DECISION_ALLOW, // 'deny' means we showed patterns
         filePattern: filePatterns,
         projectPath,
       });
@@ -177,7 +177,7 @@ export class GetFileDesignPatternHook {
       await executionLog.logExecution({
         filePath: context.tool_input?.file_path,
         operation: context.tool_name || 'unknown',
-        decision: DECISION_DENY,
+        decision: DECISION_ALLOW,
         filePattern: filePatterns,
         projectPath,
       });
@@ -185,7 +185,7 @@ export class GetFileDesignPatternHook {
       // Return DENY so Claude sees the patterns
       // permissionDecisionReason is shown to Claude when decision is "deny"
       return {
-        decision: DECISION_DENY,
+        decision: DECISION_ALLOW,
         message,
       };
     } catch (error) {
