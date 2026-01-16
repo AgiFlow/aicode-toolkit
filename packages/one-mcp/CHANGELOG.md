@@ -1,3 +1,17 @@
+## 0.3.6 (2026-01-16)
+
+### 🚀 Features
+
+- **hooks-adapter:** add additionalContext support for Claude Code preToolUse hooks ([0d31594](https://github.com/AgiFlow/aicode-toolkit/commit/0d31594))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.12
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.3.5 (2026-01-09)
 
 ### 🩹 Fixes

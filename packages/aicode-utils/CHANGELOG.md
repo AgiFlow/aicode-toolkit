@@ -1,3 +1,7 @@
+## 1.0.12 (2026-01-16)
+
+This was a version bump only for @agiflowai/aicode-utils to align it with other projects, there were no code changes.
+
 ## 1.0.11 (2026-01-09)
 
 This was a version bump only for @agiflowai/aicode-utils to align it with other projects, there were no code changes.

@@ -1,7 +1,7 @@
 {
   "name": "@agiflowai/scaffold-mcp",
   "description": "MCP server for scaffolding applications with boilerplate templates",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "license": "AGPL-3.0",
   "author": "AgiflowIO",
   "repository": {
