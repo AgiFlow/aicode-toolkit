@@ -568,8 +568,10 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
     });
 
     // Collect skills
-    const rawSkills = this.skillService ? await this.skillService.getSkills() : [];
-    const promptSkills = await this.collectPromptSkills();
+    const [rawSkills, promptSkills] = await Promise.all([
+      this.skillService ? this.skillService.getSkills() : Promise.resolve([]),
+      this.collectPromptSkills()
+    ]);
 
     // Combine and deduplicate skills (file-based skills take precedence)
     const seenSkillNames = new Set<string>();
