@@ -70,10 +70,11 @@ export interface ToolResult {
 
 /**
  * Tool registration options for Clawdbot.
+ * Note: The name field must match ToolDefinition.name for proper registration.
  */
 export interface ToolOptions {
-  /** Whether the tool is optional (default: true) */
-  optional?: boolean;
+  /** Tool name identifier (must match ToolDefinition.name) */
+  name: string;
 }
 
 /**
@@ -81,8 +82,8 @@ export interface ToolOptions {
  * Services can perform startup and cleanup tasks.
  */
 export interface ServiceDefinition {
-  /** Unique service name identifier */
-  name: string;
+  /** Unique service identifier */
+  id: string;
 
   /**
    * Service startup function
@@ -103,18 +104,32 @@ export interface ServiceDefinition {
  */
 export interface ClawdbotApi {
   /**
-   * Get plugin configuration by plugin ID
-   * @param pluginId - The unique identifier of the plugin
-   * @returns The plugin configuration if found, undefined otherwise
+   * Plugin configuration object.
+   * Contains the configuration values for this plugin from clawdbot.json.
+   * Always present, even if empty object when no config provided.
    */
-  getConfig: (pluginId: string) => PluginConfig | undefined;
+  pluginConfig: PluginConfig;
 
   /**
    * Register a tool with the Clawdbot gateway
    * @param toolDef - The tool definition with name, description, and execute function
-   * @param options - Optional tool registration options (e.g., optional flag)
+   * @param options - Tool registration options with name identifier
+   * @example
+   * ```typescript
+   * api.registerTool(
+   *   {
+   *     name: 'mcp__describe_tools',
+   *     description: 'Describe available MCP tools',
+   *     parameters: { type: 'object', properties: {...} },
+   *     execute: async (id, params) => ({
+   *       content: [{ type: 'text', text: 'Tool list...' }]
+   *     })
+   *   },
+   *   { name: 'mcp__describe_tools' }
+   * );
+   * ```
    */
-  registerTool: (toolDef: ToolDefinition, options?: ToolOptions) => void;
+  registerTool: (toolDef: ToolDefinition, options: ToolOptions) => void;
 
   /**
    * Register a service for lifecycle management
@@ -123,12 +138,12 @@ export interface ClawdbotApi {
   registerService: (service: ServiceDefinition) => void;
 
   /** Logging interface for plugin diagnostics */
-  log: {
+  logger: {
     /**
      * Log informational messages
-     * @param args - Message and optional additional data
+     * @param args - Message and optional additional data (strings, numbers, booleans)
      */
-    info: (...args: string[]) => void;
+    info: (...args: (string | number | boolean)[]) => void;
 
     /**
      * Log error messages
@@ -140,6 +155,6 @@ export interface ClawdbotApi {
      * Log warning messages
      * @param args - Warning message and optional additional data
      */
-    warn: (...args: string[]) => void;
+    warn: (...args: (string | number | boolean)[]) => void;
   };
 }
