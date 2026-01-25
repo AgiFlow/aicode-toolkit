@@ -418,9 +418,9 @@ export class GeminiCliService extends BaseCodingAgentService {
    * Executes Gemini CLI with headless mode and JSON output format
    */
   async invokeAsLlm(params: LlmInvocationParams): Promise<LlmInvocationResponse> {
-    // Check if CLI exists
+    // Check if CLI exists (pass env to ensure PATH includes nvm/fnm paths)
     try {
-      await execa(this.geminiPath, ['--version'], { timeout: 5000 });
+      await execa(this.geminiPath, ['--version'], { timeout: 5000, env: process.env });
     } catch {
       throw new Error(
         `Gemini CLI not found at path: ${this.geminiPath}. Install it with: npm install -g @google/gemini-cli`,
@@ -446,15 +446,15 @@ export class GeminiCliService extends BaseCodingAgentService {
       '--output-format',
       'json',
       '--sandbox', // Run in sandbox mode to prevent tool usage
-      '--yolo', // Enables OAuth auth with --sandbox (avoids GEMINI_API_KEY requirement)
     ];
 
-    // Add toolConfig as CLI args (e.g., { model: "gemini-2.5-pro" } -> ["--model", "gemini-2.5-pro"])
-    args.push(...this.buildToolConfigArgs());
-
-    // Use provided model or default to gemini-3-pro-preview for better JSON adherence
-    const model = params.model || 'gemini-3-pro-preview';
-    args.push(`--model=${model}`);
+    // Add toolConfig merged with defaults as CLI args
+    // toolConfig values take precedence over defaults
+    args.push(
+      ...this.buildToolConfigArgs({
+        model: params.model || 'gemini-3-pro-preview', // Default model for better JSON adherence
+      }),
+    );
 
     // Execute Gemini CLI
     try {

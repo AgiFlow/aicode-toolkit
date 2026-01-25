@@ -12,29 +12,5 @@
   "tools": {
     "enableMessageBusIntegration": true,
     "enableHooks": true
-  },
-  "hooks": {
-    "BeforeTool": [
-      {
-        "matcher": "write_file|replace",
-        "hooks": [
-          {
-            "type": "Command",
-            "command": "bun run ./packages/architect-mcp/src/cli.ts get-file-design-pattern --hook gemini-cli"
-          }
-        ]
-      }
-    ],
-    "AfterTool": [
-      {
-        "matcher": "write_file|replace",
-        "hooks": [
-          {
-            "type": "Command",
-            "command": "bun run ./packages/architect-mcp/src/cli.ts review-code-change --hook gemini-cli"
-          }
-        ]
-      }
-    ]
   }
 }

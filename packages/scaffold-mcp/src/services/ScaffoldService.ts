@@ -13,6 +13,7 @@ import type {
   ParsedInclude,
   ScaffoldResult,
 } from '../types/scaffold';
+import { applySchemaDefaults } from '../utils/schemaDefaults';
 import { ScaffoldProcessingService } from './ScaffoldProcessingService';
 
 export class ScaffoldService implements IScaffoldService {
@@ -292,24 +293,37 @@ export class ScaffoldService implements IScaffoldService {
     const parsedIncludes: ParsedInclude[] = [];
     const warnings: string[] = [];
 
+    // Apply schema defaults to variables before condition checking
+    // This ensures that conditions like ?withFeature=true work correctly
+    // when the schema has default: false for that property
+    const variablesWithDefaults = config.variables_schema
+      ? applySchemaDefaults(config.variables_schema, allVariables)
+      : allVariables;
+
     // Check if includes array exists before iterating
     if (config.includes && Array.isArray(config.includes)) {
-      for (const includeEntry of config.includes) {
-        const parsed = this.scaffoldConfigLoader.parseIncludeEntry(includeEntry, allVariables);
+      // Parse all includes and filter by conditions (sync operations)
+      const filteredIncludes = (config.includes as string[])
+        .map((includeEntry) =>
+          this.scaffoldConfigLoader.parseIncludeEntry(includeEntry, variablesWithDefaults),
+        )
+        .filter((parsed) =>
+          this.scaffoldConfigLoader.shouldIncludeFile(parsed.conditions, variablesWithDefaults),
+        );
 
-        // Check if file should be included based on conditions
-        if (!this.scaffoldConfigLoader.shouldIncludeFile(parsed.conditions, allVariables)) {
-          continue; // Skip this file
-        }
+      // Check all target paths in parallel
+      const existsResults = await Promise.all(
+        filteredIncludes.map(async (parsed: ParsedInclude) => {
+          const targetFilePath = path.join(targetPath, parsed.targetPath);
+          const exists = await this.fileSystem.pathExists(targetFilePath);
+          return { parsed, exists };
+        }),
+      );
 
+      // Collect parsed includes and warnings
+      for (const { parsed, exists } of existsResults) {
         parsedIncludes.push(parsed);
-
-        const targetFilePath = path.join(targetPath, parsed.targetPath);
-
-        // Check if target file/folder already exists - we'll track but not overwrite
-        if (await this.fileSystem.pathExists(targetFilePath)) {
-          // We'll track existing files separately and not overwrite them
-          // Add warning so AI knows about existing files for potential updates
+        if (exists) {
           warnings.push(`File/folder ${parsed.targetPath} already exists and will be preserved`);
         }
       }
@@ -322,20 +336,23 @@ export class ScaffoldService implements IScaffoldService {
     const createdFiles: string[] = [];
     const existingFiles: string[] = [];
 
-    // Copy files and process each for variable replacement
-    for (const parsed of parsedIncludes) {
-      const sourcePath = path.join(templatePath, parsed.sourcePath);
-      const targetFilePath = path.join(targetPath, parsed.targetPath);
+    // Copy and process all files in parallel
+    await Promise.all(
+      parsedIncludes.map(async (parsed) => {
+        const sourcePath = path.join(templatePath, parsed.sourcePath);
+        const targetFilePath = path.join(targetPath, parsed.targetPath);
 
-      // Always pass existingFiles array to track and prevent overwriting existing files
-      await this.processingService.copyAndProcess(
-        sourcePath,
-        targetFilePath,
-        allVariables,
-        createdFiles,
-        existingFiles,
-      );
-    }
+        // Always pass existingFiles array to track and prevent overwriting existing files
+        // Use variablesWithDefaults for template processing to ensure defaults are applied
+        await this.processingService.copyAndProcess(
+          sourcePath,
+          targetFilePath,
+          variablesWithDefaults,
+          createdFiles,
+          existingFiles,
+        );
+      }),
+    );
 
     // Prepare result message with information about existing files
     let message = `Successfully scaffolded ${scaffoldType} at ${targetPath}`;

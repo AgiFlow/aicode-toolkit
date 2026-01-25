@@ -206,26 +206,30 @@ export class RemoteConfigCacheService {
 
       const now = Date.now();
       const files = await readdir(this.cacheDir);
-      let expiredCount = 0;
+      const jsonFiles = files.filter((file) => file.endsWith('.json'));
 
-      for (const file of files) {
-        if (!file.endsWith('.json')) continue;
+      // Process all cache files in parallel
+      const results = await Promise.all(
+        jsonFiles.map(async (file) => {
+          const filePath = join(this.cacheDir, file);
+          try {
+            const content = await readFile(filePath, 'utf-8');
+            const entry: CacheEntry = JSON.parse(content);
 
-        const filePath = join(this.cacheDir, file);
-        try {
-          const content = await readFile(filePath, 'utf-8');
-          const entry: CacheEntry = JSON.parse(content);
-
-          if (now > entry.expiresAt) {
-            await unlink(filePath);
-            expiredCount++;
+            if (now > entry.expiresAt) {
+              await unlink(filePath);
+              return true; // expired and deleted
+            }
+            return false; // not expired
+          } catch (error) {
+            // If we can't read or parse the file, delete it
+            await unlink(filePath).catch(() => {});
+            return true; // treated as expired
           }
-        } catch (error) {
-          // If we can't read or parse the file, delete it
-          await unlink(filePath).catch(() => {});
-          expiredCount++;
-        }
-      }
+        })
+      );
+
+      const expiredCount = results.filter(Boolean).length;
 
       if (expiredCount > 0) {
         console.error(`Cleaned up ${expiredCount} expired remote config cache entries`);
@@ -247,16 +251,21 @@ export class RemoteConfigCacheService {
       const files = await readdir(this.cacheDir);
       const jsonFiles = files.filter((file) => file.endsWith('.json'));
 
-      let totalSize = 0;
-      for (const file of jsonFiles) {
-        const filePath = join(this.cacheDir, file);
-        try {
-          const content = await readFile(filePath, 'utf-8');
-          totalSize += Buffer.byteLength(content, 'utf-8');
-        } catch {
-          // Ignore errors for individual files
-        }
-      }
+      // Read all files in parallel and calculate sizes
+      const sizes = await Promise.all(
+        jsonFiles.map(async (file) => {
+          const filePath = join(this.cacheDir, file);
+          try {
+            const content = await readFile(filePath, 'utf-8');
+            return Buffer.byteLength(content, 'utf-8');
+          } catch {
+            // Ignore errors for individual files
+            return 0;
+          }
+        })
+      );
+
+      const totalSize = sizes.reduce((sum, size) => sum + size, 0);
 
       return {
         totalEntries: jsonFiles.length,

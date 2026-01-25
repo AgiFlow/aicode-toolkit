@@ -123,15 +123,19 @@ export default WrappedComponent;
   async getInlineStyles(darkMode = false): Promise<string> {
     const cssFiles = await this.getThemeCSS();
 
-    let styles = '';
-    for (const cssFile of cssFiles) {
-      try {
-        const content = await fs.readFile(cssFile, 'utf-8');
-        styles += content + '\n';
-      } catch (error) {
-        log.warn(`[ThemeService] Could not read CSS file ${cssFile}:`, error);
-      }
-    }
+    // Read all CSS files in parallel for better performance
+    const contents = await Promise.all(
+      cssFiles.map(async (cssFile) => {
+        try {
+          return await fs.readFile(cssFile, 'utf-8');
+        } catch (error) {
+          log.warn(`[ThemeService] Could not read CSS file ${cssFile}:`, error);
+          return '';
+        }
+      }),
+    );
+
+    let styles = contents.filter(Boolean).join('\n');
 
     // Add dark mode class wrapper if needed
     if (darkMode && styles) {
@@ -190,23 +194,30 @@ export default WrappedComponent;
       const themes: ThemeInfo[] = [];
       let activeBrand: string | undefined;
 
-      for (const file of themeFiles) {
-        const filePath = path.join(configsPath, file);
-        const content = await fs.readFile(filePath, 'utf-8');
-        const themeData = JSON.parse(content);
-
-        const themeName = file.replace('.json', '');
-
-        themes.push({
-          name: themeName,
-          fileName: file,
-          path: filePath,
-          colors: themeData.colors || themeData,
-        });
-
-        // Check if this is the active theme based on common patterns
-        if (themeName === 'lightTheme' || themeName === 'agimonTheme') {
-          activeBrand = themeName;
+      // Process all theme files in parallel
+      const results = await Promise.allSettled(
+        themeFiles.map(async (file) => {
+          const filePath = path.join(configsPath, file);
+          const content = await fs.readFile(filePath, 'utf-8');
+          const themeData = JSON.parse(content);
+          const themeName = file.replace('.json', '');
+          return {
+            name: themeName,
+            fileName: file,
+            path: filePath,
+            colors: themeData.colors || themeData,
+          };
+        }),
+      );
+      for (const [index, result] of results.entries()) {
+        if (result.status === 'fulfilled') {
+          themes.push(result.value);
+          // Check if this is the active theme based on common patterns
+          if (result.value.name === 'lightTheme' || result.value.name === 'agimonTheme') {
+            activeBrand = result.value.name;
+          }
+        } else {
+          log.warn(`[ThemeService] Failed to process theme file ${themeFiles[index]}:`, result.reason);
         }
       }
 

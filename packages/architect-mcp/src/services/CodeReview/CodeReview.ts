@@ -332,11 +332,11 @@ Provide your review in the specified JSON format.`;
     }
 
     try {
-      // Get unified diff (staged + unstaged)
-      const { stdout: unstagedDiff } = await execa('git', ['diff', '--', filePath], { cwd: dir });
-      const { stdout: stagedDiff } = await execa('git', ['diff', '--cached', '--', filePath], {
-        cwd: dir,
-      });
+      // Get unified diff (staged + unstaged) in parallel for better performance
+      const [{ stdout: unstagedDiff }, { stdout: stagedDiff }] = await Promise.all([
+        execa('git', ['diff', '--', filePath], { cwd: dir }),
+        execa('git', ['diff', '--cached', '--', filePath], { cwd: dir }),
+      ]);
 
       const diff = [stagedDiff, unstagedDiff].filter(Boolean).join('\n').trim();
 

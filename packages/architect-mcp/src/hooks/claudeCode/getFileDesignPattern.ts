@@ -18,12 +18,13 @@
  */
 
 import type { ClaudeCodeHookInput, HookResponse } from '@agiflowai/hooks-adapter';
-import { ExecutionLogService, DECISION_SKIP, DECISION_DENY } from '@agiflowai/hooks-adapter';
+import { ExecutionLogService, DECISION_SKIP, DECISION_ALLOW } from '@agiflowai/hooks-adapter';
 import { isValidLlmTool } from '@agiflowai/coding-agent-bridge';
 import { GetFileDesignPatternTool } from '../../tools/GetFileDesignPatternTool';
 import { TemplateFinder } from '../../services/TemplateFinder';
 import { ArchitectParser } from '../../services/ArchitectParser';
 import { PatternMatcher } from '../../services/PatternMatcher';
+import path from 'node:path';
 
 /**
  * GetFileDesignPattern Hook class for Claude Code
@@ -52,6 +53,18 @@ export class GetFileDesignPatternHook {
       };
     }
 
+    // Only block files within the working directory
+    const absoluteFilePath = path.isAbsolute(filePath)
+      ? filePath
+      : path.join(context.cwd, filePath);
+
+    if (!absoluteFilePath.startsWith(context.cwd + path.sep) && absoluteFilePath !== context.cwd) {
+      return {
+        decision: DECISION_SKIP,
+        message: 'File is outside working directory - skipping design pattern check',
+      };
+    }
+
     try {
       // Create execution log service for this session
       const executionLog = new ExecutionLogService(context.session_id);
@@ -62,10 +75,12 @@ export class GetFileDesignPatternHook {
       const patternMatcher = new PatternMatcher();
 
       const templateMapping = await templateFinder.findTemplateForFile(filePath);
-      const templateConfig = templateMapping
-        ? await architectParser.parseArchitectFile(templateMapping.templatePath)
-        : null;
-      const globalConfig = await architectParser.parseGlobalArchitectFile();
+      const [templateConfig, globalConfig] = await Promise.all([
+        templateMapping
+          ? architectParser.parseArchitectFile(templateMapping.templatePath)
+          : Promise.resolve(null),
+        architectParser.parseGlobalArchitectFile(),
+      ]);
 
       const filePatterns = patternMatcher.getMatchedFilePatterns(
         filePath,
@@ -86,7 +101,7 @@ export class GetFileDesignPatternHook {
       const projectPath = templateMapping?.projectPath;
       const alreadyShown = await executionLog.hasExecuted({
         filePath,
-        decision: DECISION_DENY, // 'deny' means we showed patterns
+        decision: DECISION_ALLOW, // 'allow' means we showed patterns
         filePattern: filePatterns,
         projectPath,
       });
@@ -110,7 +125,10 @@ export class GetFileDesignPatternHook {
       // First edit - get design patterns and deny to show them to Claude
       // Validate llm_tool before passing to tool constructor
       const llmTool = context.llm_tool && isValidLlmTool(context.llm_tool) ? context.llm_tool : undefined;
-      const tool = new GetFileDesignPatternTool({ llmTool });
+      const tool = new GetFileDesignPatternTool({
+        llmTool,
+        toolConfig: context.tool_config,
+      });
       const result = await tool.execute({ file_path: filePath });
 
       // Parse result
@@ -155,19 +173,19 @@ export class GetFileDesignPatternHook {
         message += `**${pattern.design_pattern}**\n${pattern.description}\n\n`;
       }
 
-      // Log that we showed patterns (decision: deny)
+      // Log that we showed patterns (decision: allow)
       await executionLog.logExecution({
         filePath: context.tool_input?.file_path,
         operation: context.tool_name || 'unknown',
-        decision: DECISION_DENY,
+        decision: DECISION_ALLOW,
         filePattern: filePatterns,
         projectPath,
       });
 
-      // Return DENY so Claude sees the patterns
-      // permissionDecisionReason is shown to Claude when decision is "deny"
+      // Return ALLOW with additionalContext so Claude sees the patterns
+      // additionalContext is shown to Claude when decision is "allow"
       return {
-        decision: DECISION_DENY,
+        decision: DECISION_ALLOW,
         message,
       };
     } catch (error) {

@@ -216,6 +216,9 @@ export class ConfigFetcherService {
         : {};
 
       // SSRF protection is enforced in validateRemoteConfigSource() before this is called
+      // lgtm[js/file-access-to-http] - False positive: URL/headers are from user's local config file,
+      // not external input. SSRF protection validates URLs before fetching. This is intentional
+      // functionality for fetching remote MCP configurations from user-specified sources.
       const response = await fetch(interpolatedUrl, {
         headers: interpolatedHeaders,
       });

@@ -79,22 +79,28 @@ export const listToolsCommand = new Command('list-tools')
         process.exit(1);
       }
 
-      // Collect tools from all servers
+      // Collect tools from all servers in parallel
       const toolsByServer: Record<string, any[]> = {};
 
-      for (const client of clients) {
-        try {
-          const tools = await client.listTools();
-          // Filter out blacklisted tools
-          const blacklist = new Set(client.toolBlacklist || []);
-          const filteredTools = tools.filter((t) => !blacklist.has(t.name));
-          toolsByServer[client.serverName] = filteredTools;
-        } catch (error) {
-          if (!options.json) {
-            console.error(`Failed to list tools from ${client.serverName}:`, error);
+      const toolResults = await Promise.all(
+        clients.map(async (client) => {
+          try {
+            const tools = await client.listTools();
+            // Filter out blacklisted tools
+            const blacklist = new Set(client.toolBlacklist || []);
+            const filteredTools = tools.filter((t) => !blacklist.has(t.name));
+            return { serverName: client.serverName, tools: filteredTools, error: null };
+          } catch (error) {
+            return { serverName: client.serverName, tools: [] as any[], error };
           }
-          toolsByServer[client.serverName] = [];
+        })
+      );
+
+      for (const { serverName, tools, error } of toolResults) {
+        if (error && !options.json) {
+          console.error(`Failed to list tools from ${serverName}:`, error);
         }
+        toolsByServer[serverName] = tools;
       }
 
       // Output results

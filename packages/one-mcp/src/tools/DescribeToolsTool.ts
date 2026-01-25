@@ -192,6 +192,19 @@ interface ServersSectionResult {
 }
 
 /**
+ * Result from a single tool/skill lookup operation
+ * Used for parallel processing of tool name lookups
+ * @property tools - Array of found tool descriptions
+ * @property skills - Array of found skill descriptions
+ * @property notFound - The requested name if not found, null otherwise
+ */
+interface LookupResult {
+  tools: ToolDescription[];
+  skills: SkillDescription[];
+  notFound: string | null;
+}
+
+/**
  * DescribeToolsTool provides progressive disclosure of MCP tools and skills.
  *
  * This tool lists available tools from all connected MCP servers and skills
@@ -260,67 +273,72 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
     }
 
     const clients = this.clientManager.getAllClients();
-    const autoDetectedSkills: AutoDetectedSkill[] = [];
 
     // Track failures for debugging (not exposed to callers, but logged)
     let listPromptsFailures = 0;
     let fetchPromptFailures = 0;
 
-    // Collect all prompt fetches in parallel
-    const fetchPromises: Promise<void>[] = [];
+    // Process all clients in parallel, each returning an array of detected skills
+    const clientResults = await Promise.all(
+      clients.map(async (client): Promise<AutoDetectedSkill[]> => {
+        const detectedSkills: AutoDetectedSkill[] = [];
 
-    for (const client of clients) {
-      // Skip if this prompt is already configured with a skill (explicit config takes precedence)
-      const configuredPromptNames = new Set(
-        client.prompts ? Object.keys(client.prompts) : []
-      );
+        // Skip prompts already configured with a skill (explicit config takes precedence)
+        const configuredPromptNames = new Set(
+          client.prompts ? Object.keys(client.prompts) : []
+        );
 
-      // List prompts from the server
-      const listPromptsPromise = (async () => {
         try {
           const prompts = await client.listPrompts();
-          if (!prompts || prompts.length === 0) return;
+          if (!prompts || prompts.length === 0) return detectedSkills;
 
-          // Fetch each prompt to check for front-matter
-          const promptFetchPromises = prompts.map(async (promptInfo: { name: string }) => {
-            // Skip if already configured
-            if (configuredPromptNames.has(promptInfo.name)) return;
+          // Fetch each prompt in parallel to check for front-matter
+          const promptResults = await Promise.all(
+            prompts.map(async (promptInfo: { name: string }): Promise<AutoDetectedSkill | null> => {
+              // Skip if already configured
+              if (configuredPromptNames.has(promptInfo.name)) return null;
 
-            try {
-              const promptResult = await client.getPrompt(promptInfo.name);
-              const messages = promptResult.messages || [];
+              try {
+                const promptResult = await client.getPrompt(promptInfo.name);
+                const messages = promptResult.messages || [];
 
-              // Extract text content from messages
-              const textContent = messages
-                .map((m: { content: unknown }) => {
-                  const content = m.content;
-                  if (typeof content === 'string') return content;
-                  if (content && typeof content === 'object' && 'text' in content) {
-                    return String((content as { text: string }).text);
-                  }
-                  return '';
-                })
-                .join('\n');
+                // Extract text content from messages
+                const textContent = messages
+                  .map((m: { content: unknown }) => {
+                    const content = m.content;
+                    if (typeof content === 'string') return content;
+                    if (content && typeof content === 'object' && 'text' in content) {
+                      return String((content as { text: string }).text);
+                    }
+                    return '';
+                  })
+                  .join('\n');
 
-              // Check for skill front-matter
-              const skillExtraction = extractSkillFrontMatter(textContent);
-              if (skillExtraction) {
-                autoDetectedSkills.push({
-                  serverName: client.serverName,
-                  promptName: promptInfo.name,
-                  skill: skillExtraction.skill,
-                });
+                // Check for skill front-matter
+                const skillExtraction = extractSkillFrontMatter(textContent);
+                if (skillExtraction) {
+                  return {
+                    serverName: client.serverName,
+                    promptName: promptInfo.name,
+                    skill: skillExtraction.skill,
+                  };
+                }
+                return null;
+              } catch (error) {
+                // Log but continue - this prompt may require arguments or be temporarily unavailable
+                fetchPromptFailures++;
+                console.error(
+                  `${LOG_PREFIX_SKILL_DETECTION} Failed to fetch prompt '${promptInfo.name}' from ${client.serverName}: ${error instanceof Error ? error.message : 'Unknown error'}`
+                );
+                return null;
               }
-            } catch (error) {
-              // Log but continue - this prompt may require arguments or be temporarily unavailable
-              fetchPromptFailures++;
-              console.error(
-                `${LOG_PREFIX_SKILL_DETECTION} Failed to fetch prompt '${promptInfo.name}' from ${client.serverName}: ${error instanceof Error ? error.message : 'Unknown error'}`
-              );
-            }
-          });
+            })
+          );
 
-          await Promise.all(promptFetchPromises);
+          // Filter out null results and add to detected skills
+          for (const result of promptResults) {
+            if (result) detectedSkills.push(result);
+          }
         } catch (error) {
           // Log but continue - server may not support listPrompts or be temporarily unavailable
           listPromptsFailures++;
@@ -328,12 +346,13 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
             `${LOG_PREFIX_SKILL_DETECTION} Failed to list prompts from ${client.serverName}: ${error instanceof Error ? error.message : 'Unknown error'}`
           );
         }
-      })();
 
-      fetchPromises.push(listPromptsPromise);
-    }
+        return detectedSkills;
+      })
+    );
 
-    await Promise.all(fetchPromises);
+    // Flatten results from all clients
+    const autoDetectedSkills = clientResults.flat();
 
     // Log summary if there were any failures (helps with debugging)
     if (listPromptsFailures > 0 || fetchPromptFailures > 0) {
@@ -549,8 +568,10 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
     });
 
     // Collect skills
-    const rawSkills = this.skillService ? await this.skillService.getSkills() : [];
-    const promptSkills = await this.collectPromptSkills();
+    const [rawSkills, promptSkills] = await Promise.all([
+      this.skillService ? this.skillService.getSkills() : Promise.resolve([]),
+      this.collectPromptSkills()
+    ]);
 
     // Combine and deduplicate skills (file-based skills take precedence)
     const seenSkillNames = new Set<string>();
@@ -692,64 +713,66 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
         }),
       );
 
-      const foundTools: ToolDescription[] = [];
-      const foundSkills: SkillDescription[] = [];
-      const notFoundItems: string[] = [];
+      // Process each tool name lookup in parallel for better performance
+      const lookupResults = await Promise.all(
+        toolNames.map(async (requestedName): Promise<LookupResult> => {
+          const result: LookupResult = { tools: [], skills: [], notFound: null };
 
-      for (const requestedName of toolNames) {
-        // Handle skill__ prefix - lookup skills from SkillService or prompt-based skills
-        if (requestedName.startsWith(SKILL_PREFIX)) {
-          const skillName = requestedName.slice(SKILL_PREFIX.length);
+          // Handle skill__ prefix - lookup skills from SkillService or prompt-based skills
+          if (requestedName.startsWith(SKILL_PREFIX)) {
+            const skillName = requestedName.slice(SKILL_PREFIX.length);
 
-          // First try SkillService
-          if (this.skillService) {
-            const skill = await this.skillService.getSkill(skillName);
-            if (skill) {
-              foundSkills.push({
-                name: skill.name,
-                location: skill.basePath,
-                instructions: formatSkillInstructions(skill.name, skill.content),
-              });
-              continue;
+            // First try SkillService
+            if (this.skillService) {
+              const skill = await this.skillService.getSkill(skillName);
+              if (skill) {
+                result.skills.push({
+                  name: skill.name,
+                  location: skill.basePath,
+                  instructions: formatSkillInstructions(skill.name, skill.content),
+                });
+                return result;
+              }
             }
+
+            // Fallback to prompt-based skills if not found in SkillService
+            const promptSkillContent = await this.getPromptSkillContent(skillName);
+            if (promptSkillContent) {
+              result.skills.push(promptSkillContent);
+              return result;
+            }
+
+            result.notFound = requestedName;
+            return result;
           }
 
-          // Fallback to prompt-based skills if not found in SkillService
-          const promptSkillContent = await this.getPromptSkillContent(skillName);
-          if (promptSkillContent) {
-            foundSkills.push(promptSkillContent);
-            continue;
+          // Handle serverName__toolName format - lookup specific server
+          const { serverName, actualToolName } = parseToolName(requestedName);
+
+          if (serverName) {
+            // Prefixed format: {serverName}__{toolName} - search specific server
+            const serverTools = serverToolsMap.get(serverName);
+            if (!serverTools) {
+              result.notFound = requestedName;
+              return result;
+            }
+
+            const tool = serverTools.find((t) => t.name === actualToolName);
+            if (tool) {
+              result.tools.push({
+                server: serverName,
+                tool: {
+                  name: tool.name,
+                  description: tool.description,
+                  inputSchema: tool.inputSchema,
+                },
+              });
+            } else {
+              result.notFound = requestedName;
+            }
+            return result;
           }
 
-          notFoundItems.push(requestedName);
-          continue;
-        }
-
-        // Handle serverName__toolName format - lookup specific server
-        const { serverName, actualToolName } = parseToolName(requestedName);
-
-        if (serverName) {
-          // Prefixed format: {serverName}__{toolName} - search specific server
-          const serverTools = serverToolsMap.get(serverName);
-          if (!serverTools) {
-            notFoundItems.push(requestedName);
-            continue;
-          }
-
-          const tool = serverTools.find((t) => t.name === actualToolName);
-          if (tool) {
-            foundTools.push({
-              server: serverName,
-              tool: {
-                name: tool.name,
-                description: tool.description,
-                inputSchema: tool.inputSchema,
-              },
-            });
-          } else {
-            notFoundItems.push(requestedName);
-          }
-        } else {
           // Plain tool name - search all servers
           // When a plain tool name matches multiple servers, return all matches
           const servers = toolToServers.get(actualToolName);
@@ -762,32 +785,32 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
             if (this.skillService) {
               const skill = await this.skillService.getSkill(actualToolName);
               if (skill) {
-                foundSkills.push({
+                result.skills.push({
                   name: skill.name,
                   location: skill.basePath,
                   instructions: formatSkillInstructions(skill.name, skill.content),
                 });
-                continue;
+                return result;
               }
             }
 
             // Then check prompt-based skills
             const promptSkillContent = await this.getPromptSkillContent(actualToolName);
             if (promptSkillContent) {
-              foundSkills.push(promptSkillContent);
-              continue;
+              result.skills.push(promptSkillContent);
+              return result;
             }
 
-            notFoundItems.push(requestedName);
-            continue;
+            result.notFound = requestedName;
+            return result;
           }
 
           if (servers.length === 1) {
             // Unique tool - found on single server
             const server = servers[0];
-            const serverTools = serverToolsMap.get(server)!;
-            const tool = serverTools.find((t) => t.name === actualToolName)!;
-            foundTools.push({
+            const svrTools = serverToolsMap.get(server)!;
+            const tool = svrTools.find((t) => t.name === actualToolName)!;
+            result.tools.push({
               server,
               tool: {
                 name: tool.name,
@@ -798,9 +821,9 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
           } else {
             // Tool exists on multiple servers - return all matches
             for (const server of servers) {
-              const serverTools = serverToolsMap.get(server)!;
-              const tool = serverTools.find((t) => t.name === actualToolName)!;
-              foundTools.push({
+              const svrTools = serverToolsMap.get(server)!;
+              const tool = svrTools.find((t) => t.name === actualToolName)!;
+              result.tools.push({
                 server,
                 tool: {
                   name: tool.name,
@@ -810,6 +833,21 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
               });
             }
           }
+
+          return result;
+        })
+      );
+
+      // Aggregate results from parallel lookups
+      const foundTools: ToolDescription[] = [];
+      const foundSkills: SkillDescription[] = [];
+      const notFoundItems: string[] = [];
+
+      for (const result of lookupResults) {
+        foundTools.push(...result.tools);
+        foundSkills.push(...result.skills);
+        if (result.notFound) {
+          notFoundItems.push(result.notFound);
         }
       }
 

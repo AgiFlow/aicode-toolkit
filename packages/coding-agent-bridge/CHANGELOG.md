@@ -1,3 +1,45 @@
+## 1.0.15 (2026-01-16)
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.12
+
+## 1.0.14 (2026-01-09)
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.11
+
+## 1.0.13 (2025-12-27)
+
+### 🩹 Fixes
+
+- **coding-agent-bridge:** remove --yolo flag from gemini-cli sandbox mode ([fce7e95](https://github.com/AgiFlow/aicode-toolkit/commit/fce7e95))
+- **coding-agent-bridge:** pass process.env to execa version checks ([fc10940](https://github.com/AgiFlow/aicode-toolkit/commit/fc10940))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
+## 1.0.12 (2025-12-27)
+
+This was a version bump only for @agiflowai/coding-agent-bridge to align it with other projects, there were no code changes.
+
+## 1.0.11 (2025-12-27)
+
+### 🩹 Fixes
+
+- **coding-agent-bridge:** merge toolConfig with default args to prevent duplicate CLI flags ([540367a](https://github.com/AgiFlow/aicode-toolkit/commit/540367a))
+- **coding-agent-bridge:** add --yolo flag to enable OAuth auth with sandbox mode ([536f87c](https://github.com/AgiFlow/aicode-toolkit/commit/536f87c))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.10
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.10 (2025-12-12)
 
 ### 🚀 Features

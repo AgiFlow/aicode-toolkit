@@ -1,3 +1,67 @@
+## 1.0.19 (2026-01-16)
+
+### 🚀 Features
+
+- **hooks-adapter:** add additionalContext support for Claude Code preToolUse hooks ([0d31594](https://github.com/AgiFlow/aicode-toolkit/commit/0d31594))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.15
+- Updated @agiflowai/architect-mcp to 1.0.17
+- Updated @agiflowai/hooks-adapter to 0.0.13
+- Updated @agiflowai/aicode-utils to 1.0.12
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
+## 1.0.18 (2026-01-10)
+
+### 🩹 Fixes
+
+- **scaffold-mcp:** search all boilerplates and scaffold methods when using them ([3333900](https://github.com/AgiFlow/aicode-toolkit/commit/3333900))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
+## 1.0.17 (2026-01-03)
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/architect-mcp to 1.0.15
+
+## 1.0.16 (2025-12-29)
+
+### 🩹 Fixes
+
+- **scaffold-mcp:** fix TypeScript errors in schemaDefaults utility ([9878053](https://github.com/AgiFlow/aicode-toolkit/commit/9878053))
+- **scaffold-mcp:** fix conditional scaffold includes with schema defaults ([7d46b59](https://github.com/AgiFlow/aicode-toolkit/commit/7d46b59))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
+## 1.0.15 (2025-12-27)
+
+### 🩹 Fixes
+
+- **scaffold-mcp:** only block Write operations within working directory ([6c42919](https://github.com/AgiFlow/aicode-toolkit/commit/6c42919))
+
+### 🔥 Performance
+
+- **scaffold-mcp:** parallelize sequential awaits in services ([bda480e](https://github.com/AgiFlow/aicode-toolkit/commit/bda480e))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.12
+- Updated @agiflowai/architect-mcp to 1.0.13
+- Updated @agiflowai/hooks-adapter to 0.0.10
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 1.0.14 (2025-12-26)
 
 ### 🧱 Updated Dependencies

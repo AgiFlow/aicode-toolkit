@@ -35,12 +35,23 @@ export abstract class BaseCodingAgentService implements CodingAgentService {
   }
 
   /**
+   * Merge default params with toolConfig (toolConfig takes precedence)
+   * @param defaults - Default parameters to merge with toolConfig
+   * @returns Merged configuration object
+   */
+  protected mergeWithDefaults(defaults: Record<string, unknown>): Record<string, unknown> {
+    return { ...defaults, ...this.toolConfig };
+  }
+
+  /**
    * Convert toolConfig object to CLI arguments array
    * Converts { model: "gpt-5.2-high", timeout: 60000 } to ["--model", "gpt-5.2-high", "--timeout", "60000"]
+   * @param defaults - Optional default params to merge with toolConfig before building args
    */
-  protected buildToolConfigArgs(): string[] {
+  protected buildToolConfigArgs(defaults?: Record<string, unknown>): string[] {
+    const merged = defaults ? this.mergeWithDefaults(defaults) : this.toolConfig;
     const args: string[] = [];
-    for (const [key, value] of Object.entries(this.toolConfig)) {
+    for (const [key, value] of Object.entries(merged)) {
       if (value !== undefined && value !== null) {
         // Convert camelCase to kebab-case for CLI flags
         const flag = `--${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;

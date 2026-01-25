@@ -1,3 +1,72 @@
+## 0.3.6 (2026-01-16)
+
+### 🚀 Features
+
+- **hooks-adapter:** add additionalContext support for Claude Code preToolUse hooks ([0d31594](https://github.com/AgiFlow/aicode-toolkit/commit/0d31594))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.12
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
+## 0.3.5 (2026-01-09)
+
+### 🩹 Fixes
+
+- address CodeQL security warnings ([724c9f0](https://github.com/AgiFlow/aicode-toolkit/commit/724c9f0))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.11
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
+## 0.3.4 (2025-12-27)
+
+### 🩹 Fixes
+
+- **one-mcp:** add type assertion for process.env spread ([629e126](https://github.com/AgiFlow/aicode-toolkit/commit/629e126))
+- **coding-agent-bridge:** pass process.env to execa version checks ([fc10940](https://github.com/AgiFlow/aicode-toolkit/commit/fc10940))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
+## 0.2.8 (2025-12-27)
+
+### 🚀 Features
+
+- **one-mcp:** add unique server identifier for multi-instance support ([58d7248](https://github.com/AgiFlow/aicode-toolkit/commit/58d7248))
+- **one-mcp:** add prefetch command for pre-downloading MCP server packages ([13d5e55](https://github.com/AgiFlow/aicode-toolkit/commit/13d5e55))
+
+### 🩹 Fixes
+
+- **one-mcp:** use rejection sampling to avoid modulo bias in ID generation ([3b7521c](https://github.com/AgiFlow/aicode-toolkit/commit/3b7521c))
+- **one-mcp:** use global install for prefetch and improve CLI output ([4262196](https://github.com/AgiFlow/aicode-toolkit/commit/4262196))
+- **one-mcp:** add input validation to prevent command injection ([750982e](https://github.com/AgiFlow/aicode-toolkit/commit/750982e))
+- **one-mcp:** skip disabled servers in prefetch package extraction ([803c21b](https://github.com/AgiFlow/aicode-toolkit/commit/803c21b))
+- **one-mcp:** improve npx package extraction to handle --package flag patterns ([d810fb9](https://github.com/AgiFlow/aicode-toolkit/commit/d810fb9))
+- **one-mcp:** increase connection timeout and make it configurable ([fccb102](https://github.com/AgiFlow/aicode-toolkit/commit/fccb102))
+
+### 🔥 Performance
+
+- **one-mcp:** parallelize sequential awaits in SkillService and describe-tools ([8463367](https://github.com/AgiFlow/aicode-toolkit/commit/8463367))
+- **one-mcp:** parallelize sequential awaits in CLI commands and cache service ([1719339](https://github.com/AgiFlow/aicode-toolkit/commit/1719339))
+- **one-mcp:** parallelize tool and skill lookups in DescribeToolsTool ([39caf9a](https://github.com/AgiFlow/aicode-toolkit/commit/39caf9a))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.10
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.3.2 (2025-12-26)
 
 ### 🧱 Updated Dependencies

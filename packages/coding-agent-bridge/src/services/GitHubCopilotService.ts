@@ -469,7 +469,7 @@ export class GitHubCopilotService extends BaseCodingAgentService {
   async invokeAsLlm(params: LlmInvocationParams): Promise<LlmInvocationResponse> {
     // Check if CLI exists
     try {
-      await execa(this.copilotPath, ['--version'], { timeout: 5000 });
+      await execa(this.copilotPath, ['--version'], { timeout: 5000, env: process.env });
     } catch {
       throw new Error(
         `GitHub Copilot CLI not found at path: ${this.copilotPath}. Install it with: npm install -g @github/copilot`,

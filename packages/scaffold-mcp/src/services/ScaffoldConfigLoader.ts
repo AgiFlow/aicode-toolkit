@@ -128,7 +128,14 @@ export class ScaffoldConfigLoader implements IScaffoldConfigLoader {
       // Handle boolean conditions
       if (conditionValue === 'true' || conditionValue === 'false') {
         const expectedBoolean = conditionValue === 'true';
-        if (Boolean(variableValue) !== expectedBoolean) {
+        // Convert variable value to boolean, handling string 'true'/'false' as well
+        let actualBoolean: boolean;
+        if (typeof variableValue === 'string') {
+          actualBoolean = variableValue.toLowerCase() === 'true';
+        } else {
+          actualBoolean = Boolean(variableValue);
+        }
+        if (actualBoolean !== expectedBoolean) {
           return false;
         }
       } else {

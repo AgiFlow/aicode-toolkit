@@ -35,6 +35,7 @@ export interface ClaudeCodePreToolUseInput {
   transcript_path: string;
   permission_mode: string;
   llm_tool?: string;
+  tool_config?: Record<string, unknown>;
 }
 
 /**
@@ -51,6 +52,7 @@ export interface ClaudeCodePostToolUseInput {
   transcript_path: string;
   permission_mode: string;
   llm_tool?: string;
+  tool_config?: Record<string, unknown>;
 }
 
 /**
@@ -67,6 +69,7 @@ interface ClaudeCodePreToolUseOutput {
     permissionDecision: 'allow' | 'deny' | 'ask';
     permissionDecisionReason: string;
     updatedInput?: Record<string, any>;
+    additionalContext?: string;
   };
 }
 
@@ -153,6 +156,11 @@ export class ClaudeCodeAdapter extends BaseAdapter<ClaudeCodeHookInput> {
     // Add updated input if provided
     if (response.updatedInput) {
       output.hookSpecificOutput.updatedInput = response.updatedInput;
+    }
+
+    // Include additional context if we want to provide feedback without blocking
+    if (response.decision === 'allow' && response.message) {
+      output.hookSpecificOutput.additionalContext = response.message;
     }
 
     const formattedOutput = JSON.stringify(output, null, 2);

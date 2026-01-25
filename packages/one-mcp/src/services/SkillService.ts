@@ -123,16 +123,16 @@ export class SkillService {
     const skills: Skill[] = [];
     const loadedSkillNames = new Set<string>();
 
-    // Load skills from each configured path
-    for (const skillPath of this.skillPaths) {
-      // Resolve path - if relative, resolve against cwd
-      const skillsDir = isAbsolute(skillPath)
-        ? skillPath
-        : join(this.cwd, skillPath);
+    // Load skills from all configured paths in parallel
+    const allDirSkills = await Promise.all(
+      this.skillPaths.map(async (skillPath) => {
+        const skillsDir = isAbsolute(skillPath) ? skillPath : join(this.cwd, skillPath);
+        return this.loadSkillsFromDirectory(skillsDir, 'project');
+      })
+    );
 
-      const dirSkills = await this.loadSkillsFromDirectory(skillsDir, 'project');
-
-      // Add skills that don't conflict with already loaded skills
+    // Merge results while preserving precedence (earlier paths take priority)
+    for (const dirSkills of allDirSkills) {
       for (const skill of dirSkills) {
         if (!loadedSkillNames.has(skill.name)) {
           skills.push(skill);
@@ -185,13 +185,17 @@ export class SkillService {
     // Stop any existing watchers first
     this.stopWatching();
 
-    for (const skillPath of this.skillPaths) {
-      const skillsDir = isAbsolute(skillPath) ? skillPath : join(this.cwd, skillPath);
+    // Check all directories exist in parallel
+    const existenceChecks = await Promise.all(
+      this.skillPaths.map(async (skillPath) => {
+        const skillsDir = isAbsolute(skillPath) ? skillPath : join(this.cwd, skillPath);
+        return { skillsDir, exists: await pathExists(skillsDir) };
+      })
+    );
 
-      // Check if directory exists before watching
-      if (!(await pathExists(skillsDir))) {
-        continue;
-      }
+    // Start watchers for existing directories
+    for (const { skillsDir, exists } of existenceChecks) {
+      if (!exists) continue;
 
       const abortController = new AbortController();
       this.watchers.push(abortController);
@@ -278,45 +282,53 @@ export class SkillService {
       );
     }
 
-    for (const entry of entries) {
-      const entryPath = join(dirPath, entry);
+    // Stat all entries in parallel
+    const entryStats = await Promise.all(
+      entries.map(async (entry) => {
+        const entryPath = join(dirPath, entry);
+        try {
+          return { entry, entryPath, stat: await stat(entryPath), error: null };
+        } catch (error) {
+          console.warn(`Skipping entry ${entryPath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          return { entry, entryPath, stat: null, error };
+        }
+      })
+    );
 
-      let entryStat;
-      try {
-        entryStat = await stat(entryPath);
-      } catch (error) {
-        // Skip entries we can't stat (permission issues, etc.)
-        console.warn(`Skipping entry ${entryPath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        continue;
-      }
+    // Identify skill files to load in parallel
+    const skillFilesToLoad: { filePath: string; isRootLevel: boolean }[] = [];
+
+    for (const { entry, entryPath, stat: entryStat } of entryStats) {
+      if (!entryStat) continue;
 
       if (entryStat.isDirectory()) {
-        // Check for SKILL.md in subdirectory
         const skillFilePath = join(entryPath, 'SKILL.md');
-        try {
-          if (await pathExists(skillFilePath)) {
-            const skill = await this.loadSkillFile(skillFilePath, location);
-            if (skill) {
-              skills.push(skill);
-            }
-          }
-        } catch (error) {
-          // Skip skills that fail to load
-          console.warn(`Skipping skill at ${skillFilePath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          continue;
-        }
+        skillFilesToLoad.push({ filePath: skillFilePath, isRootLevel: false });
       } else if (entry === 'SKILL.md') {
-        // Root level SKILL.md
+        skillFilesToLoad.push({ filePath: entryPath, isRootLevel: true });
+      }
+    }
+
+    // Load all skill files in parallel
+    const loadResults = await Promise.all(
+      skillFilesToLoad.map(async ({ filePath, isRootLevel }) => {
         try {
-          const skill = await this.loadSkillFile(entryPath, location);
-          if (skill) {
-            skills.push(skill);
+          // For subdirectory skills, check if file exists first
+          if (!isRootLevel && !(await pathExists(filePath))) {
+            return null;
           }
+          return await this.loadSkillFile(filePath, location);
         } catch (error) {
-          // Skip skills that fail to load
-          console.warn(`Skipping skill at ${entryPath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          continue;
+          console.warn(`Skipping skill at ${filePath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          return null;
         }
+      })
+    );
+
+    // Collect successful results
+    for (const skill of loadResults) {
+      if (skill) {
+        skills.push(skill);
       }
     }
 

@@ -1,3 +1,35 @@
+## 0.0.13 (2026-01-16)
+
+### 🚀 Features
+
+- **hooks-adapter:** add additionalContext support for Claude Code preToolUse hooks ([0d31594](https://github.com/AgiFlow/aicode-toolkit/commit/0d31594))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.15
+- Updated @agiflowai/aicode-utils to 1.0.12
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
+## 0.0.12 (2026-01-09)
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.14
+- Updated @agiflowai/aicode-utils to 1.0.11
+
+## 0.0.11 (2025-12-27)
+
+This was a version bump only for @agiflowai/hooks-adapter to align it with other projects, there were no code changes.
+
+## 0.0.10 (2025-12-27)
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.12
+
 ## 0.0.8 (2025-12-26)
 
 ### 🧱 Updated Dependencies

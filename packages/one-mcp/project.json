@@ -1,5 +1,5 @@
 {
-  "name": "one-mcp",
+  "name": "@agiflowai/one-mcp",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/one-mcp",
   "projectType": "application",

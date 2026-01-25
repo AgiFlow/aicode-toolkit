@@ -78,13 +78,17 @@ export class CSSThemeService extends BaseThemeService {
 
     const themes: ThemeInfo[] = [];
 
-    for (const cssFilePath of cssFilePaths) {
-      try {
+    const results = await Promise.allSettled(
+      cssFilePaths.map(async (cssFilePath) => {
         await this.validatePath(cssFilePath);
-        const fileThemes = await this.extractThemesFromCSS(cssFilePath);
-        themes.push(...fileThemes);
-      } catch (error) {
-        log.warn(`[CSSThemeService] Could not process ${cssFilePath}:`, error);
+        return this.extractThemesFromCSS(cssFilePath);
+      }),
+    );
+    for (const [index, result] of results.entries()) {
+      if (result.status === 'fulfilled') {
+        themes.push(...result.value);
+      } else {
+        log.warn(`[CSSThemeService] Could not process ${cssFilePaths[index]}:`, result.reason);
       }
     }
 

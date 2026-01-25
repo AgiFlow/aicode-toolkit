@@ -21,7 +21,7 @@
  */
 
 import { Command } from 'commander';
-import { CLAUDE_CODE, GEMINI_CLI } from '@agiflowai/coding-agent-bridge';
+import { CLAUDE_CODE, GEMINI_CLI, isValidLlmTool } from '@agiflowai/coding-agent-bridge';
 import {
   ClaudeCodeAdapter,
   GeminiCliAdapter,
@@ -34,6 +34,13 @@ import { print } from '@agiflowai/aicode-utils';
 
 interface HookOptions {
   type?: string;
+  toolConfig?: string;
+  llmTool?: string;
+}
+
+/** Type guard to validate parsed JSON is a record object */
+function isRecordObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** Type for Claude Code hook callback function */
@@ -69,6 +76,14 @@ export const hookCommand = new Command('hook')
     '--type <agentAndMethod>',
     'Hook type: <agent>.<method> (e.g., claude-code.preToolUse, gemini-cli.afterTool)',
   )
+  .option(
+    '--tool-config <json>',
+    'JSON config for the LLM tool (e.g., \'{"model":"gpt-5.2-high"}\')',
+  )
+  .option(
+    '--llm-tool <tool>',
+    'LLM tool to use for processing (e.g., claude-code, gemini-cli)',
+  )
   .action(async (options: HookOptions): Promise<void> => {
     try {
       if (!options.type) {
@@ -82,6 +97,24 @@ export const hookCommand = new Command('hook')
       }
 
       const { agent, hookMethod } = parseHookType(options.type);
+
+      // Parse tool config JSON if provided
+      let toolConfig: Record<string, unknown> | undefined;
+      if (options.toolConfig) {
+        try {
+          const parsed: unknown = JSON.parse(options.toolConfig);
+          if (!isRecordObject(parsed)) {
+            print.error('--tool-config must be a JSON object, not an array or primitive value');
+            process.exit(1);
+          }
+          toolConfig = parsed;
+        } catch (error) {
+          print.error(
+            `Invalid JSON for --tool-config. Expected format: '{"key":"value"}'. Parse error: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          process.exit(1);
+        }
+      }
 
       if (agent === CLAUDE_CODE) {
         // Import hook modules (dynamic import for conditional loading based on agent type)
@@ -118,8 +151,24 @@ export const hookCommand = new Command('hook')
 
         const adapter = new ClaudeCodeAdapter();
 
+        // Build config object with optional tool_config and llm_tool
+        const adapterConfig: { tool_config?: Record<string, unknown>; llm_tool?: string } = {};
+        if (toolConfig) {
+          adapterConfig.tool_config = toolConfig;
+        }
+        if (options.llmTool) {
+          if (!isValidLlmTool(options.llmTool)) {
+            print.error(`Invalid --llm-tool value: ${options.llmTool}. Supported: claude-code, gemini-cli`);
+            process.exit(1);
+          }
+          adapterConfig.llm_tool = options.llmTool;
+        }
+
         // Execute all hooks in serial with shared stdin
-        await adapter.executeMultiple(claudeCallbacks);
+        await adapter.executeMultiple(
+          claudeCallbacks,
+          Object.keys(adapterConfig).length > 0 ? adapterConfig : undefined,
+        );
 
       } else if (agent === GEMINI_CLI) {
         // Import hook modules (dynamic import for conditional loading based on agent type)
@@ -156,8 +205,24 @@ export const hookCommand = new Command('hook')
 
         const adapter = new GeminiCliAdapter();
 
+        // Build config object with optional tool_config and llm_tool
+        const geminiAdapterConfig: { tool_config?: Record<string, unknown>; llm_tool?: string } = {};
+        if (toolConfig) {
+          geminiAdapterConfig.tool_config = toolConfig;
+        }
+        if (options.llmTool) {
+          if (!isValidLlmTool(options.llmTool)) {
+            print.error(`Invalid --llm-tool value: ${options.llmTool}. Supported: claude-code, gemini-cli`);
+            process.exit(1);
+          }
+          geminiAdapterConfig.llm_tool = options.llmTool;
+        }
+
         // Execute all hooks in serial with shared stdin
-        await adapter.executeMultiple(geminiCallbacks);
+        await adapter.executeMultiple(
+          geminiCallbacks,
+          Object.keys(geminiAdapterConfig).length > 0 ? geminiAdapterConfig : undefined,
+        );
 
       } else {
         print.error(`Unsupported agent: ${agent}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);

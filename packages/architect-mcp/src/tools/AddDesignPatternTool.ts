@@ -137,7 +137,7 @@ export class AddDesignPatternTool implements Tool<AddDesignPatternToolInput> {
       }
 
       // Read existing architect file or create new structure
-      let architectConfig: { features?: Feature[] } = { features: [] };
+      let architectConfig: { features?: Feature[] };
 
       try {
         const content = await fs.readFile(architectPath, 'utf-8');

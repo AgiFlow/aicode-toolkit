@@ -130,20 +130,18 @@ export class ListSharedComponentsTool implements Tool<ListSharedComponentsInput>
 
       // Initialize stories index
       const storiesIndex = new StoriesIndexService();
-      await storiesIndex.initialize();
+
+      // Run independent operations in parallel for better performance
+      const [, defaultTags] = await Promise.all([
+        storiesIndex.initialize(),
+        getSharedComponentTags(),
+      ]);
 
       // Get all available tags first
       const availableTags = storiesIndex.getAllTags();
 
-      // Determine which tags to filter by
-      let filterTags: string[];
-      if (inputTags !== undefined) {
-        // User explicitly provided tags (empty array means all components)
-        filterTags = inputTags;
-      } else {
-        // Use configured default tags from toolkit.yaml
-        filterTags = await getSharedComponentTags();
-      }
+      // Determine which tags to filter by (use input if provided, otherwise defaults)
+      const filterTags = inputTags !== undefined ? inputTags : defaultTags;
 
       // Get components filtered by tags
       const filteredComponents = storiesIndex.getComponentsByTags(filterTags.length > 0 ? filterTags : undefined);

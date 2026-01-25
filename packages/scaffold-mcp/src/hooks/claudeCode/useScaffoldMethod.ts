@@ -91,6 +91,21 @@ export class UseScaffoldMethodHook {
         };
       }
 
+      // Only block files within the working directory
+      const absoluteFilePath = path.isAbsolute(filePath)
+        ? filePath
+        : path.join(context.cwd, filePath);
+
+      if (
+        !absoluteFilePath.startsWith(context.cwd + path.sep) &&
+        absoluteFilePath !== context.cwd
+      ) {
+        return {
+          decision: DECISION_SKIP,
+          message: 'File is outside working directory - skipping scaffold method check',
+        };
+      }
+
       // Create execution log service for this session
       const executionLog = new ExecutionLogService(context.session_id);
 
@@ -118,10 +133,6 @@ export class UseScaffoldMethodHook {
       const workspaceRoot = await TemplatesManagerService.getWorkspaceRoot(context.cwd);
       const projectFinder = new ProjectFinderService(workspaceRoot);
 
-      // Resolve file path (could be relative or absolute)
-      const absoluteFilePath = path.isAbsolute(filePath)
-        ? filePath
-        : path.join(context.cwd, filePath);
       const projectConfig = await projectFinder.findProjectForFile(absoluteFilePath);
 
       // If project found, use its root; otherwise use cwd
@@ -159,15 +170,15 @@ export class UseScaffoldMethodHook {
       const data: ScaffoldMethodsResponse = JSON.parse(resultText);
 
       if (!data.methods || data.methods.length === 0) {
-        // No methods available - still deny to guide AI and log it
+        // No methods available - allow with guidance
         await executionLog.logExecution({
           filePath: filePath,
           operation: 'list-scaffold-methods',
-          decision: DECISION_DENY,
+          decision: DECISION_ALLOW,
         });
 
         return {
-          decision: DECISION_DENY,
+          decision: DECISION_ALLOW,
           message:
             'No scaffolding methods are available for this project template. You should write new files directly using the Write tool.',
         };
