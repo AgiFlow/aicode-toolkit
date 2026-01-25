@@ -31,14 +31,11 @@ export { StdioTransportHandler } from './transports/stdio';
 export { SseTransportHandler } from './transports/sse';
 export { HttpTransportHandler } from './transports/http';
 
-// Tools - Add tool exports here as you create them
-// Example: export { MyTool } from './tools/MyTool.js';
+// Tools - Exported for library usage (e.g., Clawdbot plugin)
+export { DescribeToolsTool } from './tools/DescribeToolsTool';
+export { UseToolTool } from './tools/UseToolTool';
 
-// Services - Add service exports here as you create them
-// Example: export { MyService } from './services/MyService.js';
-
-// Prompts - Add prompt exports here as you create them
-// Example: export { MyPrompt } from './prompts/MyPrompt.js';
-
-// Utils - Add utility exports here as you create them
-// Example: export { formatHelper } from './utils/formatHelper.js';
+// Services - Exported for library usage (e.g., Clawdbot plugin)
+export { ConfigFetcherService } from './services/ConfigFetcherService';
+export { McpClientManagerService } from './services/McpClientManagerService';
+export { SkillService } from './services/SkillService';
