@@ -1,7 +1,7 @@
 {
   "name": "@agiflowai/clawdbot-mcp-plugin",
   "description": "Clawdbot plugin for MCP server integration with progressive tool disclosure",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "AGPL-3.0",
   "author": "AgiflowIO",
   "repository": {

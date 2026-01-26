@@ -1,3 +1,18 @@
+## 0.1.2 (2026-01-26)
+
+### 🚀 Features
+
+- **one-mcp:** register tools after MCP servers connect with full capability list ([50eb815](https://github.com/AgiFlow/aicode-toolkit/commit/50eb815))
+
+### 🩹 Fixes
+
+- **one-mcp:** improve MCP client manager lifecycle and cleanup ([4c995f9](https://github.com/AgiFlow/aicode-toolkit/commit/4c995f9))
+- **one-mcp:** bundle dependencies in clawdbot-mcp-plugin to resolve module resolution errors ([e0c248d](https://github.com/AgiFlow/aicode-toolkit/commit/e0c248d))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.1.1 (2026-01-26)
 
 ### 🧱 Updated Dependencies
