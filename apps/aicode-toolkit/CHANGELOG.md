@@ -1,3 +1,10 @@
+## 1.0.19 (2026-01-26)
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.16
+- Updated @agiflowai/aicode-utils to 1.0.13
+
 ## 1.0.18 (2026-01-16)
 
 ### 🧱 Updated Dependencies

@@ -1,3 +1,17 @@
+## 0.3.7 (2026-01-26)
+
+### 🚀 Features
+
+- **aicode-toolkit:** add clawdbot-mcp-plugin package ([6860d89](https://github.com/AgiFlow/aicode-toolkit/commit/6860d89))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.13
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.3.6 (2026-01-16)
 
 ### 🚀 Features
