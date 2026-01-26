@@ -73,6 +73,137 @@ const mcpBridgePlugin = {
     let useToolToolInstance: UseToolTool | null = null;
     let isInitialized = false;
     let toolkitDescription: string | null = null;
+    let toolsRegistered = false;
+
+    // Helper to register tools with full description (called after MCP servers connect)
+    const registerTools = () => {
+      if (toolsRegistered || !toolkitDescription) {
+        return;
+      }
+
+      // Register describe_tools with full toolkit description
+      api.registerTool(
+        {
+          name: 'mcp__describe_tools',
+          description: toolkitDescription,
+          parameters: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              toolNames: {
+                description: 'List of tool names to get detailed information about',
+                items: {
+                  minLength: 1,
+                  type: 'string',
+                },
+                minItems: 1,
+                type: 'array',
+              },
+            },
+            required: ['toolNames'],
+          },
+          async execute(_id: string, params: Record<string, unknown>) {
+            if (!isInitialized || !describeToolsToolInstance) {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: 'MCP server not initialized yet. Please wait for service startup to complete.',
+                  },
+                ],
+                isError: true,
+              };
+            }
+
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const result = await describeToolsToolInstance.execute(params as any);
+              return {
+                content: result.content || [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+              };
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : String(error);
+              api.logger.error('[one-mcp] describe_tools error:', errorMessage);
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Error executing describe_tools: ${errorMessage}`,
+                  },
+                ],
+                isError: true,
+              };
+            }
+          },
+        },
+        { name: 'mcp__describe_tools' },
+      );
+
+      // Register use_tool
+      api.registerTool(
+        {
+          name: 'mcp__use_tool',
+          description: `Execute an MCP tool (NOT Skill) with provided arguments. You MUST call describe_tools first to discover the tool's correct arguments. Then to use tool:
+- Provide toolName and toolArgs based on the schema
+- If multiple servers provide the same tool, specify serverName
+
+IMPORTANT: Only use tools discovered from describe_tools with id="${serverOptions.serverId}".`.trim(),
+          parameters: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              toolArgs: {
+                description: 'Arguments to pass to the tool, as discovered from describe_tools',
+                type: 'object',
+              },
+              toolName: {
+                description: 'Name of the tool to execute',
+                minLength: 1,
+                type: 'string',
+              },
+            },
+            required: ['toolName'],
+          },
+          async execute(_id: string, params: Record<string, unknown>) {
+            if (!isInitialized || !useToolToolInstance) {
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: 'MCP server not initialized yet. Please wait for service startup to complete.',
+                  },
+                ],
+                isError: true,
+              };
+            }
+
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const result = await useToolToolInstance.execute(params as any);
+              return {
+                content: result.content || [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+              };
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : String(error);
+              api.logger.error('[one-mcp] use_tool error:', errorMessage);
+              return {
+                content: [
+                  {
+                    type: 'text',
+                    text: `Error executing tool: ${errorMessage}`,
+                  },
+                ],
+                isError: true,
+              };
+            }
+          },
+        },
+        { name: 'mcp__use_tool' },
+      );
+
+      toolsRegistered = true;
+      api.logger.info('[one-mcp] Tools registered: mcp__describe_tools, mcp__use_tool');
+    };
 
     // Register service for async initialization
     api.registerService({
@@ -132,6 +263,9 @@ const mcpBridgePlugin = {
           const toolkitDef = await describeToolsToolInstance.getDefinition();
           toolkitDescription = toolkitDef.description;
 
+          // Register tools with full description now that we have it
+          registerTools();
+
           isInitialized = true;
           api.logger.info('[one-mcp] MCP server initialized successfully');
         } catch (error) {
@@ -147,159 +281,6 @@ const mcpBridgePlugin = {
         useToolToolInstance = null;
       },
     });
-
-    // Register describe_tools with static schema
-    api.registerTool(
-      {
-        name: 'mcp__describe_tools',
-        description: `
-<toolkit id="${serverOptions.serverId}">
-<instruction>
-Before you use any capabilities below, you MUST call this tool with a list of names to learn how to use them properly; this includes:
-- For tools: Arguments schema needed to pass to use_tool
-- For skills: Detailed instructions that will expand when invoked (Prefer to be explored first when relevant)
-
-This tool is optimized for batch queries - you can request multiple capabilities at once for better performance.
-
-How to invoke:
-- For MCP tools: Use use_tool with toolName and toolArgs based on the schema
-- For skills: Use this tool with the skill name to get expanded instructions
-</instruction>
-
-<available_capabilities>
-<!-- Capabilities will be populated dynamically after MCP servers connect -->
-</available_capabilities>
-</toolkit>
-      `.trim(),
-        parameters: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            toolNames: {
-              description: 'List of tool names to get detailed information about',
-              items: {
-                minLength: 1,
-                type: 'string',
-              },
-              minItems: 1,
-              type: 'array',
-            },
-          },
-          required: ['toolNames'],
-        },
-        async execute(_id: string, params: Record<string, unknown>) {
-          if (!isInitialized || !describeToolsToolInstance) {
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: 'MCP server not initialized yet. Please wait for service startup to complete.',
-                },
-              ],
-              isError: true,
-            };
-          }
-
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const result = await describeToolsToolInstance.execute(params as any);
-
-            // Prepend toolkit description to help AI discover available tools
-            const responseText =
-              result.content?.[0]?.type === 'text'
-                ? result.content[0].text
-                : JSON.stringify(result, null, 2);
-
-            const fullResponse = toolkitDescription
-              ? `${toolkitDescription}\n\n---\n\nDetailed Information:\n${responseText}`
-              : responseText;
-
-            return {
-              content: [{ type: 'text', text: fullResponse }],
-            };
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            api.logger.error('[one-mcp] describe_tools error:', errorMessage);
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Error executing describe_tools: ${errorMessage}`,
-                },
-              ],
-              isError: true,
-            };
-          }
-        },
-      },
-      { name: 'mcp__describe_tools' },
-    );
-
-    // Register use_tool with static schema
-    api.registerTool(
-      {
-        name: 'mcp__use_tool',
-        description: `
-Execute an MCP tool (NOT Skill) with provided arguments. You MUST call describe_tools first to discover the tool's correct arguments. Then to use tool:
-- Provide toolName and toolArgs based on the schema
-- If multiple servers provide the same tool, specify serverName
-
-IMPORTANT: Only use tools discovered from describe_tools with id="${serverOptions.serverId}".
-      `.trim(),
-        parameters: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            toolArgs: {
-              description: 'Arguments to pass to the tool, as discovered from describe_tools',
-              type: 'object',
-            },
-            toolName: {
-              description: 'Name of the tool to execute',
-              minLength: 1,
-              type: 'string',
-            },
-          },
-          required: ['toolName'],
-        },
-        async execute(_id: string, params: Record<string, unknown>) {
-          if (!isInitialized || !useToolToolInstance) {
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: 'MCP server not initialized yet. Please wait for service startup to complete.',
-                },
-              ],
-              isError: true,
-            };
-          }
-
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const result = await useToolToolInstance.execute(params as any);
-            return {
-              content: result.content || [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-            };
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            api.logger.error('[one-mcp] use_tool error:', errorMessage);
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Error executing tool: ${errorMessage}`,
-                },
-              ],
-              isError: true,
-            };
-          }
-        },
-      },
-      { name: 'mcp__use_tool' },
-    );
-
-    api.logger.info('[one-mcp] Tools registered: mcp__describe_tools, mcp__use_tool');
   },
 };
 
