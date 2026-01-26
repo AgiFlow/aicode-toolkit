@@ -71,6 +71,7 @@ const mcpBridgePlugin = {
     // Tool instances - will be initialized in service.start()
     let describeToolsToolInstance: DescribeToolsTool | null = null;
     let useToolToolInstance: UseToolTool | null = null;
+    let clientManager: McpClientManagerService | null = null;
     let isInitialized = false;
     let toolkitDescription: string | null = null;
     let toolsRegistered = false;
@@ -214,7 +215,14 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${serverOption
             `[one-mcp] Initializing MCP server with config: ${serverOptions.configFilePath}`,
           );
 
-          const clientManager = new McpClientManagerService();
+          // Clean up previous client manager if it exists
+          if (clientManager) {
+            api.logger.info('[one-mcp] Cleaning up previous client manager');
+            await clientManager.disconnectAll();
+          }
+
+          // Create new client manager
+          clientManager = new McpClientManagerService();
 
           // Load config and connect to MCP servers
           const configFetcher = new ConfigFetcherService({
@@ -224,15 +232,29 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${serverOption
 
           const config = await configFetcher.fetchConfiguration(serverOptions.noCache || false);
 
+          // Log server names for debugging
+          const serverNames = Object.keys(config.mcpServers);
+          api.logger.info(`[one-mcp] Found ${serverNames.length} MCP servers: ${serverNames.join(', ')}`);
+
           // Connect to all MCP servers
           const connectionPromises = Object.entries(config.mcpServers).map(
             async ([serverName, serverConfig]) => {
+              if (!clientManager) {
+                api.logger.error('[one-mcp] Client manager not initialized');
+                return;
+              }
+
               try {
+                api.logger.info(`[one-mcp] Attempting to connect to: ${serverName}`);
                 await clientManager.connectToServer(serverName, serverConfig);
-                api.logger.info(`[one-mcp] Connected to MCP server: ${serverName}`);
+                api.logger.info(`[one-mcp] ✓ Connection successful for: ${serverName}`);
               } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
-                api.logger.error(`[one-mcp] Failed to connect to ${serverName}:`, errorMessage);
+                const stack = error instanceof Error ? error.stack : '';
+                api.logger.error(`[one-mcp] ✗ Connection failed for ${serverName}: ${errorMessage}`);
+                if (stack) {
+                  api.logger.error(`[one-mcp]   Stack: ${stack.split('\n').slice(0, 3).join(' / ')}`);
+                }
               }
             },
           );
@@ -279,6 +301,13 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${serverOption
         isInitialized = false;
         describeToolsToolInstance = null;
         useToolToolInstance = null;
+
+        // Disconnect all MCP clients
+        if (clientManager) {
+          api.logger.info('[one-mcp] Disconnecting all MCP clients');
+          await clientManager.disconnectAll();
+          clientManager = null;
+        }
       },
     });
   },
