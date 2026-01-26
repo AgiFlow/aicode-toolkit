@@ -120,7 +120,9 @@ const mcpBridgePlugin = {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const result = await describeToolsToolInstance.execute(params as any);
               return {
-                content: result.content || [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+                content: result.content || [
+                  { type: 'text', text: JSON.stringify(result, null, 2) },
+                ],
               };
             } catch (error) {
               const errorMessage = error instanceof Error ? error.message : String(error);
@@ -144,7 +146,8 @@ const mcpBridgePlugin = {
       api.registerTool(
         {
           name: 'mcp__use_tool',
-          description: `Execute an MCP tool (NOT Skill) with provided arguments. You MUST call describe_tools first to discover the tool's correct arguments. Then to use tool:
+          description:
+            `Execute an MCP tool (NOT Skill) with provided arguments. You MUST call describe_tools first to discover the tool's correct arguments. Then to use tool:
 - Provide toolName and toolArgs based on the schema
 - If multiple servers provide the same tool, specify serverName
 
@@ -182,7 +185,9 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${serverOption
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const result = await useToolToolInstance.execute(params as any);
               return {
-                content: result.content || [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+                content: result.content || [
+                  { type: 'text', text: JSON.stringify(result, null, 2) },
+                ],
               };
             } catch (error) {
               const errorMessage = error instanceof Error ? error.message : String(error);
@@ -234,7 +239,9 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${serverOption
 
           // Log server names for debugging
           const serverNames = Object.keys(config.mcpServers);
-          api.logger.info(`[one-mcp] Found ${serverNames.length} MCP servers: ${serverNames.join(', ')}`);
+          api.logger.info(
+            `[one-mcp] Found ${serverNames.length} MCP servers: ${serverNames.join(', ')}`,
+          );
 
           // Connect to all MCP servers
           const connectionPromises = Object.entries(config.mcpServers).map(
@@ -251,9 +258,13 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${serverOption
               } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 const stack = error instanceof Error ? error.stack : '';
-                api.logger.error(`[one-mcp] ✗ Connection failed for ${serverName}: ${errorMessage}`);
+                api.logger.error(
+                  `[one-mcp] ✗ Connection failed for ${serverName}: ${errorMessage}`,
+                );
                 if (stack) {
-                  api.logger.error(`[one-mcp]   Stack: ${stack.split('\n').slice(0, 3).join(' / ')}`);
+                  api.logger.error(
+                    `[one-mcp]   Stack: ${stack.split('\n').slice(0, 3).join(' / ')}`,
+                  );
                 }
               }
             },
