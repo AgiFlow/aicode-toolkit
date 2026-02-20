@@ -166,7 +166,15 @@ export class ReviewCodeChangeHook {
 
         return {
           decision: DECISION_DENY, // Will map to 'block' in PostToolUse output
-          message: JSON.stringify(data, null, 2), // Full AI response
+          // Filter out should_do issues to keep context manageable — only critical violations matter here
+          message: JSON.stringify(
+            {
+              ...data,
+              identified_issues: data.identified_issues.filter((i) => i.type !== 'should_do'),
+            },
+            null,
+            2,
+          ),
         };
       }
 
