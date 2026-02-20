@@ -78,7 +78,11 @@ export class UseToolTool implements Tool<UseToolToolInput> {
    * @param skillService - Optional skill service for loading and executing skills
    * @param serverId - Unique server identifier for this one-mcp instance
    */
-  constructor(clientManager: McpClientManagerService, skillService?: SkillService, serverId?: string) {
+  constructor(
+    clientManager: McpClientManagerService,
+    skillService?: SkillService,
+    serverId?: string,
+  ) {
     this.clientManager = clientManager;
     this.skillService = skillService;
     this.serverId = serverId || DEFAULT_SERVER_ID;
@@ -176,7 +180,8 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverI
    * @returns CallToolResult with guidance message
    */
   private executePromptSkill(promptSkill: PromptSkillMatch): CallToolResult {
-    const location = promptSkill.skill.folder || `prompt:${promptSkill.serverName}/${promptSkill.promptName}`;
+    const location =
+      promptSkill.skill.folder || `prompt:${promptSkill.serverName}/${promptSkill.promptName}`;
     return {
       content: [
         {
@@ -258,7 +263,7 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverI
         }
 
         // Check if tool is blacklisted
-        if (client.toolBlacklist && client.toolBlacklist.includes(actualToolName)) {
+        if (client.toolBlacklist?.includes(actualToolName)) {
           return {
             content: [
               {
@@ -293,7 +298,7 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverI
         clients.map(async (client) => {
           try {
             // Skip if tool is blacklisted on this server
-            if (client.toolBlacklist && client.toolBlacklist.includes(actualToolName)) {
+            if (client.toolBlacklist?.includes(actualToolName)) {
               return null;
             }
 

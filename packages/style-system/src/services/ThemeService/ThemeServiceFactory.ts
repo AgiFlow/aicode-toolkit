@@ -91,9 +91,7 @@ export class ThemeServiceFactory {
 
       // Look for default export or named exports that extend BaseThemeService
       const ServiceClass =
-        customModule.default ||
-        customModule.ThemeService ||
-        customModule.CustomThemeService;
+        customModule.default || customModule.ThemeService || customModule.CustomThemeService;
 
       if (!ServiceClass) {
         throw new Error(

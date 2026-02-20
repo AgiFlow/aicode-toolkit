@@ -50,7 +50,7 @@ export const useToolCommand = new Command('use-tool')
       let toolArgs: any = {};
       try {
         toolArgs = JSON.parse(options.args);
-      } catch (error) {
+      } catch (_error) {
         console.error('Error: Invalid JSON in --args');
         process.exit(1);
       }
@@ -76,7 +76,7 @@ export const useToolCommand = new Command('use-tool')
               console.error(`✗ Failed to connect to ${serverName}:`, error);
             }
           }
-        }
+        },
       );
 
       await Promise.all(connectionPromises);
@@ -141,7 +141,7 @@ export const useToolCommand = new Command('use-tool')
           } catch (error) {
             return { serverName: client.serverName, hasTool: false, error };
           }
-        })
+        }),
       );
 
       const matchingServers: string[] = [];
@@ -199,13 +199,17 @@ export const useToolCommand = new Command('use-tool')
           }
         }
 
-        console.error(`Tool or skill "${toolName}" not found on any connected server or configured skill paths`);
+        console.error(
+          `Tool or skill "${toolName}" not found on any connected server or configured skill paths`,
+        );
         await clientManager.disconnectAll();
         process.exit(1);
       }
 
       if (matchingServers.length > 1) {
-        console.error(`Tool "${toolName}" found on multiple servers: ${matchingServers.join(', ')}`);
+        console.error(
+          `Tool "${toolName}" found on multiple servers: ${matchingServers.join(', ')}`,
+        );
         console.error('Please specify --server to disambiguate');
         await clientManager.disconnectAll();
         process.exit(1);
@@ -249,13 +253,11 @@ export const useToolCommand = new Command('use-tool')
         }
 
         await clientManager.disconnectAll();
-
       } catch (error) {
         console.error(`Failed to execute tool "${toolName}":`, error);
         await clientManager.disconnectAll();
         process.exit(1);
       }
-
     } catch (error) {
       console.error('Error executing use-tool:', error);
       process.exit(1);

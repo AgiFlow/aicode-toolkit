@@ -32,7 +32,7 @@ interface MockPrompt {
 function createMockClient(
   serverName: string,
   prompts: MockPrompt[],
-  options: CreateMockClientOptions = {}
+  options: CreateMockClientOptions = {},
 ): McpClientConnection {
   return {
     serverName,
@@ -97,9 +97,9 @@ describe('Server prompts handlers', () => {
             if (!promptToServers.has(prompt.name)) {
               promptToServers.set(prompt.name, []);
             }
-            promptToServers.get(prompt.name)!.push(client.serverName);
+            promptToServers.get(prompt.name)?.push(client.serverName);
           }
-        })
+        }),
       );
 
       const aggregatedPrompts: Array<{
@@ -154,9 +154,9 @@ describe('Server prompts handlers', () => {
             if (!promptToServers.has(prompt.name)) {
               promptToServers.set(prompt.name, []);
             }
-            promptToServers.get(prompt.name)!.push(client.serverName);
+            promptToServers.get(prompt.name)?.push(client.serverName);
           }
-        })
+        }),
       );
 
       const aggregatedPrompts: Array<{
@@ -210,7 +210,7 @@ describe('Server prompts handlers', () => {
           } catch {
             serverPromptsMap.set(client.serverName, []);
           }
-        })
+        }),
       );
 
       const aggregatedPrompts: Array<{
@@ -247,8 +247,8 @@ describe('Server prompts handlers', () => {
       const prompts = await client1.listPrompts();
 
       expect(prompts[0].arguments).toHaveLength(2);
-      expect(prompts[0].arguments![0].name).toBe('arg1');
-      expect(prompts[0].arguments![0].required).toBe(true);
+      expect(prompts[0].arguments?.[0].name).toBe('arg1');
+      expect(prompts[0].arguments?.[0].required).toBe(true);
     });
   });
 
@@ -275,7 +275,7 @@ describe('Server prompts handlers', () => {
       const client = clientsMap.get(serverName);
       expect(client).toBeDefined();
 
-      const result = await client!.getPrompt(actualPromptName, { arg: 'value' });
+      const result = await client?.getPrompt(actualPromptName, { arg: 'value' });
 
       expect(result.messages).toHaveLength(1);
       expect(client1.getPrompt).toHaveBeenCalledWith('my_prompt', { arg: 'value' });
@@ -476,8 +476,8 @@ describe('Server prompts handlers', () => {
       const prompts = await client1.listPrompts();
 
       expect(prompts[0].arguments).toHaveLength(10);
-      expect(prompts[0].arguments![0].required).toBe(true);
-      expect(prompts[0].arguments![5].required).toBe(false);
+      expect(prompts[0].arguments?.[0].required).toBe(true);
+      expect(prompts[0].arguments?.[5].required).toBe(false);
     });
 
     it('should handle getPrompt with undefined arguments', async () => {
@@ -496,9 +496,7 @@ describe('Server prompts handlers', () => {
         {
           name: 'full_prompt',
           description: 'Full prompt with all properties',
-          arguments: [
-            { name: 'arg1', description: 'First arg', required: true },
-          ],
+          arguments: [{ name: 'arg1', description: 'First arg', required: true }],
         },
       ]);
 
@@ -516,9 +514,9 @@ describe('Server prompts handlers', () => {
       expect(typeof aggregatedPrompt.name).toBe('string');
       expect(typeof aggregatedPrompt.description).toBe('string');
       expect(Array.isArray(aggregatedPrompt.arguments)).toBe(true);
-      expect(aggregatedPrompt.arguments![0]).toHaveProperty('name');
-      expect(aggregatedPrompt.arguments![0]).toHaveProperty('description');
-      expect(aggregatedPrompt.arguments![0]).toHaveProperty('required');
+      expect(aggregatedPrompt.arguments?.[0]).toHaveProperty('name');
+      expect(aggregatedPrompt.arguments?.[0]).toHaveProperty('description');
+      expect(aggregatedPrompt.arguments?.[0]).toHaveProperty('required');
     });
   });
 });

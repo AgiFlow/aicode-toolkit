@@ -1,4 +1,3 @@
-import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ScaffoldConfigLoader } from '../../src/services/ScaffoldConfigLoader';
 import { ScaffoldService } from '../../src/services/ScaffoldService';
@@ -66,7 +65,7 @@ describe('ScaffoldService', () => {
       const variables = { componentName: 'Button' };
 
       // Access private method via any
-      const result = await (scaffoldService as any).processScaffold({
+      const _result = await (scaffoldService as any).processScaffold({
         config,
         targetPath: '/target',
         templatePath: '/templates/test',
@@ -86,13 +85,13 @@ describe('ScaffoldService', () => {
       );
       expect(smartComponentCall).toBeDefined();
       // The variables should have withSmartComponent: false (from default)
-      expect(smartComponentCall![1].withSmartComponent).toBe(false);
+      expect(smartComponentCall?.[1].withSmartComponent).toBe(false);
 
       // Find the call for withStorybook condition
       const storybookCall = shouldIncludeCalls.find((call) => call[0]?.withStorybook === 'true');
       expect(storybookCall).toBeDefined();
       // The variables should have withStorybook: true (from default)
-      expect(storybookCall![1].withStorybook).toBe(true);
+      expect(storybookCall?.[1].withStorybook).toBe(true);
     });
 
     it('should include file when schema default matches condition', async () => {
@@ -120,7 +119,7 @@ describe('ScaffoldService', () => {
         ],
       };
 
-      const result = await (scaffoldService as any).processScaffold({
+      const _result = await (scaffoldService as any).processScaffold({
         config,
         targetPath: '/target',
         templatePath: '/templates/test',
@@ -155,7 +154,7 @@ describe('ScaffoldService', () => {
         ],
       };
 
-      const result = await (scaffoldService as any).processScaffold({
+      const _result = await (scaffoldService as any).processScaffold({
         config,
         targetPath: '/target',
         templatePath: '/templates/test',
@@ -189,7 +188,7 @@ describe('ScaffoldService', () => {
         includes: ['src/Feature.tsx->src/{{name}}Feature.tsx?withFeature=true'],
       };
 
-      const result = await (scaffoldService as any).processScaffold({
+      const _result = await (scaffoldService as any).processScaffold({
         config,
         targetPath: '/target',
         templatePath: '/templates/test',

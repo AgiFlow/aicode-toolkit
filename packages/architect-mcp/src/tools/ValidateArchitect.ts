@@ -32,7 +32,8 @@ export class ValidateArchitect implements Tool<ValidateArchitectInput> {
   getDefinition(): ToolDefinition {
     return {
       name: ValidateArchitect.TOOL_NAME,
-      description: 'Validate an architect.yaml file for syntax and schema errors. Returns detailed, actionable error messages to help fix issues.',
+      description:
+        'Validate an architect.yaml file for syntax and schema errors. Returns detailed, actionable error messages to help fix issues.',
       inputSchema: {
         type: 'object',
         properties: {

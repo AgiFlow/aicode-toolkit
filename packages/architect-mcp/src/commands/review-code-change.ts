@@ -136,9 +136,7 @@ export const reviewCodeChangeCommand = new Command('review-code-change')
         }
 
         // Display fix required status
-        const fixRequiredStatus = data.fix_required
-          ? '🔴 Fix Required'
-          : '🟢 No Fixes Required';
+        const fixRequiredStatus = data.fix_required ? '🔴 Fix Required' : '🟢 No Fixes Required';
         print.info(`### Review Result: ${fixRequiredStatus}\n`);
 
         // Display feedback

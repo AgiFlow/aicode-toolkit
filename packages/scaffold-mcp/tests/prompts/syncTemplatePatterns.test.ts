@@ -43,7 +43,9 @@ describe('SyncTemplatePatternsPrompt', (): void => {
     it('should have optional request, templateName and filePath arguments', (): void => {
       const definition = prompt.getDefinition();
       expect(definition.arguments).toHaveLength(3);
-      expect(definition.arguments?.every((arg: PromptArgument): boolean => arg.required === false)).toBe(true);
+      expect(
+        definition.arguments?.every((arg: PromptArgument): boolean => arg.required === false),
+      ).toBe(true);
       const names = definition.arguments?.map((arg: PromptArgument): string => arg.name) ?? [];
       expect(names).toEqual(['request', 'templateName', 'filePath']);
     });
@@ -80,20 +82,28 @@ describe('SyncTemplatePatternsPrompt', (): void => {
       vi.spyOn(TemplateService.prototype, 'renderString').mockImplementation((): never => {
         throw new Error('render error');
       });
-      await expect(prompt.execute({})).rejects.toThrow('Failed to execute SyncTemplatePatternsPrompt');
+      await expect(prompt.execute({})).rejects.toThrow(
+        'Failed to execute SyncTemplatePatternsPrompt',
+      );
     });
   });
 
   describe('constructor options', (): void => {
     it('should accept valid options', (): void => {
-      expect((): SyncTemplatePatternsPrompt => new SyncTemplatePatternsPrompt({ isMonolith: true })).not.toThrow();
-      expect((): SyncTemplatePatternsPrompt => new SyncTemplatePatternsPrompt({ promptAsSkill: true })).not.toThrow();
+      expect(
+        (): SyncTemplatePatternsPrompt => new SyncTemplatePatternsPrompt({ isMonolith: true }),
+      ).not.toThrow();
+      expect(
+        (): SyncTemplatePatternsPrompt => new SyncTemplatePatternsPrompt({ promptAsSkill: true }),
+      ).not.toThrow();
     });
 
     it('should throw on invalid options', (): void => {
       // JSON.parse returns `any`, allowing runtime-invalid data without type assertions
       const invalidOptions: { isMonolith: boolean } = JSON.parse('{"isMonolith":"bad"}');
-      expect((): SyncTemplatePatternsPrompt => new SyncTemplatePatternsPrompt(invalidOptions)).toThrow();
+      expect(
+        (): SyncTemplatePatternsPrompt => new SyncTemplatePatternsPrompt(invalidOptions),
+      ).toThrow();
     });
   });
 });

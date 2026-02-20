@@ -25,18 +25,27 @@ import type {
 /**
  * Creates a mock bundler service with all required methods properly typed
  */
-function createMockBundlerService(overrides: Partial<{
-  bundlerId: string;
-  frameworkId: string;
-}>= {}): BaseBundlerService {
+function createMockBundlerService(
+  overrides: Partial<{
+    bundlerId: string;
+    frameworkId: string;
+  }> = {},
+): BaseBundlerService {
   const { bundlerId = 'mock', frameworkId = 'mock' } = overrides;
   return {
     config: {},
     getBundlerId: vi.fn(() => bundlerId),
     getFrameworkId: vi.fn(() => frameworkId),
-    startDevServer: vi.fn((): Promise<DevServerResult> => Promise.resolve({ url: 'http://localhost:3000', port: 3000 })),
-    serveComponent: vi.fn((): Promise<ServeComponentResult> => Promise.resolve({ url: 'http://localhost:3000/component' })),
-    prerenderComponent: vi.fn((): Promise<PrerenderResult> => Promise.resolve({ htmlFilePath: '/tmp/component.html' })),
+    startDevServer: vi.fn(
+      (): Promise<DevServerResult> => Promise.resolve({ url: 'http://localhost:3000', port: 3000 }),
+    ),
+    serveComponent: vi.fn(
+      (): Promise<ServeComponentResult> =>
+        Promise.resolve({ url: 'http://localhost:3000/component' }),
+    ),
+    prerenderComponent: vi.fn(
+      (): Promise<PrerenderResult> => Promise.resolve({ htmlFilePath: '/tmp/component.html' }),
+    ),
     isServerRunning: vi.fn(() => false),
     getServerUrl: vi.fn(() => null),
     getServerPort: vi.fn(() => null),
@@ -68,21 +77,27 @@ interface MockConfig {
 }
 
 // Mock dependencies before importing
-vi.mock('@agiflowai/aicode-utils', (): MockAicodeUtils => ({
-  log: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-  TemplatesManagerService: {
-    getWorkspaceRootSync: vi.fn((): string => '/mock/workspace'),
-  },
-}));
+vi.mock(
+  '@agiflowai/aicode-utils',
+  (): MockAicodeUtils => ({
+    log: {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    },
+    TemplatesManagerService: {
+      getWorkspaceRootSync: vi.fn((): string => '/mock/workspace'),
+    },
+  }),
+);
 
-vi.mock('../../../src/config', (): MockConfig => ({
-  getBundlerConfig: vi.fn(),
-}));
+vi.mock(
+  '../../../src/config',
+  (): MockConfig => ({
+    getBundlerConfig: vi.fn(),
+  }),
+);
 
 // Mock ViteReactBundlerService
 const mockViteService = {
@@ -158,7 +173,10 @@ describe('BundlerServiceFactory', () => {
 
   describe('registerBundlerService', () => {
     it('should register a custom bundler service factory', () => {
-      const customService = createMockBundlerService({ bundlerId: 'custom', frameworkId: 'custom' });
+      const customService = createMockBundlerService({
+        bundlerId: 'custom',
+        frameworkId: 'custom',
+      });
       const customFactory = vi.fn(() => customService);
 
       registerBundlerService('custom-bundler', customFactory);
@@ -169,7 +187,10 @@ describe('BundlerServiceFactory', () => {
     });
 
     it('should allow overriding existing bundler', () => {
-      const customService = createMockBundlerService({ bundlerId: 'override', frameworkId: 'override' });
+      const customService = createMockBundlerService({
+        bundlerId: 'override',
+        frameworkId: 'override',
+      });
       const customFactory = vi.fn(() => customService);
 
       registerBundlerService('vite-react', customFactory);
@@ -251,7 +272,10 @@ describe('BundlerServiceFactory', () => {
     });
 
     it('should handle registering bundler with empty string key', () => {
-      const customService = createMockBundlerService({ bundlerId: 'empty-key', frameworkId: 'test' });
+      const customService = createMockBundlerService({
+        bundlerId: 'empty-key',
+        frameworkId: 'test',
+      });
       const customFactory = vi.fn(() => customService);
 
       registerBundlerService('', customFactory);

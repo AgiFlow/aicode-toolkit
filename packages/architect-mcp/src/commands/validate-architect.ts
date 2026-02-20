@@ -103,7 +103,10 @@ export const validateArchitectCommand = new Command('validate-architect')
         }
       }
     } catch (error) {
-      print.error('Error executing validate-architect:', error instanceof Error ? error : String(error));
+      print.error(
+        'Error executing validate-architect:',
+        error instanceof Error ? error : String(error),
+      );
       process.exit(1);
     }
   });

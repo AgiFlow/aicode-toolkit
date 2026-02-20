@@ -91,13 +91,16 @@ export class StoriesIndexService {
     let successCount = 0;
 
     // Process all story files in parallel
-    const results = await Promise.allSettled(storyFiles.map((filePath) => this.indexStoryFile(filePath)));
+    const results = await Promise.allSettled(
+      storyFiles.map((filePath) => this.indexStoryFile(filePath)),
+    );
     for (const [index, result] of results.entries()) {
       if (result.status === 'fulfilled') {
         successCount++;
       } else {
         const filePath = storyFiles[index];
-        const errorMessage = result.reason instanceof Error ? result.reason.message : String(result.reason);
+        const errorMessage =
+          result.reason instanceof Error ? result.reason.message : String(result.reason);
         log.error(`[StoriesIndexService] Error indexing ${filePath}: ${errorMessage}`);
         failures.push({ filePath, error: errorMessage });
       }
@@ -163,10 +166,15 @@ export class StoriesIndexService {
     const stories = csf.stories.map((story) => story.name).filter((name): name is string => !!name);
 
     // Extract tags (ensure it's an array of strings)
-    const tags: string[] = Array.isArray(csf.meta.tags) ? csf.meta.tags.filter((t): t is string => typeof t === 'string') : [];
+    const tags: string[] = Array.isArray(csf.meta.tags)
+      ? csf.meta.tags.filter((t): t is string => typeof t === 'string')
+      : [];
 
     // Extract description from file header JSDoc or meta.parameters.docs.description
-    const description = this.extractDescription(content, csf.meta as unknown as Record<string, unknown>);
+    const description = this.extractDescription(
+      content,
+      csf.meta as unknown as Record<string, unknown>,
+    );
 
     // Build StoryMeta from csf.meta
     const meta: StoryMeta = {
@@ -200,10 +208,7 @@ export class StoriesIndexService {
    * @param meta - Parsed meta object from csf-tools
    * @returns Description string or undefined
    */
-  private extractDescription(
-    content: string,
-    meta: Record<string, unknown>,
-  ): string | undefined {
+  private extractDescription(content: string, meta: Record<string, unknown>): string | undefined {
     // Priority 1: Check meta.parameters.docs.description.component
     const parameters = meta?.parameters as Record<string, unknown> | undefined;
     const docs = parameters?.docs as Record<string, unknown> | undefined;
@@ -302,7 +307,9 @@ export class StoriesIndexService {
     const newHash = this.hashContent(content);
 
     // Find existing component with this file path
-    const existingComponent = Array.from(this.componentIndex.values()).find((c) => c.filePath === filePath);
+    const existingComponent = Array.from(this.componentIndex.values()).find(
+      (c) => c.filePath === filePath,
+    );
 
     if (existingComponent && existingComponent.fileHash === newHash) {
       // No changes

@@ -11,6 +11,7 @@ import type {
   BoilerplateOptions,
   FeatureOptions,
   ParsedInclude,
+  ScaffoldConfigEntry,
   ScaffoldResult,
 } from '../types/scaffold';
 import { applySchemaDefaults } from '../utils/schemaDefaults';
@@ -105,7 +106,7 @@ export class ScaffoldService implements IScaffoldService {
 
       // Find the specific boilerplate by name
       const boilerplateArray = architectConfig.boilerplate;
-      let config;
+      let config: ScaffoldConfigEntry | undefined;
       if (Array.isArray(boilerplateArray)) {
         config = boilerplateArray.find((b: any) => b.name === boilerplateName);
         if (!config) {
@@ -194,7 +195,7 @@ export class ScaffoldService implements IScaffoldService {
 
       // Find the specific feature by name
       const featureArray = architectConfig.features;
-      let config;
+      let config: ScaffoldConfigEntry | undefined;
       if (Array.isArray(featureArray)) {
         config = featureArray.find((f: any) => f.name === featureName);
         if (!config) {

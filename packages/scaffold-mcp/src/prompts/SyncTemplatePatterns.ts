@@ -9,7 +9,8 @@ export const syncTemplatePatternsPromptOptionsSchema = z.object({
   promptAsSkill: z.boolean().default(false).describe('Render prompt with skill front matter'),
 });
 
-export interface SyncTemplatePatternsPromptOptions extends z.input<typeof syncTemplatePatternsPromptOptionsSchema> {}
+export interface SyncTemplatePatternsPromptOptions
+  extends z.input<typeof syncTemplatePatternsPromptOptionsSchema> {}
 
 interface SyncTemplatePatternsArgs {
   request?: string;

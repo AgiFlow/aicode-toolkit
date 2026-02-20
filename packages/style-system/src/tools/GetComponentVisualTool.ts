@@ -85,7 +85,8 @@ export class GetComponentVisualTool implements Tool<GetUiComponentInput> {
           storyName: {
             type: 'string',
             minLength: 1,
-            description: 'The story name to render (e.g., "Playground", "Default"). Defaults to "Playground".',
+            description:
+              'The story name to render (e.g., "Playground", "Default"). Defaults to "Playground".',
           },
           darkMode: {
             type: 'boolean',

@@ -69,12 +69,14 @@ export class ListAppComponentsTool implements Tool<ListAppComponentsInput> {
         properties: {
           appPath: {
             type: 'string',
-            description: 'The app path (relative or absolute) to list components for (e.g., "apps/my-app")',
+            description:
+              'The app path (relative or absolute) to list components for (e.g., "apps/my-app")',
             minLength: 1,
           },
           cursor: {
             type: 'string',
-            description: 'Optional pagination cursor to fetch the next page of results. Omit to fetch the first page.',
+            description:
+              'Optional pagination cursor to fetch the next page of results. Omit to fetch the first page.',
           },
         },
         required: ['appPath'],

@@ -110,10 +110,10 @@ export class CSSClassesServiceFactory {
 
     // Validate file extension is a valid source file
     const ext = path.extname(resolvedPath).toLowerCase();
-    if (!VALID_SERVICE_EXTENSIONS.includes(ext as typeof VALID_SERVICE_EXTENSIONS[number])) {
+    if (!VALID_SERVICE_EXTENSIONS.includes(ext as (typeof VALID_SERVICE_EXTENSIONS)[number])) {
       throw new Error(
         `Invalid file extension "${ext}" for customServicePath. ` +
-        `Expected one of: ${VALID_SERVICE_EXTENSIONS.join(', ')}`,
+          `Expected one of: ${VALID_SERVICE_EXTENSIONS.join(', ')}`,
       );
     }
 
@@ -123,7 +123,10 @@ export class CSSClassesServiceFactory {
       const customModule = await import(resolvedPath);
 
       // Look for default export or named export that extends BaseCSSClassesService
-      const ServiceClass = customModule.default || customModule.CSSClassesService || customModule.CustomCSSClassesService;
+      const ServiceClass =
+        customModule.default ||
+        customModule.CSSClassesService ||
+        customModule.CustomCSSClassesService;
 
       if (!ServiceClass) {
         throw new Error(

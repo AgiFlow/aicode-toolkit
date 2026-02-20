@@ -82,7 +82,7 @@ describe('mcpConfigSchema', () => {
 
       const result = ClaudeCodeMcpConfigSchema.parse(config);
       expect(result.mcpServers['server-with-instruction'].instruction).toBe(
-        'Use this server for data operations'
+        'Use this server for data operations',
       );
     });
 
@@ -101,7 +101,7 @@ describe('mcpConfigSchema', () => {
 
       const result = ClaudeCodeMcpConfigSchema.parse(config);
       expect(result.mcpServers['server-with-nested-instruction'].config?.instruction).toBe(
-        'Server default instruction'
+        'Server default instruction',
       );
     });
 
@@ -229,7 +229,7 @@ describe('mcpConfigSchema', () => {
       const result = transformClaudeCodeConfig(claudeConfig);
 
       expect(result.mcpServers['server-with-both-instructions'].instruction).toBe(
-        'User override instruction'
+        'User override instruction',
       );
     });
 
@@ -249,7 +249,7 @@ describe('mcpConfigSchema', () => {
       const result = transformClaudeCodeConfig(claudeConfig);
 
       expect(result.mcpServers['server-with-nested-only'].instruction).toBe(
-        'Server default instruction'
+        'Server default instruction',
       );
     });
   });
@@ -261,6 +261,7 @@ describe('mcpConfigSchema', () => {
       const claudeConfig = {
         mcpServers: {
           'env-server': {
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             command: '${NODE_BIN}',
             args: ['server.js'],
           },
@@ -279,6 +280,7 @@ describe('mcpConfigSchema', () => {
         mcpServers: {
           'env-server': {
             command: 'node',
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             args: ['${SERVER_PATH}'],
           },
         },
@@ -298,6 +300,7 @@ describe('mcpConfigSchema', () => {
             command: 'node',
             args: ['server.js'],
             env: {
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
               API_TOKEN: '${API_KEY}',
             },
           },
@@ -315,6 +318,7 @@ describe('mcpConfigSchema', () => {
       const claudeConfig = {
         mcpServers: {
           'http-server': {
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             url: '${MCP_HOST}/api',
           },
         },
@@ -333,6 +337,7 @@ describe('mcpConfigSchema', () => {
           'http-server': {
             url: 'https://example.com/mcp',
             headers: {
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
               Authorization: '${AUTH_TOKEN}',
             },
           },
@@ -342,7 +347,7 @@ describe('mcpConfigSchema', () => {
       const result = transformClaudeCodeConfig(claudeConfig);
 
       expect(result.mcpServers['http-server'].config.headers?.Authorization).toBe(
-        'Bearer token123'
+        'Bearer token123',
       );
     });
 
@@ -352,6 +357,7 @@ describe('mcpConfigSchema', () => {
       const claudeConfig = {
         mcpServers: {
           'env-server': {
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             command: '${UNDEFINED_VAR}',
             args: ['server.js'],
           },
@@ -360,9 +366,10 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
       expect(result.mcpServers['env-server'].config.command).toBe('${UNDEFINED_VAR}');
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Environment variable UNDEFINED_VAR is not defined')
+        expect.stringContaining('Environment variable UNDEFINED_VAR is not defined'),
       );
 
       consoleSpy.mockRestore();
@@ -376,6 +383,7 @@ describe('mcpConfigSchema', () => {
         mcpServers: {
           'env-server': {
             command: 'node',
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             args: ['${HOME}/${PROJECT}/server.js'],
           },
         },
@@ -434,6 +442,7 @@ describe('mcpConfigSchema', () => {
         mcpServers: {
           filesystem: {
             command: 'npx',
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             args: ['-y', '@modelcontextprotocol/server-filesystem', '${HOME}/Documents'],
             instruction: 'Access files in Documents folder',
           },
@@ -441,6 +450,7 @@ describe('mcpConfigSchema', () => {
             url: 'https://api.example.com/mcp',
             type: 'sse' as const,
             headers: {
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
               Authorization: 'Bearer ${API_KEY}',
             },
           },
@@ -459,7 +469,7 @@ describe('mcpConfigSchema', () => {
       expect(result.mcpServers['remote-api']).toBeDefined();
       expect(result.mcpServers['remote-api'].transport).toBe('sse');
       expect(result.mcpServers['remote-api'].config.headers?.Authorization).toBe(
-        'Bearer secret123'
+        'Bearer secret123',
       );
       expect(result.mcpServers['disabled-server']).toBeUndefined();
     });
@@ -566,15 +576,14 @@ describe('mcpConfigSchema', () => {
         },
       };
 
-      expect(() => validateRemoteConfigSource(source)).toThrow(
-        'does not match validation pattern'
-      );
+      expect(() => validateRemoteConfigSource(source)).toThrow('does not match validation pattern');
     });
 
     it('should validate URL with environment variable interpolation', () => {
       process.env.TEST_URL = 'https://secure.example.com';
 
       const source = {
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
         url: '${TEST_URL}/mcp-config.json',
         validation: {
           url: '^https://secure\\..*',
@@ -618,9 +627,7 @@ describe('mcpConfigSchema', () => {
         },
       };
 
-      expect(() => validateRemoteConfigSource(source)).toThrow(
-        'does not match validation pattern'
-      );
+      expect(() => validateRemoteConfigSource(source)).toThrow('does not match validation pattern');
     });
 
     it('should throw error when required headers are missing', () => {
@@ -638,7 +645,7 @@ describe('mcpConfigSchema', () => {
       };
 
       expect(() => validateRemoteConfigSource(source)).toThrow(
-        'missing required header: Authorization'
+        'missing required header: Authorization',
       );
     });
 
@@ -653,7 +660,7 @@ describe('mcpConfigSchema', () => {
       };
 
       expect(() => validateRemoteConfigSource(source)).toThrow(
-        'missing required headers: Authorization'
+        'missing required headers: Authorization',
       );
     });
 
@@ -663,6 +670,7 @@ describe('mcpConfigSchema', () => {
       const source = {
         url: 'https://example.com/mcp-config.json',
         headers: {
+          // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
           Authorization: 'Bearer ${TEST_TOKEN}',
         },
         validation: {
@@ -713,9 +721,7 @@ describe('mcpConfigSchema', () => {
         },
       };
 
-      expect(() => validateRemoteConfigSource(source)).toThrow(
-        'does not match validation pattern'
-      );
+      expect(() => validateRemoteConfigSource(source)).toThrow('does not match validation pattern');
     });
   });
 
@@ -734,9 +740,7 @@ describe('mcpConfigSchema', () => {
           url: 'http://example.com/config.json',
         };
 
-        expect(() => validateRemoteConfigSource(source)).toThrow(
-          'HTTPS is required for security'
-        );
+        expect(() => validateRemoteConfigSource(source)).toThrow('HTTPS is required for security');
       });
 
       it('should allow HTTP when enforceHttps is false', () => {
@@ -758,7 +762,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -768,7 +772,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -778,7 +782,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -788,7 +792,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -798,7 +802,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -808,7 +812,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -818,7 +822,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -852,7 +856,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -862,7 +866,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -872,7 +876,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -882,7 +886,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -892,7 +896,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -902,7 +906,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -912,7 +916,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -922,7 +926,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -932,7 +936,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -942,7 +946,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -952,7 +956,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -985,9 +989,7 @@ describe('mcpConfigSchema', () => {
           },
         };
 
-        expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Invalid URL protocol'
-        );
+        expect(() => validateRemoteConfigSource(source)).toThrow('Invalid URL protocol');
       });
 
       it('should block FTP protocol', () => {
@@ -998,9 +1000,7 @@ describe('mcpConfigSchema', () => {
           },
         };
 
-        expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Invalid URL protocol'
-        );
+        expect(() => validateRemoteConfigSource(source)).toThrow('Invalid URL protocol');
       });
     });
 
@@ -1009,11 +1009,12 @@ describe('mcpConfigSchema', () => {
         process.env.TEST_HOST = '127.0.0.1';
 
         const source = {
+          // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
           url: 'https://${TEST_HOST}/config.json',
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
 
         delete process.env.TEST_HOST;
@@ -1023,6 +1024,7 @@ describe('mcpConfigSchema', () => {
         process.env.TEST_HOST = 'api.example.com';
 
         const source = {
+          // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
           url: 'https://${TEST_HOST}/config.json',
         };
 
@@ -1053,7 +1055,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Private IP addresses and localhost are blocked for security'
+          'Private IP addresses and localhost are blocked for security',
         );
       });
 
@@ -1066,7 +1068,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'does not match validation pattern'
+          'does not match validation pattern',
         );
       });
     });
@@ -1078,7 +1080,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Set security.enforceHttps: false to allow HTTP'
+          'Set security.enforceHttps: false to allow HTTP',
         );
       });
 
@@ -1088,7 +1090,7 @@ describe('mcpConfigSchema', () => {
         };
 
         expect(() => validateRemoteConfigSource(source)).toThrow(
-          'Set security.allowPrivateIPs: true to allow internal networks'
+          'Set security.allowPrivateIPs: true to allow internal networks',
         );
       });
     });

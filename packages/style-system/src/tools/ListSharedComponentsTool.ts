@@ -108,7 +108,8 @@ export class ListSharedComponentsTool implements Tool<ListSharedComponentsInput>
           },
           cursor: {
             type: 'string',
-            description: 'Optional pagination cursor to fetch the next page of results. Omit to fetch the first page.',
+            description:
+              'Optional pagination cursor to fetch the next page of results. Omit to fetch the first page.',
           },
         },
         additionalProperties: false,
@@ -144,7 +145,9 @@ export class ListSharedComponentsTool implements Tool<ListSharedComponentsInput>
       const filterTags = inputTags !== undefined ? inputTags : defaultTags;
 
       // Get components filtered by tags
-      const filteredComponents = storiesIndex.getComponentsByTags(filterTags.length > 0 ? filterTags : undefined);
+      const filteredComponents = storiesIndex.getComponentsByTags(
+        filterTags.length > 0 ? filterTags : undefined,
+      );
 
       // Extract unique component names
       const allComponentNames = filteredComponents
@@ -155,7 +158,10 @@ export class ListSharedComponentsTool implements Tool<ListSharedComponentsInput>
       const totalComponents = allComponentNames.length;
 
       // Apply pagination
-      const paginatedComponents = allComponentNames.slice(offset, offset + ListSharedComponentsTool.PAGE_SIZE);
+      const paginatedComponents = allComponentNames.slice(
+        offset,
+        offset + ListSharedComponentsTool.PAGE_SIZE,
+      );
 
       // Determine if there are more results
       const hasMore = offset + paginatedComponents.length < totalComponents;

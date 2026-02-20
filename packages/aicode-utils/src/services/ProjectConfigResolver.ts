@@ -35,6 +35,7 @@ import { TemplatesManagerService } from './TemplatesManagerService';
  * 1. project.json (monorepo - Nx/Lerna/Turborepo)
  * 2. toolkit.yaml at workspace root (monolith)
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: architectural pattern
 export class ProjectConfigResolver {
   /**
    * Resolve project configuration with priority fallback

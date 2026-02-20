@@ -10,7 +10,11 @@
  * - Use descriptive names for types and interfaces
  */
 
-import type { CallToolResult, ReadResourceResult, GetPromptResult } from '@modelcontextprotocol/sdk/types.js';
+import type {
+  CallToolResult,
+  ReadResourceResult,
+  GetPromptResult,
+} from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * Tool definition for MCP

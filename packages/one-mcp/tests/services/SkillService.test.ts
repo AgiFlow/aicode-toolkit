@@ -25,7 +25,10 @@ describe('SkillService', () => {
 
   beforeEach(async () => {
     // Create a unique temp directory for each test
-    tempDir = join(tmpdir(), `skill-service-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    tempDir = join(
+      tmpdir(),
+      `skill-service-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
     skillsDir = join(tempDir, 'skills');
     await mkdir(skillsDir, { recursive: true });
   });
@@ -46,7 +49,7 @@ describe('SkillService', () => {
 name: test-skill
 description: A test skill
 ---
-Test content`
+Test content`,
       );
 
       const service = new SkillService(tempDir, ['skills']);
@@ -70,7 +73,7 @@ Test content`
 name: test-skill
 description: A test skill
 ---
-Test content`
+Test content`,
       );
 
       const service = new SkillService(tempDir, ['skills']);
@@ -97,7 +100,7 @@ Test content`
 name: test-skill
 description: A test skill
 ---
-Test content`
+Test content`,
       );
 
       const service = new SkillService(tempDir, ['skills'], { onCacheInvalidated });
@@ -192,7 +195,7 @@ Test content`
 name: my-skill
 description: My test skill
 ---
-Skill content`
+Skill content`,
       );
 
       const service = new SkillService(tempDir, ['skills']);

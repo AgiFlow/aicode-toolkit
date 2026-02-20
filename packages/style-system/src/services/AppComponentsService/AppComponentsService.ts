@@ -157,10 +157,7 @@ export class AppComponentsService {
       const projectJson = JSON.parse(await fs.readFile(projectJsonPath, 'utf-8'));
       appName = projectJson.name || appName;
     } catch (error) {
-      log.warn(
-        `[AppComponentsService] Could not read project.json for ${resolvedAppPath}:`,
-        error,
-      );
+      log.warn(`[AppComponentsService] Could not read project.json for ${resolvedAppPath}:`, error);
     }
 
     return appName;
@@ -184,13 +181,12 @@ export class AppComponentsService {
       };
 
       return Object.entries(allDeps)
-        .filter(([_name, version]) => typeof version === 'string' && version.startsWith('workspace:'))
+        .filter(
+          ([_name, version]) => typeof version === 'string' && version.startsWith('workspace:'),
+        )
         .map(([name]) => name);
     } catch (error) {
-      log.warn(
-        `[AppComponentsService] Could not read package.json for ${resolvedAppPath}:`,
-        error,
-      );
+      log.warn(`[AppComponentsService] Could not read package.json for ${resolvedAppPath}:`, error);
       return [];
     }
   }
@@ -231,7 +227,10 @@ export class AppComponentsService {
         const pkgDir = path.dirname(result.value.pkgJsonPath);
         packageMap.set(result.value.name, pkgDir);
       } else if (result.status === 'rejected') {
-        log.debug(`[AppComponentsService] Skipping invalid package.json at ${packageJsonFiles[index]}:`, result.reason);
+        log.debug(
+          `[AppComponentsService] Skipping invalid package.json at ${packageJsonFiles[index]}:`,
+          result.reason,
+        );
       }
     }
 

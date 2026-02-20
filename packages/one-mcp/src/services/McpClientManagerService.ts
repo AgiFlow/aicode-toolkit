@@ -170,7 +170,9 @@ export class McpClientManagerService {
           // Force kill after timeout if process doesn't exit
           setTimeout(() => {
             if (!childProcess.killed) {
-              console.error(`Force killing stdio MCP server: ${serverName} (PID: ${childProcess.pid})`);
+              console.error(
+                `Force killing stdio MCP server: ${serverName} (PID: ${childProcess.pid})`,
+              );
               childProcess.kill('SIGKILL');
             }
           }, 1000);
@@ -185,10 +187,7 @@ export class McpClientManagerService {
    * Connect to an MCP server based on its configuration with timeout
    * Uses the timeout from server config, falling back to default (30s)
    */
-  async connectToServer(
-    serverName: string,
-    config: McpServerConfig,
-  ): Promise<void> {
+  async connectToServer(serverName: string, config: McpServerConfig): Promise<void> {
     const timeoutMs = config.timeout ?? DEFAULT_CONNECTION_TIMEOUT_MS;
     if (this.clients.has(serverName)) {
       throw new Error(`Client for ${serverName} is already connected`);

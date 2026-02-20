@@ -64,14 +64,16 @@ export const listToolsCommand = new Command('list-tools')
               console.error(`✗ Failed to connect to ${serverName}:`, error);
             }
           }
-        }
+        },
       );
 
       await Promise.all(connectionPromises);
 
       // Get all clients
       const clients = options.server
-        ? [clientManager.getClient(options.server)].filter((c): c is NonNullable<typeof c> => c !== undefined)
+        ? [clientManager.getClient(options.server)].filter(
+            (c): c is NonNullable<typeof c> => c !== undefined,
+          )
         : clientManager.getAllClients();
 
       if (clients.length === 0) {
@@ -93,7 +95,7 @@ export const listToolsCommand = new Command('list-tools')
           } catch (error) {
             return { serverName: client.serverName, tools: [] as any[], error };
           }
-        })
+        }),
       );
 
       for (const { serverName, tools, error } of toolResults) {
@@ -108,7 +110,7 @@ export const listToolsCommand = new Command('list-tools')
         console.log(JSON.stringify(toolsByServer, null, 2));
       } else {
         for (const [serverName, tools] of Object.entries(toolsByServer)) {
-          const client = clients.find(c => c.serverName === serverName);
+          const client = clients.find((c) => c.serverName === serverName);
           const omitDescription = client?.omitToolDescription || false;
 
           console.log(`\n${serverName}:`);
@@ -117,7 +119,7 @@ export const listToolsCommand = new Command('list-tools')
           } else {
             if (omitDescription) {
               // Show tools as comma-separated list without descriptions
-              const toolNames = tools.map(t => t.name).join(', ');
+              const toolNames = tools.map((t) => t.name).join(', ');
               console.log(`  ${toolNames}`);
             } else {
               // Show tools with descriptions (default)
@@ -131,7 +133,6 @@ export const listToolsCommand = new Command('list-tools')
 
       // Cleanup
       await clientManager.disconnectAll();
-
     } catch (error) {
       console.error('Error executing list-tools:', error);
       process.exit(1);

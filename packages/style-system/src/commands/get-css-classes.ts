@@ -14,8 +14,15 @@ interface GetCSSClassesOptions {
 
 export const getCSSClassesCommand = new Command('get-css-classes')
   .description('Extract and return all valid CSS classes from a theme CSS file')
-  .option('-c, --category <category>', "Category filter: 'colors', 'typography', 'spacing', 'effects', 'all'", 'all')
-  .option('-a, --app-path <path>', 'App path to read theme path from project.json (e.g., "apps/agiflow-app")')
+  .option(
+    '-c, --category <category>',
+    "Category filter: 'colors', 'typography', 'spacing', 'effects', 'all'",
+    'all',
+  )
+  .option(
+    '-a, --app-path <path>',
+    'App path to read theme path from project.json (e.g., "apps/agiflow-app")',
+  )
   .option(
     '-t, --theme-path <path>',
     'Default theme CSS file path relative to workspace root (used if appPath not provided or themePath not in project.json)',
@@ -39,7 +46,10 @@ export const getCSSClassesCommand = new Command('get-css-classes')
       const firstContent = result.content[0];
       print.info(firstContent?.type === 'text' ? firstContent.text : '');
     } catch (error) {
-      print.error('Error getting CSS classes:', error instanceof Error ? error.message : String(error));
+      print.error(
+        'Error getting CSS classes:',
+        error instanceof Error ? error.message : String(error),
+      );
       process.exit(1);
     }
   });

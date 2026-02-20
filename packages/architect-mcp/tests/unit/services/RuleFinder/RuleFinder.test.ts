@@ -46,9 +46,7 @@ describe('RuleFinder pattern matching logic', () => {
           positivePatterns.length === 0 ||
           positivePatterns.some((pattern) => minimatch(pathVariant, pattern));
 
-        const matchesNegative = negativePatterns.some((pattern) =>
-          minimatch(pathVariant, pattern),
-        );
+        const matchesNegative = negativePatterns.some((pattern) => minimatch(pathVariant, pattern));
 
         if (matchesPositive && !matchesNegative) {
           return ruleSection;
@@ -61,9 +59,7 @@ describe('RuleFinder pattern matching logic', () => {
 
   describe('backward compatibility with pattern field', () => {
     it('should match files using single pattern field', () => {
-      const rules = [
-        { pattern: 'src/app/**/page.tsx', description: 'Page component' },
-      ];
+      const rules = [{ pattern: 'src/app/**/page.tsx', description: 'Page component' }];
 
       const result = findMatchingRule('src/app/users/page.tsx', rules);
       expect(result).not.toBeNull();
@@ -71,9 +67,7 @@ describe('RuleFinder pattern matching logic', () => {
     });
 
     it('should not match files that do not fit the pattern', () => {
-      const rules = [
-        { pattern: 'src/app/**/page.tsx', description: 'Page component' },
-      ];
+      const rules = [{ pattern: 'src/app/**/page.tsx', description: 'Page component' }];
 
       const result = findMatchingRule('src/services/UserService.ts', rules);
       expect(result).toBeNull();
@@ -110,11 +104,7 @@ describe('RuleFinder pattern matching logic', () => {
       const rules = [
         {
           pattern: 'validation-standards',
-          globs: [
-            'src/actions/**/*.ts',
-            'src/app/api/**/route.ts',
-            'src/services/**/*.ts',
-          ],
+          globs: ['src/actions/**/*.ts', 'src/app/api/**/route.ts', 'src/services/**/*.ts'],
           description: 'Validation Standards',
         },
       ];
@@ -421,6 +411,7 @@ describe('RuleFinder mergeRulesConfigs logic', () => {
 
     // Merge all rules in priority order: project -> template -> global
     return {
+      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       ...baseConfig!,
       rules: [
         ...(projectRules?.rules || []),
@@ -446,7 +437,11 @@ describe('RuleFinder mergeRulesConfigs logic', () => {
     description: 'Next.js 15 specific rules',
     rules: [
       { pattern: 'server-actions', globs: ['src/actions/**/*.ts'], description: 'Server actions' },
-      { pattern: 'page-components', globs: ['src/app/**/page.tsx'], description: 'Page components' },
+      {
+        pattern: 'page-components',
+        globs: ['src/app/**/page.tsx'],
+        description: 'Page components',
+      },
     ],
   };
 
@@ -456,7 +451,11 @@ describe('RuleFinder mergeRulesConfigs logic', () => {
     description: 'Project-specific rules',
     rules: [
       { pattern: 'custom-api', globs: ['src/api/**/*.ts'], description: 'Custom API rules' },
-      { pattern: 'local-services', globs: ['src/services/**/*.ts'], description: 'Local service rules' },
+      {
+        pattern: 'local-services',
+        globs: ['src/services/**/*.ts'],
+        description: 'Local service rules',
+      },
     ],
   };
 

@@ -61,7 +61,7 @@ interface MockClientOptions {
 function createMockClient(
   serverName: string,
   tools: MockToolDefinition[],
-  options: MockClientOptions = {}
+  options: MockClientOptions = {},
 ): McpClientConnection {
   return {
     serverName,
@@ -74,7 +74,7 @@ function createMockClient(
         name: t.name,
         description: t.description || `Description for ${t.name}`,
         inputSchema: t.inputSchema || { type: 'object', properties: {} },
-      }))
+      })),
     ),
     listResources: vi.fn().mockResolvedValue([]),
     listPrompts: vi.fn().mockResolvedValue([]),
@@ -92,7 +92,7 @@ function createMockClientWithPrompts(
   serverName: string,
   tools: MockToolDefinition[],
   prompts: Record<string, PromptConfig>,
-  options: MockClientOptions = {}
+  options: MockClientOptions = {},
 ): McpClientConnection {
   return {
     serverName,
@@ -106,7 +106,7 @@ function createMockClientWithPrompts(
         name: t.name,
         description: t.description || `Description for ${t.name}`,
         inputSchema: t.inputSchema || { type: 'object', properties: {} },
-      }))
+      })),
     ),
     listResources: vi.fn().mockResolvedValue([]),
     listPrompts: vi.fn().mockResolvedValue([]),
@@ -132,7 +132,7 @@ function createMockClientWithPrompts(
 function createMockSkill(
   name: string,
   description: string,
-  location: 'project' | 'user' = 'project'
+  location: 'project' | 'user' = 'project',
 ): Skill {
   return {
     name,
@@ -344,7 +344,7 @@ describe('DescribeToolsTool', () => {
 
     it('should return skill descriptions for skill__ prefixed names', async () => {
       vi.mocked(mockSkillService.getSkill).mockResolvedValue(
-        createMockSkill('my-skill', 'My skill description')
+        createMockSkill('my-skill', 'My skill description'),
       );
 
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
@@ -359,7 +359,7 @@ describe('DescribeToolsTool', () => {
 
     it('should return skill descriptions for plain skill names (without skill__ prefix)', async () => {
       vi.mocked(mockSkillService.getSkill).mockResolvedValue(
-        createMockSkill('my-skill', 'My skill description')
+        createMockSkill('my-skill', 'My skill description'),
       );
 
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
@@ -444,7 +444,7 @@ describe('DescribeToolsTool', () => {
           { name: 'allowed_tool', description: 'Allowed' },
           { name: 'blocked_tool', description: 'Blocked' },
         ],
-        { toolBlacklist: ['blocked_tool'] }
+        { toolBlacklist: ['blocked_tool'] },
       );
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
@@ -459,18 +459,14 @@ describe('DescribeToolsTool', () => {
 
   describe('prompt-based skills', () => {
     it('should include prompt-based skills in getDefinition', async () => {
-      const mockClient = createMockClientWithPrompts(
-        'test-server',
-        [{ name: 'my_tool' }],
-        {
-          'code-review': {
-            skill: {
-              name: 'code-reviewer',
-              description: 'Review code for best practices',
-            },
+      const mockClient = createMockClientWithPrompts('test-server', [{ name: 'my_tool' }], {
+        'code-review': {
+          skill: {
+            name: 'code-reviewer',
+            description: 'Review code for best practices',
           },
-        }
-      );
+        },
+      });
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
 
@@ -482,18 +478,14 @@ describe('DescribeToolsTool', () => {
     });
 
     it('should return prompt-based skill content when executing with skill__ prefix', async () => {
-      const mockClient = createMockClientWithPrompts(
-        'test-server',
-        [],
-        {
-          'code-review': {
-            skill: {
-              name: 'code-reviewer',
-              description: 'Review code for best practices',
-            },
+      const mockClient = createMockClientWithPrompts('test-server', [], {
+        'code-review': {
+          skill: {
+            name: 'code-reviewer',
+            description: 'Review code for best practices',
           },
-        }
-      );
+        },
+      });
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
       vi.mocked(mockClientManager.getClient).mockReturnValue(mockClient);
@@ -508,22 +500,20 @@ describe('DescribeToolsTool', () => {
       expect(parsed.skills[0].name).toBe('code-reviewer');
       expect(parsed.skills[0].instructions).toContain('Instructions for prompt: code-review');
       // Should include command message prefix
-      expect(parsed.skills[0].instructions).toContain('<command-message>The "code-reviewer" skill is loading</command-message>');
+      expect(parsed.skills[0].instructions).toContain(
+        '<command-message>The "code-reviewer" skill is loading</command-message>',
+      );
     });
 
     it('should return prompt-based skill content when executing with plain name', async () => {
-      const mockClient = createMockClientWithPrompts(
-        'test-server',
-        [],
-        {
-          'doc-gen': {
-            skill: {
-              name: 'doc-generator',
-              description: 'Generate documentation',
-            },
+      const mockClient = createMockClientWithPrompts('test-server', [], {
+        'doc-gen': {
+          skill: {
+            name: 'doc-generator',
+            description: 'Generate documentation',
           },
-        }
-      );
+        },
+      });
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
       vi.mocked(mockClientManager.getClient).mockReturnValue(mockClient);
@@ -539,19 +529,15 @@ describe('DescribeToolsTool', () => {
     });
 
     it('should include folder path in location when configured', async () => {
-      const mockClient = createMockClientWithPrompts(
-        'test-server',
-        [],
-        {
-          'code-review': {
-            skill: {
-              name: 'code-reviewer',
-              description: 'Review code',
-              folder: './prompts/code-review',
-            },
+      const mockClient = createMockClientWithPrompts('test-server', [], {
+        'code-review': {
+          skill: {
+            name: 'code-reviewer',
+            description: 'Review code',
+            folder: './prompts/code-review',
           },
-        }
-      );
+        },
+      });
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
       vi.mocked(mockClientManager.getClient).mockReturnValue(mockClient);
@@ -565,18 +551,14 @@ describe('DescribeToolsTool', () => {
     });
 
     it('should use prompt reference in location when folder not configured', async () => {
-      const mockClient = createMockClientWithPrompts(
-        'my-server',
-        [],
-        {
-          'my-prompt': {
-            skill: {
-              name: 'my-skill',
-              description: 'My skill description',
-            },
+      const mockClient = createMockClientWithPrompts('my-server', [], {
+        'my-prompt': {
+          skill: {
+            name: 'my-skill',
+            description: 'My skill description',
           },
-        }
-      );
+        },
+      });
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
       vi.mocked(mockClientManager.getClient).mockReturnValue(mockClient);
@@ -590,18 +572,14 @@ describe('DescribeToolsTool', () => {
     });
 
     it('should handle getPrompt errors gracefully', async () => {
-      const mockClient = createMockClientWithPrompts(
-        'test-server',
-        [],
-        {
-          'failing-prompt': {
-            skill: {
-              name: 'failing-skill',
-              description: 'This skill will fail',
-            },
+      const mockClient = createMockClientWithPrompts('test-server', [], {
+        'failing-prompt': {
+          skill: {
+            name: 'failing-skill',
+            description: 'This skill will fail',
           },
-        }
-      );
+        },
+      });
       // Override getPrompt to throw an error
       mockClient.getPrompt = vi.fn().mockRejectedValue(new Error('Connection failed'));
 
@@ -616,18 +594,14 @@ describe('DescribeToolsTool', () => {
     });
 
     it('should handle client not found for prompt-based skill', async () => {
-      const mockClient = createMockClientWithPrompts(
-        'test-server',
-        [],
-        {
-          'my-prompt': {
-            skill: {
-              name: 'orphan-skill',
-              description: 'Skill with missing client',
-            },
+      const mockClient = createMockClientWithPrompts('test-server', [], {
+        'my-prompt': {
+          skill: {
+            name: 'orphan-skill',
+            description: 'Skill with missing client',
           },
-        }
-      );
+        },
+      });
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
       // Return undefined to simulate client not found
@@ -671,7 +645,7 @@ describe('DescribeToolsTool', () => {
         createMockSkill('shared-skill', 'File-based version'),
       ]);
       vi.mocked(mockSkillService.getSkill).mockResolvedValue(
-        createMockSkill('shared-skill', 'File-based version')
+        createMockSkill('shared-skill', 'File-based version'),
       );
 
       // Set up prompt-based skill with same name
@@ -790,9 +764,9 @@ describe('DescribeToolsTool', () => {
           },
         },
         transport: 'stdio',
-        listTools: vi.fn().mockResolvedValue([
-          { name: 'analyze', description: 'Analyze tool', inputSchema: {} },
-        ]),
+        listTools: vi
+          .fn()
+          .mockResolvedValue([{ name: 'analyze', description: 'Analyze tool', inputSchema: {} }]),
         listResources: vi.fn().mockResolvedValue([]),
         listPrompts: vi.fn().mockResolvedValue([]),
         callTool: vi.fn(),
@@ -839,9 +813,11 @@ describe('DescribeToolsTool', () => {
           },
         },
         transport: 'stdio',
-        listTools: vi.fn().mockResolvedValue([
-          { name: 'unique-tool', description: 'Unique tool', inputSchema: {} },
-        ]),
+        listTools: vi
+          .fn()
+          .mockResolvedValue([
+            { name: 'unique-tool', description: 'Unique tool', inputSchema: {} },
+          ]),
         listResources: vi.fn().mockResolvedValue([]),
         listPrompts: vi.fn().mockResolvedValue([]),
         callTool: vi.fn(),

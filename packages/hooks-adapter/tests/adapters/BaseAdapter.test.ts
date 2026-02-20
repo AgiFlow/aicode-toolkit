@@ -91,7 +91,7 @@ describe('BaseAdapter', () => {
 
       mockStdin(JSON.stringify(input));
 
-      const callback = vi.fn(async (context: HookContext) => ({
+      const callback = vi.fn(async (_context: HookContext) => ({
         decision: 'allow' as const,
         message: 'Test message',
       }));

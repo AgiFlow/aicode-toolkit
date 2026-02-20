@@ -30,7 +30,12 @@ import type { Tool, ToolDefinition } from '../types';
 import type { McpClientManagerService } from '../services/McpClientManagerService';
 import type { SkillService } from '../services/SkillService';
 import { parseToolName, extractSkillFrontMatter } from '../utils';
-import { SKILL_PREFIX, LOG_PREFIX_SKILL_DETECTION, PROMPT_LOCATION_PREFIX, DEFAULT_SERVER_ID } from '../constants';
+import {
+  SKILL_PREFIX,
+  LOG_PREFIX_SKILL_DETECTION,
+  PROMPT_LOCATION_PREFIX,
+  DEFAULT_SERVER_ID,
+} from '../constants';
 import { Liquid } from 'liquidjs';
 import toolkitDescriptionTemplate from '../templates/toolkit-description.liquid?raw';
 
@@ -237,7 +242,11 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
    * @param skillService - Optional skill service for loading skills
    * @param serverId - Unique server identifier for this one-mcp instance
    */
-  constructor(clientManager: McpClientManagerService, skillService?: SkillService, serverId?: string) {
+  constructor(
+    clientManager: McpClientManagerService,
+    skillService?: SkillService,
+    serverId?: string,
+  ) {
     this.clientManager = clientManager;
     this.skillService = skillService;
     this.serverId = serverId || DEFAULT_SERVER_ID;
@@ -284,9 +293,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
         const detectedSkills: AutoDetectedSkill[] = [];
 
         // Skip prompts already configured with a skill (explicit config takes precedence)
-        const configuredPromptNames = new Set(
-          client.prompts ? Object.keys(client.prompts) : []
-        );
+        const configuredPromptNames = new Set(client.prompts ? Object.keys(client.prompts) : []);
 
         try {
           const prompts = await client.listPrompts();
@@ -328,11 +335,11 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
                 // Log but continue - this prompt may require arguments or be temporarily unavailable
                 fetchPromptFailures++;
                 console.error(
-                  `${LOG_PREFIX_SKILL_DETECTION} Failed to fetch prompt '${promptInfo.name}' from ${client.serverName}: ${error instanceof Error ? error.message : 'Unknown error'}`
+                  `${LOG_PREFIX_SKILL_DETECTION} Failed to fetch prompt '${promptInfo.name}' from ${client.serverName}: ${error instanceof Error ? error.message : 'Unknown error'}`,
                 );
                 return null;
               }
-            })
+            }),
           );
 
           // Filter out null results and add to detected skills
@@ -343,12 +350,12 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
           // Log but continue - server may not support listPrompts or be temporarily unavailable
           listPromptsFailures++;
           console.error(
-            `${LOG_PREFIX_SKILL_DETECTION} Failed to list prompts from ${client.serverName}: ${error instanceof Error ? error.message : 'Unknown error'}`
+            `${LOG_PREFIX_SKILL_DETECTION} Failed to list prompts from ${client.serverName}: ${error instanceof Error ? error.message : 'Unknown error'}`,
           );
         }
 
         return detectedSkills;
-      })
+      }),
     );
 
     // Flatten results from all clients
@@ -357,7 +364,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
     // Log summary if there were any failures (helps with debugging)
     if (listPromptsFailures > 0 || fetchPromptFailures > 0) {
       console.error(
-        `${LOG_PREFIX_SKILL_DETECTION} Completed with ${listPromptsFailures} server failure(s) and ${fetchPromptFailures} prompt failure(s). Detected ${autoDetectedSkills.length} skill(s).`
+        `${LOG_PREFIX_SKILL_DETECTION} Completed with ${listPromptsFailures} server failure(s) and ${fetchPromptFailures} prompt failure(s). Detected ${autoDetectedSkills.length} skill(s).`,
       );
     }
 
@@ -461,33 +468,38 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
 
     const client = this.clientManager.getClient(promptSkill.serverName);
     if (!client) {
-      console.error(`Client not found for server '${promptSkill.serverName}' when fetching prompt skill '${skillName}'`);
+      console.error(
+        `Client not found for server '${promptSkill.serverName}' when fetching prompt skill '${skillName}'`,
+      );
       return undefined;
     }
 
     try {
       const promptResult = await client.getPrompt(promptSkill.promptName);
       // Prompt messages can contain either string content or TextContent objects with text field
-      const rawInstructions = promptResult.messages
-        ?.map((m) => {
-          const content = m.content;
-          if (typeof content === 'string') return content;
-          if (content && typeof content === 'object' && 'text' in content) {
-            return String(content.text);
-          }
-          return '';
-        })
-        .join('\n') || '';
+      const rawInstructions =
+        promptResult.messages
+          ?.map((m) => {
+            const content = m.content;
+            if (typeof content === 'string') return content;
+            if (content && typeof content === 'object' && 'text' in content) {
+              return String(content.text);
+            }
+            return '';
+          })
+          .join('\n') || '';
 
       return {
         name: promptSkill.skill.name,
         // Location is either the configured folder or a prompt reference
-        location: promptSkill.skill.folder || `${PROMPT_LOCATION_PREFIX}${promptSkill.serverName}/${promptSkill.promptName}`,
+        location:
+          promptSkill.skill.folder ||
+          `${PROMPT_LOCATION_PREFIX}${promptSkill.serverName}/${promptSkill.promptName}`,
         instructions: formatSkillInstructions(promptSkill.skill.name, rawInstructions),
       };
     } catch (error) {
       console.error(
-        `Failed to get prompt-based skill '${skillName}': ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to get prompt-based skill '${skillName}': ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       return undefined;
     }
@@ -505,7 +517,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
    *
    * @returns Object with rendered description and set of all tool names
    */
-  private async buildToolkitDescription(): Promise<{ content: string; toolNames: Set<string> }> {
+  private async buildToolkitDescription(): Promise<ServersSectionResult> {
     const clients = this.clientManager.getAllClients();
 
     // First pass: collect all tools from all servers to detect name clashes
@@ -527,7 +539,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
             if (!toolToServers.has(tool.name)) {
               toolToServers.set(tool.name, []);
             }
-            toolToServers.get(tool.name)!.push(client.serverName);
+            toolToServers.get(tool.name)?.push(client.serverName);
           }
         } catch (error) {
           console.error(`Failed to list tools from ${client.serverName}:`, error);
@@ -570,7 +582,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
     // Collect skills
     const [rawSkills, promptSkills] = await Promise.all([
       this.skillService ? this.skillService.getSkills() : Promise.resolve([]),
-      this.collectPromptSkills()
+      this.collectPromptSkills(),
     ]);
 
     // Combine and deduplicate skills (file-based skills take precedence)
@@ -608,7 +620,11 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
       };
     });
 
-    const content = await this.liquid.parseAndRender(toolkitDescriptionTemplate, { servers, skills, serverId: this.serverId });
+    const content = await this.liquid.parseAndRender(toolkitDescriptionTemplate, {
+      servers,
+      skills,
+      serverId: this.serverId,
+    });
     return { content, toolNames: allToolNames };
   }
 
@@ -704,7 +720,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
               if (!toolToServers.has(tool.name)) {
                 toolToServers.set(tool.name, []);
               }
-              toolToServers.get(tool.name)!.push(client.serverName);
+              toolToServers.get(tool.name)?.push(client.serverName);
             }
           } catch (error) {
             console.error(`Failed to list tools from ${client.serverName}:`, error);
@@ -808,7 +824,9 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
           if (servers.length === 1) {
             // Unique tool - found on single server
             const server = servers[0];
+            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
             const svrTools = serverToolsMap.get(server)!;
+            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
             const tool = svrTools.find((t) => t.name === actualToolName)!;
             result.tools.push({
               server,
@@ -821,7 +839,9 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
           } else {
             // Tool exists on multiple servers - return all matches
             for (const server of servers) {
+              // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
               const svrTools = serverToolsMap.get(server)!;
+              // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
               const tool = svrTools.find((t) => t.name === actualToolName)!;
               result.tools.push({
                 server,
@@ -835,7 +855,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
           }
 
           return result;
-        })
+        }),
       );
 
       // Aggregate results from parallel lookups
@@ -870,15 +890,13 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
       if (foundTools.length > 0) {
         result.tools = foundTools;
         nextSteps.push(
-          'For MCP tools: Use the use_tool function with toolName and toolArgs based on the inputSchema above.'
+          'For MCP tools: Use the use_tool function with toolName and toolArgs based on the inputSchema above.',
         );
       }
 
       if (foundSkills.length > 0) {
         result.skills = foundSkills;
-        nextSteps.push(
-          `For skill, just follow skill's description to continue.`
-        );
+        nextSteps.push(`For skill, just follow skill's description to continue.`);
       }
 
       if (nextSteps.length > 0) {

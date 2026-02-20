@@ -62,7 +62,6 @@ import type { BundlerFactory, RenderOptions, RenderResult } from './types';
  * ```
  */
 export class ComponentRendererService {
-  private monorepoRoot: string;
   private tmpDir: string;
   private themeService: ThemeService;
   private appPath: string;
@@ -107,7 +106,10 @@ export class ComponentRendererService {
    * @returns Rendered image path, HTML content, and component info
    * @throws Error if rendering fails
    */
-  async renderComponent(componentInfo: ComponentInfo, options: RenderOptions = {}): Promise<RenderResult> {
+  async renderComponent(
+    componentInfo: ComponentInfo,
+    options: RenderOptions = {},
+  ): Promise<RenderResult> {
     const {
       storyName = componentInfo.stories[0] || 'Default',
       args = {},
@@ -124,13 +126,17 @@ export class ComponentRendererService {
 
       // Get theme configuration
       const designSystemConfig = this.themeService.getConfig();
-      log.info(`[ComponentRendererService] Using theme provider: ${designSystemConfig.themeProvider}`);
+      log.info(
+        `[ComponentRendererService] Using theme provider: ${designSystemConfig.themeProvider}`,
+      );
       log.info(`[ComponentRendererService] Design system type: ${designSystemConfig.type}`);
 
       // Validate theme provider
       const isValid = await this.themeService.validateThemeProvider();
       if (!isValid) {
-        log.warn(`[ComponentRendererService] Theme provider path may not exist: ${designSystemConfig.themeProvider}`);
+        log.warn(
+          `[ComponentRendererService] Theme provider path may not exist: ${designSystemConfig.themeProvider}`,
+        );
       }
 
       // Get the bundler service instance via factory
@@ -229,7 +235,9 @@ export class ComponentRendererService {
         html = await fs.readFile(htmlFilePath, 'utf-8');
         log.info(`[ComponentRendererService] HTML file kept at: ${htmlFilePath}`);
       } else {
-        log.warn('[ComponentRendererService] No HTML file path available, returning empty HTML content');
+        log.warn(
+          '[ComponentRendererService] No HTML file path available, returning empty HTML content',
+        );
       }
 
       return {
@@ -262,7 +270,10 @@ export class ComponentRendererService {
    * @param olderThanMs - Remove files older than this duration (default: 1 hour)
    * @param keepCount - Maximum number of recent files to keep (default: 100)
    */
-  async cleanup(olderThanMs: number = 3600000, keepCount: number = ComponentRendererService.DEFAULT_MAX_TEMP_FILES): Promise<void> {
+  async cleanup(
+    olderThanMs: number = 3600000,
+    keepCount: number = ComponentRendererService.DEFAULT_MAX_TEMP_FILES,
+  ): Promise<void> {
     try {
       const files = await fs.readdir(this.tmpDir);
       const now = Date.now();
@@ -288,7 +299,11 @@ export class ComponentRendererService {
       const oldFiles = componentFiles.filter((f) => now - f.mtime > olderThanMs);
       await Promise.all(
         oldFiles.map((file) =>
-          fs.unlink(file.path).catch((err) => log.warn('[ComponentRendererService] Failed to delete file:', file.path, err)),
+          fs
+            .unlink(file.path)
+            .catch((err) =>
+              log.warn('[ComponentRendererService] Failed to delete file:', file.path, err),
+            ),
         ),
       );
       let deletedCount = oldFiles.length;
@@ -303,7 +318,11 @@ export class ComponentRendererService {
         // Delete excess files in parallel
         await Promise.all(
           toDelete.map((file) =>
-            fs.unlink(file.path).catch((err) => log.warn('[ComponentRendererService] Failed to delete file:', file.path, err)),
+            fs
+              .unlink(file.path)
+              .catch((err) =>
+                log.warn('[ComponentRendererService] Failed to delete file:', file.path, err),
+              ),
           ),
         );
         deletedCount += toDelete.length;

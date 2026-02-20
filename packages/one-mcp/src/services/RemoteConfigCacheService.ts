@@ -116,9 +116,7 @@ export class RemoteConfigCacheService {
       }
 
       const expiresInSeconds = Math.round((cacheEntry.expiresAt - now) / 1000);
-      console.error(
-        `Remote config cache hit for ${url} (expires in ${expiresInSeconds}s)`
-      );
+      console.error(`Remote config cache hit for ${url} (expires in ${expiresInSeconds}s)`);
       return cacheEntry.data;
     } catch (error) {
       console.error(`Failed to read remote config cache for ${url}:`, error);
@@ -149,9 +147,7 @@ export class RemoteConfigCacheService {
       };
 
       await writeFile(cacheFilePath, JSON.stringify(cacheEntry, null, 2), 'utf-8');
-      console.error(
-        `Cached remote config for ${url} (TTL: ${Math.round(this.cacheTTL / 1000)}s)`
-      );
+      console.error(`Cached remote config for ${url} (TTL: ${Math.round(this.cacheTTL / 1000)}s)`);
     } catch (error) {
       console.error(`Failed to write remote config cache for ${url}:`, error);
     }
@@ -186,7 +182,11 @@ export class RemoteConfigCacheService {
       const files = await readdir(this.cacheDir);
       const deletePromises = files
         .filter((file) => file.endsWith('.json'))
-        .map((file) => unlink(join(this.cacheDir, file)).catch(() => {}));
+        .map((file) =>
+          unlink(join(this.cacheDir, file)).catch(() => {
+            /* ignore */
+          }),
+        );
 
       await Promise.all(deletePromises);
       console.error(`Cleared all remote config cache entries (${files.length} files)`);
@@ -221,12 +221,14 @@ export class RemoteConfigCacheService {
               return true; // expired and deleted
             }
             return false; // not expired
-          } catch (error) {
+          } catch (_error) {
             // If we can't read or parse the file, delete it
-            await unlink(filePath).catch(() => {});
+            await unlink(filePath).catch(() => {
+              /* ignore */
+            });
             return true; // treated as expired
           }
-        })
+        }),
       );
 
       const expiredCount = results.filter(Boolean).length;
@@ -262,7 +264,7 @@ export class RemoteConfigCacheService {
             // Ignore errors for individual files
             return 0;
           }
-        })
+        }),
       );
 
       const totalSize = sizes.reduce((sum, size) => sum + size, 0);

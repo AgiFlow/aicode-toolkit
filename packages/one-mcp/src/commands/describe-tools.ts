@@ -66,7 +66,7 @@ export const describeToolsCommand = new Command('describe-tools')
               console.error(`✗ Failed to connect to ${serverName}:`, error);
             }
           }
-        }
+        },
       );
 
       await Promise.all(connectionPromises);
@@ -90,7 +90,7 @@ export const describeToolsCommand = new Command('describe-tools')
 
       // Fetch tools from all clients in parallel
       const filteredClients = clients.filter(
-        (client) => !options.server || client.serverName === options.server
+        (client) => !options.server || client.serverName === options.server,
       );
 
       const toolResults = await Promise.all(
@@ -101,7 +101,7 @@ export const describeToolsCommand = new Command('describe-tools')
           } catch (error) {
             return { client, tools: [] as any[], error };
           }
-        })
+        }),
       );
 
       for (const { client, tools, error } of toolResults) {
@@ -141,7 +141,7 @@ export const describeToolsCommand = new Command('describe-tools')
               : toolName;
             const skill = await skillService.getSkill(skillName);
             return { toolName, skill };
-          })
+          }),
         );
 
         for (const { toolName, skill } of skillResults) {
@@ -164,7 +164,9 @@ export const describeToolsCommand = new Command('describe-tools')
       // Build next steps guidance
       const nextSteps: string[] = [];
       if (foundTools.length > 0) {
-        nextSteps.push('For MCP tools: Use the use_tool function with toolName and toolArgs based on the inputSchema above.');
+        nextSteps.push(
+          'For MCP tools: Use the use_tool function with toolName and toolArgs based on the inputSchema above.',
+        );
       }
       if (foundSkills.length > 0) {
         nextSteps.push(`For skill, just follow skill's description to continue.`);
@@ -230,7 +232,6 @@ export const describeToolsCommand = new Command('describe-tools')
 
       // Cleanup
       await clientManager.disconnectAll();
-
     } catch (error) {
       console.error('Error executing describe-tools:', error);
       process.exit(1);

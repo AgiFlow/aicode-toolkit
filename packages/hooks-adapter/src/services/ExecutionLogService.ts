@@ -233,7 +233,7 @@ export class ExecutionLogService {
           } else {
             console.warn('Skipping malformed log entry:', line.substring(0, 100));
           }
-        } catch (parseError) {
+        } catch (_parseError) {
           // Skip unparseable lines
           console.warn('Skipping malformed log entry:', line.substring(0, 100));
         }
@@ -317,7 +317,10 @@ export class ExecutionLogService {
       // for detecting changes. We get mtime after for optimization purposes.
       // Note: There's a theoretical race between read and stat, but the checksum
       // (computed from actual content read) is what we use for change detection.
-      const [content, stats] = await Promise.all([fs.readFile(filePath, 'utf-8'), fs.stat(filePath)]);
+      const [content, stats] = await Promise.all([
+        fs.readFile(filePath, 'utf-8'),
+        fs.stat(filePath),
+      ]);
       const checksum = crypto.createHash('md5').update(content).digest('hex');
 
       return {
@@ -449,7 +452,7 @@ export class ExecutionLogService {
         // Only check scaffold operations
         if (entry.operation === 'scaffold') {
           // Check if this file is in the generatedFiles list
-          if (entry.generatedFiles && entry.generatedFiles.includes(filePath)) {
+          if (entry.generatedFiles?.includes(filePath)) {
             return true;
           }
         }

@@ -4,9 +4,7 @@
   "mcpServers": {
     "example-server": {
       "command": "node",
-      "args": [
-        "/path/to/mcp-server/build/index.js"
-      ],
+      "args": ["/path/to/mcp-server/build/index.js"],
       "env": {
         "LOG_LEVEL": "info",
         "_comment": "You can use environment variable interpolation:",

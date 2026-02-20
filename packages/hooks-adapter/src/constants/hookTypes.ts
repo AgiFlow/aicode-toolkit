@@ -60,14 +60,12 @@ export const AFTER_TOOL_USE = GeminiCliHookTypes.AFTER_TOOL_USE;
 /**
  * Union type of all supported Claude Code hook types
  */
-export type ClaudeCodeHookType =
-  (typeof ClaudeCodeHookTypes)[keyof typeof ClaudeCodeHookTypes];
+export type ClaudeCodeHookType = (typeof ClaudeCodeHookTypes)[keyof typeof ClaudeCodeHookTypes];
 
 /**
  * Union type of all supported Gemini CLI hook types
  */
-export type GeminiCliHookType =
-  (typeof GeminiCliHookTypes)[keyof typeof GeminiCliHookTypes];
+export type GeminiCliHookType = (typeof GeminiCliHookTypes)[keyof typeof GeminiCliHookTypes];
 
 /**
  * Union type of all supported hook types across all agents

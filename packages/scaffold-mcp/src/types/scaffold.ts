@@ -1,4 +1,8 @@
-import type { IFileSystemService, IScaffoldConfigLoader, IVariableReplacementService } from './interfaces';
+import type {
+  IFileSystemService,
+  IScaffoldConfigLoader,
+  IVariableReplacementService,
+} from './interfaces';
 
 /** Template variable values — intentionally flexible to support any YAML/JSON schema */
 export type TemplateVariables = Record<string, unknown>;

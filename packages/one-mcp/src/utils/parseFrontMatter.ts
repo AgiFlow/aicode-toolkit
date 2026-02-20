@@ -161,7 +161,10 @@ export function parseFrontMatter(content: string): ParseFrontMatterResult {
       } else {
         // Simple single-line value
         // Remove surrounding quotes if present
-        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        if (
+          (value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))
+        ) {
           value = value.slice(1, -1);
         }
         if (key && value) {
@@ -225,7 +228,7 @@ export function isValidSkillFrontMatter(frontMatter: Record<string, string> | nu
  * @returns Object with skill metadata and content, or null if no valid skill front matter
  */
 export function extractSkillFrontMatter(
-  content: string
+  content: string,
 ): { skill: SkillFrontMatter; content: string } | null {
   const { frontMatter, content: remainingContent } = parseFrontMatter(content);
 

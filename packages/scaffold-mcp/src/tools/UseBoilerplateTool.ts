@@ -49,7 +49,8 @@ export class UseBoilerplateTool {
 
     properties.marker = {
       type: 'string',
-      description: 'Custom scaffold marker tag injected into generated code files (default: @scaffold-generated)',
+      description:
+        'Custom scaffold marker tag injected into generated code files (default: @scaffold-generated)',
     };
 
     return {

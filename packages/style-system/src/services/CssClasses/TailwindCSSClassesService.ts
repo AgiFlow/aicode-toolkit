@@ -21,7 +21,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import postcss from 'postcss';
 import { BaseCSSClassesService } from './BaseCSSClassesService';
-import type { CSSClassCategory, CSSClassesResult, CSSClassValue, StyleSystemConfig } from './types';
+import type { CSSClassCategory, CSSClassesResult, CSSClassValue } from './types';
 
 /**
  * Tailwind CSS class extraction service.
@@ -37,14 +37,6 @@ import type { CSSClassCategory, CSSClassesResult, CSSClassValue, StyleSystemConf
  * ```
  */
 export class TailwindCSSClassesService extends BaseCSSClassesService {
-  /**
-   * Creates a new TailwindCSSClassesService instance
-   * @param config - Style system configuration from toolkit.yaml
-   */
-  constructor(config: StyleSystemConfig) {
-    super(config);
-  }
-
   /**
    * Get the CSS framework identifier
    * @returns Framework identifier string 'tailwind'
@@ -67,7 +59,10 @@ export class TailwindCSSClassesService extends BaseCSSClassesService {
    * @returns Promise resolving to extracted CSS classes organized by category
    * @throws Error if theme file cannot be read or parsed
    */
-  async extractClasses(category: CSSClassCategory | string, themePath: string): Promise<CSSClassesResult> {
+  async extractClasses(
+    category: CSSClassCategory | string,
+    themePath: string,
+  ): Promise<CSSClassesResult> {
     try {
       await this.validateThemePath(themePath);
 
@@ -213,7 +208,10 @@ export class TailwindCSSClassesService extends BaseCSSClassesService {
         if (varName.startsWith('font-')) {
           const fontName = varName.replace('font-', '');
           if (fontName.startsWith('weight-')) {
-            typographyClasses.push({ class: `font-${fontName.replace('weight-', '')}`, value: varValue });
+            typographyClasses.push({
+              class: `font-${fontName.replace('weight-', '')}`,
+              value: varValue,
+            });
           } else {
             typographyClasses.push({ class: `font-${fontName}`, value: varValue });
           }
@@ -247,7 +245,11 @@ export class TailwindCSSClassesService extends BaseCSSClassesService {
     const result: CSSClassesResult = {
       category: category as string,
       classes: {},
-      totalClasses: colorClasses.length + typographyClasses.length + spacingClasses.length + effectsClasses.length,
+      totalClasses:
+        colorClasses.length +
+        typographyClasses.length +
+        spacingClasses.length +
+        effectsClasses.length,
     };
 
     if (category === 'all' || category === 'colors') {

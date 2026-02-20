@@ -26,7 +26,7 @@ function createMockClawdbotApi(config: Partial<PluginConfig> = {}): ClawdbotApi 
       }
       return undefined;
     }),
-    registerTool: vi.fn((toolDef: ToolDefinition, options?: unknown) => {
+    registerTool: vi.fn((toolDef: ToolDefinition, _options?: unknown) => {
       registeredTools.push(toolDef);
     }),
     registerService: vi.fn((service: ServiceDefinition) => {

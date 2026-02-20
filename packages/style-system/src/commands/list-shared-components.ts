@@ -27,7 +27,10 @@ export const listSharedComponentsCommand = new Command('list-shared-components')
       const firstContent = result.content[0];
       print.info(firstContent?.type === 'text' ? firstContent.text : '');
     } catch (error) {
-      print.error('Error listing shared components:', error instanceof Error ? error.message : String(error));
+      print.error(
+        'Error listing shared components:',
+        error instanceof Error ? error.message : String(error),
+      );
       process.exit(1);
     }
   });

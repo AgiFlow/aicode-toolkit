@@ -51,7 +51,9 @@ export const prefetchCommand = new Command('prefetch')
 
       if (!configFilePath) {
         print.error('No MCP configuration file found.');
-        print.info('Use --config <path> to specify a config file, or run "one-mcp init" to create one.');
+        print.info(
+          'Use --config <path> to specify a config file, or run "one-mcp init" to create one.',
+        );
         process.exit(1);
       }
 
@@ -104,21 +106,30 @@ export const prefetchCommand = new Command('prefetch')
       // Report results
       print.newline();
       if (summary.failed === 0) {
-        print.success(`Prefetch complete: ${summary.successful} succeeded, ${summary.failed} failed`);
+        print.success(
+          `Prefetch complete: ${summary.successful} succeeded, ${summary.failed} failed`,
+        );
       } else {
-        print.warning(`Prefetch complete: ${summary.successful} succeeded, ${summary.failed} failed`);
+        print.warning(
+          `Prefetch complete: ${summary.successful} succeeded, ${summary.failed} failed`,
+        );
       }
 
       if (summary.failed > 0) {
         print.newline();
         print.error('Failed packages:');
         for (const result of summary.results.filter((r) => !r.success)) {
-          print.item(`${result.package.serverName} (${result.package.packageName}): ${result.output.trim()}`);
+          print.item(
+            `${result.package.serverName} (${result.package.packageName}): ${result.output.trim()}`,
+          );
         }
         process.exit(1);
       }
     } catch (error) {
-      print.error('Error executing prefetch:', error instanceof Error ? error.message : String(error));
+      print.error(
+        'Error executing prefetch:',
+        error instanceof Error ? error.message : String(error),
+      );
       process.exit(1);
     }
   });
