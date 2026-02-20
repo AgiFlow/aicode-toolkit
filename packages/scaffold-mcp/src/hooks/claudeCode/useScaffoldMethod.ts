@@ -65,9 +65,8 @@ interface ExecutionLogServiceWithLoadLog extends ExecutionLogService {
  */
 function isScaffoldMethodsResponse(value: unknown): value is ScaffoldMethodsResponse {
   if (typeof value !== 'object' || value === null) return false;
-  const obj = value as Record<string, unknown>;
-  if ('methods' in obj && !Array.isArray(obj.methods)) return false;
-  if ('nextCursor' in obj && typeof obj.nextCursor !== 'string') return false;
+  if ('methods' in value && !Array.isArray(value.methods)) return false;
+  if ('nextCursor' in value && typeof value.nextCursor !== 'string') return false;
   return true;
 }
 
@@ -76,11 +75,13 @@ function isScaffoldMethodsResponse(value: unknown): value is ScaffoldMethodsResp
  */
 function isPendingScaffoldLogEntry(value: unknown): value is PendingScaffoldLogEntry {
   if (typeof value !== 'object' || value === null) return false;
-  const obj = value as Record<string, unknown>;
   return (
-    typeof obj.scaffoldId === 'string' &&
-    Array.isArray(obj.generatedFiles) &&
-    typeof obj.projectPath === 'string'
+    'scaffoldId' in value &&
+    typeof value.scaffoldId === 'string' &&
+    'generatedFiles' in value &&
+    Array.isArray(value.generatedFiles) &&
+    'projectPath' in value &&
+    typeof value.projectPath === 'string'
   );
 }
 
@@ -128,6 +129,25 @@ export class UseScaffoldMethodHook {
         return {
           decision: DECISION_SKIP,
           message: 'File is outside working directory - skipping scaffold method check',
+        };
+      }
+
+      // Skip if the file already exists — Write on an existing file is an overwrite, not new creation
+      let fileExists = false;
+      try {
+        await fs.access(absoluteFilePath);
+        fileExists = true;
+      } catch (accessErr) {
+        // ENOENT means the file does not exist — expected case, proceed with scaffold check
+        // Re-throw any other unexpected filesystem errors
+        if (!(accessErr instanceof Error && 'code' in accessErr && accessErr.code === 'ENOENT')) {
+          throw accessErr;
+        }
+      }
+      if (fileExists) {
+        return {
+          decision: DECISION_SKIP,
+          message: 'File already exists - skipping scaffold method check',
         };
       }
 
@@ -540,11 +560,7 @@ async function processPendingScaffoldLogs(sessionId: string, scaffoldId: string)
       } catch (unlinkError: unknown) {
         // ENOENT means file was already deleted — safe to ignore; log unexpected errors
         if (
-          !(
-            unlinkError instanceof Error &&
-            'code' in unlinkError &&
-            unlinkError.code === 'ENOENT'
-          )
+          !(unlinkError instanceof Error && 'code' in unlinkError && unlinkError.code === 'ENOENT')
         ) {
           console.error('processPendingScaffoldLogs: failed to delete temp log file:', unlinkError);
         }
