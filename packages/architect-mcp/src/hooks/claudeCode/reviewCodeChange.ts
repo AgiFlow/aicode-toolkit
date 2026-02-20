@@ -164,9 +164,18 @@ export class ReviewCodeChangeHook {
           fileChecksum: fileMetadata?.checksum,
         });
 
+        // Only strip should_do issues when critical violations are also present — if all issues
+        // are should_do, keep them so the feedback isn't empty
+        const hasCriticalIssues = data.identified_issues.some(
+          (i) => i.type === 'must_do' || i.type === 'must_not_do',
+        );
+        const identified_issues = hasCriticalIssues
+          ? data.identified_issues.filter((i) => i.type !== 'should_do')
+          : data.identified_issues;
+
         return {
           decision: DECISION_DENY, // Will map to 'block' in PostToolUse output
-          message: JSON.stringify(data, null, 2), // Full AI response
+          message: JSON.stringify({ ...data, identified_issues }, null, 2),
         };
       }
 

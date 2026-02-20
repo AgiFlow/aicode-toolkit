@@ -31,7 +31,7 @@ import {
   DECISION_DENY,
   DECISION_ALLOW,
 } from '@agiflowai/hooks-adapter';
-import { ListScaffoldingMethodsTool } from '../../tools/ListScaffoldingMethodsTool';
+import { ListScaffoldingMethodsTool } from '../../tools';
 import { TemplatesManagerService, ProjectFinderService } from '@agiflowai/aicode-utils';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -42,11 +42,7 @@ import os from 'node:os';
  */
 interface ScaffoldMethod {
   name: string;
-  instruction?: string;
   description?: string;
-  variables_schema?: {
-    required?: string[];
-  };
 }
 
 /**
@@ -62,6 +58,31 @@ interface ScaffoldMethodsResponse {
  */
 interface ExecutionLogServiceWithLoadLog extends ExecutionLogService {
   loadLog(): Promise<LogEntry[]>;
+}
+
+/**
+ * Type guard for ScaffoldMethodsResponse
+ */
+function isScaffoldMethodsResponse(value: unknown): value is ScaffoldMethodsResponse {
+  if (typeof value !== 'object' || value === null) return false;
+  if ('methods' in value && !Array.isArray(value.methods)) return false;
+  if ('nextCursor' in value && typeof value.nextCursor !== 'string') return false;
+  return true;
+}
+
+/**
+ * Type guard for PendingScaffoldLogEntry
+ */
+function isPendingScaffoldLogEntry(value: unknown): value is PendingScaffoldLogEntry {
+  if (typeof value !== 'object' || value === null) return false;
+  return (
+    'scaffoldId' in value &&
+    typeof value.scaffoldId === 'string' &&
+    'generatedFiles' in value &&
+    Array.isArray(value.generatedFiles) &&
+    'projectPath' in value &&
+    typeof value.projectPath === 'string'
+  );
 }
 
 /**
@@ -108,6 +129,25 @@ export class UseScaffoldMethodHook {
         return {
           decision: DECISION_SKIP,
           message: 'File is outside working directory - skipping scaffold method check',
+        };
+      }
+
+      // Skip if the file already exists — Write on an existing file is an overwrite, not new creation
+      let fileExists = false;
+      try {
+        await fs.access(absoluteFilePath);
+        fileExists = true;
+      } catch (accessErr) {
+        // ENOENT means the file does not exist — expected case, proceed with scaffold check
+        // Re-throw any other unexpected filesystem errors
+        if (!(accessErr instanceof Error && 'code' in accessErr && accessErr.code === 'ENOENT')) {
+          throw accessErr;
+        }
+      }
+      if (fileExists) {
+        return {
+          decision: DECISION_SKIP,
+          message: 'File already exists - skipping scaffold method check',
         };
       }
 
@@ -172,7 +212,14 @@ export class UseScaffoldMethodHook {
         };
       }
 
-      const data: ScaffoldMethodsResponse = JSON.parse(resultText);
+      const parsed: unknown = JSON.parse(resultText);
+      if (!isScaffoldMethodsResponse(parsed)) {
+        return {
+          decision: DECISION_SKIP,
+          message: '⚠️ Unexpected response shape from scaffolding methods tool',
+        };
+      }
+      const data = parsed;
 
       if (!data.methods || data.methods.length === 0) {
         // No methods available - allow with guidance
@@ -189,32 +236,17 @@ export class UseScaffoldMethodHook {
         };
       }
 
-      // Format all available methods for LLM guidance
-      let message = '🎯 **Scaffolding Methods Available**\\n\\n';
-      message +=
-        'Before writing new files, check if any of these scaffolding methods match your needs:\\n\\n';
+      // Format available methods as a concise list (name + description only)
+      let message =
+        'Before writing new files, use `use-scaffold-method` if any of these match your needs:\n\n';
 
       for (const method of data.methods) {
-        message += `**${method.name}**\\n`;
-        message += `${method.instruction || method.description || 'No description available'}\\n`;
-
-        if (method.variables_schema?.required && method.variables_schema.required.length > 0) {
-          message += `Required: ${method.variables_schema.required.join(', ')}\\n`;
-        }
-        message += '\\n';
+        message += `- **${method.name}**: ${method.description || 'No description available'}\n`;
       }
 
       if (data.nextCursor) {
-        message += `\\n_Note: More methods available. Use cursor "${data.nextCursor}" to see more._\\n\\n`;
+        message += `\n_More methods available (cursor: "${data.nextCursor}")._\n`;
       }
-
-      message += '\\n**Instructions:**\\n';
-      message +=
-        '1. If one of these scaffold methods matches what you need to create, use the `use-scaffold-method` MCP tool instead of writing files manually\\n';
-      message +=
-        '2. If none of these methods are relevant to your task, proceed to write new files directly using the Write tool\\n';
-      message +=
-        '3. Using scaffold methods ensures consistency with project patterns and includes all necessary boilerplate\\n';
 
       // Log that we showed methods for this file path (decision: deny)
       await executionLog.logExecution({
@@ -361,7 +393,7 @@ export class UseScaffoldMethodHook {
 
       // There are still unedited files - provide reminder (only if we just edited a scaffolded file)
       if (isScaffoldedFile) {
-        const remainingFilesList = remainingFiles.map((f: string) => `  - ${f}`).join('\\n');
+        const remainingFilesList = remainingFiles.map((f: string) => `  - ${f}`).join('\n');
         const featureInfo = featureName ? ` for "${featureName}"` : '';
         const reminderMessage = `
 ⚠️ **Scaffold Implementation Progress${featureInfo}: ${editedFiles.length}/${totalFiles} files completed**
@@ -411,7 +443,9 @@ function extractScaffoldId(toolResult: ToolResult | null): string | null {
     }
 
     return null;
-  } catch {
+  } catch (error) {
+    // Parsing errors are non-fatal; absence of scaffold ID is handled by the caller
+    console.error('extractScaffoldId: failed to parse tool result:', error);
     return null;
   }
 }
@@ -422,27 +456,32 @@ function extractScaffoldId(toolResult: ToolResult | null): string | null {
 async function getLastScaffoldExecution(
   executionLog: ExecutionLogServiceWithLoadLog,
 ): Promise<ScaffoldExecution | null> {
-  const entries = await executionLog.loadLog();
+  try {
+    const entries = await executionLog.loadLog();
 
-  // Search from end (most recent) for efficiency
-  for (let i = entries.length - 1; i >= 0; i--) {
-    const entry = entries[i];
+    // Search from end (most recent) for efficiency
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const entry = entries[i];
 
-    if (
-      entry.operation === 'scaffold' &&
-      entry.scaffoldId &&
-      entry.generatedFiles &&
-      entry.generatedFiles.length > 0
-    ) {
-      return {
-        scaffoldId: entry.scaffoldId,
-        generatedFiles: entry.generatedFiles,
-        featureName: entry.featureName,
-      };
+      if (
+        entry.operation === 'scaffold' &&
+        entry.scaffoldId &&
+        entry.generatedFiles &&
+        entry.generatedFiles.length > 0
+      ) {
+        return {
+          scaffoldId: entry.scaffoldId,
+          generatedFiles: entry.generatedFiles,
+          featureName: entry.featureName,
+        };
+      }
     }
-  }
 
-  return null;
+    return null;
+  } catch (error) {
+    console.error('getLastScaffoldExecution: failed to load log:', error);
+    return null;
+  }
 }
 
 /**
@@ -452,21 +491,26 @@ async function getEditedScaffoldFiles(
   executionLog: ExecutionLogServiceWithLoadLog,
   scaffoldId: string,
 ): Promise<string[]> {
-  const entries = await executionLog.loadLog();
-  const editedFiles: string[] = [];
+  try {
+    const entries = await executionLog.loadLog();
+    const editedFiles: string[] = [];
 
-  for (const entry of entries) {
-    if (
-      entry.operation === 'scaffold-file-edit' &&
-      entry.filePath.startsWith(`scaffold-edit-${scaffoldId}-`)
-    ) {
-      // Extract the file path from the edit key
-      const filePath = entry.filePath.replace(`scaffold-edit-${scaffoldId}-`, '');
-      editedFiles.push(filePath);
+    for (const entry of entries) {
+      if (
+        entry.operation === 'scaffold-file-edit' &&
+        entry.filePath.startsWith(`scaffold-edit-${scaffoldId}-`)
+      ) {
+        // Extract the file path from the edit key
+        const filePath = entry.filePath.replace(`scaffold-edit-${scaffoldId}-`, '');
+        editedFiles.push(filePath);
+      }
     }
-  }
 
-  return editedFiles;
+    return editedFiles;
+  } catch (error) {
+    console.error('getEditedScaffoldFiles: failed to load log:', error);
+    return [];
+  }
 }
 
 /**
@@ -479,7 +523,7 @@ async function processPendingScaffoldLogs(sessionId: string, scaffoldId: string)
   try {
     // Read temp log file
     const content = await fs.readFile(tempLogFile, 'utf-8');
-    const lines = content.trim().split('\\n').filter(Boolean);
+    const lines = content.trim().split('\n').filter(Boolean);
 
     // Create execution log service for this session
     const executionLog = new ExecutionLogService(sessionId);
@@ -488,30 +532,38 @@ async function processPendingScaffoldLogs(sessionId: string, scaffoldId: string)
       // Process each pending log entry
       for (const line of lines) {
         try {
-          const entry = JSON.parse(line) as PendingScaffoldLogEntry;
+          const parsed: unknown = JSON.parse(line);
+          if (!isPendingScaffoldLogEntry(parsed)) {
+            console.error('processPendingScaffoldLogs: skipping malformed entry:', line);
+            continue;
+          }
 
           // Log to ExecutionLogService with sessionId from hook context
           // Use scaffoldId as unique key instead of projectPath to support multiple scaffolds per project
           await executionLog.logExecution({
-            filePath: `scaffold-${entry.scaffoldId}`,
+            filePath: `scaffold-${parsed.scaffoldId}`,
             operation: 'scaffold',
             decision: DECISION_ALLOW,
-            generatedFiles: entry.generatedFiles,
-            scaffoldId: entry.scaffoldId,
-            projectPath: entry.projectPath,
-            featureName: entry.featureName,
+            generatedFiles: parsed.generatedFiles,
+            scaffoldId: parsed.scaffoldId,
+            projectPath: parsed.projectPath,
+            featureName: parsed.featureName,
           });
         } catch (parseError) {
-          // Skip malformed entries
-          console.error('Failed to parse pending scaffold log entry:', parseError);
+          console.error('processPendingScaffoldLogs: failed to parse line:', parseError);
         }
       }
     } finally {
       // Always clean up temp log file, even if processing fails
       try {
         await fs.unlink(tempLogFile);
-      } catch {
-        // Ignore unlink errors - file might already be deleted
+      } catch (unlinkError: unknown) {
+        // ENOENT means file was already deleted — safe to ignore; log unexpected errors
+        if (
+          !(unlinkError instanceof Error && 'code' in unlinkError && unlinkError.code === 'ENOENT')
+        ) {
+          console.error('processPendingScaffoldLogs: failed to delete temp log file:', unlinkError);
+        }
       }
     }
   } catch (error: unknown) {
