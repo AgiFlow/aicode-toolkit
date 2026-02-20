@@ -1,3 +1,26 @@
+## 1.0.22 (2026-02-20)
+
+### 🚀 Features
+
+- **scaffold-mcp:** skip scaffold prompt when target file already exists ([8d7f9f9](https://github.com/AgiFlow/aicode-toolkit/commit/8d7f9f9))
+- **scaffold-mcp:** simplify scaffold method hook message and add tests ([9bd0138](https://github.com/AgiFlow/aicode-toolkit/commit/9bd0138))
+
+### 🩹 Fixes
+
+- **scaffold-mcp:** fix biome lint errors in hook test file ([71b77ec](https://github.com/AgiFlow/aicode-toolkit/commit/71b77ec))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.18
+- Updated @agiflowai/architect-mcp to 1.0.20
+- Updated @agiflowai/hooks-adapter to 0.0.16
+- Updated @agiflowai/aicode-utils to 1.0.15
+
+### ❤️ Thank You
+
+- Claude Sonnet 4.6
+- Vuong Ngo
+
 ## 1.0.20 (2026-01-26)
 
 ### 🧱 Updated Dependencies

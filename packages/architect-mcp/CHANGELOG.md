@@ -1,3 +1,21 @@
+## 1.0.20 (2026-02-20)
+
+### 🩹 Fixes
+
+- **architect-mcp:** only filter should_do issues when critical violations exist ([3f8f9b7](https://github.com/AgiFlow/aicode-toolkit/commit/3f8f9b7))
+- **architect-mcp:** filter should_do issues from blocking hook response ([b2f7561](https://github.com/AgiFlow/aicode-toolkit/commit/b2f7561))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.18
+- Updated @agiflowai/hooks-adapter to 0.0.16
+- Updated @agiflowai/aicode-utils to 1.0.15
+
+### ❤️ Thank You
+
+- Claude Sonnet 4.6
+- Vuong Ngo
+
 ## 1.0.18 (2026-01-26)
 
 ### 🧱 Updated Dependencies
