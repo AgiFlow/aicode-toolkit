@@ -61,20 +61,26 @@ const { mockExecute, mockHasExecuted, mockLogExecution, mockLoadLog } = vi.hoist
 // Module mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('@agiflowai/hooks-adapter', async (importOriginal): Promise<object> => {
-  const actual = await importOriginal<typeof import('@agiflowai/hooks-adapter')>();
-  return {
-    ...actual,
-    // Vitest v4 requires a regular function (not arrow) for constructor mocks
-    ExecutionLogService: vi.fn(function (): MockExecutionLogService {
-      return {
-        hasExecuted: mockHasExecuted,
-        logExecution: mockLogExecution,
-        loadLog: mockLoadLog,
-      };
-    }),
-  };
-});
+vi.mock(
+  '@agiflowai/hooks-adapter',
+  async (
+    importOriginal: () => Promise<typeof import('@agiflowai/hooks-adapter')>,
+  ): Promise<object> => {
+    const actual = await importOriginal<typeof import('@agiflowai/hooks-adapter')>();
+    return {
+      ...actual,
+      // Vitest v4 requires a regular function (not arrow) for constructor mocks
+      // biome-ignore lint/complexity/useArrowFunction: regular function required for `new` call in Vitest v4
+      ExecutionLogService: vi.fn(function (): MockExecutionLogService {
+        return {
+          hasExecuted: mockHasExecuted,
+          logExecution: mockLogExecution,
+          loadLog: mockLoadLog,
+        };
+      }),
+    };
+  },
+);
 
 vi.mock('@agiflowai/aicode-utils', (): object => ({
   TemplatesManagerService: {
@@ -82,6 +88,7 @@ vi.mock('@agiflowai/aicode-utils', (): object => ({
     getWorkspaceRoot: vi.fn().mockResolvedValue('/test'),
   },
   // Vitest v4 requires a regular function (not arrow) for constructor mocks
+  // biome-ignore lint/complexity/useArrowFunction: regular function required for `new` call in Vitest v4
   ProjectFinderService: vi.fn(function (): MockProjectFinderService {
     return {
       findProjectForFile: vi.fn().mockResolvedValue({ root: '/test/apps/my-app' }),
@@ -91,6 +98,7 @@ vi.mock('@agiflowai/aicode-utils', (): object => ({
 
 vi.mock('../../../src/tools', (): object => ({
   // Vitest v4 requires a regular function (not arrow) for constructor mocks
+  // biome-ignore lint/complexity/useArrowFunction: regular function required for `new` call in Vitest v4
   ListScaffoldingMethodsTool: vi.fn(function (): MockListScaffoldingMethodsTool {
     return { execute: mockExecute };
   }),
@@ -187,61 +195,49 @@ describe('UseScaffoldMethodHook.preToolUse', (): void => {
     expect(result.decision).toBe(DECISION_ALLOW);
   });
 
-  it(
-    'should deny and return a concise name:description list when methods are available',
-    async (): Promise<void> => {
-      mockExecute.mockResolvedValue(
-        makeMethodsResult([
-          { name: 'scaffold-route', description: 'Generate a new route' },
-          { name: 'scaffold-component', description: 'Generate a new React component' },
-        ]),
-      );
+  it('should deny and return a concise name:description list when methods are available', async (): Promise<void> => {
+    mockExecute.mockResolvedValue(
+      makeMethodsResult([
+        { name: 'scaffold-route', description: 'Generate a new route' },
+        { name: 'scaffold-component', description: 'Generate a new React component' },
+      ]),
+    );
 
-      const result = await hook.preToolUse(makePreToolUseContext());
+    const result = await hook.preToolUse(makePreToolUseContext());
 
-      expect(result.decision).toBe(DECISION_DENY);
-      expect(result.message).toContain('- **scaffold-route**: Generate a new route');
-      expect(result.message).toContain('- **scaffold-component**: Generate a new React component');
-    },
-  );
+    expect(result.decision).toBe(DECISION_DENY);
+    expect(result.message).toContain('- **scaffold-route**: Generate a new route');
+    expect(result.message).toContain('- **scaffold-component**: Generate a new React component');
+  });
 
-  it(
-    'should not include instruction text or required variables in the message',
-    async (): Promise<void> => {
-      mockExecute.mockResolvedValue(
-        makeMethodsResult([{ name: 'scaffold-route', description: 'Short description' }]),
-      );
+  it('should not include instruction text or required variables in the message', async (): Promise<void> => {
+    mockExecute.mockResolvedValue(
+      makeMethodsResult([{ name: 'scaffold-route', description: 'Short description' }]),
+    );
 
-      const result = await hook.preToolUse(makePreToolUseContext());
+    const result = await hook.preToolUse(makePreToolUseContext());
 
-      expect(result.message).not.toContain('Required:');
-      expect(result.message).not.toContain('Instructions:');
-      expect(result.message).not.toContain('Using scaffold methods ensures');
-    },
-  );
+    expect(result.message).not.toContain('Required:');
+    expect(result.message).not.toContain('Instructions:');
+    expect(result.message).not.toContain('Using scaffold methods ensures');
+  });
 
-  it(
-    'should include a nextCursor note when more methods are available',
-    async (): Promise<void> => {
-      mockExecute.mockResolvedValue(makeMethodsResult([{ name: 'scaffold-route' }], 'abc123'));
+  it('should include a nextCursor note when more methods are available', async (): Promise<void> => {
+    mockExecute.mockResolvedValue(makeMethodsResult([{ name: 'scaffold-route' }], 'abc123'));
 
-      const result = await hook.preToolUse(makePreToolUseContext());
+    const result = await hook.preToolUse(makePreToolUseContext());
 
-      expect(result.decision).toBe(DECISION_DENY);
-      expect(result.message).toContain('abc123');
-    },
-  );
+    expect(result.decision).toBe(DECISION_DENY);
+    expect(result.message).toContain('abc123');
+  });
 
-  it(
-    'should fall back to "No description available" for methods without a description',
-    async (): Promise<void> => {
-      mockExecute.mockResolvedValue(makeMethodsResult([{ name: 'scaffold-mystery' }]));
+  it('should fall back to "No description available" for methods without a description', async (): Promise<void> => {
+    mockExecute.mockResolvedValue(makeMethodsResult([{ name: 'scaffold-mystery' }]));
 
-      const result = await hook.preToolUse(makePreToolUseContext());
+    const result = await hook.preToolUse(makePreToolUseContext());
 
-      expect(result.message).toContain('- **scaffold-mystery**: No description available');
-    },
-  );
+    expect(result.message).toContain('- **scaffold-mystery**: No description available');
+  });
 
   it('should skip when the tool returns an unexpected content type', async (): Promise<void> => {
     mockExecute.mockResolvedValue({ isError: false, content: [{ type: 'image' }] });
