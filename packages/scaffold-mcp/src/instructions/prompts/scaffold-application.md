@@ -62,9 +62,15 @@ After the boilerplate is created, **consider if additional features are needed**
    - Use `list-scaffolding-methods`{% if not isMonolith %} with the new project path{% endif %}
    - Use `use-scaffold-method` to add tools, services, prompts, etc.
    - **IMPLEMENT** the actual logic in the scaffolded feature files
+   - **REMOVE the `// @scaffold-generated` marker** from each file after implementing it (see below)
    - **REGISTER** the features in `src/server/index.ts`
 4. **Install dependencies**: Remind user to run `pnpm install`
 5. **Report** the complete setup including any features added
+
+## Scaffold Marker — Remove After Implementing
+Generated `.ts`/`.tsx`/`.js`/`.jsx` files contain `// @scaffold-generated` at the top. This comment flags unimplemented boilerplate files.
+
+**You MUST delete this line once a file is fully implemented.** Leaving it in place marks the file as a "phantom" — a scaffolded file whose logic was never written. The marker is checked at session boundaries to catch files that were accidentally left as empty templates.
 
 ## Example Workflow:
 {% if not isMonolith %}1. Call `list-boilerplates` → See available templates
@@ -75,4 +81,5 @@ After the boilerplate is created, **consider if additional features are needed**
 5. **Review if user requested specific features (tools, prompts, etc.)**
 6. **If features needed**: Add them using `list-scaffolding-methods` and `use-scaffold-method`
 7. **READ and IMPLEMENT** the scaffolded feature files with actual logic
-8. Report success and next steps to the user
+8. **REMOVE `// @scaffold-generated`** from each file once implemented
+9. Report success and next steps to the user

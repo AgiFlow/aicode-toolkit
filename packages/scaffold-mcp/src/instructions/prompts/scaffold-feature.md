@@ -81,12 +81,17 @@ After scaffolding completes, **you MUST**:
    - Replace TODO comments with real code
    - Replace template placeholders with actual implementation
    - Add the specific functionality described in the user's request
-3. **REGISTER** the feature in appropriate files:
+3. **REMOVE the `// @scaffold-generated` marker** from each file after you finish implementing it:
+   - Generated `.ts`/`.tsx`/`.js`/`.jsx` files will have `// @scaffold-generated` at the top
+   - This marker flags files that still contain unimplemented boilerplate
+   - **Delete this comment line** once a file is fully implemented
+   - Leaving the marker in place signals that the file is a "phantom" — unimplemented boilerplate
+4. **REGISTER** the feature in appropriate files:
    - Import and register tools in `src/server/index.ts`
    - Export new modules from `index.ts` files
    - Update any necessary configuration files
-4. **TEST** to ensure the implementation works correctly
-5. **DO NOT SKIP** this step - scaffolded files are templates that need actual code
+5. **TEST** to ensure the implementation works correctly
+6. **DO NOT SKIP** this step - scaffolded files are templates that need actual code
 
 ## Example Workflow:
 1. Identify project path (provided or ask user){% if not isMonolith %}
@@ -96,5 +101,6 @@ After scaffolding completes, **you MUST**:
 4. Collect required variables based on schema
 5. Call `use-scaffold-method` with {% if not isMonolith %}projectPath, {% endif %}scaffold_feature_name, and variables
 6. **READ the generated files and IMPLEMENT the actual logic**
-7. **REGISTER the feature in server/index.ts and other config files**
-8. Report success and list created files with implementation details
+7. **REMOVE `// @scaffold-generated` from each file once implemented**
+8. **REGISTER the feature in server/index.ts and other config files**
+9. Report success and list created files with implementation details
