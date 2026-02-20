@@ -1,3 +1,14 @@
+## 0.3.9 (2026-02-20)
+
+### 🚀 Features
+
+- **one-mcp:** add list-resources and read-resource CLI commands with skill discovery ([00260d4](https://github.com/AgiFlow/aicode-toolkit/commit/00260d4))
+
+### ❤️ Thank You
+
+- Claude Sonnet 4.6
+- Vuong Ngo
+
 ## 0.3.7 (2026-01-26)
 
 ### 🚀 Features
