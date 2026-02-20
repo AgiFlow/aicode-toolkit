@@ -21,7 +21,7 @@
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { log, TemplatesManagerService } from '@agiflowai/aicode-utils';
+import { log } from '@agiflowai/aicode-utils';
 import type { DesignSystemConfig } from '../../config';
 import { takeScreenshot } from '../../utils/screenshot';
 import type { BaseBundlerService } from '../BundlerService';
@@ -81,7 +81,6 @@ export class ComponentRendererService {
     if (!appPath) {
       throw new Error('appPath is required for ComponentRendererService');
     }
-    this.monorepoRoot = TemplatesManagerService.getWorkspaceRootSync();
     this.appPath = appPath;
     // Use OS temp directory for screenshots (e.g., /tmp on Unix, %TEMP% on Windows)
     this.tmpDir = path.join(os.tmpdir(), 'style-system');
