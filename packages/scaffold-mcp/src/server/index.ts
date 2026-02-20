@@ -13,6 +13,7 @@ import {
   GenerateFeatureScaffoldPrompt,
   ScaffoldApplicationPrompt,
   ScaffoldFeaturePrompt,
+  SyncTemplatePatternsPrompt,
 } from '../prompts';
 import { TemplateService } from '../services/TemplateService';
 import {
@@ -65,6 +66,9 @@ export function createServer(options: ServerOptions = {}) {
     : null;
   const generateFeatureScaffoldPrompt = adminEnabled
     ? new GenerateFeatureScaffoldPrompt({ isMonolith, promptAsSkill })
+    : null;
+  const syncTemplatePatternsPrompt = adminEnabled
+    ? new SyncTemplatePatternsPrompt({ isMonolith, promptAsSkill })
     : null;
 
   // Initialize user-facing prompts (always available)
@@ -200,6 +204,10 @@ export function createServer(options: ServerOptions = {}) {
       if (generateFeatureScaffoldPrompt) {
         prompts.push(generateFeatureScaffoldPrompt.getDefinition());
       }
+
+      if (syncTemplatePatternsPrompt) {
+        prompts.push(syncTemplatePatternsPrompt.getDefinition());
+      }
     }
 
     return { prompts };
@@ -238,6 +246,13 @@ export function createServer(options: ServerOptions = {}) {
       return {
         messages: generateFeatureScaffoldPrompt.getMessages(args as any),
       };
+    }
+
+    if (name === SyncTemplatePatternsPrompt.PROMPT_NAME) {
+      if (!syncTemplatePatternsPrompt) {
+        throw new Error('Prompt not available');
+      }
+      return await syncTemplatePatternsPrompt.execute(args as any);
     }
 
     throw new Error(`Unknown prompt: ${name}`);

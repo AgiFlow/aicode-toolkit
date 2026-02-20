@@ -49,11 +49,21 @@ export type {
 
 // StoriesIndexService
 export { StoriesIndexService } from './StoriesIndexService';
-export type { ComponentInfo, StoriesIndexServiceConfig, StoriesIndexServiceResult, StoryMeta } from './StoriesIndexService';
+export type {
+  ComponentInfo,
+  StoriesIndexServiceConfig,
+  StoriesIndexServiceResult,
+  StoryMeta,
+} from './StoriesIndexService';
 
 // ThemeService
 export { ThemeService } from './ThemeService';
-export type { AvailableThemesResult, ThemeInfo, ThemeServiceConfig, ThemeServiceResult } from './ThemeService';
+export type {
+  AvailableThemesResult,
+  ThemeInfo,
+  ThemeServiceConfig,
+  ThemeServiceResult,
+} from './ThemeService';
 
 // CSS Classes services
 export {
@@ -62,7 +72,12 @@ export {
   DEFAULT_STYLE_SYSTEM_CONFIG,
   TailwindCSSClassesService,
 } from './CssClasses';
-export type { CSSClassCategory, CSSClassesResult, CSSClassValue, StyleSystemConfig } from './CssClasses';
+export type {
+  CSSClassCategory,
+  CSSClassesResult,
+  CSSClassValue,
+  StyleSystemConfig,
+} from './CssClasses';
 
 // GetUiComponentService
 export { DEFAULT_GET_UI_COMPONENT_CONFIG, GetUiComponentService } from './GetUiComponentService';

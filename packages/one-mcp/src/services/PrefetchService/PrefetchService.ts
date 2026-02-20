@@ -18,12 +18,7 @@
 
 import { spawn } from 'node:child_process';
 import type { McpStdioConfig, McpServerTransportConfig } from '../../types';
-import type {
-  PrefetchServiceConfig,
-  PackageInfo,
-  PrefetchResult,
-  PrefetchSummary,
-} from './types';
+import type { PrefetchServiceConfig, PackageInfo, PrefetchResult, PrefetchSummary } from './types';
 import {
   TRANSPORT_STDIO,
   COMMAND_NPX,
@@ -370,7 +365,10 @@ export class PrefetchService {
    * @param args - Command arguments
    * @returns Promise with success status and output
    */
-  private runCommand(command: string, args: string[]): Promise<{ success: boolean; output: string }> {
+  private runCommand(
+    command: string,
+    args: string[],
+  ): Promise<{ success: boolean; output: string }> {
     return new Promise((resolve) => {
       const proc = spawn(command, args, {
         stdio: [STDIO_IGNORE, STDIO_PIPE, STDIO_PIPE],

@@ -116,8 +116,13 @@ function validateDesignSystemConfig(config: unknown, projectName: string): Desig
   }
 
   if (cfg.sharedComponentTags !== undefined) {
-    if (!Array.isArray(cfg.sharedComponentTags) || !cfg.sharedComponentTags.every((t) => typeof t === 'string')) {
-      throw new Error(`[${projectName}] style-system.sharedComponentTags must be an array of strings`);
+    if (
+      !Array.isArray(cfg.sharedComponentTags) ||
+      !cfg.sharedComponentTags.every((t) => typeof t === 'string')
+    ) {
+      throw new Error(
+        `[${projectName}] style-system.sharedComponentTags must be an array of strings`,
+      );
     }
   }
 
@@ -161,8 +166,8 @@ export async function getAppDesignSystemConfig(appPath: string): Promise<DesignS
       throw new Error(`${projectJsonPath} must contain a JSON object`);
     }
 
-    const project = projectJson as Record<string, unknown>;
-    const projectName = typeof project.name === 'string' ? project.name : path.basename(resolvedAppPath);
+    const project = projectJson as ProjectJson;
+    const projectName = project.name ? project.name : path.basename(resolvedAppPath);
 
     if (project['style-system']) {
       const validatedConfig = validateDesignSystemConfig(project['style-system'], projectName);
@@ -186,7 +191,10 @@ export async function getAppDesignSystemConfigByName(appName: string): Promise<D
   const monorepoRoot = TemplatesManagerService.getWorkspaceRootSync();
 
   // Try common app locations
-  const possiblePaths = [path.join(monorepoRoot, 'apps', appName), path.join(monorepoRoot, 'backend', 'apps', appName)];
+  const possiblePaths = [
+    path.join(monorepoRoot, 'apps', appName),
+    path.join(monorepoRoot, 'backend', 'apps', appName),
+  ];
 
   const errors: string[] = [];
 
@@ -260,7 +268,9 @@ export async function getSharedComponentTags(): Promise<string[]> {
         log.info(`[Config] Loaded sharedComponentTags from toolkit.yaml: ${tags.join(', ')}`);
         return tags;
       }
-      log.warn('[Config] sharedComponentTags in toolkit.yaml is not a valid string array, using defaults');
+      log.warn(
+        '[Config] sharedComponentTags in toolkit.yaml is not a valid string array, using defaults',
+      );
     }
   } catch (error) {
     // Only log if it's not a file-not-found error (ENOENT)
@@ -270,7 +280,9 @@ export async function getSharedComponentTags(): Promise<string[]> {
     // toolkit.yaml doesn't exist or couldn't be read, use defaults
   }
 
-  log.info(`[Config] Using default sharedComponentTags: ${DEFAULT_SHARED_COMPONENT_TAGS.join(', ')}`);
+  log.info(
+    `[Config] Using default sharedComponentTags: ${DEFAULT_SHARED_COMPONENT_TAGS.join(', ')}`,
+  );
   return DEFAULT_SHARED_COMPONENT_TAGS;
 }
 
@@ -294,7 +306,10 @@ export async function getGetCssClassesConfig(): Promise<GetCssClassesConfig | un
       const getCssClassesConfig = config['style-system'].getCssClasses;
 
       // Validate customService if provided
-      if (getCssClassesConfig.customService !== undefined && typeof getCssClassesConfig.customService !== 'string') {
+      if (
+        getCssClassesConfig.customService !== undefined &&
+        typeof getCssClassesConfig.customService !== 'string'
+      ) {
         log.warn('[Config] style-system.getCssClasses.customService must be a string, ignoring');
         return undefined;
       }
@@ -332,7 +347,10 @@ export async function getBundlerConfig(): Promise<BundlerConfig | undefined> {
       const bundlerConfig = config['style-system'].bundler;
 
       // Validate customService if provided
-      if (bundlerConfig.customService !== undefined && typeof bundlerConfig.customService !== 'string') {
+      if (
+        bundlerConfig.customService !== undefined &&
+        typeof bundlerConfig.customService !== 'string'
+      ) {
         log.warn('[Config] style-system.bundler.customService must be a string, ignoring');
         return undefined;
       }

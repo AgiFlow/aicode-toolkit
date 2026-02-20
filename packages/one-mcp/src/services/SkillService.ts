@@ -19,8 +19,7 @@
 
 import { readFile, readdir, stat, access, watch } from 'node:fs/promises';
 import { join, dirname, isAbsolute } from 'node:path';
-import type { FSWatcher } from 'node:fs';
-import type { Skill, SkillMetadata } from '../types';
+import type { Skill } from '../types';
 import { parseFrontMatter } from '../utils';
 
 /**
@@ -30,7 +29,7 @@ export class SkillLoadError extends Error {
   constructor(
     message: string,
     public readonly filePath: string,
-    public readonly cause?: Error
+    public readonly cause?: Error,
   ) {
     super(message);
     this.name = 'SkillLoadError';
@@ -54,7 +53,7 @@ async function pathExists(path: string): Promise<boolean> {
     }
     // For other errors (permission denied, etc.), rethrow with context
     throw new Error(
-      `Failed to check path existence for "${path}": ${error instanceof Error ? error.message : 'Unknown error'}`
+      `Failed to check path existence for "${path}": ${error instanceof Error ? error.message : 'Unknown error'}`,
     );
   }
 }
@@ -95,11 +94,7 @@ export class SkillService {
    * @param options - Optional configuration
    * @param options.onCacheInvalidated - Callback invoked when cache is invalidated due to file changes
    */
-  constructor(
-    cwd: string,
-    skillPaths: string[],
-    options?: { onCacheInvalidated?: () => void }
-  ) {
+  constructor(cwd: string, skillPaths: string[], options?: { onCacheInvalidated?: () => void }) {
     this.cwd = cwd;
     this.skillPaths = skillPaths;
     this.onCacheInvalidated = options?.onCacheInvalidated;
@@ -128,7 +123,7 @@ export class SkillService {
       this.skillPaths.map(async (skillPath) => {
         const skillsDir = isAbsolute(skillPath) ? skillPath : join(this.cwd, skillPath);
         return this.loadSkillsFromDirectory(skillsDir, 'project');
-      })
+      }),
     );
 
     // Merge results while preserving precedence (earlier paths take priority)
@@ -190,7 +185,7 @@ export class SkillService {
       this.skillPaths.map(async (skillPath) => {
         const skillsDir = isAbsolute(skillPath) ? skillPath : join(this.cwd, skillPath);
         return { skillsDir, exists: await pathExists(skillsDir) };
-      })
+      }),
     );
 
     // Start watchers for existing directories
@@ -204,7 +199,9 @@ export class SkillService {
       this.watchDirectory(skillsDir, abortController.signal).catch((error) => {
         // Only log if not aborted
         if (error?.name !== 'AbortError') {
-          console.error(`[skill-watcher] Error watching ${skillsDir}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          console.error(
+            `[skill-watcher] Error watching ${skillsDir}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
         }
       });
     }
@@ -231,7 +228,7 @@ export class SkillService {
 
     for await (const event of watcher) {
       // Only invalidate cache when SKILL.md files change
-      if (event.filename && event.filename.endsWith('SKILL.md')) {
+      if (event.filename?.endsWith('SKILL.md')) {
         this.clearCache();
         this.onCacheInvalidated?.();
       }
@@ -254,7 +251,7 @@ export class SkillService {
    */
   private async loadSkillsFromDirectory(
     dirPath: string,
-    location: 'project' | 'user'
+    location: 'project' | 'user',
   ): Promise<Skill[]> {
     const skills: Skill[] = [];
 
@@ -267,7 +264,7 @@ export class SkillService {
       throw new SkillLoadError(
         `Cannot access skills directory: ${error instanceof Error ? error.message : 'Unknown error'}`,
         dirPath,
-        error instanceof Error ? error : undefined
+        error instanceof Error ? error : undefined,
       );
     }
 
@@ -278,7 +275,7 @@ export class SkillService {
       throw new SkillLoadError(
         `Failed to read skills directory: ${error instanceof Error ? error.message : 'Unknown error'}`,
         dirPath,
-        error instanceof Error ? error : undefined
+        error instanceof Error ? error : undefined,
       );
     }
 
@@ -289,10 +286,12 @@ export class SkillService {
         try {
           return { entry, entryPath, stat: await stat(entryPath), error: null };
         } catch (error) {
-          console.warn(`Skipping entry ${entryPath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          console.warn(
+            `Skipping entry ${entryPath}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
           return { entry, entryPath, stat: null, error };
         }
-      })
+      }),
     );
 
     // Identify skill files to load in parallel
@@ -319,10 +318,12 @@ export class SkillService {
           }
           return await this.loadSkillFile(filePath, location);
         } catch (error) {
-          console.warn(`Skipping skill at ${filePath}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          console.warn(
+            `Skipping skill at ${filePath}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
           return null;
         }
-      })
+      }),
     );
 
     // Collect successful results
@@ -352,7 +353,7 @@ export class SkillService {
    */
   private async loadSkillFile(
     filePath: string,
-    location: 'project' | 'user'
+    location: 'project' | 'user',
   ): Promise<Skill | null> {
     let fileContent: string;
     try {
@@ -361,7 +362,7 @@ export class SkillService {
       throw new SkillLoadError(
         `Failed to read skill file: ${error instanceof Error ? error.message : 'Unknown error'}`,
         filePath,
-        error instanceof Error ? error : undefined
+        error instanceof Error ? error : undefined,
       );
     }
 

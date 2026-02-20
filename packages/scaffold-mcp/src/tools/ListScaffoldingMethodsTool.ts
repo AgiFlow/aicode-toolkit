@@ -2,7 +2,10 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { ProjectConfigResolver } from '@agiflowai/aicode-utils';
 import listScaffoldingMethodsDescription from '../instructions/tools/list-scaffolding-methods/description.md?raw';
 import { FileSystemService } from '../services/FileSystemService';
-import { ScaffoldingMethodsService } from '../services/ScaffoldingMethodsService';
+import {
+  ScaffoldingMethodsService,
+  type ListScaffoldingMethodsResult,
+} from '../services/ScaffoldingMethodsService';
 import { TemplateService } from '../services/TemplateService';
 import type { ToolDefinition } from './types';
 
@@ -78,7 +81,7 @@ export class ListScaffoldingMethodsTool {
         cursor?: string;
       };
 
-      let result;
+      let result: ListScaffoldingMethodsResult;
 
       // In monolith mode, read template name from toolkit.yaml or project.json
       if (this.isMonolith) {
@@ -105,6 +108,7 @@ export class ListScaffoldingMethodsTool {
           result = await this.scaffoldingMethodsService.listScaffoldingMethods(projectPath, cursor);
         } else {
           result = await this.scaffoldingMethodsService.listScaffoldingMethodsByTemplate(
+            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
             templateName!,
             cursor,
           );

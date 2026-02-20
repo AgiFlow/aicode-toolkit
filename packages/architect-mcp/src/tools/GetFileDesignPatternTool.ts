@@ -30,11 +30,7 @@ import type {
 import { TemplateFinder } from '../services/TemplateFinder';
 import { ArchitectParser } from '../services/ArchitectParser';
 import { PatternMatcher } from '../services/PatternMatcher';
-import {
-  LlmProxyService,
-  type LlmToolId,
-  isValidLlmTool,
-} from '@agiflowai/coding-agent-bridge';
+import { LlmProxyService, type LlmToolId, isValidLlmTool } from '@agiflowai/coding-agent-bridge';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 

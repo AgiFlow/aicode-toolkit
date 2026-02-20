@@ -88,7 +88,10 @@ describe('TailwindCSSClassesService', () => {
 
       expect(result.category).toBe('typography');
       expect(result.classes.typography).toBeDefined();
-      expect(result.classes.typography).toContainEqual({ class: 'font-sans', value: 'ui-sans-serif, system-ui' });
+      expect(result.classes.typography).toContainEqual({
+        class: 'font-sans',
+        value: 'ui-sans-serif, system-ui',
+      });
       expect(result.classes.typography).toContainEqual({ class: 'text-lg', value: '1.125rem' });
     });
 
@@ -108,9 +111,18 @@ describe('TailwindCSSClassesService', () => {
 
       expect(result.category).toBe('spacing');
       expect(result.classes.spacing).toBeDefined();
-      expect(result.classes.spacing).toContainEqual({ class: 'p-4', value: 'calc(var(--space-4) * 1)' });
-      expect(result.classes.spacing).toContainEqual({ class: 'm-4', value: 'calc(var(--space-4) * 1)' });
-      expect(result.classes.spacing).toContainEqual({ class: 'gap-4', value: 'calc(var(--space-4) * 1)' });
+      expect(result.classes.spacing).toContainEqual({
+        class: 'p-4',
+        value: 'calc(var(--space-4) * 1)',
+      });
+      expect(result.classes.spacing).toContainEqual({
+        class: 'm-4',
+        value: 'calc(var(--space-4) * 1)',
+      });
+      expect(result.classes.spacing).toContainEqual({
+        class: 'gap-4',
+        value: 'calc(var(--space-4) * 1)',
+      });
       expect(result.classes.spacing).toContainEqual({ class: 'space', value: '0.25rem' });
     });
 
@@ -129,8 +141,14 @@ describe('TailwindCSSClassesService', () => {
 
       expect(result.category).toBe('effects');
       expect(result.classes.effects).toBeDefined();
-      expect(result.classes.effects).toContainEqual({ class: 'shadow-sm', value: '0 1px 2px rgba(0,0,0,0.05)' });
-      expect(result.classes.effects).toContainEqual({ class: 'shadow-lg', value: '0 10px 15px -3px rgba(0,0,0,0.1)' });
+      expect(result.classes.effects).toContainEqual({
+        class: 'shadow-sm',
+        value: '0 1px 2px rgba(0,0,0,0.05)',
+      });
+      expect(result.classes.effects).toContainEqual({
+        class: 'shadow-lg',
+        value: '0 10px 15px -3px rgba(0,0,0,0.1)',
+      });
     });
 
     it('should extract all categories when category is "all"', async () => {
@@ -168,8 +186,14 @@ describe('TailwindCSSClassesService', () => {
 
       const result = await service.extractClasses('colors', mockThemePath);
 
-      expect(result.classes.colors).toContainEqual({ class: 'bg-sidebar-background', value: 'hsl(0 0% 98%)' });
-      expect(result.classes.colors).toContainEqual({ class: 'text-sidebar-background', value: 'hsl(0 0% 98%)' });
+      expect(result.classes.colors).toContainEqual({
+        class: 'bg-sidebar-background',
+        value: 'hsl(0 0% 98%)',
+      });
+      expect(result.classes.colors).toContainEqual({
+        class: 'text-sidebar-background',
+        value: 'hsl(0 0% 98%)',
+      });
     });
 
     it('should handle multi-line CSS values', async () => {

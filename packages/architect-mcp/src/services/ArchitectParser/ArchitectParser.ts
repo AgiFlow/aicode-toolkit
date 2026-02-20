@@ -94,6 +94,7 @@ export class ArchitectParser {
 
     // Check cache first
     if (this.configCache.has(architectPath)) {
+      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       return this.configCache.get(architectPath)!;
     }
 
@@ -133,7 +134,9 @@ export class ArchitectParser {
           message: issue.message,
           code: issue.code,
         }));
-        const errorMessages = issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+        const errorMessages = issues
+          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          .join(', ');
         throw new InvalidConfigError(errorMessages, issues);
       }
 
@@ -175,6 +178,7 @@ export class ArchitectParser {
 
     // Check cache first
     if (this.configCache.has(resolvedPath)) {
+      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       return this.configCache.get(resolvedPath)!;
     }
 

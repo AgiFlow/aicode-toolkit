@@ -139,7 +139,8 @@ export class CodeReviewService {
       properties: {
         feedback: {
           type: 'string',
-          description: 'Short feedback about the code quality and compliance with rules (TEXT only)',
+          description:
+            'Short feedback about the code quality and compliance with rules (TEXT only)',
         },
         identified_issues: {
           type: 'array',
@@ -218,7 +219,10 @@ export class CodeReviewService {
   /**
    * Build system prompt for code review
    */
-  private buildSystemPrompt(rulesConfig: RulesYamlConfig, jsonSchema: Record<string, unknown>): string {
+  private buildSystemPrompt(
+    rulesConfig: RulesYamlConfig,
+    jsonSchema: Record<string, unknown>,
+  ): string {
     return `You are a code reviewer for a ${rulesConfig.template} template project.
 
 ${rulesConfig.description}
@@ -395,22 +399,26 @@ ${currentContent}`;
 
         // Alternative format from some LLMs: { reviews: [...] }
         if (Array.isArray(parsed.reviews)) {
-          const issues = parsed.reviews.map(
-            (review: Record<string, unknown>) => {
-              // Handle various field names from different LLMs
-              const ruleField = review.rule || review.rule_id || review.ruleId;
-              const descField = review.description || review.comment || review.content || review.message || review.suggestion;
-              const locField = review.location || review.line_number || review.lineNumber || review.line;
+          const issues = parsed.reviews.map((review: Record<string, unknown>) => {
+            // Handle various field names from different LLMs
+            const ruleField = review.rule || review.rule_id || review.ruleId;
+            const descField =
+              review.description ||
+              review.comment ||
+              review.content ||
+              review.message ||
+              review.suggestion;
+            const locField =
+              review.location || review.line_number || review.lineNumber || review.line;
 
-              return {
-                type: this.normalizeIssueType(review.type as string),
-                rule: (ruleField as string) || this.extractRuleFromContent(descField as string),
-                violation: [descField, locField ? `Line ${locField}` : null]
-                  .filter(Boolean)
-                  .join('. '),
-              };
-            },
-          );
+            return {
+              type: this.normalizeIssueType(review.type as string),
+              rule: (ruleField as string) || this.extractRuleFromContent(descField as string),
+              violation: [descField, locField ? `Line ${locField}` : null]
+                .filter(Boolean)
+                .join('. '),
+            };
+          });
 
           return {
             feedback: this.generateFeedbackFromIssues(issues),
@@ -421,27 +429,25 @@ ${currentContent}`;
 
         // Codex format: { status, issues: [...] }
         if (parsed.issues && Array.isArray(parsed.issues)) {
-          const issues = parsed.issues.map(
-            (issue: Record<string, unknown>) => {
-              const ruleField = issue.rule || issue.rule_id;
-              const descField = issue.details || issue.description || issue.message || issue.comment;
-              const locField = issue.location || issue.line || issue.line_number;
-              const severityField = issue.severity;
+          const issues = parsed.issues.map((issue: Record<string, unknown>) => {
+            const ruleField = issue.rule || issue.rule_id;
+            const descField = issue.details || issue.description || issue.message || issue.comment;
+            const locField = issue.location || issue.line || issue.line_number;
+            const severityField = issue.severity;
 
-              // Map Codex severity (error/warning) to our type
-              let issueType = 'should_do';
-              if (severityField === 'error') issueType = 'must_not_do';
-              else if (severityField === 'warning') issueType = 'must_do';
+            // Map Codex severity (error/warning) to our type
+            let issueType = 'should_do';
+            if (severityField === 'error') issueType = 'must_not_do';
+            else if (severityField === 'warning') issueType = 'must_do';
 
-              return {
-                type: issueType,
-                rule: (ruleField as string) || this.extractRuleFromContent(descField as string),
-                violation: [descField, locField ? `Location: ${locField}` : null]
-                  .filter(Boolean)
-                  .join('. '),
-              };
-            },
-          );
+            return {
+              type: issueType,
+              rule: (ruleField as string) || this.extractRuleFromContent(descField as string),
+              violation: [descField, locField ? `Location: ${locField}` : null]
+                .filter(Boolean)
+                .join('. '),
+            };
+          });
 
           return {
             feedback: this.generateFeedbackFromIssues(issues),
@@ -452,22 +458,21 @@ ${currentContent}`;
 
         // Alternative format: { review: { comments: [...] } }
         if (parsed.review && Array.isArray(parsed.review.comments)) {
-          const issues = parsed.review.comments.map(
-            (comment: Record<string, unknown>) => {
-              // Handle various field names
-              const ruleField = comment.rule || comment.rule_id || comment.ruleId;
-              const descField = comment.content || comment.comment || comment.description || comment.message;
-              const locField = comment.line || comment.line_number || comment.lineNumber;
+          const issues = parsed.review.comments.map((comment: Record<string, unknown>) => {
+            // Handle various field names
+            const ruleField = comment.rule || comment.rule_id || comment.ruleId;
+            const descField =
+              comment.content || comment.comment || comment.description || comment.message;
+            const locField = comment.line || comment.line_number || comment.lineNumber;
 
-              return {
-                type: this.normalizeIssueType((ruleField || comment.type) as string),
-                rule: (ruleField as string) || this.extractRuleFromContent(descField as string),
-                violation: [descField, locField ? `Line ${locField}` : null]
-                  .filter(Boolean)
-                  .join('. '),
-              };
-            },
-          );
+            return {
+              type: this.normalizeIssueType((ruleField || comment.type) as string),
+              rule: (ruleField as string) || this.extractRuleFromContent(descField as string),
+              violation: [descField, locField ? `Line ${locField}` : null]
+                .filter(Boolean)
+                .join('. '),
+            };
+          });
 
           return {
             feedback: this.generateFeedbackFromIssues(issues),
@@ -540,19 +545,23 @@ ${currentContent}`;
   /**
    * Generate feedback text from issues array
    */
-  private generateFeedbackFromIssues(issues: Array<{ type: string; rule: string; violation?: string }>): string {
+  private generateFeedbackFromIssues(
+    issues: Array<{ type: string; rule: string; violation?: string }>,
+  ): string {
     if (issues.length === 0) return 'No issues found.';
 
     const grouped = {
-      must_not_do: issues.filter(i => i.type === 'must_not_do'),
-      must_do: issues.filter(i => i.type === 'must_do'),
-      should_do: issues.filter(i => i.type === 'should_do'),
+      must_not_do: issues.filter((i) => i.type === 'must_not_do'),
+      must_do: issues.filter((i) => i.type === 'must_do'),
+      should_do: issues.filter((i) => i.type === 'should_do'),
     };
 
     const parts: string[] = [];
 
     if (grouped.must_not_do.length > 0) {
-      parts.push(`Found ${grouped.must_not_do.length} "Must Not Do" violation(s) that need immediate attention.`);
+      parts.push(
+        `Found ${grouped.must_not_do.length} "Must Not Do" violation(s) that need immediate attention.`,
+      );
     }
     if (grouped.must_do.length > 0) {
       parts.push(`Found ${grouped.must_do.length} "Must Do" requirement(s) that are missing.`);

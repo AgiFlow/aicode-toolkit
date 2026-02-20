@@ -37,7 +37,10 @@ export type StoriesIndexFactory = () => StoriesIndexService;
 /**
  * Factory function type for creating ComponentRendererService instances.
  */
-export type RendererFactory = (config: DesignSystemConfig, appPath: string) => ComponentRendererService;
+export type RendererFactory = (
+  config: DesignSystemConfig,
+  appPath: string,
+) => ComponentRendererService;
 
 /**
  * GetUiComponentService handles rendering UI component previews.
@@ -106,7 +109,7 @@ export class GetUiComponentService {
       }
       // Validate selector to prevent CSS injection attacks
       // Only allow safe CSS selector characters
-      if (!/^[a-zA-Z0-9_\-#.\[\]=":' ]+$/.test(input.selector)) {
+      if (!/^[a-zA-Z0-9_\-#.[\]=":' ]+$/.test(input.selector)) {
         throw new Error('selector contains invalid characters');
       }
       // Prevent JavaScript execution in selectors

@@ -5,7 +5,7 @@
  */
 
 import type { RuleSection, AddRuleInput } from '../../schemas';
-import { RULES_ERROR } from '../../constants';
+import type { RULES_ERROR } from '../../constants';
 
 /**
  * Configuration options for RulesWriter

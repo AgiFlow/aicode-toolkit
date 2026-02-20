@@ -140,7 +140,9 @@ function validateCssFiles(cssFiles: string[], workspaceRoot: string): void {
     // Validate file extension
     const ext = path.extname(cssFile).toLowerCase();
     if (!['.css', '.scss', '.sass', '.less', '.pcss', '.postcss'].includes(ext)) {
-      throw new Error(`CSS file "${cssFile}" must have a valid CSS extension (.css, .scss, .sass, .less, .pcss)`);
+      throw new Error(
+        `CSS file "${cssFile}" must have a valid CSS extension (.css, .scss, .sass, .less, .pcss)`,
+      );
     }
   }
 }
@@ -156,12 +158,12 @@ function createStoryEntryPlugin(
   // The /@virtual:story-entry?id=xxx pattern is used in HTML script src
   return {
     name: 'vite-plugin-story-entry',
-    enforce: 'pre',  // Run before Vite's built-in plugins (especially vite:build-html)
+    enforce: 'pre', // Run before Vite's built-in plugins (especially vite:build-html)
     resolveId(id: string): string | undefined {
       // Match virtual module requests (with or without leading /)
       if (id.includes('virtual:story-entry')) {
         log.debug(`[vite-plugin-story-entry] resolveId: ${id}`);
-        return `\0${id.replace(/^\//, '')}`;  // Remove leading / if present
+        return `\0${id.replace(/^\//, '')}`; // Remove leading / if present
       }
       return undefined;
     },
@@ -310,11 +312,14 @@ export class ViteReactBundlerService extends BaseBundlerService {
    * @throws Error if server fails to start
    */
   async startDevServer(appPath: string): Promise<DevServerResult> {
-    const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(this.monorepoRoot, appPath);
+    const resolvedAppPath = path.isAbsolute(appPath)
+      ? appPath
+      : path.join(this.monorepoRoot, appPath);
 
     // If server is already running for the same app, return existing info
     if (this.isServerRunning() && this.currentAppPath === resolvedAppPath) {
       log.info(`[ViteReactBundlerService] Server already running for ${resolvedAppPath}`);
+      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       return { url: this.serverUrl!, port: this.serverPort! };
     }
 
@@ -375,35 +380,40 @@ export class ViteReactBundlerService extends BaseBundlerService {
       });
 
       // Add middleware to serve HTML from memory
-      this.server.middlewares.use(async (req: IncomingMessage, res: ServerResponse, next: Connect.NextFunction) => {
-        const url = req.url || '/';
-        // Match preview URLs like /preview/{storyId} - captures the storyId parameter
-        const match = url.match(/^\/preview\/([^/?]+)/);
+      this.server.middlewares.use(
+        async (req: IncomingMessage, res: ServerResponse, next: Connect.NextFunction) => {
+          const url = req.url || '/';
+          // Match preview URLs like /preview/{storyId} - captures the storyId parameter
+          const match = url.match(/^\/preview\/([^/?]+)/);
 
-        if (match) {
-          const storyId = match[1];
-          const config = this.storyConfigs.get(storyId);
+          if (match) {
+            const storyId = match[1];
+            const config = this.storyConfigs.get(storyId);
 
-          if (config) {
-            try {
-              const htmlTemplate = this.generateHtmlTemplate(`@virtual:story-entry?id=${storyId}`, config.darkMode);
-              // Transform HTML using Vite (injects client scripts, HMR, etc.)
-              const transformedHtml = await this.server!.transformIndexHtml(url, htmlTemplate);
+            if (config) {
+              try {
+                const htmlTemplate = this.generateHtmlTemplate(
+                  `@virtual:story-entry?id=${storyId}`,
+                  config.darkMode,
+                );
+                // Transform HTML using Vite (injects client scripts, HMR, etc.)
+                const transformedHtml = await this.server?.transformIndexHtml(url, htmlTemplate);
 
-              res.statusCode = 200;
-              res.setHeader('Content-Type', 'text/html');
-              res.end(transformedHtml);
-              return;
-            } catch (e) {
-              const err = e as Error;
-              log.error(`[ViteMiddleware] Error serving preview: ${err.message}`);
-              next(err);
-              return;
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'text/html');
+                res.end(transformedHtml);
+                return;
+              } catch (e) {
+                const err = e as Error;
+                log.error(`[ViteMiddleware] Error serving preview: ${err.message}`);
+                next(err);
+                return;
+              }
             }
           }
-        }
-        next();
-      });
+          next();
+        },
+      );
 
       await this.server.listen();
 
@@ -445,7 +455,15 @@ export class ViteReactBundlerService extends BaseBundlerService {
       throw new Error('Dev server is not running. Start it first using startDevServer().');
     }
 
-    const { componentPath, storyName, args = {}, darkMode = false, appPath, cssFiles = [], rootComponent } = options;
+    const {
+      componentPath,
+      storyName,
+      args = {},
+      darkMode = false,
+      appPath,
+      cssFiles = [],
+      rootComponent,
+    } = options;
 
     // Validate inputs to prevent code injection, memory issues, and path traversal
     validateStoryName(storyName);
@@ -453,7 +471,9 @@ export class ViteReactBundlerService extends BaseBundlerService {
     validateArgsSize(args);
     validateCssFiles(cssFiles, this.monorepoRoot);
 
-    const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(this.monorepoRoot, appPath);
+    const resolvedAppPath = path.isAbsolute(appPath)
+      ? appPath
+      : path.join(this.monorepoRoot, appPath);
 
     if (this.currentAppPath !== resolvedAppPath) {
       throw new Error(
@@ -516,7 +536,15 @@ export class ViteReactBundlerService extends BaseBundlerService {
    * @throws Error if build fails
    */
   async prerenderComponent(options: RenderOptions): Promise<PrerenderResult> {
-    const { componentPath, storyName, args = {}, darkMode = false, appPath, cssFiles = [], rootComponent } = options;
+    const {
+      componentPath,
+      storyName,
+      args = {},
+      darkMode = false,
+      appPath,
+      cssFiles = [],
+      rootComponent,
+    } = options;
 
     // Validate inputs to prevent code injection, memory issues, and path traversal
     validateStoryName(storyName);
@@ -524,14 +552,23 @@ export class ViteReactBundlerService extends BaseBundlerService {
     validateArgsSize(args);
     validateCssFiles(cssFiles, this.monorepoRoot);
 
-    const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(this.monorepoRoot, appPath);
+    const resolvedAppPath = path.isAbsolute(appPath)
+      ? appPath
+      : path.join(this.monorepoRoot, appPath);
     const tmpDir = path.join(resolvedAppPath, '.tmp');
 
     try {
       await fs.mkdir(tmpDir, { recursive: true });
 
       const htmlFilePath = await this.buildComponent({
-        componentPath, storyName, args, appPath: resolvedAppPath, darkMode, cssFiles, rootComponent, tmpDir,
+        componentPath,
+        storyName,
+        args,
+        appPath: resolvedAppPath,
+        darkMode,
+        cssFiles,
+        rootComponent,
+        tmpDir,
       });
 
       return { htmlFilePath };
@@ -559,7 +596,9 @@ export class ViteReactBundlerService extends BaseBundlerService {
         await this.server.close();
       } catch (error) {
         // Intentionally suppressed - cleanup should always complete
-        log.error(`[ViteReactBundlerService] Error closing server: ${error instanceof Error ? error.message : String(error)}`);
+        log.error(
+          `[ViteReactBundlerService] Error closing server: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
       this.server = null;
       this.serverUrl = null;
@@ -596,13 +635,16 @@ export class ViteReactBundlerService extends BaseBundlerService {
     }
 
     if (entriesToDelete.length > 0) {
-      log.debug(`[ViteReactBundlerService] Cleaned up ${entriesToDelete.length} stale story configs`);
+      log.debug(
+        `[ViteReactBundlerService] Cleaned up ${entriesToDelete.length} stale story configs`,
+      );
     }
 
     // If still over limit, remove oldest entries
     if (this.storyConfigs.size > STORY_CONFIG_MAX_COUNT) {
-      const sortedEntries = Array.from(this.storyConfigTimestamps.entries())
-        .sort((a, b) => a[1] - b[1]); // Sort by timestamp ascending (oldest first)
+      const sortedEntries = Array.from(this.storyConfigTimestamps.entries()).sort(
+        (a, b) => a[1] - b[1],
+      ); // Sort by timestamp ascending (oldest first)
 
       const toRemove = sortedEntries.slice(0, this.storyConfigs.size - STORY_CONFIG_MAX_COUNT);
       for (const [storyId] of toRemove) {
@@ -610,7 +652,9 @@ export class ViteReactBundlerService extends BaseBundlerService {
         this.storyConfigTimestamps.delete(storyId);
       }
 
-      log.debug(`[ViteReactBundlerService] Removed ${toRemove.length} oldest story configs to stay under limit`);
+      log.debug(
+        `[ViteReactBundlerService] Removed ${toRemove.length} oldest story configs to stay under limit`,
+      );
     }
   }
 
@@ -655,6 +699,7 @@ ${cssImportStatements}
 
     // Use absolute path to wrapper CSS with @source directive for Tailwind v4
     // Virtual modules don't have a real location, so relative paths don't work
+    // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
     const wrapperCssPath = path.join(tmpDir!, 'tailwind-wrapper.css').replace(/\\/g, '/');
     const cssImports = `import '${wrapperCssPath}';`;
 
@@ -804,7 +849,11 @@ root.render(wrappedElement);
       log.info(`[ViteReactBundlerService] Component built to: ${builtHtmlPath}`);
 
       // Clean up the input HTML file - non-critical, log debug on failure
-      await fs.unlink(htmlTemplatePath).catch((err) => log.debug(`[ViteReactBundlerService] Failed to cleanup temp file: ${err.message}`));
+      await fs
+        .unlink(htmlTemplatePath)
+        .catch((err) =>
+          log.debug(`[ViteReactBundlerService] Failed to cleanup temp file: ${err.message}`),
+        );
 
       return builtHtmlPath;
     } catch (error) {

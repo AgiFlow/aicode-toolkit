@@ -15,5 +15,10 @@ export { ThemeService } from './ThemeService';
 export { ThemeServiceFactory } from './ThemeServiceFactory';
 
 // Types
-export type { AvailableThemesResult, ThemeInfo, ThemeServiceConfig, ThemeServiceResult } from './types';
+export type {
+  AvailableThemesResult,
+  ThemeInfo,
+  ThemeServiceConfig,
+  ThemeServiceResult,
+} from './types';
 export { DEFAULT_THEME_SERVICE_CONFIG } from './types';

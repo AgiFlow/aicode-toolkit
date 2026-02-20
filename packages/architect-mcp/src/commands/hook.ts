@@ -80,10 +80,7 @@ export const hookCommand = new Command('hook')
     '--tool-config <json>',
     'JSON config for the LLM tool (e.g., \'{"model":"gpt-5.2-high"}\')',
   )
-  .option(
-    '--llm-tool <tool>',
-    'LLM tool to use for processing (e.g., claude-code, gemini-cli)',
-  )
+  .option('--llm-tool <tool>', 'LLM tool to use for processing (e.g., claude-code, gemini-cli)')
   .action(async (options: HookOptions): Promise<void> => {
     try {
       if (!options.type) {
@@ -118,7 +115,10 @@ export const hookCommand = new Command('hook')
 
       if (agent === CLAUDE_CODE) {
         // Import hook modules (dynamic import for conditional loading based on agent type)
-        const [getFileDesignPatternModule, reviewCodeChangeModule]: [ClaudeCodeHookModule, ClaudeCodeHookModule] = await Promise.all([
+        const [getFileDesignPatternModule, reviewCodeChangeModule]: [
+          ClaudeCodeHookModule,
+          ClaudeCodeHookModule,
+        ] = await Promise.all([
           import('../hooks/claudeCode/getFileDesignPattern'),
           import('../hooks/claudeCode/reviewCodeChange'),
         ]);
@@ -158,7 +158,9 @@ export const hookCommand = new Command('hook')
         }
         if (options.llmTool) {
           if (!isValidLlmTool(options.llmTool)) {
-            print.error(`Invalid --llm-tool value: ${options.llmTool}. Supported: claude-code, gemini-cli`);
+            print.error(
+              `Invalid --llm-tool value: ${options.llmTool}. Supported: claude-code, gemini-cli`,
+            );
             process.exit(1);
           }
           adapterConfig.llm_tool = options.llmTool;
@@ -169,10 +171,12 @@ export const hookCommand = new Command('hook')
           claudeCallbacks,
           Object.keys(adapterConfig).length > 0 ? adapterConfig : undefined,
         );
-
       } else if (agent === GEMINI_CLI) {
         // Import hook modules (dynamic import for conditional loading based on agent type)
-        const [getFileDesignPatternModule, reviewCodeChangeModule]: [GeminiCliHookModule, GeminiCliHookModule] = await Promise.all([
+        const [getFileDesignPatternModule, reviewCodeChangeModule]: [
+          GeminiCliHookModule,
+          GeminiCliHookModule,
+        ] = await Promise.all([
           import('../hooks/geminiCli/getFileDesignPattern'),
           import('../hooks/geminiCli/reviewCodeChange'),
         ]);
@@ -206,13 +210,16 @@ export const hookCommand = new Command('hook')
         const adapter = new GeminiCliAdapter();
 
         // Build config object with optional tool_config and llm_tool
-        const geminiAdapterConfig: { tool_config?: Record<string, unknown>; llm_tool?: string } = {};
+        const geminiAdapterConfig: { tool_config?: Record<string, unknown>; llm_tool?: string } =
+          {};
         if (toolConfig) {
           geminiAdapterConfig.tool_config = toolConfig;
         }
         if (options.llmTool) {
           if (!isValidLlmTool(options.llmTool)) {
-            print.error(`Invalid --llm-tool value: ${options.llmTool}. Supported: claude-code, gemini-cli`);
+            print.error(
+              `Invalid --llm-tool value: ${options.llmTool}. Supported: claude-code, gemini-cli`,
+            );
             process.exit(1);
           }
           geminiAdapterConfig.llm_tool = options.llmTool;
@@ -223,7 +230,6 @@ export const hookCommand = new Command('hook')
           geminiCallbacks,
           Object.keys(geminiAdapterConfig).length > 0 ? geminiAdapterConfig : undefined,
         );
-
       } else {
         print.error(`Unsupported agent: ${agent}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);
         process.exit(1);

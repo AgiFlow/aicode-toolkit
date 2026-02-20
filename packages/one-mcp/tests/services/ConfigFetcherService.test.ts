@@ -26,9 +26,7 @@ describe('ConfigFetcherService', () => {
 
   describe('constructor', () => {
     it('should throw error when configFilePath is not provided', () => {
-      expect(() => new ConfigFetcherService({})).toThrow(
-        'configFilePath must be provided'
-      );
+      expect(() => new ConfigFetcherService({})).toThrow('configFilePath must be provided');
     });
 
     it('should create service with configFilePath', () => {
@@ -51,14 +49,17 @@ describe('ConfigFetcherService', () => {
         useCache: false, // Disable cache for predictable test behavior
       });
 
-      await writeFile(tempConfigPath, JSON.stringify({
-        mcpServers: {
-          test: {
-            command: 'node',
-            args: ['server.js'],
+      await writeFile(
+        tempConfigPath,
+        JSON.stringify({
+          mcpServers: {
+            test: {
+              command: 'node',
+              args: ['server.js'],
+            },
           },
-        },
-      }));
+        }),
+      );
 
       await service.fetchConfiguration();
       expect(service.isCacheValid()).toBe(true);
@@ -70,19 +71,22 @@ describe('ConfigFetcherService', () => {
         cacheTtlMs: 100,
       });
 
-      await writeFile(tempConfigPath, JSON.stringify({
-        mcpServers: {
-          test: {
-            command: 'node',
-            args: ['server.js'],
+      await writeFile(
+        tempConfigPath,
+        JSON.stringify({
+          mcpServers: {
+            test: {
+              command: 'node',
+              args: ['server.js'],
+            },
           },
-        },
-      }));
+        }),
+      );
 
       await service.fetchConfiguration();
 
       // Wait for cache to expire
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
       expect(service.isCacheValid()).toBe(false);
     });
   });
@@ -138,9 +142,7 @@ mcpServers:
         configFilePath: '/nonexistent/config.json',
       });
 
-      await expect(service.fetchConfiguration()).rejects.toThrow(
-        'Config file not found'
-      );
+      await expect(service.fetchConfiguration()).rejects.toThrow('Config file not found');
     });
 
     it('should throw error if file is invalid JSON', async () => {
@@ -151,9 +153,7 @@ mcpServers:
         useCache: false, // Disable cache for predictable test behavior
       });
 
-      await expect(service.fetchConfiguration()).rejects.toThrow(
-        'Failed to load config file'
-      );
+      await expect(service.fetchConfiguration()).rejects.toThrow('Failed to load config file');
     });
 
     it('should throw error if config structure is invalid', async () => {
@@ -167,7 +167,6 @@ mcpServers:
       await expect(service.fetchConfiguration()).rejects.toThrow();
     });
   });
-
 
   describe('caching', () => {
     it('should cache configuration and return cached value on subsequent calls', async () => {
@@ -223,7 +222,7 @@ mcpServers:
 
       // Update file and wait for cache to expire
       await writeFile(tempConfigPath, JSON.stringify(config2));
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       const result2 = await service.fetchConfiguration();
 
@@ -256,7 +255,6 @@ mcpServers:
     });
   });
 
-
   describe('validation', () => {
     it('should throw error if mcpServers is missing', async () => {
       await writeFile(tempConfigPath, JSON.stringify({}));
@@ -270,9 +268,12 @@ mcpServers:
     });
 
     it('should throw error if mcpServers is not an object', async () => {
-      await writeFile(tempConfigPath, JSON.stringify({
-        mcpServers: 'invalid',
-      }));
+      await writeFile(
+        tempConfigPath,
+        JSON.stringify({
+          mcpServers: 'invalid',
+        }),
+      );
 
       const service = new ConfigFetcherService({
         configFilePath: tempConfigPath,
@@ -291,7 +292,9 @@ mcpServers:
     afterEach(async () => {
       vi.unstubAllGlobals();
       // Clean up cache between tests
-      const { RemoteConfigCacheService } = await import('../../src/services/RemoteConfigCacheService');
+      const { RemoteConfigCacheService } = await import(
+        '../../src/services/RemoteConfigCacheService'
+      );
       const cacheService = new RemoteConfigCacheService();
       await cacheService.clearAll();
     });
@@ -337,10 +340,9 @@ mcpServers:
 
       expect(result.mcpServers['local-server']).toBeDefined();
       expect(result.mcpServers['remote-server']).toBeDefined();
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://example.com/mcp-config.json',
-        { headers: {} }
-      );
+      expect(global.fetch).toHaveBeenCalledWith('https://example.com/mcp-config.json', {
+        headers: {},
+      });
     });
 
     it('should use local-priority merge strategy by default', async () => {
@@ -438,8 +440,10 @@ mcpServers:
         mcpServers: {},
         remoteConfigs: [
           {
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             url: '${TEST_API_URL}/mcp-config.json',
             headers: {
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
               Authorization: 'Bearer ${TEST_API_KEY}',
             },
           },
@@ -469,14 +473,11 @@ mcpServers:
 
       await service.fetchConfiguration();
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://example.com/mcp-config.json',
-        {
-          headers: {
-            Authorization: 'Bearer secret-key',
-          },
-        }
-      );
+      expect(global.fetch).toHaveBeenCalledWith('https://example.com/mcp-config.json', {
+        headers: {
+          Authorization: 'Bearer secret-key',
+        },
+      });
 
       delete process.env.TEST_API_URL;
       delete process.env.TEST_API_KEY;
@@ -627,7 +628,7 @@ mcpServers:
         fetchOrder.push(currentFetch);
 
         // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
 
         if (url.includes('config1.json')) {
           return { ok: true, json: async () => remoteConfig1 };
@@ -669,7 +670,9 @@ mcpServers:
 
     afterEach(async () => {
       vi.unstubAllGlobals();
-      const { RemoteConfigCacheService } = await import('../../src/services/RemoteConfigCacheService');
+      const { RemoteConfigCacheService } = await import(
+        '../../src/services/RemoteConfigCacheService'
+      );
       const cacheService = new RemoteConfigCacheService();
       await cacheService.clearAll();
     });
@@ -762,7 +765,9 @@ mcpServers:
       expect(global.fetch).toHaveBeenCalledTimes(2);
 
       // Verify cache was still written
-      const { RemoteConfigCacheService } = await import('../../src/services/RemoteConfigCacheService');
+      const { RemoteConfigCacheService } = await import(
+        '../../src/services/RemoteConfigCacheService'
+      );
       const cacheService = new RemoteConfigCacheService();
       const cachedConfig = await cacheService.get('https://example.com/config.json');
       expect(cachedConfig).not.toBeNull();
@@ -806,7 +811,7 @@ mcpServers:
       expect(global.fetch).toHaveBeenCalledTimes(1);
 
       // Wait for cache to expire
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       // Second call with new instance - should fetch again (cache expired)
       const service2 = new ConfigFetcherService({

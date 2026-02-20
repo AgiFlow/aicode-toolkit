@@ -132,7 +132,9 @@ features:
       mockStat.mockResolvedValue({ isFile: (): boolean => true });
       mockReadFile.mockResolvedValue(validYaml);
 
-      const result = await tool.execute({ file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml` });
+      const result = await tool.execute({
+        file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml`,
+      });
 
       expect(result.isError).toBeFalsy();
       const content = result.content[0];
@@ -153,7 +155,9 @@ features:
       mockStat.mockResolvedValue({ isFile: (): boolean => true });
       mockReadFile.mockResolvedValue('features: []');
 
-      const result = await tool.execute({ file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml` });
+      const result = await tool.execute({
+        file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml`,
+      });
 
       expect(result.isError).toBeFalsy();
       const content = result.content[0];
@@ -169,7 +173,9 @@ features:
       mockStat.mockResolvedValue({ isFile: (): boolean => true });
       mockReadFile.mockResolvedValue('');
 
-      const result = await tool.execute({ file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml` });
+      const result = await tool.execute({
+        file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml`,
+      });
 
       expect(result.isError).toBeFalsy();
       const content = result.content[0];
@@ -194,7 +200,9 @@ features:
       mockStat.mockResolvedValue({ isFile: (): boolean => true });
       mockReadFile.mockResolvedValue(invalidYaml);
 
-      const result = await tool.execute({ file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml` });
+      const result = await tool.execute({
+        file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml`,
+      });
 
       expect(result.isError).toBe(true);
       const content = result.content[0];
@@ -220,7 +228,9 @@ features:
       mockStat.mockResolvedValue({ isFile: (): boolean => true });
       mockReadFile.mockResolvedValue(invalidYaml);
 
-      const result = await tool.execute({ file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml` });
+      const result = await tool.execute({
+        file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml`,
+      });
 
       // Note: js-yaml may or may not catch duplicate keys depending on version
       // This test verifies our error handling works regardless
@@ -242,7 +252,9 @@ features:
       mockStat.mockResolvedValue({ isFile: (): boolean => true });
       mockReadFile.mockResolvedValue(invalidYaml);
 
-      const result = await tool.execute({ file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml` });
+      const result = await tool.execute({
+        file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml`,
+      });
 
       expect(result.isError).toBe(true);
       const content = result.content[0];
@@ -266,7 +278,9 @@ features:
       mockStat.mockResolvedValue({ isFile: (): boolean => true });
       mockReadFile.mockResolvedValue(invalidYaml);
 
-      const result = await tool.execute({ file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml` });
+      const result = await tool.execute({
+        file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml`,
+      });
 
       expect(result.isError).toBe(true);
       const content = result.content[0];
@@ -290,7 +304,9 @@ features:
       mockStat.mockResolvedValue({ isFile: (): boolean => true });
       mockReadFile.mockResolvedValue(invalidYaml);
 
-      const result = await tool.execute({ file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml` });
+      const result = await tool.execute({
+        file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml`,
+      });
 
       expect(result.isError).toBe(true);
       const content = result.content[0];
@@ -315,7 +331,9 @@ features:
       mockStat.mockResolvedValue({ isFile: (): boolean => true });
       mockReadFile.mockResolvedValue(invalidYaml);
 
-      const result = await tool.execute({ file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml` });
+      const result = await tool.execute({
+        file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml`,
+      });
 
       expect(result.isError).toBe(true);
       const content = result.content[0];
@@ -332,7 +350,9 @@ features:
     it('should handle file not found', async () => {
       mockAccess.mockRejectedValue(new Error('ENOENT'));
 
-      const result = await tool.execute({ file_path: `${MOCK_WORKSPACE_ROOT}/nonexistent/architect.yaml` });
+      const result = await tool.execute({
+        file_path: `${MOCK_WORKSPACE_ROOT}/nonexistent/architect.yaml`,
+      });
 
       expect(result.isError).toBe(true);
       const content = result.content[0];
@@ -476,7 +496,9 @@ features:
       mockStat.mockResolvedValue({ isFile: (): boolean => true });
       mockReadFile.mockResolvedValue('features: []');
 
-      const result = await tool.execute({ file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml` });
+      const result = await tool.execute({
+        file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml`,
+      });
 
       const content = result.content[0];
       if (content.type === 'text') {
@@ -489,7 +511,9 @@ features:
       mockStat.mockResolvedValue({ isFile: (): boolean => true });
       mockReadFile.mockResolvedValue('features: []');
 
-      const result = await tool.execute({ file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml` });
+      const result = await tool.execute({
+        file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml`,
+      });
 
       const content = result.content[0];
       if (content.type === 'text') {
@@ -503,7 +527,9 @@ features:
       mockStat.mockResolvedValue({ isFile: (): boolean => true });
       mockReadFile.mockResolvedValue('invalid: yaml: syntax:');
 
-      const result = await tool.execute({ file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml` });
+      const result = await tool.execute({
+        file_path: `${MOCK_WORKSPACE_ROOT}/test/architect.yaml`,
+      });
 
       const content = result.content[0];
       if (content.type === 'text') {
@@ -549,7 +575,9 @@ features:
       mockStat.mockResolvedValue({ isFile: (): boolean => true });
       mockReadFile.mockResolvedValue('features: []');
 
-      const result = await tool.execute({ file_path: '/different/templates/nextjs/architect.yaml' });
+      const result = await tool.execute({
+        file_path: '/different/templates/nextjs/architect.yaml',
+      });
 
       expect(result.isError).toBeFalsy();
       const content = result.content[0];

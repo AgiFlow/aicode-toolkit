@@ -222,7 +222,8 @@ export class ValidateArchitectTool implements Tool<ValidateArchitectToolInput> {
           const resolvedTemplatesRoot = path.resolve(templatesRoot);
           const relativeToTemplates = path.relative(resolvedTemplatesRoot, resolvedPath);
           const isWithinTemplates =
-            !relativeToTemplates.startsWith(PARENT_DIR_PREFIX) && !path.isAbsolute(relativeToTemplates);
+            !relativeToTemplates.startsWith(PARENT_DIR_PREFIX) &&
+            !path.isAbsolute(relativeToTemplates);
 
           if (isWithinTemplates) {
             return { success: true, path: resolvedPath };
@@ -257,6 +258,7 @@ export class ValidateArchitectTool implements Tool<ValidateArchitectToolInput> {
       };
     }
 
+    // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
     const templatePath = path.join(templatesRoot, input.template_name!);
 
     // Check template directory exists

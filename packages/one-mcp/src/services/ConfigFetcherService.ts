@@ -21,7 +21,12 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import yaml from 'js-yaml';
 import type { RemoteMcpConfiguration } from '../types';
-import { parseMcpConfig, validateRemoteConfigSource, type RemoteConfigSource, type ClaudeCodeMcpConfig } from '../utils/mcpConfigSchema';
+import {
+  parseMcpConfig,
+  validateRemoteConfigSource,
+  type RemoteConfigSource,
+  type ClaudeCodeMcpConfig,
+} from '../utils/mcpConfigSchema';
 import { RemoteConfigCacheService } from './RemoteConfigCacheService';
 
 export interface ConfigFetcherOptions {
@@ -211,7 +216,7 @@ export class ConfigFetcherService {
             Object.entries(source.headers).map(([key, value]) => [
               key,
               this.interpolateEnvVars(value),
-            ])
+            ]),
           )
         : {};
 
@@ -224,9 +229,7 @@ export class ConfigFetcherService {
       });
 
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch remote config: ${response.status} ${response.statusText}`
-        );
+        throw new Error(`Failed to fetch remote config: ${response.status} ${response.statusText}`);
       }
 
       const rawConfig = await response.json();
@@ -271,7 +274,7 @@ export class ConfigFetcherService {
   private mergeConfigurations(
     localConfig: RemoteMcpConfiguration,
     remoteConfig: RemoteMcpConfiguration,
-    mergeStrategy: 'local-priority' | 'remote-priority' | 'merge-deep'
+    mergeStrategy: 'local-priority' | 'remote-priority' | 'merge-deep',
   ): RemoteMcpConfiguration {
     switch (mergeStrategy) {
       case 'local-priority':
@@ -346,7 +349,6 @@ export class ConfigFetcherService {
         throw new Error(`Unknown merge strategy: ${mergeStrategy}`);
     }
   }
-
 
   /**
    * Clear the cached configuration

@@ -11,12 +11,15 @@ import type {
   BoilerplateOptions,
   FeatureOptions,
   ParsedInclude,
+  ScaffoldConfigEntry,
   ScaffoldResult,
 } from '../types/scaffold';
 import { applySchemaDefaults } from '../utils/schemaDefaults';
 import { ScaffoldProcessingService } from './ScaffoldProcessingService';
 
 export class ScaffoldService implements IScaffoldService {
+  static readonly DEFAULT_MARKER = '@scaffold-generated';
+
   private readonly templatesRootPath: string;
   private readonly processingService: ScaffoldProcessingService;
 
@@ -49,6 +52,7 @@ export class ScaffoldService implements IScaffoldService {
         templateFolder,
         boilerplateName,
         variables = {},
+        marker,
       } = options;
 
       // For boilerplates, create a new directory (unless projectName is empty for monolith)
@@ -102,7 +106,7 @@ export class ScaffoldService implements IScaffoldService {
 
       // Find the specific boilerplate by name
       const boilerplateArray = architectConfig.boilerplate;
-      let config;
+      let config: ScaffoldConfigEntry | undefined;
       if (Array.isArray(boilerplateArray)) {
         config = boilerplateArray.find((b: any) => b.name === boilerplateName);
         if (!config) {
@@ -132,6 +136,7 @@ export class ScaffoldService implements IScaffoldService {
         templatePath,
         allVariables,
         scaffoldType: 'boilerplate',
+        marker: marker ?? ScaffoldService.DEFAULT_MARKER,
       });
     } catch (error) {
       return {
@@ -146,7 +151,7 @@ export class ScaffoldService implements IScaffoldService {
    */
   async useFeature(options: FeatureOptions): Promise<ScaffoldResult> {
     try {
-      const { projectPath, templateFolder, featureName, variables = {} } = options;
+      const { projectPath, templateFolder, featureName, variables = {}, marker } = options;
 
       // For features, targetPath is the project path itself (no new directory)
       const targetPath = path.resolve(projectPath);
@@ -190,7 +195,7 @@ export class ScaffoldService implements IScaffoldService {
 
       // Find the specific feature by name
       const featureArray = architectConfig.features;
-      let config;
+      let config: ScaffoldConfigEntry | undefined;
       if (Array.isArray(featureArray)) {
         config = featureArray.find((f: any) => f.name === featureName);
         if (!config) {
@@ -218,12 +223,35 @@ export class ScaffoldService implements IScaffoldService {
         templatePath,
         allVariables,
         scaffoldType: 'feature',
+        marker: marker ?? ScaffoldService.DEFAULT_MARKER,
       });
     } catch (error) {
       return {
         success: false,
         message: `Error scaffolding feature: ${error instanceof Error ? error.message : String(error)}`,
       };
+    }
+  }
+
+  /**
+   * Inject scaffold marker comment into generated code files.
+   * Prepends `// <marker>` to .ts/.tsx/.js/.jsx files that don't already have it.
+   * Fails silently — marker injection should never break scaffold output.
+   */
+  private async injectScaffoldMarkers(createdFiles: string[], marker: string): Promise<void> {
+    const codeExtensions = new Set(['.ts', '.tsx', '.js', '.jsx']);
+    const markerComment = `// ${marker}`;
+
+    for (const filePath of createdFiles) {
+      if (!codeExtensions.has(path.extname(filePath))) continue;
+
+      try {
+        const content = await this.fileSystem.readFile(filePath, 'utf8');
+        if (content.startsWith(markerComment)) continue; // already injected
+        await this.fileSystem.writeFile(filePath, `${markerComment}\n${content}`);
+      } catch (error) {
+        log.warn(`Failed to inject scaffold marker into ${filePath}:`, error);
+      }
     }
   }
 
@@ -236,8 +264,9 @@ export class ScaffoldService implements IScaffoldService {
     templatePath: string;
     allVariables: Record<string, any>;
     scaffoldType: 'boilerplate' | 'feature';
+    marker?: string;
   }): Promise<ScaffoldResult> {
-    const { config, targetPath, templatePath, allVariables, scaffoldType } = params;
+    const { config, targetPath, templatePath, allVariables, scaffoldType, marker } = params;
 
     // Check if config has a custom generator
     log.debug('Config generator:', config.generator);
@@ -353,6 +382,11 @@ export class ScaffoldService implements IScaffoldService {
         );
       }),
     );
+
+    // Inject scaffold marker into generated code files if marker is provided
+    if (marker && createdFiles.length > 0) {
+      await this.injectScaffoldMarkers(createdFiles, marker);
+    }
 
     // Prepare result message with information about existing files
     let message = `Successfully scaffolded ${scaffoldType} at ${targetPath}`;

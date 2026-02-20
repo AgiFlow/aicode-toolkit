@@ -58,7 +58,7 @@ export class ListThemesTool implements Tool<ListThemesInput> {
     return {
       name: ListThemesTool.TOOL_NAME,
       description:
-        'List all available theme configurations. Reads themes from CSS files configured in the app\'s project.json style-system config.',
+        "List all available theme configurations. Reads themes from CSS files configured in the app's project.json style-system config.",
       inputSchema: {
         type: 'object',
         properties: {

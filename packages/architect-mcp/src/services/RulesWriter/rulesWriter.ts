@@ -88,11 +88,7 @@ export class RulesWriter {
       }
 
       // Resolve paths based on global or template-specific
-      const pathResult = await this.resolveRulesPath(
-        templatesRoot,
-        isGlobal,
-        input.template_name,
-      );
+      const pathResult = await this.resolveRulesPath(templatesRoot, isGlobal, input.template_name);
 
       if (!pathResult.success) {
         return pathResult;
@@ -284,10 +280,7 @@ export class RulesWriter {
   /**
    * Write rules config to YAML file
    */
-  private async writeRulesConfig(
-    rulesPath: string,
-    rulesConfig: RulesYamlConfig,
-  ): Promise<void> {
+  private async writeRulesConfig(rulesPath: string, rulesConfig: RulesYamlConfig): Promise<void> {
     const yamlContent = yaml.dump(rulesConfig, {
       indent: YAML_INDENT,
       lineWidth: YAML_NO_LINE_WRAP,

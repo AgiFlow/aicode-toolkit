@@ -124,7 +124,8 @@ export class GetFileDesignPatternHook {
 
       // First edit - get design patterns and deny to show them to Claude
       // Validate llm_tool before passing to tool constructor
-      const llmTool = context.llm_tool && isValidLlmTool(context.llm_tool) ? context.llm_tool : undefined;
+      const llmTool =
+        context.llm_tool && isValidLlmTool(context.llm_tool) ? context.llm_tool : undefined;
       const tool = new GetFileDesignPatternTool({
         llmTool,
         toolConfig: context.tool_config,
@@ -166,7 +167,8 @@ export class GetFileDesignPatternHook {
       }
 
       // Format patterns for LLM
-      let message = 'The hook is blocked only once to provide guidelines for this file. You must follow these design patterns when editing/writing this file:\n\n';
+      let message =
+        'The hook is blocked only once to provide guidelines for this file. You must follow these design patterns when editing/writing this file:\n\n';
       message += `**Matched file patterns:** ${filePatterns}\n\n`;
 
       for (const pattern of data.matched_patterns) {

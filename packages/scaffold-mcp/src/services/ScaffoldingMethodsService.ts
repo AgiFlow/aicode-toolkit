@@ -40,6 +40,8 @@ export interface UseScaffoldMethodRequest {
   variables: Record<string, any>;
   /** Optional session ID for logging scaffold execution */
   sessionId?: string;
+  /** Optional scaffold-generated marker tag to inject into generated code files (default: @scaffold-generated) */
+  marker?: string;
 }
 
 interface ArchitectConfig {
@@ -309,7 +311,7 @@ export class ScaffoldingMethodsService {
   }
 
   async useScaffoldMethod(request: UseScaffoldMethodRequest): Promise<ScaffoldResult> {
-    const { projectPath, scaffold_feature_name, variables, sessionId } = request;
+    const { projectPath, scaffold_feature_name, variables, sessionId, marker } = request;
 
     const absoluteProjectPath = await this.resolveProjectPath(projectPath);
 
@@ -349,6 +351,7 @@ export class ScaffoldingMethodsService {
         appPath: absoluteProjectPath,
         appName: projectName,
       },
+      marker,
     });
 
     if (!result.success) {

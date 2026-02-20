@@ -94,7 +94,8 @@ export class GetCSSClassesTool implements Tool<GetCSSClassesInput> {
           category: {
             type: 'string',
             enum: ['colors', 'typography', 'spacing', 'effects', 'all'],
-            description: "Category filter: 'colors', 'typography', 'spacing', 'effects', 'all' (default)",
+            description:
+              "Category filter: 'colors', 'typography', 'spacing', 'effects', 'all' (default)",
           },
           appPath: {
             type: 'string',
@@ -176,7 +177,9 @@ export class GetCSSClassesTool implements Tool<GetCSSClassesInput> {
       const config = await getAppDesignSystemConfig(appPath);
       if (config.themePath) {
         // Resolve themePath relative to app directory
-        const resolvedAppPath = path.isAbsolute(appPath) ? appPath : path.join(workspaceRoot, appPath);
+        const resolvedAppPath = path.isAbsolute(appPath)
+          ? appPath
+          : path.join(workspaceRoot, appPath);
         return path.resolve(resolvedAppPath, config.themePath);
       }
     }

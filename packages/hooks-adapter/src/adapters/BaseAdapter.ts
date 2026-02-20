@@ -57,8 +57,13 @@ export abstract class BaseAdapter<TContext = any> {
 
       // If decision is 'skip', don't output anything and let Claude continue normally
       if (response.decision === 'skip') {
-        process.exit(0);
+        process.exit(response.exitCode ?? 0);
         return;
+      }
+
+      // Write userMessage to stderr if present (visible to user, not LLM)
+      if (response.userMessage) {
+        process.stderr.write(`${response.userMessage}\n`);
       }
 
       // Format response for AI agent
@@ -66,7 +71,7 @@ export abstract class BaseAdapter<TContext = any> {
 
       // Write to stdout
       console.log(output);
-      process.exit(0);
+      process.exit(response.exitCode ?? 0);
     } catch (error) {
       this.handleError(error);
     }
@@ -108,12 +113,17 @@ export abstract class BaseAdapter<TContext = any> {
         return;
       }
 
+      // Write userMessage to stderr if present (visible to user, not LLM)
+      if (finalResponse.userMessage) {
+        process.stderr.write(`${finalResponse.userMessage}\n`);
+      }
+
       // Format and output the first non-skip response
       const output = this.formatOutput(finalResponse);
 
       // Write to stdout
       console.log(output);
-      process.exit(0);
+      process.exit(finalResponse.exitCode ?? 0);
     } catch (error) {
       this.handleError(error);
     }

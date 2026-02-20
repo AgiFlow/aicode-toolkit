@@ -27,12 +27,7 @@ import * as yaml from 'js-yaml';
 import { minimatch } from 'minimatch';
 import * as path from 'node:path';
 import type { RulesYamlConfig, RuleSection, ProjectConfig } from '../../types';
-import {
-  RULES_FILENAME,
-  SRC_PREFIX,
-  UTF8_ENCODING,
-  GLOB_NEGATION_PREFIX,
-} from '../../constants';
+import { RULES_FILENAME, SRC_PREFIX, UTF8_ENCODING, GLOB_NEGATION_PREFIX } from '../../constants';
 
 export class RuleFinder {
   private projectCache: Map<string, ProjectConfig> = new Map();
@@ -262,6 +257,7 @@ export class RuleFinder {
 
     // Merge all rules in priority order: project -> template -> global
     return {
+      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       ...baseConfig!,
       rules: [
         ...(projectRules?.rules || []),
@@ -280,6 +276,7 @@ export class RuleFinder {
   }> {
     // Check cache
     if (this.rulesCache.has(sourceTemplate)) {
+      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       const cached = this.rulesCache.get(sourceTemplate)!;
       const templatesRoot = await TemplatesManagerService.findTemplatesPath(this.workspaceRoot);
       if (!templatesRoot) {
@@ -355,9 +352,7 @@ export class RuleFinder {
           : [ruleSection.pattern];
 
       // Separate positive and negative (negated) patterns
-      const positivePatterns = patterns.filter(
-        (p) => !p.startsWith(GLOB_NEGATION_PREFIX),
-      );
+      const positivePatterns = patterns.filter((p) => !p.startsWith(GLOB_NEGATION_PREFIX));
       const negativePatterns = patterns
         .filter((p) => p.startsWith(GLOB_NEGATION_PREFIX))
         .map((p) => p.slice(GLOB_NEGATION_PREFIX.length)); // Remove the negation prefix
@@ -372,9 +367,7 @@ export class RuleFinder {
           positivePatterns.some((pattern) => minimatch(pathVariant, pattern));
 
         // Must NOT match any negative pattern
-        const matchesNegative = negativePatterns.some((pattern) =>
-          minimatch(pathVariant, pattern),
-        );
+        const matchesNegative = negativePatterns.some((pattern) => minimatch(pathVariant, pattern));
 
         if (matchesPositive && !matchesNegative) {
           return ruleSection;

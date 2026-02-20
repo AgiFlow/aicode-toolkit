@@ -91,7 +91,10 @@ export const mcpServeCommand = new Command('mcp-serve')
   .option('--host <host>', 'Host to bind to (http/sse only)', 'localhost')
   .option('-c, --config <path>', 'Path to MCP server configuration file')
   .option('--no-cache', 'Disable configuration caching, always reload from config file')
-  .option('--id <id>', 'Unique server identifier (overrides config file id, auto-generated if not provided)')
+  .option(
+    '--id <id>',
+    'Unique server identifier (overrides config file id, auto-generated if not provided)',
+  )
   .action(async (options: McpServeOptions): Promise<void> => {
     const transportType = options.type.toLowerCase();
 

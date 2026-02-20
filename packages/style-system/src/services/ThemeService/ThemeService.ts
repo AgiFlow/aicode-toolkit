@@ -73,7 +73,10 @@ export class ThemeService {
     }
 
     // Otherwise, search for common CSS locations
-    const cssPatterns = ['**/packages/frontend/web-theme/src/**/*.css', '**/packages/frontend/shared-theme/**/*.css'];
+    const cssPatterns = [
+      '**/packages/frontend/web-theme/src/**/*.css',
+      '**/packages/frontend/shared-theme/**/*.css',
+    ];
 
     const cssFiles: string[] = [];
 
@@ -217,7 +220,10 @@ export default WrappedComponent;
             activeBrand = result.value.name;
           }
         } else {
-          log.warn(`[ThemeService] Failed to process theme file ${themeFiles[index]}:`, result.reason);
+          log.warn(
+            `[ThemeService] Failed to process theme file ${themeFiles[index]}:`,
+            result.reason,
+          );
         }
       }
 
@@ -226,7 +232,9 @@ export default WrappedComponent;
         activeBrand,
       };
     } catch (error) {
-      throw new Error(`Failed to list themes: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to list themes: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }

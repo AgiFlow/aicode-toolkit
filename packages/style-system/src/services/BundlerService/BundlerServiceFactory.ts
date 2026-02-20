@@ -161,7 +161,7 @@ export async function getBundlerServiceFromConfig(): Promise<BaseBundlerService>
   if (!customServicePath.startsWith(normalizedWorkspaceRoot + path.sep)) {
     log.error(
       `[BundlerServiceFactory] Security error: customService path "${config.customService}" ` +
-      `resolves outside workspace root`,
+        `resolves outside workspace root`,
     );
     cachedBundlerService = createDefaultBundlerService();
     return cachedBundlerService;
@@ -169,10 +169,10 @@ export async function getBundlerServiceFromConfig(): Promise<BaseBundlerService>
 
   // Validate file extension is a valid source file
   const ext = path.extname(customServicePath).toLowerCase();
-  if (!VALID_SERVICE_EXTENSIONS.includes(ext as typeof VALID_SERVICE_EXTENSIONS[number])) {
+  if (!VALID_SERVICE_EXTENSIONS.includes(ext as (typeof VALID_SERVICE_EXTENSIONS)[number])) {
     log.error(
       `[BundlerServiceFactory] Invalid file extension "${ext}" for customService. ` +
-      `Expected one of: ${VALID_SERVICE_EXTENSIONS.join(', ')}`,
+        `Expected one of: ${VALID_SERVICE_EXTENSIONS.join(', ')}`,
     );
     cachedBundlerService = createDefaultBundlerService();
     return cachedBundlerService;
@@ -207,7 +207,7 @@ export async function getBundlerServiceFromConfig(): Promise<BaseBundlerService>
     if (!cachedBundlerService) {
       throw new Error(
         'Custom bundler service module must export a class extending BaseBundlerService as default, ' +
-        'an instance as default, or a getInstance() function',
+          'an instance as default, or a getInstance() function',
       );
     }
 
@@ -226,13 +226,14 @@ export async function getBundlerServiceFromConfig(): Promise<BaseBundlerService>
     ] as const;
 
     const missingMethods = requiredMethods.filter(
-      (method) => typeof (cachedBundlerService as unknown as Record<string, unknown>)[method] !== 'function',
+      (method) =>
+        typeof (cachedBundlerService as unknown as Record<string, unknown>)[method] !== 'function',
     );
 
     if (missingMethods.length > 0) {
       throw new Error(
         `Custom bundler service must implement BaseBundlerService interface. ` +
-        `Missing methods: ${missingMethods.join(', ')}`,
+          `Missing methods: ${missingMethods.join(', ')}`,
       );
     }
 

@@ -83,53 +83,53 @@ function interpolateEnvVarsInObject<T>(obj: T): T {
  */
 const PRIVATE_IP_PATTERNS = [
   // IPv4 ranges
-  /^127\./,                          // Loopback (127.0.0.0/8)
-  /^10\./,                           // Private Class A (10.0.0.0/8)
-  /^172\.(1[6-9]|2\d|3[01])\./,     // Private Class B (172.16.0.0/12)
-  /^192\.168\./,                     // Private Class C (192.168.0.0/16)
-  /^169\.254\./,                     // Link-local (169.254.0.0/16)
-  /^0\./,                            // Invalid (0.0.0.0/8)
-  /^224\./,                          // Multicast (224.0.0.0/4)
-  /^240\./,                          // Reserved (240.0.0.0/4)
+  /^127\./, // Loopback (127.0.0.0/8)
+  /^10\./, // Private Class A (10.0.0.0/8)
+  /^172\.(1[6-9]|2\d|3[01])\./, // Private Class B (172.16.0.0/12)
+  /^192\.168\./, // Private Class C (192.168.0.0/16)
+  /^169\.254\./, // Link-local (169.254.0.0/16)
+  /^0\./, // Invalid (0.0.0.0/8)
+  /^224\./, // Multicast (224.0.0.0/4)
+  /^240\./, // Reserved (240.0.0.0/4)
 
   // Localhost
-  /^localhost$/i,                    // Localhost
-  /^.*\.localhost$/i,                // *.localhost
+  /^localhost$/i, // Localhost
+  /^.*\.localhost$/i, // *.localhost
 
   // IPv6 loopback (multiple notations)
-  /^\[::\]/,                         // IPv6 loopback compressed (::)
-  /^\[::1\]/,                        // IPv6 loopback (::1)
-  /^\[0:0:0:0:0:0:0:1\]/,           // IPv6 loopback full notation
+  /^\[::\]/, // IPv6 loopback compressed (::)
+  /^\[::1\]/, // IPv6 loopback (::1)
+  /^\[0:0:0:0:0:0:0:1\]/, // IPv6 loopback full notation
   /^\[0{1,4}:0{1,4}:0{1,4}:0{1,4}:0{1,4}:0{1,4}:0{1,4}:1\]/i, // IPv6 loopback with leading zeros
 
   // IPv6 link-local
-  /^\[fe80:/i,                       // IPv6 link-local (fe80::/10)
+  /^\[fe80:/i, // IPv6 link-local (fe80::/10)
 
   // IPv6 unique local
-  /^\[fc00:/i,                       // IPv6 unique local (fc00::/7)
-  /^\[fd00:/i,                       // IPv6 unique local (fd00::/8)
+  /^\[fc00:/i, // IPv6 unique local (fc00::/7)
+  /^\[fd00:/i, // IPv6 unique local (fd00::/8)
 
   // IPv4-mapped IPv6 addresses (::ffff:x.x.x.x)
   // Note: URL parser converts these to hex notation, e.g., ::ffff:127.0.0.1 → ::ffff:7f00:1
-  /^\[::ffff:127\./i,               // IPv4-mapped IPv6 loopback (dotted notation)
-  /^\[::ffff:7f[0-9a-f]{2}:/i,      // IPv4-mapped IPv6 loopback (hex: 127.x.x.x → 7fxx:xxxx)
-  /^\[::ffff:10\./i,                // IPv4-mapped IPv6 private Class A (dotted notation)
-  /^\[::ffff:a[0-9a-f]{2}:/i,       // IPv4-mapped IPv6 private Class A (hex: 10.x.x.x → 0axx:xxxx)
+  /^\[::ffff:127\./i, // IPv4-mapped IPv6 loopback (dotted notation)
+  /^\[::ffff:7f[0-9a-f]{2}:/i, // IPv4-mapped IPv6 loopback (hex: 127.x.x.x → 7fxx:xxxx)
+  /^\[::ffff:10\./i, // IPv4-mapped IPv6 private Class A (dotted notation)
+  /^\[::ffff:a[0-9a-f]{2}:/i, // IPv4-mapped IPv6 private Class A (hex: 10.x.x.x → 0axx:xxxx)
   /^\[::ffff:172\.(1[6-9]|2\d|3[01])\./i, // IPv4-mapped IPv6 private Class B (dotted)
-  /^\[::ffff:ac1[0-9a-f]:/i,        // IPv4-mapped IPv6 private Class B (hex: 172.16-31.x.x → ac1x:xxxx)
-  /^\[::ffff:192\.168\./i,          // IPv4-mapped IPv6 private Class C (dotted notation)
-  /^\[::ffff:c0a8:/i,               // IPv4-mapped IPv6 private Class C (hex: 192.168.x.x → c0a8:xxxx)
-  /^\[::ffff:169\.254\./i,          // IPv4-mapped IPv6 link-local (dotted notation)
-  /^\[::ffff:a9fe:/i,               // IPv4-mapped IPv6 link-local (hex: 169.254.x.x → a9fe:xxxx)
-  /^\[::ffff:0\./i,                 // IPv4-mapped IPv6 invalid
+  /^\[::ffff:ac1[0-9a-f]:/i, // IPv4-mapped IPv6 private Class B (hex: 172.16-31.x.x → ac1x:xxxx)
+  /^\[::ffff:192\.168\./i, // IPv4-mapped IPv6 private Class C (dotted notation)
+  /^\[::ffff:c0a8:/i, // IPv4-mapped IPv6 private Class C (hex: 192.168.x.x → c0a8:xxxx)
+  /^\[::ffff:169\.254\./i, // IPv4-mapped IPv6 link-local (dotted notation)
+  /^\[::ffff:a9fe:/i, // IPv4-mapped IPv6 link-local (hex: 169.254.x.x → a9fe:xxxx)
+  /^\[::ffff:0\./i, // IPv4-mapped IPv6 invalid
 
   // IPv4-compatible IPv6 (deprecated but should still block)
-  /^\[::127\./i,                    // IPv4-compatible IPv6 loopback (dotted notation)
-  /^\[::7f[0-9a-f]{2}:/i,           // IPv4-compatible IPv6 loopback (hex notation)
-  /^\[::10\./i,                     // IPv4-compatible IPv6 private Class A (dotted notation)
-  /^\[::a[0-9a-f]{2}:/i,            // IPv4-compatible IPv6 private Class A (hex notation)
-  /^\[::192\.168\./i,               // IPv4-compatible IPv6 private Class C (dotted notation)
-  /^\[::c0a8:/i,                    // IPv4-compatible IPv6 private Class C (hex notation)
+  /^\[::127\./i, // IPv4-compatible IPv6 loopback (dotted notation)
+  /^\[::7f[0-9a-f]{2}:/i, // IPv4-compatible IPv6 loopback (hex notation)
+  /^\[::10\./i, // IPv4-compatible IPv6 private Class A (dotted notation)
+  /^\[::a[0-9a-f]{2}:/i, // IPv4-compatible IPv6 private Class A (hex notation)
+  /^\[::192\.168\./i, // IPv4-compatible IPv6 private Class C (dotted notation)
+  /^\[::c0a8:/i, // IPv4-compatible IPv6 private Class C (hex notation)
 ];
 
 /**
@@ -147,7 +147,7 @@ function validateUrlSecurity(url: string, security?: RemoteConfigSource['securit
   let parsedUrl: URL;
   try {
     parsedUrl = new URL(url);
-  } catch (error) {
+  } catch (_error) {
     throw new Error(`Invalid URL format: ${url}`);
   }
 
@@ -155,13 +155,13 @@ function validateUrlSecurity(url: string, security?: RemoteConfigSource['securit
   const protocol = parsedUrl.protocol.replace(':', '');
   if (enforceHttps && protocol !== 'https') {
     throw new Error(
-      `HTTPS is required for security. URL uses '${protocol}://'. Set security.enforceHttps: false to allow HTTP.`
+      `HTTPS is required for security. URL uses '${protocol}://'. Set security.enforceHttps: false to allow HTTP.`,
     );
   }
 
   if (protocol !== 'http' && protocol !== 'https') {
     throw new Error(
-      `Invalid URL protocol '${protocol}://'. Only http:// and https:// are allowed.`
+      `Invalid URL protocol '${protocol}://'. Only http:// and https:// are allowed.`,
     );
   }
 
@@ -172,7 +172,7 @@ function validateUrlSecurity(url: string, security?: RemoteConfigSource['securit
 
     if (isPrivateOrLocal) {
       throw new Error(
-        `Private IP addresses and localhost are blocked for security (${hostname}). Set security.allowPrivateIPs: true to allow internal networks.`
+        `Private IP addresses and localhost are blocked for security (${hostname}). Set security.allowPrivateIPs: true to allow internal networks.`,
       );
     }
   }
@@ -202,7 +202,7 @@ export function validateRemoteConfigSource(source: RemoteConfigSource): void {
 
     if (!urlPattern.test(interpolatedUrl)) {
       throw new Error(
-        `Remote config URL "${interpolatedUrl}" does not match validation pattern: ${source.validation.url}`
+        `Remote config URL "${interpolatedUrl}" does not match validation pattern: ${source.validation.url}`,
       );
     }
   }
@@ -212,18 +212,14 @@ export function validateRemoteConfigSource(source: RemoteConfigSource): void {
     // Check if headers are provided in the source
     if (!source.headers) {
       const requiredHeaders = Object.keys(source.validation.headers);
-      throw new Error(
-        `Remote config is missing required headers: ${requiredHeaders.join(', ')}`
-      );
+      throw new Error(`Remote config is missing required headers: ${requiredHeaders.join(', ')}`);
     }
 
     // Validate each header value against its regex pattern
     for (const [headerName, pattern] of Object.entries(source.validation.headers)) {
       // Check if header exists
       if (!(headerName in source.headers)) {
-        throw new Error(
-          `Remote config is missing required header: ${headerName}`
-        );
+        throw new Error(`Remote config is missing required header: ${headerName}`);
       }
 
       // Interpolate environment variables in the header value
@@ -233,7 +229,7 @@ export function validateRemoteConfigSource(source: RemoteConfigSource): void {
       const headerPattern = new RegExp(pattern);
       if (!headerPattern.test(interpolatedHeaderValue)) {
         throw new Error(
-          `Remote config header "${headerName}" value "${interpolatedHeaderValue}" does not match validation pattern: ${pattern}`
+          `Remote config header "${headerName}" value "${interpolatedHeaderValue}" does not match validation pattern: ${pattern}`,
         );
       }
     }
@@ -264,12 +260,14 @@ const PromptConfigSchema = z.object({
 });
 
 // Additional config options (nested under 'config' key)
-const AdditionalConfigSchema = z.object({
-  instruction: z.string().optional(),
-  toolBlacklist: z.array(z.string()).optional(),
-  omitToolDescription: z.boolean().optional(),
-  prompts: z.record(z.string(), PromptConfigSchema).optional(), // Optional prompts to skill conversion
-}).optional();
+const AdditionalConfigSchema = z
+  .object({
+    instruction: z.string().optional(),
+    toolBlacklist: z.array(z.string()).optional(),
+    omitToolDescription: z.boolean().optional(),
+    prompts: z.record(z.string(), PromptConfigSchema).optional(), // Optional prompts to skill conversion
+  })
+  .optional();
 
 // Stdio server config (standard Claude Code format)
 const ClaudeCodeStdioServerSchema = z.object({
@@ -300,16 +298,20 @@ const ClaudeCodeServerConfigSchema = z.union([
 ]);
 
 // Remote config validation schema
-const RemoteConfigValidationSchema = z.object({
-  url: z.string().optional(), // Regex pattern to validate URL
-  headers: z.record(z.string(), z.string()).optional(), // Header name to regex pattern mapping for validating header values
-}).optional();
+const RemoteConfigValidationSchema = z
+  .object({
+    url: z.string().optional(), // Regex pattern to validate URL
+    headers: z.record(z.string(), z.string()).optional(), // Header name to regex pattern mapping for validating header values
+  })
+  .optional();
 
 // Remote config security schema for SSRF protection
-const RemoteConfigSecuritySchema = z.object({
-  allowPrivateIPs: z.boolean().optional(), // Allow private IP ranges (default: false)
-  enforceHttps: z.boolean().optional(), // Enforce HTTPS only (default: true)
-}).optional();
+const RemoteConfigSecuritySchema = z
+  .object({
+    allowPrivateIPs: z.boolean().optional(), // Allow private IP ranges (default: false)
+    enforceHttps: z.boolean().optional(), // Enforce HTTPS only (default: true)
+  })
+  .optional();
 
 // Remote config source schema
 const RemoteConfigSourceSchema = z.object({

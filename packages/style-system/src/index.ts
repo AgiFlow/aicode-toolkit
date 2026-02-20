@@ -42,7 +42,12 @@ export {
   DEFAULT_STYLE_SYSTEM_CONFIG,
   TailwindCSSClassesService,
 } from './services/CssClasses';
-export type { CSSClassCategory, CSSClassesResult, CSSClassValue, StyleSystemConfig } from './services/CssClasses';
+export type {
+  CSSClassCategory,
+  CSSClassesResult,
+  CSSClassValue,
+  StyleSystemConfig,
+} from './services/CssClasses';
 
 // Tools
 export { GetCSSClassesTool } from './tools/GetCSSClassesTool';

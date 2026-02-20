@@ -8,7 +8,10 @@ import {
 } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 import { FileSystemService } from '../services/FileSystemService';
-import { ScaffoldingMethodsService } from '../services/ScaffoldingMethodsService';
+import {
+  ScaffoldingMethodsService,
+  type ListScaffoldingMethodsResult,
+} from '../services/ScaffoldingMethodsService';
 
 /**
  * Scaffold CLI command
@@ -47,7 +50,7 @@ scaffoldCommand
         templatesDir,
       );
 
-      let result;
+      let result: ListScaffoldingMethodsResult;
       let displayName: string;
 
       if (projectPath) {
@@ -242,12 +245,16 @@ scaffoldCommand
 
         if (result.createdFiles && result.createdFiles.length > 0) {
           print.header('\n📁 Created files:');
-          result.createdFiles.forEach((file) => print.debug(`   - ${file}`));
+          result.createdFiles.forEach((file) => {
+            print.debug(`   - ${file}`);
+          });
         }
 
         if (result.warnings && result.warnings.length > 0) {
           messages.warning('\n⚠️  Warnings:');
-          result.warnings.forEach((warning) => print.debug(`   - ${warning}`));
+          result.warnings.forEach((warning) => {
+            print.debug(`   - ${warning}`);
+          });
         }
 
         print.header('\n📋 Next steps:');

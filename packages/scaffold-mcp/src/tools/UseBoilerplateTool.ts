@@ -47,6 +47,12 @@ export class UseBoilerplateTool {
       };
     }
 
+    properties.marker = {
+      type: 'string',
+      description:
+        'Custom scaffold marker tag injected into generated code files (default: @scaffold-generated)',
+    };
+
     return {
       name: UseBoilerplateTool.TOOL_NAME,
       description: description.trim(),
@@ -64,10 +70,11 @@ export class UseBoilerplateTool {
    */
   async execute(args: Record<string, any>): Promise<CallToolResult> {
     try {
-      const { boilerplateName, variables, targetFolderOverride } = args as {
+      const { boilerplateName, variables, targetFolderOverride, marker } = args as {
         boilerplateName?: string;
         variables: Record<string, any>;
         targetFolderOverride?: string;
+        marker?: string;
       };
 
       // Create the request object
@@ -78,6 +85,7 @@ export class UseBoilerplateTool {
         variables,
         targetFolderOverride,
         monolith: this.isMonolith,
+        marker,
       };
 
       // Execute the boilerplate service

@@ -232,7 +232,8 @@ export class BoilerplateService {
     }
 
     // Determine package name and folder name from variables
-    const packageName = variables.packageName || variables.appName;
+    const rawPackageName = variables.packageName ?? variables.appName;
+    const packageName = typeof rawPackageName === 'string' ? rawPackageName : undefined;
     if (!packageName) {
       return {
         success: false,
@@ -266,6 +267,7 @@ export class BoilerplateService {
           appName: folderName,
           sourceTemplate: boilerplate.template_path,
         },
+        marker: request.marker,
       });
 
       if (!result.success) {

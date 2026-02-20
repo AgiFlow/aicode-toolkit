@@ -16,12 +16,19 @@ export const getUiComponentCommand = new Command('get-ui-component')
   .description(
     'Get a screenshot of a UI component rendered with app-specific design system configuration. Returns screenshot path and story file content.',
   )
-  .requiredOption('-c, --component-name <name>', 'The name of the component to capture (e.g., "Button", "Card")')
+  .requiredOption(
+    '-c, --component-name <name>',
+    'The name of the component to capture (e.g., "Button", "Card")',
+  )
   .requiredOption(
     '-a, --app-path <path>',
     'The app path (relative or absolute) to load design system config from (e.g., "apps/agiflow-app")',
   )
-  .option('-s, --story-name <name>', 'The story name to render (e.g., "Playground", "Default")', 'Playground')
+  .option(
+    '-s, --story-name <name>',
+    'The story name to render (e.g., "Playground", "Default")',
+    'Playground',
+  )
   .option('-d, --dark-mode', 'Render the component in dark mode', false)
   .action(async (options: GetUiComponentOptions): Promise<void> => {
     try {

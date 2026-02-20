@@ -81,7 +81,8 @@ export const EQUALS_DELIMITER = '=';
  * // Valid: '@scope/package@1.0.0', 'my-package', 'my_package', '@org/pkg'
  * // Invalid: 'pkg; rm -rf /', 'pkg$(cmd)', 'pkg`whoami`', 'pkg|cat /etc/passwd'
  */
-export const VALID_PACKAGE_NAME_PATTERN = /^(@[a-zA-Z0-9_-]+\/)?[a-zA-Z0-9._-]+(@[a-zA-Z0-9._-]+)?$/;
+export const VALID_PACKAGE_NAME_PATTERN =
+  /^(@[a-zA-Z0-9_-]+\/)?[a-zA-Z0-9._-]+(@[a-zA-Z0-9._-]+)?$/;
 
 // Platform identifiers
 /** Windows platform identifier */

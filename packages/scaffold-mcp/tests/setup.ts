@@ -5,7 +5,7 @@ vi.mock('@modelcontextprotocol/sdk/server/index.js', () => {
   class MockServer {
     public name: string;
     public version: string;
-    public requestHandlers: Map<any, Function>;
+    public requestHandlers: Map<any, (...args: unknown[]) => unknown>;
 
     constructor(info: any, _options?: any) {
       this.name = info.name;
@@ -13,7 +13,7 @@ vi.mock('@modelcontextprotocol/sdk/server/index.js', () => {
       this.requestHandlers = new Map();
     }
 
-    setRequestHandler(schema: any, handler: Function) {
+    setRequestHandler(schema: any, handler: (...args: unknown[]) => unknown) {
       this.requestHandlers.set(schema, handler);
     }
 

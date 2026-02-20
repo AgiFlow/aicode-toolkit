@@ -14,6 +14,7 @@ export interface PaginationResult<T> {
   };
 }
 
+// biome-ignore lint/complexity/noStaticOnlyClass: architectural pattern
 export class PaginationHelper {
   /**
    * Default page size for pagination

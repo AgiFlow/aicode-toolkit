@@ -22,5 +22,8 @@ export { GeminiCliAdapter } from './GeminiCliAdapter';
 // Export adapter-specific types
 export type { ClaudeCodePreToolUseInput } from './ClaudeCodeAdapter';
 export type { ClaudeCodePostToolUseInput } from './ClaudeCodeAdapter';
+export type { ClaudeCodeStopInput } from './ClaudeCodeAdapter';
+export type { ClaudeCodeUserPromptSubmitInput } from './ClaudeCodeAdapter';
+export type { ClaudeCodeTaskCompletedInput } from './ClaudeCodeAdapter';
 export type { ClaudeCodeHookInput } from './ClaudeCodeAdapter';
 export type { GeminiCliHookInput } from './GeminiCliAdapter';

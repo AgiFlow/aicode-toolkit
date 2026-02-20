@@ -1,16 +1,16 @@
 /**
- * ClaudeCodeAdapter - Unified adapter for Claude Code hook format (PreToolUse & PostToolUse)
+ * ClaudeCodeAdapter - Unified adapter for Claude Code hook format
  *
  * DESIGN PATTERNS:
  * - Adapter pattern: Converts Claude Code format to normalized format
  * - Parser pattern: Extracts file paths and operations from tool inputs
- * - State pattern: Stores hook event type to morph behavior between PreToolUse and PostToolUse
+ * - State pattern: Stores hook event type to morph behavior between hook events
  *
  * CODING STANDARDS:
  * - Parse Claude Code JSON stdin format exactly as specified
  * - Format output to match Claude Code hook response schema
  * - Handle missing/optional fields gracefully
- * - Support both PreToolUse and PostToolUse events in one adapter
+ * - Support PreToolUse, PostToolUse, Stop, UserPromptSubmit, TaskCompleted events
  *
  * AVOID:
  * - Assuming all fields are present
@@ -23,17 +23,23 @@ import type { HookResponse } from '../types';
 import { log } from '@agiflowai/aicode-utils';
 
 /**
- * Claude Code hook input format (PreToolUse)
+ * Common fields shared by all Claude Code hook inputs
  */
-export interface ClaudeCodePreToolUseInput {
-  tool_name: string;
-  tool_input: Record<string, any>;
+interface ClaudeCodeCommonFields {
   cwd: string;
   session_id: string;
-  hook_event_name: 'PreToolUse';
-  tool_use_id: string;
   transcript_path: string;
   permission_mode: string;
+}
+
+/**
+ * Claude Code hook input format (PreToolUse)
+ */
+export interface ClaudeCodePreToolUseInput extends ClaudeCodeCommonFields {
+  hook_event_name: 'PreToolUse';
+  tool_name: string;
+  tool_input: Record<string, any>;
+  tool_use_id: string;
   llm_tool?: string;
   tool_config?: Record<string, unknown>;
 }
@@ -41,24 +47,52 @@ export interface ClaudeCodePreToolUseInput {
 /**
  * Claude Code hook input format (PostToolUse)
  */
-export interface ClaudeCodePostToolUseInput {
+export interface ClaudeCodePostToolUseInput extends ClaudeCodeCommonFields {
+  hook_event_name: 'PostToolUse';
   tool_name: string;
   tool_input: Record<string, any>;
   tool_response: Record<string, any>;
-  cwd: string;
-  session_id: string;
-  hook_event_name: 'PostToolUse';
   tool_use_id: string;
-  transcript_path: string;
-  permission_mode: string;
   llm_tool?: string;
   tool_config?: Record<string, unknown>;
 }
 
 /**
- * Union type for both hook input formats
+ * Claude Code hook input format (Stop)
  */
-export type ClaudeCodeHookInput = ClaudeCodePreToolUseInput | ClaudeCodePostToolUseInput;
+export interface ClaudeCodeStopInput extends ClaudeCodeCommonFields {
+  hook_event_name: 'Stop';
+  stop_hook_active: boolean;
+  last_assistant_message: string;
+}
+
+/**
+ * Claude Code hook input format (UserPromptSubmit)
+ */
+export interface ClaudeCodeUserPromptSubmitInput extends ClaudeCodeCommonFields {
+  hook_event_name: 'UserPromptSubmit';
+  prompt: string;
+}
+
+/**
+ * Claude Code hook input format (TaskCompleted)
+ */
+export interface ClaudeCodeTaskCompletedInput extends ClaudeCodeCommonFields {
+  hook_event_name: 'TaskCompleted';
+  task_id: string;
+  task_subject: string;
+  task_description: string;
+}
+
+/**
+ * Union type for all hook input formats
+ */
+export type ClaudeCodeHookInput =
+  | ClaudeCodePreToolUseInput
+  | ClaudeCodePostToolUseInput
+  | ClaudeCodeStopInput
+  | ClaudeCodeUserPromptSubmitInput
+  | ClaudeCodeTaskCompletedInput;
 
 /**
  * Claude Code PreToolUse hook output format
@@ -86,10 +120,23 @@ interface ClaudeCodePostToolUseOutput {
 }
 
 /**
- * Unified adapter for Claude Code hook format (PreToolUse & PostToolUse)
+ * Claude Code blockable hook output format (Stop, UserPromptSubmit, TaskCompleted)
+ */
+interface ClaudeCodeBlockableOutput {
+  decision?: 'block';
+  reason?: string;
+}
+
+/**
+ * Blockable hook event names
+ */
+const BLOCKABLE_EVENTS = new Set(['Stop', 'UserPromptSubmit', 'TaskCompleted']);
+
+/**
+ * Unified adapter for Claude Code hook format
  */
 export class ClaudeCodeAdapter extends BaseAdapter<ClaudeCodeHookInput> {
-  private hookEventName: 'PreToolUse' | 'PostToolUse' = 'PreToolUse';
+  private hookEventName: string = 'PreToolUse';
 
   /**
    * Parse Claude Code stdin into ClaudeCodeHookInput
@@ -115,7 +162,7 @@ export class ClaudeCodeAdapter extends BaseAdapter<ClaudeCodeHookInput> {
 
   /**
    * Format normalized HookResponse into Claude Code output
-   * Morphs output based on hook event type (PreToolUse vs PostToolUse)
+   * Morphs output based on hook event type
    *
    * @param response - Normalized hook response
    * @returns JSON string for Claude Code
@@ -131,6 +178,11 @@ export class ClaudeCodeAdapter extends BaseAdapter<ClaudeCodeHookInput> {
       const emptyOutput = JSON.stringify({}, null, 2);
       log.debug('ClaudeCodeAdapter: Skip decision, returning empty output');
       return emptyOutput;
+    }
+
+    // Route to blockable output for Stop/UserPromptSubmit/TaskCompleted
+    if (BLOCKABLE_EVENTS.has(this.hookEventName)) {
+      return this.formatBlockableOutput(response);
     }
 
     // Format based on hook event type
@@ -192,6 +244,26 @@ export class ClaudeCodeAdapter extends BaseAdapter<ClaudeCodeHookInput> {
 
     const formattedOutput = JSON.stringify(output, null, 2);
     log.debug('ClaudeCodeAdapter: Formatted PostToolUse output', { output: formattedOutput });
+
+    return formattedOutput;
+  }
+
+  /**
+   * Format blockable output for Stop, UserPromptSubmit, and TaskCompleted hooks
+   * Maps 'deny' decision to 'block', otherwise returns empty object
+   */
+  formatBlockableOutput(response: HookResponse): string {
+    const output: ClaudeCodeBlockableOutput = {};
+
+    if (response.decision === 'deny') {
+      output.decision = 'block';
+      output.reason = response.message;
+    }
+
+    const formattedOutput = JSON.stringify(output, null, 2);
+    log.debug(`ClaudeCodeAdapter: Formatted ${this.hookEventName} output`, {
+      output: formattedOutput,
+    });
 
     return formattedOutput;
   }

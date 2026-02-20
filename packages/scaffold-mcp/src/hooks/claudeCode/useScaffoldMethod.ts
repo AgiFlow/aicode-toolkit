@@ -81,6 +81,11 @@ export class UseScaffoldMethodHook {
    */
   async preToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
     try {
+      // Guard: only PreToolUse/PostToolUse events carry tool_name and tool_input
+      if (!('tool_name' in context)) {
+        return { decision: DECISION_SKIP, message: 'Not a tool use event' };
+      }
+
       // Only intercept Write operations with a file path
       const filePath = context.tool_input?.file_path;
 
@@ -241,6 +246,11 @@ export class UseScaffoldMethodHook {
    */
   async postToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
     try {
+      // Guard: only PreToolUse/PostToolUse events carry tool_name and tool_input
+      if (!('tool_name' in context)) {
+        return { decision: DECISION_SKIP, message: 'Not a tool use event' };
+      }
+
       // Create execution log service for this session
       const executionLog = new ExecutionLogService(context.session_id);
 
