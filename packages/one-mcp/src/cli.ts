@@ -18,12 +18,16 @@
  * - Missing error handling for command execution
  */
 import { Command } from 'commander';
-import { mcpServeCommand } from './commands/mcp-serve';
-import { listToolsCommand } from './commands/list-tools';
-import { describeToolsCommand } from './commands/describe-tools';
-import { useToolCommand } from './commands/use-tool';
-import { initCommand } from './commands/init';
-import { prefetchCommand } from './commands/prefetch';
+import {
+  initCommand,
+  mcpServeCommand,
+  listToolsCommand,
+  describeToolsCommand,
+  useToolCommand,
+  listResourcesCommand,
+  readResourceCommand,
+  prefetchCommand,
+} from './commands';
 import packageJson from '../package.json' assert { type: 'json' };
 
 /**
@@ -44,6 +48,8 @@ async function main() {
     program.addCommand(listToolsCommand);
     program.addCommand(describeToolsCommand);
     program.addCommand(useToolCommand);
+    program.addCommand(listResourcesCommand);
+    program.addCommand(readResourceCommand);
     program.addCommand(prefetchCommand);
 
     // Parse arguments
