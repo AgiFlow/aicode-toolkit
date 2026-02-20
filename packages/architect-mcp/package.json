@@ -1,7 +1,7 @@
 {
   "name": "@agiflowai/architect-mcp",
   "description": "MCP server for software architecture design and planning",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "license": "AGPL-3.0",
   "keywords": [
     "mcp",
