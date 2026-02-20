@@ -21,13 +21,27 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as crypto from 'node:crypto';
-import type { LogEntry } from '../types';
+import type { Decision, LogEntry } from '../types';
 
 /**
  * Type guard for Node.js filesystem errors
  */
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && 'code' in error;
+}
+
+/**
+ * Type guard for LogEntry — validates required fields at runtime
+ */
+function isLogEntry(value: unknown): value is LogEntry {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'filePath' in value &&
+    typeof value.filePath === 'string' &&
+    'operation' in value &&
+    typeof value.operation === 'string'
+  );
 }
 
 /**
@@ -45,7 +59,7 @@ export interface LogExecutionParams {
   sessionId: string;
   filePath: string;
   operation: string;
-  decision: string;
+  decision: Decision;
   filePattern?: string;
   /** File modification timestamp (mtime) at time of execution */
   fileMtime?: number;
@@ -68,7 +82,7 @@ export interface HasExecutedParams {
   /** File path to check */
   filePath: string;
   /** Decision to check for (e.g., 'deny' means we already showed patterns) */
-  decision: string;
+  decision: Decision;
   /** Optional file pattern to match */
   filePattern?: string;
   /** Optional project path to distinguish same patterns in different projects */
@@ -213,9 +227,14 @@ export class ExecutionLogService {
 
       for (const line of lines) {
         try {
-          entries.push(JSON.parse(line) as LogEntry);
+          const parsed: unknown = JSON.parse(line);
+          if (isLogEntry(parsed)) {
+            entries.push(parsed);
+          } else {
+            console.warn('Skipping malformed log entry:', line.substring(0, 100));
+          }
         } catch (parseError) {
-          // Skip malformed entries, log for debugging
+          // Skip unparseable lines
           console.warn('Skipping malformed log entry:', line.substring(0, 100));
         }
       }
@@ -298,9 +317,8 @@ export class ExecutionLogService {
       // for detecting changes. We get mtime after for optimization purposes.
       // Note: There's a theoretical race between read and stat, but the checksum
       // (computed from actual content read) is what we use for change detection.
-      const content = await fs.readFile(filePath, 'utf-8');
+      const [content, stats] = await Promise.all([fs.readFile(filePath, 'utf-8'), fs.stat(filePath)]);
       const checksum = crypto.createHash('md5').update(content).digest('hex');
-      const stats = await fs.stat(filePath);
 
       return {
         mtime: stats.mtimeMs,
@@ -328,7 +346,7 @@ export class ExecutionLogService {
    * @param decision - Decision type to check for
    * @returns true if file has changed or no previous execution found, true on error (fail-open)
    */
-  async hasFileChanged(filePath: string, decision: string): Promise<boolean> {
+  async hasFileChanged(filePath: string, decision: Decision): Promise<boolean> {
     try {
       const entries = await this.loadLog();
 
