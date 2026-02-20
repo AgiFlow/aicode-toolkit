@@ -423,14 +423,32 @@ npx @agiflowai/one-mcp init --output mcp-config.yaml
 # Pre-download packages for faster startup
 npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml
 
-# List all tools from configured servers
+# List all tools from configured servers (also shows configured skills)
 npx @agiflowai/one-mcp list-tools --config ./mcp-config.yaml
+
+# List tools as JSON (includes __skills__ key)
+npx @agiflowai/one-mcp list-tools --config ./mcp-config.yaml --json
+
+# Filter tools by server
+npx @agiflowai/one-mcp list-tools --config ./mcp-config.yaml --server filesystem
 
 # Get tool details
 npx @agiflowai/one-mcp describe-tools --config ./mcp-config.yaml --tools read_file,write_file
 
 # Execute a tool directly
 npx @agiflowai/one-mcp use-tool --config ./mcp-config.yaml --tool-name read_file --args '{"path": "/tmp/test.txt"}'
+
+# List all resources from configured servers
+npx @agiflowai/one-mcp list-resources --config ./mcp-config.yaml
+
+# Filter resources by server
+npx @agiflowai/one-mcp list-resources --config ./mcp-config.yaml --server my-server
+
+# Read a resource by URI
+npx @agiflowai/one-mcp read-resource --config ./mcp-config.yaml file:///readme.md
+
+# Read from a specific server
+npx @agiflowai/one-mcp read-resource --config ./mcp-config.yaml --server my-server file:///readme.md
 ```
 
 ### Prefetch Command
