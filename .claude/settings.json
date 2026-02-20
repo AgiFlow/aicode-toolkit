@@ -39,6 +39,36 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.stop"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.userPromptSubmit"
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.taskCompleted"
+          }
+        ]
+      }
     ]
   }
 }

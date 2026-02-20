@@ -34,6 +34,7 @@ import { print } from '@agiflowai/aicode-utils';
 
 interface HookOptions {
   type?: string;
+  marker?: string;
 }
 
 /** Type for Claude Code hook callback function */
@@ -42,15 +43,23 @@ type ClaudeCodeHookCallback = (context: ClaudeCodeHookInput) => Promise<HookResp
 /** Type for Gemini CLI hook callback function */
 type GeminiCliHookCallback = (context: GeminiCliHookInput) => Promise<HookResponse>;
 
-/** Interface for class-based hook with preToolUse and postToolUse methods */
+/** Interface for class-based hook with lifecycle methods */
 interface HookClass<T> {
   preToolUse?: (context: T) => Promise<HookResponse>;
   postToolUse?: (context: T) => Promise<HookResponse>;
+  stop?: (context: T) => Promise<HookResponse>;
+  userPromptSubmit?: (context: T) => Promise<HookResponse>;
+  taskCompleted?: (context: T) => Promise<HookResponse>;
 }
 
 /** Interface for Claude Code hook module exports */
 interface ClaudeCodeHookModule {
   UseScaffoldMethodHook?: new () => HookClass<ClaudeCodeHookInput>;
+}
+
+/** Interface for PhantomCodeCheck hook module exports */
+interface PhantomCodeCheckHookModule {
+  PhantomCodeCheckHook?: new (marker: string) => HookClass<ClaudeCodeHookInput>;
 }
 
 /** Interface for Gemini CLI hook module exports */
@@ -67,6 +76,10 @@ export const hookCommand = new Command('hook')
     '--type <agentAndMethod>',
     'Hook type: <agent>.<method> (e.g., claude-code.postToolUse, gemini-cli.afterTool)',
   )
+  .option(
+    '--marker <tag>',
+    'Scaffold marker tag to scan for in phantom code check (default: @scaffold-generated)',
+  )
   .action(async (options: HookOptions): Promise<void> => {
     try {
       if (!options.type) {
@@ -82,9 +95,12 @@ export const hookCommand = new Command('hook')
       const { agent, hookMethod } = parseHookType(options.type);
 
       if (agent === CLAUDE_CODE) {
-        // Import hook module (dynamic import for conditional loading based on agent type)
+        // Import hook modules (dynamic import for conditional loading based on agent type)
         const useScaffoldMethodModule: ClaudeCodeHookModule = await import(
           '../hooks/claudeCode/useScaffoldMethod'
+        );
+        const phantomCodeCheckModule: PhantomCodeCheckHookModule = await import(
+          '../hooks/claudeCode/phantomCodeCheck'
         );
 
         // Collect all available hooks for this hook method
@@ -99,9 +115,19 @@ export const hookCommand = new Command('hook')
           }
         }
 
+        // Instantiate PhantomCodeCheckHook with marker and get the method
+        if (phantomCodeCheckModule.PhantomCodeCheckHook) {
+          const markerValue = options.marker ?? '@scaffold-generated';
+          const hookInstance = new phantomCodeCheckModule.PhantomCodeCheckHook(markerValue);
+          const hookFn = hookInstance[hookMethod as keyof HookClass<ClaudeCodeHookInput>];
+          if (hookFn) {
+            claudeCallbacks.push(hookFn.bind(hookInstance));
+          }
+        }
+
         if (claudeCallbacks.length === 0) {
-          print.error(`Hook not found: ${hookMethod} in Claude Code hooks`);
-          process.exit(1);
+          // No hooks registered for this method — exit gracefully (no-op)
+          process.exit(0);
         }
 
         const adapter = new ClaudeCodeAdapter();

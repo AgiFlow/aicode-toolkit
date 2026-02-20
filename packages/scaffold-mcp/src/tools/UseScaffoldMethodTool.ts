@@ -82,6 +82,11 @@ export class UseScaffoldMethodTool {
       };
     }
 
+    properties.marker = {
+      type: 'string',
+      description: 'Custom scaffold marker tag injected into generated code files (default: @scaffold-generated)',
+    };
+
     return {
       name: UseScaffoldMethodTool.TOOL_NAME,
       description: `Generates and adds a specific feature to an existing project using a scaffolding method.
@@ -115,10 +120,11 @@ IMPORTANT:
    */
   async execute(args: Record<string, any>): Promise<CallToolResult> {
     try {
-      const { projectPath, scaffold_feature_name, variables } = args as {
+      const { projectPath, scaffold_feature_name, variables, marker } = args as {
         projectPath?: string;
         scaffold_feature_name: string;
         variables: Record<string, any>;
+        marker?: string;
       };
 
       // In monolith mode, automatically use current working directory
@@ -129,6 +135,7 @@ IMPORTANT:
         projectPath: resolvedProjectPath,
         scaffold_feature_name,
         variables,
+        marker,
       });
 
       // Generate stable scaffold ID
