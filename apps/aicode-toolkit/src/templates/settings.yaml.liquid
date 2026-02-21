@@ -1,0 +1,114 @@
+# .toolkit/settings.yaml
+# Toolkit configuration for aicode-toolkit
+#
+# Local overrides go in .toolkit/settings.local.yaml (add to .gitignore).
+# Local settings are shallow-merged over this file — useful for per-developer
+# LLM tool preferences or API keys without committing them.
+
+# ---------------------------------------------------------------------------
+# Project identity
+# ---------------------------------------------------------------------------
+{% if projectType %}
+projectType: {{ projectType }}
+{% else %}
+# projectType: monolith
+{% endif %}
+{% if templatesPath %}
+templatesPath: {{ templatesPath }}
+{% else %}
+# templatesPath: ./templates
+{% endif %}
+{% if sourceTemplate %}
+sourceTemplate: {{ sourceTemplate }}
+{% else %}
+# sourceTemplate: react-vite
+{% endif %}
+version: '1.0'
+
+# ---------------------------------------------------------------------------
+# scaffold-mcp — configuration for the scaffold-mcp CLI
+# CLI flags always take precedence over values set here.
+# ---------------------------------------------------------------------------
+
+scaffold-mcp:
+
+  # -------------------------------------------------------------------------
+  # mcp-serve — defaults for `scaffold-mcp mcp-serve`
+  # -------------------------------------------------------------------------
+  mcp-serve:
+    # type: stdio
+    # port: 3000
+    # host: localhost
+    # adminEnable: false
+    # promptAsSkill: false
+    {% if fallbackTool %}
+    fallbackTool: {{ fallbackTool }}
+    {% if fallbackToolConfig %}
+    fallbackToolConfig:
+      {% for pair in fallbackToolConfig %}
+      {{ pair[0] }}: {{ pair[1] }}
+      {% endfor %}
+    {% else %}
+    # fallbackToolConfig:
+    #   model: gemini-2.0-flash
+    {% endif %}
+    {% else %}
+    # fallbackTool: gemini-cli
+    # fallbackToolConfig:
+    #   model: gemini-2.0-flash
+    {% endif %}
+
+  # -------------------------------------------------------------------------
+  # hook — defaults for `scaffold-mcp hook`
+  # Keyed by agent name, then by hook method.
+  # Supported agents  : claude-code | gemini-cli
+  # Supported methods : preToolUse | postToolUse | userPromptSubmit | taskCompleted | stop
+  # -------------------------------------------------------------------------
+  hook:
+
+    claude-code:
+      preToolUse:
+        {% if fallbackTool %}
+        llm-tool: {{ fallbackTool }}
+        {% if fallbackToolConfig %}
+        tool-config:
+          {% for pair in fallbackToolConfig %}
+          {{ pair[0] }}: {{ pair[1] }}
+          {% endfor %}
+        {% endif %}
+        {% else %}
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+        {% endif %}
+
+      postToolUse:
+        {% if fallbackTool %}
+        llm-tool: {{ fallbackTool }}
+        {% if fallbackToolConfig %}
+        tool-config:
+          {% for pair in fallbackToolConfig %}
+          {{ pair[0] }}: {{ pair[1] }}
+          {% endfor %}
+        {% endif %}
+        {% else %}
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+        {% endif %}
+
+    gemini-cli:
+      postToolUse:
+        {% if fallbackTool %}
+        llm-tool: {{ fallbackTool }}
+        {% if fallbackToolConfig %}
+        tool-config:
+          {% for pair in fallbackToolConfig %}
+          {{ pair[0] }}: {{ pair[1] }}
+          {% endfor %}
+        {% endif %}
+        {% else %}
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+        {% endif %}

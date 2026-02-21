@@ -1,0 +1,105 @@
+# .toolkit/settings.yaml
+# Toolkit configuration for aicode-toolkit
+#
+# Local overrides go in .toolkit/settings.local.yaml (add to .gitignore).
+# Local settings are shallow-merged over this file — useful for per-developer
+# LLM tool preferences or API keys without committing them.
+#
+# All fields are optional. Uncomment and edit what you need.
+
+# ---------------------------------------------------------------------------
+# Project identity
+# ---------------------------------------------------------------------------
+
+# Project type: monolith (single app) or monorepo (multiple packages/apps)
+# projectType: monolith
+
+# Path to the scaffold templates directory, relative to workspace root.
+# templatesPath: ./templates
+
+# Active template name (monolith only — monorepo reads from project.json).
+# sourceTemplate: react-vite
+
+# Config schema version.
+# version: '1.0'
+
+# ---------------------------------------------------------------------------
+# scaffold-mcp — configuration for the scaffold-mcp CLI
+# CLI flags always take precedence over values set here.
+# ---------------------------------------------------------------------------
+
+scaffold-mcp:
+
+  # -------------------------------------------------------------------------
+  # mcp-serve — defaults for `scaffold-mcp mcp-serve`
+  # -------------------------------------------------------------------------
+  mcp-serve:
+    # Transport type: stdio | http | sse  (default: stdio)
+    # type: stdio
+
+    # Port for http/sse transport (default: 3000)
+    # port: 3000
+
+    # Host to bind for http/sse transport (default: localhost)
+    # host: localhost
+
+    # Enable admin tools such as generate-boilerplate (default: false)
+    # adminEnable: false
+
+    # Render prompts with skill front matter for Claude Code (default: false)
+    # promptAsSkill: false
+
+    # Fallback LLM tool used when scaffold-mcp needs AI assistance.
+    # Supported: claude-code | gemini-cli | codex
+    # fallbackTool: gemini-cli
+
+    # Config passed to the fallback LLM tool.
+    # fallbackToolConfig:
+    #   model: gemini-2.0-flash
+
+  # -------------------------------------------------------------------------
+  # hook — defaults for `scaffold-mcp hook`
+  # Keyed by agent name, then by hook method.
+  # Supported agents  : claude-code | gemini-cli
+  # Supported methods : preToolUse | postToolUse | userPromptSubmit | taskCompleted | stop
+  # CLI flags --fallback-tool and --fallback-tool-config still take precedence.
+  # -------------------------------------------------------------------------
+  hook:
+
+    claude-code:
+      preToolUse:
+        # LLM tool to use for this hook. Supported: claude-code | gemini-cli | codex
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+
+      postToolUse:
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+
+      userPromptSubmit:
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+
+      taskCompleted:
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+
+      stop:
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+
+    gemini-cli:
+      preToolUse:
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+
+      postToolUse:
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
