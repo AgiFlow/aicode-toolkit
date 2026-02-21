@@ -19,7 +19,7 @@
  * - Not cleaning up resources on shutdown
  */
 
-import { ProjectConfigResolver, print } from '@agiflowai/aicode-utils';
+import { ProjectConfigResolver, TemplatesManagerService, print } from '@agiflowai/aicode-utils';
 import {
   type LlmToolId,
   isValidLlmTool,
@@ -37,12 +37,13 @@ import {
 } from '../transports';
 
 /**
- * Options passed by Commander for the mcp-serve command
+ * Options passed by Commander for the mcp-serve command.
+ * String/number fields are optional because defaults come from config file.
  */
 interface McpServeOptions {
-  type: string;
-  port: number;
-  host: string;
+  type?: string;
+  port?: number;
+  host?: string;
   adminEnable: boolean;
   promptAsSkill: boolean;
   fallbackTool?: string;
@@ -132,14 +133,13 @@ async function startServer(handler: TransportHandler): Promise<void> {
  */
 export const mcpServeCommand = new Command('mcp-serve')
   .description('Start MCP server with specified transport')
-  .option('-t, --type <type>', 'Transport type: stdio, http, or sse', 'stdio')
+  .option('-t, --type <type>', 'Transport type: stdio, http, or sse')
   .option(
     '-p, --port <port>',
     'Port to listen on (http/sse only)',
     (val: string): number => parseInt(val, 10),
-    3000,
   )
-  .option('--host <host>', 'Host to bind to (http/sse only)', 'localhost')
+  .option('--host <host>', 'Host to bind to (http/sse only)')
   .option('--admin-enable', 'Enable admin tools (generate-boilerplate)', false)
   .option(
     '--prompt-as-skill',
@@ -149,22 +149,28 @@ export const mcpServeCommand = new Command('mcp-serve')
   .option(
     '--fallback-tool <tool>',
     `Fallback LLM tool for scaffold operations. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
-    undefined,
   )
   .option(
     '--fallback-tool-config <json>',
     'JSON config for fallback tool (e.g., \'{"model":"claude-sonnet-4-6"}\')',
-    undefined,
   )
   .action(async (options: McpServeOptions): Promise<void> => {
     try {
-      const transportType = options.type.toLowerCase();
+      // Read config file; CLI flags take precedence over config values
+      const toolkitConfig = await TemplatesManagerService.readToolkitConfig();
+      const fileConfig = toolkitConfig?.['mcp-serve'] ?? {};
 
-      const fallbackTool = parseLlmToolOption(options.fallbackTool, '--fallback-tool');
-      const fallbackToolConfig = parseJsonConfig(
-        options.fallbackToolConfig,
-        '--fallback-tool-config',
-      );
+      const transportType = (options.type ?? fileConfig.type ?? 'stdio').toLowerCase();
+      const adminEnable = options.adminEnable || fileConfig.adminEnable || false;
+      const promptAsSkill = options.promptAsSkill || fileConfig.promptAsSkill || false;
+
+      const fallbackToolStr = options.fallbackTool ?? fileConfig.fallbackTool;
+      const fallbackTool = parseLlmToolOption(fallbackToolStr, '--fallback-tool');
+
+      // CLI --fallback-tool-config (JSON string) takes precedence over config object
+      const fallbackToolConfig = options.fallbackToolConfig
+        ? parseJsonConfig(options.fallbackToolConfig, '--fallback-tool-config')
+        : fileConfig.fallbackToolConfig;
 
       // Detect if current workspace is monolith
       let isMonolith = false;
@@ -180,9 +186,9 @@ export const mcpServeCommand = new Command('mcp-serve')
       }
 
       const serverOptions: ServerOptions = {
-        adminEnabled: options.adminEnable,
+        adminEnabled: adminEnable,
         isMonolith,
-        promptAsSkill: options.promptAsSkill,
+        promptAsSkill,
         fallbackTool,
         fallbackToolConfig,
       };
@@ -192,22 +198,18 @@ export const mcpServeCommand = new Command('mcp-serve')
         const handler = new StdioTransportHandler(server);
         await startServer(handler);
       } else if (transportType === TransportMode.HTTP) {
-        const config: TransportConfig = {
-          mode: TransportMode.HTTP,
-          port: options.port || Number(process.env.MCP_PORT) || 3000,
-          host: options.host || process.env.MCP_HOST || 'localhost',
-        };
+        const port = options.port ?? fileConfig.port ?? Number(process.env.MCP_PORT) ?? 3000;
+        const host = options.host ?? fileConfig.host ?? process.env.MCP_HOST ?? 'localhost';
+        const config: TransportConfig = { mode: TransportMode.HTTP, port, host };
         const handler = new HttpTransportHandler(
           (): ReturnType<typeof createServer> => createServer(serverOptions),
           config,
         );
         await startServer(handler);
       } else if (transportType === TransportMode.SSE) {
-        const config: TransportConfig = {
-          mode: TransportMode.SSE,
-          port: options.port || Number(process.env.MCP_PORT) || 3000,
-          host: options.host || process.env.MCP_HOST || 'localhost',
-        };
+        const port = options.port ?? fileConfig.port ?? Number(process.env.MCP_PORT) ?? 3000;
+        const host = options.host ?? fileConfig.host ?? process.env.MCP_HOST ?? 'localhost';
+        const config: TransportConfig = { mode: TransportMode.SSE, port, host };
         const handler = new SseTransportHandler(
           (): ReturnType<typeof createServer> => createServer(serverOptions),
           config,

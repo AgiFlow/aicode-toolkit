@@ -34,7 +34,7 @@ import {
   type GeminiCliHookInput,
   type HookResponse,
 } from '@agiflowai/hooks-adapter';
-import { print } from '@agiflowai/aicode-utils';
+import { TemplatesManagerService, print } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 
 /** Options parsed by Commander for the hook command */
@@ -116,22 +116,15 @@ export const hookCommand = new Command('hook')
   .option(
     '--type <agentAndMethod>',
     'Hook type: <agent>.<method> (e.g., claude-code.postToolUse, gemini-cli.postToolUse)',
-    undefined,
   )
-  .option(
-    '--marker <tag>',
-    'Scaffold marker tag to scan for in phantom code check',
-    '@scaffold-generated',
-  )
+  .option('--marker <tag>', 'Scaffold marker tag to scan for in phantom code check')
   .option(
     '--fallback-tool <tool>',
     `Fallback LLM tool for scaffold operations. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
-    undefined,
   )
   .option(
     '--fallback-tool-config <json>',
     'JSON config for the fallback tool (e.g., \'{"model":"claude-sonnet-4-6"}\')',
-    undefined,
   )
   .action(async (options: HookOptions): Promise<void> => {
     try {
@@ -143,16 +136,22 @@ export const hookCommand = new Command('hook')
 
       const { agent, hookMethod } = parseHookType(options.type);
 
-      // Parse fallback tool config JSON
-      const fallbackToolConfig = parseJsonConfigOption(
-        options.fallbackToolConfig,
-        '--fallback-tool-config',
-      );
+      // Read config file; CLI flags take precedence over config values
+      const toolkitConfig = await TemplatesManagerService.readToolkitConfig();
+      const fileConfig = toolkitConfig?.hook ?? {};
+
+      const marker = options.marker ?? fileConfig.marker ?? '@scaffold-generated';
+      const fallbackToolStr = options.fallbackTool ?? fileConfig.fallbackTool;
+
+      // CLI --fallback-tool-config (JSON string) takes precedence over config object
+      const fallbackToolConfig = options.fallbackToolConfig
+        ? parseJsonConfigOption(options.fallbackToolConfig, '--fallback-tool-config')
+        : fileConfig.fallbackToolConfig;
 
       // Validate fallback tool if provided
-      if (options.fallbackTool && !isValidLlmTool(options.fallbackTool)) {
+      if (fallbackToolStr && !isValidLlmTool(fallbackToolStr)) {
         throw new Error(
-          `Invalid --fallback-tool: ${options.fallbackTool}. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
+          `Invalid --fallback-tool: ${fallbackToolStr}. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
         );
       }
 
@@ -161,8 +160,8 @@ export const hookCommand = new Command('hook')
       if (fallbackToolConfig) {
         adapterConfig.tool_config = fallbackToolConfig;
       }
-      if (options.fallbackTool) {
-        adapterConfig.llm_tool = options.fallbackTool;
+      if (fallbackToolStr) {
+        adapterConfig.llm_tool = fallbackToolStr;
       }
       const resolvedAdapterConfig =
         Object.keys(adapterConfig).length > 0 ? adapterConfig : undefined;
@@ -187,8 +186,7 @@ export const hookCommand = new Command('hook')
         }
 
         if (hookModule.PhantomCodeCheckHook) {
-          const markerValue = options.marker ?? '@scaffold-generated';
-          const hookInstance = new hookModule.PhantomCodeCheckHook(markerValue);
+          const hookInstance = new hookModule.PhantomCodeCheckHook(marker);
           const hookFn = hookInstance[hookMethod];
           if (hookFn) {
             claudeCallbacks.push(hookFn.bind(hookInstance));

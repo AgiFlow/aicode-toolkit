@@ -21,13 +21,39 @@
 export * from './projectConfig';
 
 /**
- * Toolkit configuration from toolkit.yaml
+ * Configuration for the scaffold-mcp mcp-serve command.
+ * Keys map 1-to-1 with CLI flags (camelCase).
+ */
+export interface McpServeConfig {
+  type?: string;
+  port?: number;
+  host?: string;
+  adminEnable?: boolean;
+  promptAsSkill?: boolean;
+  fallbackTool?: string;
+  fallbackToolConfig?: Record<string, unknown>;
+}
+
+/**
+ * Configuration for the scaffold-mcp hook command.
+ * Keys map 1-to-1 with CLI flags (camelCase).
+ */
+export interface HookConfig {
+  marker?: string;
+  fallbackTool?: string;
+  fallbackToolConfig?: Record<string, unknown>;
+}
+
+/**
+ * Toolkit configuration from .toolkit/settings.yaml (or legacy toolkit.yaml)
  */
 export interface ToolkitConfig {
   version?: string;
   templatesPath?: string;
   projectType?: 'monolith' | 'monorepo';
   sourceTemplate?: string;
+  'mcp-serve'?: McpServeConfig;
+  hook?: HookConfig;
 }
 
 /**
