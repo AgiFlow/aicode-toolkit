@@ -1,16 +1,17 @@
 import path from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
 import {
   detectProjectType as detectProjectTypeUtil,
   ProjectType,
   print,
-  TemplatesManagerService,
-  type ToolkitConfig,
   findWorkspaceRoot,
 } from '@agiflowai/aicode-utils';
 import { confirm, input, select } from '@inquirer/prompts';
 import { Command } from 'commander';
+import { Liquid } from 'liquidjs';
 import ora from 'ora';
 import { createActor, fromPromise } from 'xstate';
+import settingsLiquidTemplate from '../templates/settings.yaml.liquid?raw';
 import { MCP_SERVER_INFO, MCPServer } from '../constants';
 import {
   type CodingAgent,
@@ -507,7 +508,7 @@ const initActors = {
   ),
 
   /**
-   * Create configuration (toolkit.yaml for monolith)
+   * Create configuration (.toolkit/settings.yaml for monolith)
    */
   createConfig: fromPromise(
     async ({
@@ -520,7 +521,7 @@ const initActors = {
         selectedTemplates: string[];
       };
     }) => {
-      // Only create toolkit.yaml for monolith
+      // Only create settings.yaml for monolith
       if (actorInput.projectType === ProjectType.MONOLITH) {
         // Calculate relative path from workspace root
         const relativeTemplatesPath = path.relative(
@@ -528,15 +529,19 @@ const initActors = {
           actorInput.templatesPath,
         );
 
-        const toolkitConfig: ToolkitConfig = {
-          version: '1.0',
-          templatesPath: relativeTemplatesPath || 'templates',
+        const liquid = new Liquid();
+        const content = await liquid.parseAndRender(settingsLiquidTemplate, {
           projectType: 'monolith',
-          sourceTemplate: actorInput.selectedTemplates[0], // Monolith has only one template
-        };
+          templatesPath: relativeTemplatesPath || 'templates',
+          sourceTemplate: actorInput.selectedTemplates[0],
+        });
+
+        const toolkitDir = path.join(actorInput.workspaceRoot, '.toolkit');
+        const settingsPath = path.join(toolkitDir, 'settings.yaml');
 
         print.info('\nCreating .toolkit/settings.yaml...');
-        await TemplatesManagerService.writeToolkitConfig(toolkitConfig, actorInput.workspaceRoot);
+        await mkdir(toolkitDir, { recursive: true });
+        await writeFile(settingsPath, content, { encoding: 'utf-8', flag: 'w' });
         print.success('.toolkit/settings.yaml created');
       }
     },
