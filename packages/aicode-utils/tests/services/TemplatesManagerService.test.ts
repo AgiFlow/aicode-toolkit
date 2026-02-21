@@ -85,11 +85,14 @@ describe('TemplatesManagerService', () => {
       const mockCwd = process.cwd();
       const gitPath = path.join(mockCwd, '.git');
       const templatesPath = path.join(mockCwd, 'templates');
+      const settingsPath = path.join(mockCwd, '.toolkit', 'settings.yaml');
+      const legacyConfigPath = path.join(mockCwd, 'toolkit.yaml');
 
       vi.mocked(fsHelpers.pathExistsSync).mockImplementation((p: string) => {
         if (p === gitPath) return true;
         if (p === templatesPath) return true;
-        if (p === path.join(mockCwd, 'toolkit.yaml')) return false;
+        if (p === settingsPath) return false;
+        if (p === legacyConfigPath) return false;
         return false;
       });
 
@@ -110,11 +113,14 @@ describe('TemplatesManagerService', () => {
       const mockCwd = process.cwd();
       const gitPath = path.join(mockCwd, '.git');
       const templatesPath = path.join(mockCwd, 'templates');
+      const settingsPath = path.join(mockCwd, '.toolkit', 'settings.yaml');
+      const legacyConfigPath = path.join(mockCwd, 'toolkit.yaml');
 
       vi.mocked(fsHelpers.pathExists).mockImplementation(async (p: string) => {
         if (p === gitPath) return true;
         if (p === templatesPath) return true;
-        if (p === path.join(mockCwd, 'toolkit.yaml')) return false;
+        if (p === settingsPath) return false;
+        if (p === legacyConfigPath) return false;
         return false;
       });
 

@@ -32,7 +32,14 @@ import type { ToolkitConfig } from '../types';
 export class TemplatesManagerService {
   private static SCAFFOLD_CONFIG_FILE = 'scaffold.yaml';
   private static TEMPLATES_FOLDER = 'templates';
-  private static TOOLKIT_CONFIG_FILE = 'toolkit.yaml';
+  private static TOOLKIT_FOLDER = '.toolkit';
+  private static SETTINGS_FILE = 'settings.yaml';
+  private static SETTINGS_LOCAL_FILE = 'settings.local.yaml';
+  private static TOOLKIT_CONFIG_FILE = 'toolkit.yaml'; // kept for backward-compat fallback
+
+  private static mergeToolkitConfigs(base: ToolkitConfig, local: ToolkitConfig): ToolkitConfig {
+    return { ...base, ...local };
+  }
 
   /**
    * Find the templates directory by searching upwards from the starting path.
@@ -40,39 +47,28 @@ export class TemplatesManagerService {
    * Algorithm:
    * 1. Start from the provided path (default: current working directory)
    * 2. Search upwards to find the workspace root (where .git exists or filesystem root)
-   * 3. Check if toolkit.yaml exists at workspace root
-   *    - If yes, read templatesPath from toolkit.yaml
-   *    - If no, default to 'templates' folder in workspace root
+   * 3. Read toolkit config (checks .toolkit/settings.yaml, then toolkit.yaml)
+   *    - If config has templatesPath, use it
+   *    - If no config, default to 'templates' folder in workspace root
    * 4. Verify the templates directory exists
    *
    * @param startPath - The path to start searching from (defaults to process.cwd())
    * @returns The absolute path to the templates directory, or null if not found
    */
   static async findTemplatesPath(startPath: string = process.cwd()): Promise<string | null> {
-    // First, find the workspace root
     const workspaceRoot = await TemplatesManagerService.findWorkspaceRoot(startPath);
+    const config = await TemplatesManagerService.readToolkitConfig(startPath);
 
-    // Check if toolkit.yaml exists
-    const toolkitConfigPath = path.join(workspaceRoot, TemplatesManagerService.TOOLKIT_CONFIG_FILE);
+    if (config?.templatesPath) {
+      const templatesPath = path.isAbsolute(config.templatesPath)
+        ? config.templatesPath
+        : path.join(workspaceRoot, config.templatesPath);
 
-    if (await pathExists(toolkitConfigPath)) {
-      // Read toolkit.yaml to get templatesPath
-      const yaml = await import('js-yaml');
-      const content = await fs.readFile(toolkitConfigPath, 'utf-8');
-      const config = yaml.load(content) as any;
-
-      if (config?.templatesPath) {
-        const templatesPath = path.isAbsolute(config.templatesPath)
-          ? config.templatesPath
-          : path.join(workspaceRoot, config.templatesPath);
-
-        if (await pathExists(templatesPath)) {
-          return templatesPath;
-        } else {
-          // Return null instead of throwing - let caller handle missing path
-          return null;
-        }
+      if (await pathExists(templatesPath)) {
+        return templatesPath;
       }
+      // Return null instead of throwing - let caller handle missing path
+      return null;
     }
 
     // Default to templates folder in workspace root
@@ -119,30 +115,19 @@ export class TemplatesManagerService {
    * @returns The absolute path to the templates directory, or null if not found
    */
   static findTemplatesPathSync(startPath: string = process.cwd()): string | null {
-    // First, find the workspace root
     const workspaceRoot = TemplatesManagerService.findWorkspaceRootSync(startPath);
+    const config = TemplatesManagerService.readToolkitConfigSync(startPath);
 
-    // Check if toolkit.yaml exists
-    const toolkitConfigPath = path.join(workspaceRoot, TemplatesManagerService.TOOLKIT_CONFIG_FILE);
+    if (config?.templatesPath) {
+      const templatesPath = path.isAbsolute(config.templatesPath)
+        ? config.templatesPath
+        : path.join(workspaceRoot, config.templatesPath);
 
-    if (pathExistsSync(toolkitConfigPath)) {
-      // Read toolkit.yaml to get templatesPath
-      const yaml = require('js-yaml');
-      const content = readFileSync(toolkitConfigPath, 'utf-8');
-      const config = yaml.load(content) as any;
-
-      if (config?.templatesPath) {
-        const templatesPath = path.isAbsolute(config.templatesPath)
-          ? config.templatesPath
-          : path.join(workspaceRoot, config.templatesPath);
-
-        if (pathExistsSync(templatesPath)) {
-          return templatesPath;
-        } else {
-          // Return null instead of throwing - let caller handle missing path
-          return null;
-        }
+      if (pathExistsSync(templatesPath)) {
+        return templatesPath;
       }
+      // Return null instead of throwing - let caller handle missing path
+      return null;
     }
 
     // Default to templates folder in workspace root
@@ -210,49 +195,89 @@ export class TemplatesManagerService {
   }
 
   /**
-   * Read toolkit.yaml configuration from workspace root
+   * Read toolkit configuration from workspace root.
+   *
+   * Priority order:
+   * 1. .toolkit/settings.yaml (new location)
+   * 2. Shallow-merge .toolkit/settings.local.yaml over settings.yaml if present
+   * 3. Fallback to root toolkit.yaml (deprecated, backward-compat)
    *
    * @param startPath - The path to start searching from (defaults to process.cwd())
    * @returns The toolkit configuration object or null if not found
    */
   static async readToolkitConfig(startPath: string = process.cwd()): Promise<ToolkitConfig | null> {
     const workspaceRoot = await TemplatesManagerService.findWorkspaceRoot(startPath);
-    const toolkitConfigPath = path.join(workspaceRoot, TemplatesManagerService.TOOLKIT_CONFIG_FILE);
+    const yaml = await import('js-yaml');
 
-    if (!(await pathExists(toolkitConfigPath))) {
+    const toolkitFolder = path.join(workspaceRoot, TemplatesManagerService.TOOLKIT_FOLDER);
+    const settingsPath = path.join(toolkitFolder, TemplatesManagerService.SETTINGS_FILE);
+    const settingsLocalPath = path.join(toolkitFolder, TemplatesManagerService.SETTINGS_LOCAL_FILE);
+
+    if (await pathExists(settingsPath)) {
+      const baseContent = await fs.readFile(settingsPath, 'utf-8');
+      const base = yaml.load(baseContent) as ToolkitConfig;
+
+      if (await pathExists(settingsLocalPath)) {
+        const localContent = await fs.readFile(settingsLocalPath, 'utf-8');
+        const local = yaml.load(localContent) as ToolkitConfig;
+        return TemplatesManagerService.mergeToolkitConfigs(base, local);
+      }
+
+      return base;
+    }
+
+    // Fallback: legacy toolkit.yaml at workspace root
+    const legacyConfigPath = path.join(workspaceRoot, TemplatesManagerService.TOOLKIT_CONFIG_FILE);
+    if (!(await pathExists(legacyConfigPath))) {
       return null;
     }
 
-    const yaml = await import('js-yaml');
-    const content = await fs.readFile(toolkitConfigPath, 'utf-8');
-    const config = yaml.load(content) as ToolkitConfig;
-
-    return config;
+    const content = await fs.readFile(legacyConfigPath, 'utf-8');
+    return yaml.load(content) as ToolkitConfig;
   }
 
   /**
-   * Read toolkit.yaml configuration from workspace root (sync)
+   * Read toolkit configuration from workspace root (sync).
+   *
+   * Priority order:
+   * 1. .toolkit/settings.yaml (new location)
+   * 2. Shallow-merge .toolkit/settings.local.yaml over settings.yaml if present
+   * 3. Fallback to root toolkit.yaml (deprecated, backward-compat)
    *
    * @param startPath - The path to start searching from (defaults to process.cwd())
    * @returns The toolkit configuration object or null if not found
    */
   static readToolkitConfigSync(startPath: string = process.cwd()): ToolkitConfig | null {
     const workspaceRoot = TemplatesManagerService.findWorkspaceRootSync(startPath);
-    const toolkitConfigPath = path.join(workspaceRoot, TemplatesManagerService.TOOLKIT_CONFIG_FILE);
+    const yaml = require('js-yaml');
 
-    if (!pathExistsSync(toolkitConfigPath)) {
+    const toolkitFolder = path.join(workspaceRoot, TemplatesManagerService.TOOLKIT_FOLDER);
+    const settingsPath = path.join(toolkitFolder, TemplatesManagerService.SETTINGS_FILE);
+    const settingsLocalPath = path.join(toolkitFolder, TemplatesManagerService.SETTINGS_LOCAL_FILE);
+
+    if (pathExistsSync(settingsPath)) {
+      const base = yaml.load(readFileSync(settingsPath, 'utf-8')) as ToolkitConfig;
+
+      if (pathExistsSync(settingsLocalPath)) {
+        const local = yaml.load(readFileSync(settingsLocalPath, 'utf-8')) as ToolkitConfig;
+        return TemplatesManagerService.mergeToolkitConfigs(base, local);
+      }
+
+      return base;
+    }
+
+    // Fallback: legacy toolkit.yaml at workspace root
+    const legacyConfigPath = path.join(workspaceRoot, TemplatesManagerService.TOOLKIT_CONFIG_FILE);
+    if (!pathExistsSync(legacyConfigPath)) {
       return null;
     }
 
-    const yaml = require('js-yaml');
-    const content = readFileSync(toolkitConfigPath, 'utf-8');
-    const config = yaml.load(content) as ToolkitConfig;
-
-    return config;
+    return yaml.load(readFileSync(legacyConfigPath, 'utf-8')) as ToolkitConfig;
   }
 
   /**
-   * Write toolkit.yaml configuration to workspace root
+   * Write toolkit configuration to .toolkit/settings.yaml.
+   * Creates the .toolkit directory if it does not exist.
    *
    * @param config - The toolkit configuration to write
    * @param startPath - The path to start searching from (defaults to process.cwd())
@@ -262,11 +287,14 @@ export class TemplatesManagerService {
     startPath: string = process.cwd(),
   ): Promise<void> {
     const workspaceRoot = await TemplatesManagerService.findWorkspaceRoot(startPath);
-    const toolkitConfigPath = path.join(workspaceRoot, TemplatesManagerService.TOOLKIT_CONFIG_FILE);
+    const toolkitFolder = path.join(workspaceRoot, TemplatesManagerService.TOOLKIT_FOLDER);
+    const settingsPath = path.join(toolkitFolder, TemplatesManagerService.SETTINGS_FILE);
+
+    await fs.mkdir(toolkitFolder, { recursive: true });
 
     const yaml = await import('js-yaml');
     const content = yaml.dump(config, { indent: 2 });
-    await fs.writeFile(toolkitConfigPath, content, 'utf-8');
+    await fs.writeFile(settingsPath, content, 'utf-8');
   }
 
   /**

@@ -535,9 +535,9 @@ const initActors = {
           sourceTemplate: actorInput.selectedTemplates[0], // Monolith has only one template
         };
 
-        print.info('\nCreating toolkit.yaml...');
+        print.info('\nCreating .toolkit/settings.yaml...');
         await TemplatesManagerService.writeToolkitConfig(toolkitConfig, actorInput.workspaceRoot);
-        print.success('toolkit.yaml created');
+        print.success('.toolkit/settings.yaml created');
       }
     },
   ),
