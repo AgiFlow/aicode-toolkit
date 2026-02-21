@@ -134,10 +134,8 @@ async function startServer(handler: TransportHandler): Promise<void> {
 export const mcpServeCommand = new Command('mcp-serve')
   .description('Start MCP server with specified transport')
   .option('-t, --type <type>', 'Transport type: stdio, http, or sse')
-  .option(
-    '-p, --port <port>',
-    'Port to listen on (http/sse only)',
-    (val: string): number => parseInt(val, 10),
+  .option('-p, --port <port>', 'Port to listen on (http/sse only)', (val: string): number =>
+    parseInt(val, 10),
   )
   .option('--host <host>', 'Host to bind to (http/sse only)')
   .option('--admin-enable', 'Enable admin tools (generate-boilerplate)', false)
