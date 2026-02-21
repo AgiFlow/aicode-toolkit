@@ -112,3 +112,111 @@ scaffold-mcp:
         # tool-config:
         #   model: gemini-2.0-flash
         {% endif %}
+
+# ---------------------------------------------------------------------------
+# architect-mcp — configuration for the architect-mcp CLI
+# CLI flags always take precedence over values set here.
+# ---------------------------------------------------------------------------
+
+architect-mcp:
+
+  # -------------------------------------------------------------------------
+  # mcp-serve — defaults for `architect-mcp mcp-serve`
+  # -------------------------------------------------------------------------
+  mcp-serve:
+    # type: stdio
+    # port: 3000
+    # host: localhost
+    # adminEnable: false
+    {% if fallbackTool %}
+    fallbackTool: {{ fallbackTool }}
+    {% if fallbackToolConfig %}
+    fallbackToolConfig:
+      {% for pair in fallbackToolConfig %}
+      {{ pair[0] }}: {{ pair[1] }}
+      {% endfor %}
+    {% else %}
+    # fallbackToolConfig:
+    #   model: gemini-2.0-flash
+    {% endif %}
+    {% else %}
+    # fallbackTool: gemini-cli
+    # fallbackToolConfig:
+    #   model: gemini-2.0-flash
+    {% endif %}
+    # designPatternTool: gemini-cli
+    # designPatternToolConfig:
+    #   model: gemini-2.0-flash
+    # reviewTool: gemini-cli
+    # reviewToolConfig:
+    #   model: gemini-2.0-flash
+
+  # -------------------------------------------------------------------------
+  # hook — defaults for `architect-mcp hook`
+  # Keyed by agent name, then by hook method.
+  # Supported agents  : claude-code | gemini-cli
+  # Supported methods : preToolUse | postToolUse
+  # -------------------------------------------------------------------------
+  hook:
+
+    claude-code:
+      preToolUse:
+        {% if fallbackTool %}
+        llm-tool: {{ fallbackTool }}
+        {% if fallbackToolConfig %}
+        tool-config:
+          {% for pair in fallbackToolConfig %}
+          {{ pair[0] }}: {{ pair[1] }}
+          {% endfor %}
+        {% endif %}
+        {% else %}
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+        {% endif %}
+
+      postToolUse:
+        {% if fallbackTool %}
+        llm-tool: {{ fallbackTool }}
+        {% if fallbackToolConfig %}
+        tool-config:
+          {% for pair in fallbackToolConfig %}
+          {{ pair[0] }}: {{ pair[1] }}
+          {% endfor %}
+        {% endif %}
+        {% else %}
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+        {% endif %}
+
+    gemini-cli:
+      preToolUse:
+        {% if fallbackTool %}
+        llm-tool: {{ fallbackTool }}
+        {% if fallbackToolConfig %}
+        tool-config:
+          {% for pair in fallbackToolConfig %}
+          {{ pair[0] }}: {{ pair[1] }}
+          {% endfor %}
+        {% endif %}
+        {% else %}
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+        {% endif %}
+
+      postToolUse:
+        {% if fallbackTool %}
+        llm-tool: {{ fallbackTool }}
+        {% if fallbackToolConfig %}
+        tool-config:
+          {% for pair in fallbackToolConfig %}
+          {{ pair[0] }}: {{ pair[1] }}
+          {% endfor %}
+        {% endif %}
+        {% else %}
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+        {% endif %}

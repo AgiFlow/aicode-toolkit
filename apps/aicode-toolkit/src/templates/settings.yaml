@@ -103,3 +103,82 @@ scaffold-mcp:
         # llm-tool: gemini-cli
         # tool-config:
         #   model: gemini-2.0-flash
+
+# ---------------------------------------------------------------------------
+# architect-mcp — configuration for the architect-mcp CLI
+# CLI flags always take precedence over values set here.
+# ---------------------------------------------------------------------------
+
+architect-mcp:
+
+  # -------------------------------------------------------------------------
+  # mcp-serve — defaults for `architect-mcp mcp-serve`
+  # -------------------------------------------------------------------------
+  mcp-serve:
+    # Transport type: stdio | http | sse  (default: stdio)
+    # type: stdio
+
+    # Port for http/sse transport (default: 3000)
+    # port: 3000
+
+    # Host to bind for http/sse transport (default: localhost)
+    # host: localhost
+
+    # Enable admin tools such as add-design-pattern and add-rule (default: false)
+    # adminEnable: false
+
+    # Fallback LLM tool used for both design-pattern and review when specific tools are not set.
+    # Supported: claude-code | gemini-cli | codex
+    # fallbackTool: gemini-cli
+
+    # Config passed to the fallback LLM tool.
+    # fallbackToolConfig:
+    #   model: gemini-2.0-flash
+
+    # LLM tool used specifically for get-file-design-pattern analysis.
+    # Overrides fallbackTool for design pattern operations.
+    # designPatternTool: gemini-cli
+
+    # Config passed to the design pattern LLM tool.
+    # designPatternToolConfig:
+    #   model: gemini-2.0-flash
+
+    # LLM tool used specifically for review-code-change analysis.
+    # Overrides fallbackTool for code review operations.
+    # reviewTool: gemini-cli
+
+    # Config passed to the review LLM tool.
+    # reviewToolConfig:
+    #   model: gemini-2.0-flash
+
+  # -------------------------------------------------------------------------
+  # hook — defaults for `architect-mcp hook`
+  # Keyed by agent name, then by hook method.
+  # Supported agents  : claude-code | gemini-cli
+  # Supported methods : preToolUse | postToolUse
+  # CLI flags --llm-tool, --fallback-tool, and --tool-config still take precedence.
+  # -------------------------------------------------------------------------
+  hook:
+
+    claude-code:
+      preToolUse:
+        # LLM tool to use for this hook. Supported: claude-code | gemini-cli | codex
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+
+      postToolUse:
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+
+    gemini-cli:
+      preToolUse:
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+
+      postToolUse:
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash

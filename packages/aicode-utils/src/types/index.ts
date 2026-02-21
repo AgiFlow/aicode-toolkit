@@ -73,6 +73,57 @@ export interface ScaffoldMcpConfig {
 }
 
 /**
+ * Configuration for the architect-mcp mcp-serve command.
+ * Keys map 1-to-1 with CLI flags (camelCase).
+ */
+export interface ArchitectMcpServeConfig {
+  type?: string;
+  port?: number;
+  host?: string;
+  adminEnable?: boolean;
+  fallbackTool?: string;
+  fallbackToolConfig?: Record<string, unknown>;
+  designPatternTool?: string;
+  designPatternToolConfig?: Record<string, unknown>;
+  reviewTool?: string;
+  reviewToolConfig?: Record<string, unknown>;
+}
+
+/**
+ * Configuration for a single architect-mcp hook method invocation.
+ * Keys use kebab-case matching the adapter/CLI convention.
+ */
+export interface ArchitectHookMethodConfig {
+  'llm-tool'?: string;
+  'tool-config'?: Record<string, unknown>;
+}
+
+/**
+ * Per-method configuration for a specific agent (architect-mcp).
+ * Only preToolUse and postToolUse are supported.
+ */
+export interface ArchitectHookAgentConfig {
+  preToolUse?: ArchitectHookMethodConfig;
+  postToolUse?: ArchitectHookMethodConfig;
+}
+
+/**
+ * Hook configuration keyed by agent name (architect-mcp).
+ */
+export interface ArchitectHookConfig {
+  'claude-code'?: ArchitectHookAgentConfig;
+  'gemini-cli'?: ArchitectHookAgentConfig;
+}
+
+/**
+ * Top-level architect-mcp configuration block.
+ */
+export interface ArchitectMcpConfig {
+  'mcp-serve'?: ArchitectMcpServeConfig;
+  hook?: ArchitectHookConfig;
+}
+
+/**
  * Toolkit configuration from .toolkit/settings.yaml (or legacy toolkit.yaml)
  */
 export interface ToolkitConfig {
@@ -81,6 +132,7 @@ export interface ToolkitConfig {
   projectType?: 'monolith' | 'monorepo';
   sourceTemplate?: string;
   'scaffold-mcp'?: ScaffoldMcpConfig;
+  'architect-mcp'?: ArchitectMcpConfig;
 }
 
 /**
