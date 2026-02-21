@@ -158,7 +158,7 @@ export const mcpServeCommand = new Command('mcp-serve')
     try {
       // Read config file; CLI flags take precedence over config values
       const toolkitConfig = await TemplatesManagerService.readToolkitConfig();
-      const fileConfig = toolkitConfig?.['mcp-serve'] ?? {};
+      const fileConfig = toolkitConfig?.['scaffold-mcp']?.['mcp-serve'] ?? {};
 
       const transportType = (options.type ?? fileConfig.type ?? 'stdio').toLowerCase();
       const adminEnable = options.adminEnable || fileConfig.adminEnable || false;

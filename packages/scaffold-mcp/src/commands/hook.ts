@@ -26,6 +26,7 @@ import {
   SUPPORTED_LLM_TOOLS,
   isValidLlmTool,
 } from '@agiflowai/coding-agent-bridge';
+import type { HookAgentConfig, HookConfig } from '@agiflowai/aicode-utils';
 import {
   ClaudeCodeAdapter,
   GeminiCliAdapter,
@@ -136,17 +137,19 @@ export const hookCommand = new Command('hook')
 
       const { agent, hookMethod } = parseHookType(options.type);
 
-      // Read config file; CLI flags take precedence over config values
+      // Read per-agent per-method config; CLI flags take precedence
       const toolkitConfig = await TemplatesManagerService.readToolkitConfig();
-      const fileConfig = toolkitConfig?.hook ?? {};
+      const hookConfig = toolkitConfig?.['scaffold-mcp']?.hook;
+      const methodConfig =
+        hookConfig?.[agent as keyof HookConfig]?.[hookMethod as keyof HookAgentConfig];
 
-      const marker = options.marker ?? fileConfig.marker ?? '@scaffold-generated';
-      const fallbackToolStr = options.fallbackTool ?? fileConfig.fallbackTool;
+      const marker = options.marker ?? '@scaffold-generated';
+      const fallbackToolStr = options.fallbackTool ?? methodConfig?.['llm-tool'];
 
       // CLI --fallback-tool-config (JSON string) takes precedence over config object
       const fallbackToolConfig = options.fallbackToolConfig
         ? parseJsonConfigOption(options.fallbackToolConfig, '--fallback-tool-config')
-        : fileConfig.fallbackToolConfig;
+        : methodConfig?.['tool-config'];
 
       // Validate fallback tool if provided
       if (fallbackToolStr && !isValidLlmTool(fallbackToolStr)) {

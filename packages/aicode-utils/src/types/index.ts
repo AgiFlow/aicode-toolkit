@@ -35,13 +35,41 @@ export interface McpServeConfig {
 }
 
 /**
- * Configuration for the scaffold-mcp hook command.
- * Keys map 1-to-1 with CLI flags (camelCase).
+ * Configuration for a single hook method invocation.
+ * Keys use kebab-case matching the adapter/CLI convention.
+ */
+export interface HookMethodConfig {
+  'llm-tool'?: string;
+  'tool-config'?: Record<string, unknown>;
+  'fallback-tool'?: string;
+  'fallback-tool-config'?: Record<string, unknown>;
+}
+
+/**
+ * Per-method configuration for a specific agent.
+ */
+export interface HookAgentConfig {
+  preToolUse?: HookMethodConfig;
+  postToolUse?: HookMethodConfig;
+  stop?: HookMethodConfig;
+  userPromptSubmit?: HookMethodConfig;
+  taskCompleted?: HookMethodConfig;
+}
+
+/**
+ * Hook configuration keyed by agent name.
  */
 export interface HookConfig {
-  marker?: string;
-  fallbackTool?: string;
-  fallbackToolConfig?: Record<string, unknown>;
+  'claude-code'?: HookAgentConfig;
+  'gemini-cli'?: HookAgentConfig;
+}
+
+/**
+ * Top-level scaffold-mcp configuration block.
+ */
+export interface ScaffoldMcpConfig {
+  'mcp-serve'?: McpServeConfig;
+  hook?: HookConfig;
 }
 
 /**
@@ -52,8 +80,7 @@ export interface ToolkitConfig {
   templatesPath?: string;
   projectType?: 'monolith' | 'monorepo';
   sourceTemplate?: string;
-  'mcp-serve'?: McpServeConfig;
-  hook?: HookConfig;
+  'scaffold-mcp'?: ScaffoldMcpConfig;
 }
 
 /**
