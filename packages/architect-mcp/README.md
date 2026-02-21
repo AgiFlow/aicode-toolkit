@@ -222,6 +222,28 @@ npx @agiflowai/architect-mcp mcp-serve \
 - Reviews code and returns specific violations
 - Precise, context-aware feedback
 
+### Mode 3: Fallback Tool (single flag for both)
+
+Use `--fallback-tool` when you want both tools to use the same LLM without specifying each separately. A specific `--design-pattern-tool` or `--review-tool` always takes precedence over the fallback.
+
+```bash
+# Both design-pattern and review use claude-code
+npx @agiflowai/architect-mcp mcp-serve \
+  --fallback-tool claude-code
+
+# Override review specifically — design-pattern still uses the fallback
+npx @agiflowai/architect-mcp mcp-serve \
+  --fallback-tool claude-code \
+  --review-tool gemini-cli
+
+# With a custom model config applied to both tools
+npx @agiflowai/architect-mcp mcp-serve \
+  --fallback-tool claude-code \
+  --fallback-tool-config '{"model":"claude-sonnet-4-6"}'
+```
+
+**Precedence:** `--design-pattern-tool` > `--fallback-tool` (same for `--review-tool`).
+
 ---
 
 ## CLI Commands
@@ -336,6 +358,16 @@ npx @agiflowai/architect-mcp mcp-serve \
   --design-pattern-tool-config '{"model":"gpt-5.2"}' \
   --review-tool codex \
   --review-tool-config '{"model":"gpt-5.2"}'
+
+# Fallback tool — both tools use claude-code
+npx @agiflowai/architect-mcp mcp-serve \
+  --fallback-tool claude-code
+
+# Fallback with config, override one tool specifically
+npx @agiflowai/architect-mcp mcp-serve \
+  --fallback-tool claude-code \
+  --fallback-tool-config '{"model":"claude-sonnet-4-6"}' \
+  --review-tool gemini-cli
 ```
 
 | Option | Description | Default |
@@ -347,6 +379,8 @@ npx @agiflowai/architect-mcp mcp-serve \
 | `--design-pattern-tool-config` | JSON config for design pattern LLM tool (e.g., `{"model":"gpt-5.2"}`) | `{}` |
 | `--review-tool` | LLM for code review (`claude-code`, `gemini-cli`, `codex`) | disabled |
 | `--review-tool-config` | JSON config for review LLM tool (e.g., `{"model":"gpt-5.2"}`) | `{}` |
+| `--fallback-tool` | LLM used for both tools when the specific flag is not set | disabled |
+| `--fallback-tool-config` | JSON config applied to the fallback tool (e.g., `{"model":"claude-sonnet-4-6"}`) | `{}` |
 
 ---
 

@@ -19,6 +19,31 @@
  * - Mixing CLI and library concerns
  */
 
+// Server
+export { createServer } from './server';
+export type { ServerOptions } from './server';
+
+// Transports
+export {
+  StdioTransportHandler,
+  SseTransportHandler,
+  HttpTransportHandler,
+  TransportMode,
+} from './transports';
+export type { TransportConfig, TransportHandler } from './transports';
+
+// Tools
+export {
+  GenerateBoilerplateFileTool,
+  GenerateBoilerplateTool,
+  GenerateFeatureScaffoldTool,
+  ListBoilerplatesTool,
+  ListScaffoldingMethodsTool,
+  UseBoilerplateTool,
+  UseScaffoldMethodTool,
+  WriteToFileTool,
+} from './tools';
+
 // Services
 export {
   BoilerplateGeneratorService,
@@ -31,21 +56,7 @@ export {
   ScaffoldService,
   TemplateService,
   VariableReplacementService,
-} from './services/index';
-// Tools
-export {
-  GenerateBoilerplateFileTool,
-  GenerateBoilerplateTool,
-  GenerateFeatureScaffoldTool,
-  ListBoilerplatesTool,
-  ListScaffoldingMethodsTool,
-  UseBoilerplateTool,
-  UseScaffoldMethodTool,
-  WriteToFileTool,
-} from './tools/index';
-export { HttpTransportHandler } from './transports/http';
-export { SseTransportHandler } from './transports/sse';
-// Transports
-export { StdioTransportHandler } from './transports/stdio';
+} from './services';
+
 // Types
-export type * from './types/index';
+export type * from './types';

@@ -149,6 +149,17 @@ npx @agiflowai/scaffold-mcp mcp-serve --type sse --port 3000
 
 # With admin tools enabled
 npx @agiflowai/scaffold-mcp mcp-serve --admin-enable
+
+# With Claude Code skill front matter on prompts
+npx @agiflowai/scaffold-mcp mcp-serve --prompt-as-skill
+
+# With a fallback LLM tool for scaffold operations
+npx @agiflowai/scaffold-mcp mcp-serve --fallback-tool claude-code
+
+# Fallback tool with a specific model config
+npx @agiflowai/scaffold-mcp mcp-serve \
+  --fallback-tool claude-code \
+  --fallback-tool-config '{"model":"claude-sonnet-4-6"}'
 ```
 
 | Option | Description | Default |
@@ -157,6 +168,9 @@ npx @agiflowai/scaffold-mcp mcp-serve --admin-enable
 | `-p, --port` | Port for HTTP/SSE | `3000` |
 | `--host` | Host for HTTP/SSE | `localhost` |
 | `--admin-enable` | Enable template creation tools | `false` |
+| `--prompt-as-skill` | Render MCP prompts with Claude Code skill front matter, exposing them as `/skill` commands | `false` |
+| `--fallback-tool` | LLM tool for scaffold operations (`claude-code`, `gemini-cli`, `codex`) | disabled |
+| `--fallback-tool-config` | JSON config for the fallback tool (e.g., `{"model":"claude-sonnet-4-6"}`) | `{}` |
 
 ---
 

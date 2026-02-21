@@ -20,8 +20,7 @@
  * - Not exiting with appropriate exit codes on errors
  */
 
-import { Command } from 'commander';
-import { CLAUDE_CODE, GEMINI_CLI, isValidLlmTool } from '@agiflowai/coding-agent-bridge';
+import { CLAUDE_CODE, GEMINI_CLI, SUPPORTED_LLM_TOOLS, isValidLlmTool } from '@agiflowai/coding-agent-bridge';
 import {
   ClaudeCodeAdapter,
   GeminiCliAdapter,
@@ -31,11 +30,21 @@ import {
   type HookResponse,
 } from '@agiflowai/hooks-adapter';
 import { print } from '@agiflowai/aicode-utils';
+import { Command } from 'commander';
 
+/** Options parsed by Commander for the hook command */
 interface HookOptions {
   type?: string;
   toolConfig?: string;
   llmTool?: string;
+  fallbackTool?: string;
+  fallbackToolConfig?: string;
+}
+
+/** Adapter config shape passed to executeMultiple */
+interface HookAdapterConfig {
+  tool_config?: Record<string, unknown>;
+  llm_tool?: string;
 }
 
 /** Type guard to validate parsed JSON is a record object */
@@ -67,6 +76,32 @@ interface GeminiCliHookModule {
   ReviewCodeChangeHook?: new () => HookClass<GeminiCliHookInput>;
 }
 
+/** Type guard for valid architect hook method keys */
+function isHookMethod(key: string): key is keyof HookClass<unknown> {
+  return key === 'preToolUse' || key === 'postToolUse';
+}
+
+/**
+ * Parse a JSON config string. Returns undefined for empty input, throws on invalid JSON or non-object.
+ */
+function parseJsonConfigOption(
+  value: string | undefined,
+  flagName: string,
+): Record<string, unknown> | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!isRecordObject(parsed)) {
+      throw new Error(`${flagName} must be a JSON object, not an array or primitive value`);
+    }
+    return parsed;
+  } catch (error) {
+    throw new Error(
+      `Invalid JSON for ${flagName}. Expected format: '{"key":"value"}'. Parse error: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 /**
  * Hook command for executing architect hooks
  */
@@ -74,168 +109,136 @@ export const hookCommand = new Command('hook')
   .description('Execute architect hooks for AI agent integrations')
   .option(
     '--type <agentAndMethod>',
-    'Hook type: <agent>.<method> (e.g., claude-code.preToolUse, gemini-cli.afterTool)',
+    'Hook type: <agent>.<method> (e.g., claude-code.preToolUse, gemini-cli.postToolUse)',
+    undefined,
   )
   .option(
     '--tool-config <json>',
     'JSON config for the LLM tool (e.g., \'{"model":"gpt-5.2-high"}\')',
+    undefined,
   )
-  .option('--llm-tool <tool>', 'LLM tool to use for processing (e.g., claude-code, gemini-cli)')
+  .option(
+    '--llm-tool <tool>',
+    `LLM tool to use for processing. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
+    undefined,
+  )
+  .option(
+    '--fallback-tool <tool>',
+    `Fallback LLM tool when --llm-tool is not set. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
+    undefined,
+  )
+  .option(
+    '--fallback-tool-config <json>',
+    'JSON config for the fallback tool (e.g., \'{"model":"claude-sonnet-4-6"}\')',
+    undefined,
+  )
   .action(async (options: HookOptions): Promise<void> => {
     try {
       if (!options.type) {
-        print.error('--type option is required');
-        print.info('Examples:');
-        print.info('  architect hook --type claude-code.preToolUse');
-        print.info('  architect hook --type claude-code.postToolUse');
-        print.info('  architect hook --type gemini-cli.beforeTool');
-        print.info('  architect hook --type gemini-cli.afterTool');
-        process.exit(1);
+        throw new Error(
+          '--type option is required. Examples: claude-code.preToolUse, claude-code.postToolUse, gemini-cli.beforeTool, gemini-cli.afterTool',
+        );
       }
 
       const { agent, hookMethod } = parseHookType(options.type);
 
-      // Parse tool config JSON if provided
-      let toolConfig: Record<string, unknown> | undefined;
-      if (options.toolConfig) {
-        try {
-          const parsed: unknown = JSON.parse(options.toolConfig);
-          if (!isRecordObject(parsed)) {
-            print.error('--tool-config must be a JSON object, not an array or primitive value');
-            process.exit(1);
-          }
-          toolConfig = parsed;
-        } catch (error) {
+      // Parse JSON config options
+      const toolConfig = parseJsonConfigOption(options.toolConfig, '--tool-config');
+      const fallbackToolConfig = parseJsonConfigOption(options.fallbackToolConfig, '--fallback-tool-config');
+
+      // Resolve effective tool and config (specific flags take precedence over fallback)
+      const resolvedLlmTool = options.llmTool ?? options.fallbackTool;
+      const resolvedToolConfig = toolConfig ?? fallbackToolConfig;
+
+      if (!isHookMethod(hookMethod)) {
+        print.error(
+          `Unsupported hook method: ${hookMethod}. Supported: preToolUse, postToolUse`,
+        );
+        process.exit(1);
+      }
+
+      // Build adapter config with resolved tool and config
+      const adapterConfig: HookAdapterConfig = {};
+      if (resolvedToolConfig) {
+        adapterConfig.tool_config = resolvedToolConfig;
+      }
+      if (resolvedLlmTool) {
+        if (!isValidLlmTool(resolvedLlmTool)) {
           print.error(
-            `Invalid JSON for --tool-config. Expected format: '{"key":"value"}'. Parse error: ${error instanceof Error ? error.message : String(error)}`,
+            `Invalid LLM tool: ${resolvedLlmTool}. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
           );
           process.exit(1);
         }
+        adapterConfig.llm_tool = resolvedLlmTool;
       }
 
-      if (agent === CLAUDE_CODE) {
-        // Import hook modules (dynamic import for conditional loading based on agent type)
-        const [getFileDesignPatternModule, reviewCodeChangeModule]: [
-          ClaudeCodeHookModule,
-          ClaudeCodeHookModule,
-        ] = await Promise.all([
-          import('../hooks/claudeCode/getFileDesignPattern'),
-          import('../hooks/claudeCode/reviewCodeChange'),
-        ]);
+      const resolvedAdapterConfig =
+        Object.keys(adapterConfig).length > 0 ? adapterConfig : undefined;
 
-        // Collect all available hooks for this hook method
+      if (agent === CLAUDE_CODE) {
+        // Import hook module via barrel export (dynamic for conditional loading based on agent type)
+        const hookModule: ClaudeCodeHookModule = await import('../hooks/claudeCode');
+
         const claudeCallbacks: ClaudeCodeHookCallback[] = [];
 
-        // Instantiate GetFileDesignPatternHook class and get the method
-        if (getFileDesignPatternModule.GetFileDesignPatternHook) {
-          const hookInstance = new getFileDesignPatternModule.GetFileDesignPatternHook();
-          const hookFn = hookInstance[hookMethod as keyof HookClass<ClaudeCodeHookInput>];
+        if (hookModule.GetFileDesignPatternHook) {
+          const hookInstance = new hookModule.GetFileDesignPatternHook();
+          const hookFn = hookInstance[hookMethod];
           if (hookFn) {
             claudeCallbacks.push(hookFn.bind(hookInstance));
           }
         }
 
-        // Instantiate ReviewCodeChangeHook class and get the method
-        if (reviewCodeChangeModule.ReviewCodeChangeHook) {
-          const hookInstance = new reviewCodeChangeModule.ReviewCodeChangeHook();
-          const hookFn = hookInstance[hookMethod as keyof HookClass<ClaudeCodeHookInput>];
+        if (hookModule.ReviewCodeChangeHook) {
+          const hookInstance = new hookModule.ReviewCodeChangeHook();
+          const hookFn = hookInstance[hookMethod];
           if (hookFn) {
             claudeCallbacks.push(hookFn.bind(hookInstance));
           }
         }
 
         if (claudeCallbacks.length === 0) {
-          print.error(`Hook not found: ${hookMethod} in Claude Code hooks`);
+          print.error(`No hooks registered for method: ${hookMethod} in Claude Code hooks`);
           process.exit(1);
         }
 
         const adapter = new ClaudeCodeAdapter();
-
-        // Build config object with optional tool_config and llm_tool
-        const adapterConfig: { tool_config?: Record<string, unknown>; llm_tool?: string } = {};
-        if (toolConfig) {
-          adapterConfig.tool_config = toolConfig;
-        }
-        if (options.llmTool) {
-          if (!isValidLlmTool(options.llmTool)) {
-            print.error(
-              `Invalid --llm-tool value: ${options.llmTool}. Supported: claude-code, gemini-cli`,
-            );
-            process.exit(1);
-          }
-          adapterConfig.llm_tool = options.llmTool;
-        }
-
-        // Execute all hooks in serial with shared stdin
-        await adapter.executeMultiple(
-          claudeCallbacks,
-          Object.keys(adapterConfig).length > 0 ? adapterConfig : undefined,
-        );
+        await adapter.executeMultiple(claudeCallbacks, resolvedAdapterConfig);
       } else if (agent === GEMINI_CLI) {
-        // Import hook modules (dynamic import for conditional loading based on agent type)
-        const [getFileDesignPatternModule, reviewCodeChangeModule]: [
-          GeminiCliHookModule,
-          GeminiCliHookModule,
-        ] = await Promise.all([
-          import('../hooks/geminiCli/getFileDesignPattern'),
-          import('../hooks/geminiCli/reviewCodeChange'),
-        ]);
+        // Import hook module via barrel export (dynamic for conditional loading based on agent type)
+        const hookModule: GeminiCliHookModule = await import('../hooks/geminiCli');
 
-        // Collect all available hooks for this hook method
         const geminiCallbacks: GeminiCliHookCallback[] = [];
 
-        // Instantiate GetFileDesignPatternHook class and get the method
-        if (getFileDesignPatternModule.GetFileDesignPatternHook) {
-          const hookInstance = new getFileDesignPatternModule.GetFileDesignPatternHook();
-          const hookFn = hookInstance[hookMethod as keyof HookClass<GeminiCliHookInput>];
+        if (hookModule.GetFileDesignPatternHook) {
+          const hookInstance = new hookModule.GetFileDesignPatternHook();
+          const hookFn = hookInstance[hookMethod];
           if (hookFn) {
             geminiCallbacks.push(hookFn.bind(hookInstance));
           }
         }
 
-        // Instantiate ReviewCodeChangeHook class and get the method
-        if (reviewCodeChangeModule.ReviewCodeChangeHook) {
-          const hookInstance = new reviewCodeChangeModule.ReviewCodeChangeHook();
-          const hookFn = hookInstance[hookMethod as keyof HookClass<GeminiCliHookInput>];
+        if (hookModule.ReviewCodeChangeHook) {
+          const hookInstance = new hookModule.ReviewCodeChangeHook();
+          const hookFn = hookInstance[hookMethod];
           if (hookFn) {
             geminiCallbacks.push(hookFn.bind(hookInstance));
           }
         }
 
         if (geminiCallbacks.length === 0) {
-          print.error(`Hook not found: ${hookMethod} in Gemini CLI hooks`);
+          print.error(`No hooks registered for method: ${hookMethod} in Gemini CLI hooks`);
           process.exit(1);
         }
 
         const adapter = new GeminiCliAdapter();
-
-        // Build config object with optional tool_config and llm_tool
-        const geminiAdapterConfig: { tool_config?: Record<string, unknown>; llm_tool?: string } =
-          {};
-        if (toolConfig) {
-          geminiAdapterConfig.tool_config = toolConfig;
-        }
-        if (options.llmTool) {
-          if (!isValidLlmTool(options.llmTool)) {
-            print.error(
-              `Invalid --llm-tool value: ${options.llmTool}. Supported: claude-code, gemini-cli`,
-            );
-            process.exit(1);
-          }
-          geminiAdapterConfig.llm_tool = options.llmTool;
-        }
-
-        // Execute all hooks in serial with shared stdin
-        await adapter.executeMultiple(
-          geminiCallbacks,
-          Object.keys(geminiAdapterConfig).length > 0 ? geminiAdapterConfig : undefined,
-        );
+        await adapter.executeMultiple(geminiCallbacks, resolvedAdapterConfig);
       } else {
         print.error(`Unsupported agent: ${agent}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);
         process.exit(1);
       }
     } catch (error) {
-      print.error(`Hook error: ${(error as Error).message}`);
+      print.error(`Hook error: ${error instanceof Error ? error.message : String(error)}`);
       process.exit(1);
     }
   });

@@ -1,4 +1,3 @@
-import { print } from '@agiflowai/aicode-utils';
 /**
  * MCP Serve Command
  *
@@ -20,26 +19,93 @@ import { print } from '@agiflowai/aicode-utils';
  * - Not cleaning up resources on shutdown
  */
 
+import { print } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 import { createServer } from '../server';
-import { HttpTransportHandler } from '../transports/http';
-import { SseTransportHandler } from '../transports/sse';
-import { StdioTransportHandler } from '../transports/stdio';
-import { type TransportConfig, type TransportHandler, TransportMode } from '../transports/types';
 import {
-  type LlmToolId,
-  isValidLlmTool,
-  SUPPORTED_LLM_TOOLS,
-} from '@agiflowai/coding-agent-bridge';
+  HttpTransportHandler,
+  SseTransportHandler,
+  StdioTransportHandler,
+  TransportMode,
+  type TransportConfig,
+  type TransportHandler,
+} from '../transports';
+import { type LlmToolId, isValidLlmTool, SUPPORTED_LLM_TOOLS } from '@agiflowai/coding-agent-bridge';
+
+/**
+ * Options passed by Commander for the mcp-serve command
+ */
+interface McpServeOptions {
+  type: string;
+  port: number;
+  host: string;
+  designPatternTool?: string;
+  reviewTool?: string;
+  designPatternToolConfig?: string;
+  reviewToolConfig?: string;
+  fallbackTool?: string;
+  fallbackToolConfig?: string;
+  adminEnable: boolean;
+}
+
+/**
+ * Resolved options forwarded to createServer()
+ */
+interface ServerOptions {
+  designPatternTool?: LlmToolId;
+  designPatternToolConfig?: Record<string, unknown>;
+  reviewTool?: LlmToolId;
+  reviewToolConfig?: Record<string, unknown>;
+  adminEnabled: boolean;
+}
+
+/**
+ * Type guard to verify a parsed JSON value is a plain object.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Validate and resolve an LLM tool option. Throws on invalid input.
+ */
+function parseLlmToolOption(value: string | undefined, flagName: string): LlmToolId | undefined {
+  if (!value) return undefined;
+  if (!isValidLlmTool(value)) {
+    throw new Error(`Invalid ${flagName}: ${value}. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`);
+  }
+  return value;
+}
+
+/**
+ * Parse a JSON config string option. Throws on parse failure or non-object value.
+ */
+function parseJsonConfig(value: string | undefined, flagName: string): Record<string, unknown> | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!isRecord(parsed)) {
+      throw new Error(`Invalid JSON for ${flagName}: expected a JSON object`);
+    }
+    return parsed;
+  } catch (error) {
+    throw new Error(`Invalid JSON for ${flagName}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
 
 /**
  * Start MCP server with given transport handler
  */
-async function startServer(handler: TransportHandler) {
-  await handler.start();
+async function startServer(handler: TransportHandler): Promise<void> {
+  try {
+    await handler.start();
+  } catch (error) {
+    print.error('Failed to start transport:', error instanceof Error ? error : String(error));
+    process.exit(1);
+  }
 
   // Handle graceful shutdown
-  const shutdown = async (signal: string) => {
+  const shutdown = async (signal: string): Promise<void> => {
     print.error(`\nReceived ${signal}, shutting down gracefully...`);
     try {
       await handler.stop();
@@ -50,8 +116,8 @@ async function startServer(handler: TransportHandler) {
     }
   };
 
-  process.on('SIGINT', () => shutdown('SIGINT'));
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', async (): Promise<void> => { await shutdown('SIGINT'); });
+  process.on('SIGTERM', async (): Promise<void> => { await shutdown('SIGTERM'); });
 }
 
 /**
@@ -63,7 +129,7 @@ export const mcpServeCommand = new Command('mcp-serve')
   .option(
     '-p, --port <port>',
     'Port to listen on (http/sse only)',
-    (val) => parseInt(val, 10),
+    (val: string): number => parseInt(val, 10),
     3000,
   )
   .option('--host <host>', 'Host to bind to (http/sse only)', 'localhost')
@@ -87,75 +153,44 @@ export const mcpServeCommand = new Command('mcp-serve')
     'JSON config for review tool (e.g., \'{"model":"gpt-5.2-high"}\')',
     undefined,
   )
+  .option(
+    '--fallback-tool <tool>',
+    `Fallback LLM tool used when --review-tool or --design-pattern-tool is not set. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
+    undefined,
+  )
+  .option(
+    '--fallback-tool-config <json>',
+    'JSON config for fallback tool (e.g., \'{"model":"claude-sonnet-4-6"}\')',
+    undefined,
+  )
   .option('--admin-enable', 'Enable admin tools (add_design_pattern, add_rule)', false)
-  .action(async (options) => {
+  .action(async (options: McpServeOptions): Promise<void> => {
     try {
       const transportType = options.type.toLowerCase();
-      const adminEnabled = options.adminEnable as boolean;
+      const adminEnabled = options.adminEnable;
 
-      // Validate design-pattern-tool option
-      let designPatternTool: LlmToolId | undefined;
-      if (options.designPatternTool) {
-        if (!isValidLlmTool(options.designPatternTool)) {
-          print.error(
-            `Invalid design pattern tool: ${options.designPatternTool}. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
-          );
-          process.exit(1);
-        }
-        designPatternTool = options.designPatternTool as LlmToolId;
-      }
+      const designPatternTool = parseLlmToolOption(options.designPatternTool, '--design-pattern-tool');
+      const reviewTool = parseLlmToolOption(options.reviewTool, '--review-tool');
+      const fallbackTool = parseLlmToolOption(options.fallbackTool, '--fallback-tool');
 
-      // Validate review-tool option
-      let reviewTool: LlmToolId | undefined;
-      if (options.reviewTool) {
-        if (!isValidLlmTool(options.reviewTool)) {
-          print.error(
-            `Invalid review tool: ${options.reviewTool}. Supported: ${SUPPORTED_LLM_TOOLS.join(', ')}`,
-          );
-          process.exit(1);
-        }
-        reviewTool = options.reviewTool as LlmToolId;
-      }
+      const designPatternToolConfig = parseJsonConfig(options.designPatternToolConfig, '--design-pattern-tool-config');
+      const reviewToolConfig = parseJsonConfig(options.reviewToolConfig, '--review-tool-config');
+      const fallbackToolConfig = parseJsonConfig(options.fallbackToolConfig, '--fallback-tool-config');
 
-      // Parse tool config JSON options
-      let designPatternToolConfig: Record<string, unknown> | undefined;
-      if (options.designPatternToolConfig) {
-        try {
-          designPatternToolConfig = JSON.parse(options.designPatternToolConfig);
-        } catch (error) {
-          print.error(
-            `Invalid JSON for --design-pattern-tool-config: ${error instanceof Error ? error.message : String(error)}`,
-          );
-          process.exit(1);
-        }
-      }
-
-      let reviewToolConfig: Record<string, unknown> | undefined;
-      if (options.reviewToolConfig) {
-        try {
-          reviewToolConfig = JSON.parse(options.reviewToolConfig);
-        } catch (error) {
-          print.error(
-            `Invalid JSON for --review-tool-config: ${error instanceof Error ? error.message : String(error)}`,
-          );
-          process.exit(1);
-        }
-      }
-
-      const serverOptions = {
-        designPatternTool,
-        designPatternToolConfig,
-        reviewTool,
-        reviewToolConfig,
+      // Specific tools take precedence over fallback
+      const serverOptions: ServerOptions = {
+        designPatternTool: designPatternTool ?? fallbackTool,
+        designPatternToolConfig: designPatternToolConfig ?? fallbackToolConfig,
+        reviewTool: reviewTool ?? fallbackTool,
+        reviewToolConfig: reviewToolConfig ?? fallbackToolConfig,
         adminEnabled,
       };
 
-      if (transportType === 'stdio') {
+      if (transportType === TransportMode.STDIO) {
         const server = createServer(serverOptions);
         const handler = new StdioTransportHandler(server);
         await startServer(handler);
-      } else if (transportType === 'http') {
-        // For HTTP, pass a factory function to create new server instances per session
+      } else if (transportType === TransportMode.HTTP) {
         const config: TransportConfig = {
           mode: TransportMode.HTTP,
           port: options.port || Number(process.env.MCP_PORT) || 3000,
@@ -163,8 +198,7 @@ export const mcpServeCommand = new Command('mcp-serve')
         };
         const handler = new HttpTransportHandler(() => createServer(serverOptions), config);
         await startServer(handler);
-      } else if (transportType === 'sse') {
-        // For SSE, pass a factory function to create new server instances per connection
+      } else if (transportType === TransportMode.SSE) {
         const config: TransportConfig = {
           mode: TransportMode.SSE,
           port: options.port || Number(process.env.MCP_PORT) || 3000,
