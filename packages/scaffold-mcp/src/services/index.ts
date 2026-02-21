@@ -2,8 +2,8 @@
  * Services Barrel Exports
  */
 
-export { BoilerplateGeneratorService } from './BoilerplateGeneratorService';
 // Boilerplate services
+export { BoilerplateGeneratorService } from './BoilerplateGeneratorService';
 export { BoilerplateService } from './BoilerplateService';
 // Core services
 export { FileSystemService } from './FileSystemService';

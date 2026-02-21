@@ -15,7 +15,7 @@ import {
   ScaffoldFeaturePrompt,
   SyncTemplatePatternsPrompt,
 } from '../prompts';
-import { TemplateService } from '../services/TemplateService';
+import { TemplateService } from '../services';
 import {
   GenerateBoilerplateFileTool,
   GenerateBoilerplateTool,
@@ -31,10 +31,18 @@ export interface ServerOptions {
   adminEnabled?: boolean;
   isMonolith?: boolean;
   promptAsSkill?: boolean;
+  fallbackTool?: string;
+  fallbackToolConfig?: Record<string, unknown>;
 }
 
-export function createServer(options: ServerOptions = {}) {
-  const { adminEnabled = false, isMonolith = false, promptAsSkill = false } = options;
+export function createServer(options: ServerOptions = {}): Server {
+  const {
+    adminEnabled = false,
+    isMonolith = false,
+    promptAsSkill = false,
+    fallbackTool,
+    fallbackToolConfig,
+  } = options;
 
   // Find templates folder by searching upwards from current directory
   const templatesPath = TemplatesManagerService.findTemplatesPathSync();
@@ -75,11 +83,13 @@ export function createServer(options: ServerOptions = {}) {
   const scaffoldApplicationPrompt = new ScaffoldApplicationPrompt({ isMonolith, promptAsSkill });
   const scaffoldFeaturePrompt = new ScaffoldFeaturePrompt({ isMonolith, promptAsSkill });
 
-  // Render instructions from template
+  // Render instructions from template — include fallback LLM tool context if configured
   const templateService = new TemplateService();
   const instructions = templateService.renderString(serverInstructionsTemplate, {
     adminEnabled,
-    isMonolith
+    isMonolith,
+    fallbackTool,
+    fallbackToolConfig,
   });
 
   const server = new Server(
@@ -97,165 +107,141 @@ export function createServer(options: ServerOptions = {}) {
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    // Get tool definitions
-    const listScaffoldingMethodsToolDef = listScaffoldingMethodsTool.getDefinition();
-    const useScaffoldMethodToolDef = useScaffoldMethodTool.getDefinition();
-    const writeToFileToolDef = writeToFileTool.getDefinition();
+    try {
+      const tools = [
+        listScaffoldingMethodsTool.getDefinition(),
+        useScaffoldMethodTool.getDefinition(),
+        writeToFileTool.getDefinition(),
+      ];
 
-    const tools = [
-      listScaffoldingMethodsToolDef,
-      useScaffoldMethodToolDef,
-      writeToFileToolDef,
-    ];
+      if (!isMonolith) {
+        if (listBoilerplatesTool) tools.unshift(listBoilerplatesTool.getDefinition());
+        if (useBoilerplateTool) tools.splice(1, 0, useBoilerplateTool.getDefinition());
+      }
 
-    // Add boilerplate tools only for non-monolith projects
-    if (!isMonolith) {
-      if (listBoilerplatesTool) {
-        tools.unshift(listBoilerplatesTool.getDefinition());
+      if (adminEnabled) {
+        if (generateBoilerplateTool) tools.push(generateBoilerplateTool.getDefinition());
+        if (generateBoilerplateFileTool) tools.push(generateBoilerplateFileTool.getDefinition());
+        if (generateFeatureScaffoldTool) tools.push(generateFeatureScaffoldTool.getDefinition());
       }
-      if (useBoilerplateTool) {
-        tools.splice(1, 0, useBoilerplateTool.getDefinition());
-      }
+
+      return { tools };
+    } catch (error) {
+      throw new Error(`Failed to list tools: ${error instanceof Error ? error.message : String(error)}`);
     }
-
-    // Add admin tools if enabled
-    if (adminEnabled) {
-      if (generateBoilerplateTool) {
-        tools.push(generateBoilerplateTool.getDefinition());
-      }
-      if (generateBoilerplateFileTool) {
-        tools.push(generateBoilerplateFileTool.getDefinition());
-      }
-      if (generateFeatureScaffoldTool) {
-        tools.push(generateFeatureScaffoldTool.getDefinition());
-      }
-    }
-
-    return { tools };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-
-    if (name === ListBoilerplatesTool.TOOL_NAME) {
-      if (isMonolith || !listBoilerplatesTool) {
-        throw new Error('Boilerplate tools are not available for monolith projects');
+    try {
+      if (name === ListBoilerplatesTool.TOOL_NAME) {
+        if (isMonolith || !listBoilerplatesTool) {
+          throw new Error('Boilerplate tools are not available for monolith projects');
+        }
+        return await listBoilerplatesTool.execute(args || {});
       }
-      return await listBoilerplatesTool.execute(args || {});
-    }
 
-    if (name === UseBoilerplateTool.TOOL_NAME) {
-      if (isMonolith || !useBoilerplateTool) {
-        throw new Error('Boilerplate tools are not available for monolith projects');
+      if (name === UseBoilerplateTool.TOOL_NAME) {
+        if (isMonolith || !useBoilerplateTool) {
+          throw new Error('Boilerplate tools are not available for monolith projects');
+        }
+        return await useBoilerplateTool.execute(args || {});
       }
-      return await useBoilerplateTool.execute(args || {});
-    }
 
-    if (name === ListScaffoldingMethodsTool.TOOL_NAME) {
-      return await listScaffoldingMethodsTool.execute(args || {});
-    }
-
-    if (name === UseScaffoldMethodTool.TOOL_NAME) {
-      return await useScaffoldMethodTool.execute(args || {});
-    }
-
-    if (name === WriteToFileTool.TOOL_NAME) {
-      return await writeToFileTool.execute(args || {});
-    }
-
-    if (name === GenerateBoilerplateTool.TOOL_NAME) {
-      if (!adminEnabled || !generateBoilerplateTool) {
-        throw new Error('Admin tools are not enabled. Use --admin-enable flag to enable.');
+      if (name === ListScaffoldingMethodsTool.TOOL_NAME) {
+        return await listScaffoldingMethodsTool.execute(args || {});
       }
-      return await generateBoilerplateTool.execute(args as any);
-    }
 
-    if (name === GenerateBoilerplateFileTool.TOOL_NAME) {
-      if (!adminEnabled || !generateBoilerplateFileTool) {
-        throw new Error('Admin tools are not enabled. Use --admin-enable flag to enable.');
+      if (name === UseScaffoldMethodTool.TOOL_NAME) {
+        return await useScaffoldMethodTool.execute(args || {});
       }
-      return await generateBoilerplateFileTool.execute(args as any);
-    }
 
-    if (name === GenerateFeatureScaffoldTool.TOOL_NAME) {
-      if (!adminEnabled || !generateFeatureScaffoldTool) {
-        throw new Error('Admin tools are not enabled. Use --admin-enable flag to enable.');
+      if (name === WriteToFileTool.TOOL_NAME) {
+        return await writeToFileTool.execute(args || {});
       }
-      return await generateFeatureScaffoldTool.execute(args as any);
-    }
 
-    throw new Error(`Unknown tool: ${name}`);
+      if (name === GenerateBoilerplateTool.TOOL_NAME) {
+        if (!adminEnabled || !generateBoilerplateTool) {
+          throw new Error('Admin tools are not enabled. Use --admin-enable flag to enable.');
+        }
+        return await generateBoilerplateTool.execute(args as any);
+      }
+
+      if (name === GenerateBoilerplateFileTool.TOOL_NAME) {
+        if (!adminEnabled || !generateBoilerplateFileTool) {
+          throw new Error('Admin tools are not enabled. Use --admin-enable flag to enable.');
+        }
+        return await generateBoilerplateFileTool.execute(args as any);
+      }
+
+      if (name === GenerateFeatureScaffoldTool.TOOL_NAME) {
+        if (!adminEnabled || !generateFeatureScaffoldTool) {
+          throw new Error('Admin tools are not enabled. Use --admin-enable flag to enable.');
+        }
+        return await generateFeatureScaffoldTool.execute(args as any);
+      }
+
+      throw new Error(`Unknown tool: ${name}`);
+    } catch (error) {
+      throw new Error(`Tool '${name}' execution failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   });
 
-  // Prompt handlers
   server.setRequestHandler(ListPromptsRequestSchema, async () => {
-    const prompts = [];
+    try {
+      const prompts = [
+        scaffoldApplicationPrompt.getDefinition(),
+        scaffoldFeaturePrompt.getDefinition(),
+      ];
 
-    // User-facing prompts (always available)
-    prompts.push(scaffoldApplicationPrompt.getDefinition());
-    prompts.push(scaffoldFeaturePrompt.getDefinition());
-
-    // Admin prompts (only in admin mode)
-    if (adminEnabled) {
-      if (generateBoilerplatePrompt) {
-        prompts.push(generateBoilerplatePrompt.getDefinition());
+      if (adminEnabled) {
+        if (generateBoilerplatePrompt) prompts.push(generateBoilerplatePrompt.getDefinition());
+        if (generateFeatureScaffoldPrompt) prompts.push(generateFeatureScaffoldPrompt.getDefinition());
+        if (syncTemplatePatternsPrompt) prompts.push(syncTemplatePatternsPrompt.getDefinition());
       }
 
-      if (generateFeatureScaffoldPrompt) {
-        prompts.push(generateFeatureScaffoldPrompt.getDefinition());
-      }
-
-      if (syncTemplatePatternsPrompt) {
-        prompts.push(syncTemplatePatternsPrompt.getDefinition());
-      }
+      return { prompts };
+    } catch (error) {
+      throw new Error(`Failed to list prompts: ${error instanceof Error ? error.message : String(error)}`);
     }
-
-    return { prompts };
   });
 
   server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-
-    // User-facing prompts (always available)
-    if (name === ScaffoldApplicationPrompt.PROMPT_NAME) {
-      return {
-        messages: scaffoldApplicationPrompt.getMessages(args as any),
-      };
-    }
-
-    if (name === ScaffoldFeaturePrompt.PROMPT_NAME) {
-      return {
-        messages: scaffoldFeaturePrompt.getMessages(args as any),
-      };
-    }
-
-    // Admin prompts (only in admin mode)
-    if (name === GenerateBoilerplatePrompt.PROMPT_NAME) {
-      if (!generateBoilerplatePrompt) {
-        throw new Error('Prompt not available');
+    try {
+      if (name === ScaffoldApplicationPrompt.PROMPT_NAME) {
+        return { messages: scaffoldApplicationPrompt.getMessages(args as any) };
       }
-      return {
-        messages: generateBoilerplatePrompt.getMessages(args as any),
-      };
-    }
 
-    if (name === GenerateFeatureScaffoldPrompt.PROMPT_NAME) {
-      if (!generateFeatureScaffoldPrompt) {
-        throw new Error('Prompt not available');
+      if (name === ScaffoldFeaturePrompt.PROMPT_NAME) {
+        return { messages: scaffoldFeaturePrompt.getMessages(args as any) };
       }
-      return {
-        messages: generateFeatureScaffoldPrompt.getMessages(args as any),
-      };
-    }
 
-    if (name === SyncTemplatePatternsPrompt.PROMPT_NAME) {
-      if (!syncTemplatePatternsPrompt) {
-        throw new Error('Prompt not available');
+      if (name === GenerateBoilerplatePrompt.PROMPT_NAME) {
+        if (!generateBoilerplatePrompt) {
+          throw new Error(`Prompt '${name}' is not available — admin mode is disabled`);
+        }
+        return { messages: generateBoilerplatePrompt.getMessages(args as any) };
       }
-      return await syncTemplatePatternsPrompt.execute(args as any);
-    }
 
-    throw new Error(`Unknown prompt: ${name}`);
+      if (name === GenerateFeatureScaffoldPrompt.PROMPT_NAME) {
+        if (!generateFeatureScaffoldPrompt) {
+          throw new Error(`Prompt '${name}' is not available — admin mode is disabled`);
+        }
+        return { messages: generateFeatureScaffoldPrompt.getMessages(args as any) };
+      }
+
+      if (name === SyncTemplatePatternsPrompt.PROMPT_NAME) {
+        if (!syncTemplatePatternsPrompt) {
+          throw new Error(`Prompt '${name}' is not available — admin mode is disabled`);
+        }
+        return await syncTemplatePatternsPrompt.execute(args as any);
+      }
+
+      throw new Error(`Unknown prompt: ${name}`);
+    } catch (error) {
+      throw new Error(`Prompt '${name}' execution failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   });
 
   return server;
