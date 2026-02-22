@@ -344,9 +344,9 @@ describe('TemplatesManagerService', (): void => {
     it('should propagate pathExists errors', async (): Promise<void> => {
       vi.mocked(fsHelpers.pathExists).mockRejectedValue(new Error('Permission denied'));
 
-      await expect(
-        TemplatesManagerService.findTemplatesPath(MOCK_WORKSPACE),
-      ).rejects.toThrow('Permission denied');
+      await expect(TemplatesManagerService.findTemplatesPath(MOCK_WORKSPACE)).rejects.toThrow(
+        'Permission denied',
+      );
     });
   });
 
@@ -409,9 +409,9 @@ describe('TemplatesManagerService', (): void => {
       });
       vi.mocked(fs.readFile).mockRejectedValue(new Error('Permission denied'));
 
-      await expect(
-        TemplatesManagerService.readToolkitConfig(MOCK_WORKSPACE),
-      ).rejects.toThrow('Permission denied');
+      await expect(TemplatesManagerService.readToolkitConfig(MOCK_WORKSPACE)).rejects.toThrow(
+        'Permission denied',
+      );
     });
 
     // -----------------------------------------------------------------------
@@ -425,9 +425,7 @@ describe('TemplatesManagerService', (): void => {
         if (p === MOCK_SETTINGS_LOCAL_PATH) return true;
         return false;
       });
-      vi.mocked(fs.readFile)
-        .mockResolvedValueOnce(BASE_YAML)
-        .mockResolvedValueOnce(LOCAL_SCALAR);
+      vi.mocked(fs.readFile).mockResolvedValueOnce(BASE_YAML).mockResolvedValueOnce(LOCAL_SCALAR);
 
       const result = await TemplatesManagerService.readToolkitConfig(MOCK_WORKSPACE);
 
@@ -478,9 +476,7 @@ describe('TemplatesManagerService', (): void => {
         if (p === MOCK_SETTINGS_LOCAL_PATH) return true;
         return false;
       });
-      vi.mocked(fs.readFile)
-        .mockResolvedValueOnce(BASE_YAML)
-        .mockResolvedValueOnce(LOCAL_MIXED);
+      vi.mocked(fs.readFile).mockResolvedValueOnce(BASE_YAML).mockResolvedValueOnce(LOCAL_MIXED);
 
       const result = await TemplatesManagerService.readToolkitConfig(MOCK_WORKSPACE);
 
@@ -584,9 +580,7 @@ describe('TemplatesManagerService', (): void => {
         if (p === MOCK_SETTINGS_LOCAL_PATH) return true;
         return false;
       });
-      mockReadFileSync
-        .mockReturnValueOnce(BASE_YAML)
-        .mockReturnValueOnce(LOCAL_PARTIAL_NESTED);
+      mockReadFileSync.mockReturnValueOnce(BASE_YAML).mockReturnValueOnce(LOCAL_PARTIAL_NESTED);
 
       const result = TemplatesManagerService.readToolkitConfigSync(MOCK_WORKSPACE);
 
@@ -611,9 +605,7 @@ describe('TemplatesManagerService', (): void => {
         if (p === MOCK_SETTINGS_LOCAL_PATH) return true;
         return false;
       });
-      mockReadFileSync
-        .mockReturnValueOnce(BASE_YAML)
-        .mockReturnValueOnce(LOCAL_SCALAR);
+      mockReadFileSync.mockReturnValueOnce(BASE_YAML).mockReturnValueOnce(LOCAL_SCALAR);
 
       const result = TemplatesManagerService.readToolkitConfigSync(MOCK_WORKSPACE);
 

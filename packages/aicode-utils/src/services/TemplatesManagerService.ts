@@ -37,8 +37,47 @@ export class TemplatesManagerService {
   private static SETTINGS_LOCAL_FILE = 'settings.local.yaml';
   private static TOOLKIT_CONFIG_FILE = 'toolkit.yaml'; // kept for backward-compat fallback
 
+  /**
+   * Recursively merge two plain objects. Primitive and array values in `local`
+   * replace those in `base`; plain-object values are merged recursively.
+   */
+  private static deepMerge(
+    base: Record<string, unknown>,
+    local: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const result: Record<string, unknown> = { ...base };
+    for (const [key, localValue] of Object.entries(local)) {
+      const baseValue = result[key];
+      if (
+        localValue !== null &&
+        typeof localValue === 'object' &&
+        !Array.isArray(localValue) &&
+        baseValue !== null &&
+        typeof baseValue === 'object' &&
+        !Array.isArray(baseValue)
+      ) {
+        result[key] = TemplatesManagerService.deepMerge(
+          baseValue as Record<string, unknown>,
+          localValue as Record<string, unknown>,
+        );
+      } else {
+        result[key] = localValue;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Deep-merge two ToolkitConfig objects. Plain-object values are merged
+   * recursively; primitives and arrays in `local` replace those in `base`.
+   * This allows settings.local.yaml to override a single leaf key (e.g.
+   * scaffold-mcp.mcp-serve.fallbackTool) without wiping sibling keys.
+   */
   private static mergeToolkitConfigs(base: ToolkitConfig, local: ToolkitConfig): ToolkitConfig {
-    return { ...base, ...local };
+    return TemplatesManagerService.deepMerge(
+      base as unknown as Record<string, unknown>,
+      local as unknown as Record<string, unknown>,
+    ) as ToolkitConfig;
   }
 
   /**
