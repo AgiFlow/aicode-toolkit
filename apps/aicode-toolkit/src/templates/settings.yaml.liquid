@@ -57,6 +57,9 @@ scaffold-mcp:
     # fallbackToolConfig:
     #   model: gemini-2.0-flash
     {% endif %}
+    # Extra CLI args merged into the mcp-serve command (key: value → --key value)
+    # args:
+    #   review-tool: gemini-cli
 
   # -------------------------------------------------------------------------
   # hook — defaults for `scaffold-mcp hook`
@@ -154,6 +157,9 @@ architect-mcp:
     # reviewTool: gemini-cli
     # reviewToolConfig:
     #   model: gemini-2.0-flash
+    # Extra CLI args merged into the mcp-serve command (key: value → --key value)
+    # args:
+    #   review-tool: gemini-cli
 
   # -------------------------------------------------------------------------
   # hook — defaults for `architect-mcp hook`
