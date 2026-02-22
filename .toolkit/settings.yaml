@@ -1,0 +1,99 @@
+# .toolkit/settings.yaml
+# Toolkit configuration for aicode-toolkit monorepo
+#
+# Local overrides go in .toolkit/settings.local.yaml (add to .gitignore).
+# Run `aicode sync` to regenerate .claude/settings.json and mcp-config.yaml.
+
+projectType: monorepo
+version: '1.0'
+
+# ---------------------------------------------------------------------------
+# scaffold-mcp
+# ---------------------------------------------------------------------------
+
+scaffold-mcp:
+
+  mcp-serve:
+    adminEnable: true
+    promptAsSkill: true
+
+  hook:
+    claude-code:
+      preToolUse:
+        # hook reads llm-tool/tool-config from this file at runtime
+
+      postToolUse:
+
+      stop:
+
+      userPromptSubmit:
+
+      taskCompleted:
+
+# ---------------------------------------------------------------------------
+# architect-mcp
+# ---------------------------------------------------------------------------
+
+architect-mcp:
+
+  mcp-serve:
+    adminEnable: true
+    designPatternTool: gemini-cli
+    designPatternToolConfig:
+      model: gemini-3-flash-preview
+    reviewTool: gemini-cli
+    reviewToolConfig:
+      model: gemini-3-flash-preview
+
+  hook:
+    claude-code:
+      preToolUse:
+        llm-tool: gemini-cli
+        tool-config:
+          model: gemini-3-flash-preview
+
+      postToolUse:
+        llm-tool: gemini-cli
+        tool-config:
+          model: gemini-3-flash-preview
+
+# ---------------------------------------------------------------------------
+# mcp-config — generates mcp-config.yaml via `aicode sync --mcp`
+# ---------------------------------------------------------------------------
+
+mcp-config:
+  servers:
+    scaffold-mcp:
+      command: bun
+      args:
+        - run
+        - packages/scaffold-mcp/src/cli.ts
+        - mcp-serve
+        - --admin-enable
+        - --prompt-as-skill
+      instruction: >-
+        Use this server for generating boilerplate code, scaffolding new projects,
+        and adding features to existing projects. Supports multiple templates and
+        custom code generation patterns.
+    architect-mcp:
+      command: bun
+      args:
+        - run
+        - packages/architect-mcp/src/cli.ts
+        - mcp-serve
+        - --admin-enable
+        - --design-pattern-tool
+        - gemini-cli
+        - --design-pattern-tool-config
+        - '{"model":"gemini-3-flash-preview"}'
+        - --review-tool
+        - gemini-cli
+        - --review-tool-config
+        - '{"model":"gemini-3-flash-preview"}'
+      instruction: >-
+        Use this server for design pattern guidance and code review.
+        Provides tools for getting file design patterns and reviewing code changes
+        against established coding standards.
+  skills:
+    paths:
+      - docs/skills

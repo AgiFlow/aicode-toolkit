@@ -24,7 +24,7 @@ import path from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { Command } from 'commander';
 import { print, TemplatesManagerService } from '@agiflowai/aicode-utils';
-import type { ToolkitConfig } from '@agiflowai/aicode-utils';
+import type { ToolkitConfig, HookAgentConfig, ArchitectHookAgentConfig } from '@agiflowai/aicode-utils';
 import yaml from 'js-yaml';
 
 // ---------------------------------------------------------------------------
@@ -87,7 +87,13 @@ interface McpConfigOut {
 // Runtime type guard
 // ---------------------------------------------------------------------------
 
-function hasHookConfig(config: ToolkitConfig): boolean {
+/** Narrowed type asserting at least one MCP source has a claude-code hook section. */
+type ToolkitConfigWithHooks = ToolkitConfig & (
+  | { 'scaffold-mcp': NonNullable<ToolkitConfig['scaffold-mcp']> & { hook: { 'claude-code': HookAgentConfig } } }
+  | { 'architect-mcp': NonNullable<ToolkitConfig['architect-mcp']> & { hook: { 'claude-code': ArchitectHookAgentConfig } } }
+);
+
+function hasHookConfig(config: ToolkitConfig): config is ToolkitConfigWithHooks {
   return !!(
     config['scaffold-mcp']?.hook?.['claude-code'] || config['architect-mcp']?.hook?.['claude-code']
   );
@@ -172,8 +178,8 @@ async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string)
         ['userPromptSubmit', scaffoldAgent.userPromptSubmit],
         ['taskCompleted', scaffoldAgent.taskCompleted],
       ] as const) {
-        if (!methodConfig) continue;
-        const extraFlags = methodConfig.args ? argsToFlags(methodConfig.args) : [];
+        if (methodConfig === undefined) continue;
+        const extraFlags = methodConfig?.args ? argsToFlags(methodConfig?.args) : [];
         const command = buildHookCommand(scaffoldServer, `claude-code.${method}`, extraFlags);
         addHookEntry(hooksOutput, METHOD_TO_EVENT[method], command);
         hasAny = true;
@@ -188,8 +194,8 @@ async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string)
         ['preToolUse', architectAgent.preToolUse],
         ['postToolUse', architectAgent.postToolUse],
       ] as const) {
-        if (!methodConfig) continue;
-        const extraFlags = methodConfig.args ? argsToFlags(methodConfig.args) : [];
+        if (methodConfig === undefined) continue;
+        const extraFlags = methodConfig?.args ? argsToFlags(methodConfig?.args) : [];
         const command = buildHookCommand(architectServer, `claude-code.${method}`, extraFlags);
         addHookEntry(hooksOutput, METHOD_TO_EVENT[method], command);
         hasAny = true;
@@ -268,8 +274,10 @@ export const syncCommand = new Command('sync')
   .option('--mcp', 'Generate mcp-config.yaml only', false)
   .action(async (options: SyncCommandOptions): Promise<void> => {
     try {
-      const workspaceRoot = await TemplatesManagerService.getWorkspaceRoot();
-      const config = await TemplatesManagerService.readToolkitConfig();
+      const [workspaceRoot, config] = await Promise.all([
+        TemplatesManagerService.getWorkspaceRoot(),
+        TemplatesManagerService.readToolkitConfig(),
+      ]);
 
       if (!config) {
         throw new Error('No .toolkit/settings.yaml found. Run `aicode init` first.');
