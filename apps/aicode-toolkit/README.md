@@ -77,30 +77,35 @@ npx @agiflowai/aicode-toolkit sync --mcp
 | `--hooks` | Write `.claude/settings.json` only |
 | `--mcp` | Write `mcp-config.yaml` only |
 
-#### `claude-code` section → `.claude/settings.json`
+#### Hooks → `.claude/settings.json`
 
-Define Claude Code hook lifecycle entries in `.toolkit/settings.yaml`:
+Hook commands are derived automatically from `mcp-config.servers` by replacing
+`mcp-serve` with `hook --type claude-code.<method>`. Configure which methods to
+activate in `.toolkit/settings.yaml`:
 
 ```yaml
-claude-code:
-  hooks:
-    PreToolUse:
-      - matcher: Write|Edit
-        commands:
-          - bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.preToolUse
-      - matcher: Edit|Write
-        commands:
-          - bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.preToolUse
-    PostToolUse:
-      - matcher: Edit|Write
-        commands:
-          - bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.postToolUse
-    Stop:
-      - commands:
-          - bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.stop
+scaffold-mcp:
+  hook:
+    claude-code:
+      preToolUse:
+        args:           # extra CLI args appended to the generated hook command
+          llm-tool: gemini-cli
+      postToolUse: {}
+      stop: {}
+      userPromptSubmit: {}
+      taskCompleted: {}
+
+architect-mcp:
+  hook:
+    claude-code:
+      preToolUse:
+        args:
+          llm-tool: gemini-cli
+      postToolUse: {}
 ```
 
-Run `aicode sync --hooks` to write `.claude/settings.json` from this config.
+Generated hook entries fire on all tool calls (no matcher). Run `aicode sync --hooks`
+to write `.claude/settings.json`.
 
 #### `mcp-config` section → `mcp-config.yaml`
 

@@ -20,19 +20,21 @@ Hooks let scaffold-mcp proactively suggest scaffolding methods when AI agents cr
 Define hooks in `.toolkit/settings.yaml` and generate `.claude/settings.json` automatically:
 
 ```yaml
-claude-code:
-  hooks:
-    PreToolUse:
-      - matcher: Write
-        commands:
-          - npx @agiflowai/scaffold-mcp hook --type claude-code.preToolUse
-    PostToolUse:
-      - matcher: mcp__one-mcp__use_tool
-        commands:
-          - npx @agiflowai/scaffold-mcp hook --type claude-code.postToolUse
+scaffold-mcp:
+  hook:
+    claude-code:
+      preToolUse:
+        args:       # extra CLI args appended to the generated hook command
+          llm-tool: gemini-cli
+      postToolUse: {}
+      stop: {}
+      userPromptSubmit: {}
+      taskCompleted: {}
 ```
 
-Then run:
+The hook command is derived from `mcp-config.servers.scaffold-mcp` by replacing
+`mcp-serve` with `hook --type claude-code.<method>`. Generated entries fire on all
+tool calls (no matcher). Then run:
 
 ```bash
 npx @agiflowai/aicode-toolkit sync --hooks

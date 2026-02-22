@@ -81,6 +81,8 @@ scaffold-mcp:
         # tool-config:
         #   model: gemini-2.0-flash
         {% endif %}
+        # args:
+        #   llm-tool: gemini-cli
 
       postToolUse:
         {% if fallbackTool %}
@@ -96,6 +98,8 @@ scaffold-mcp:
         # tool-config:
         #   model: gemini-2.0-flash
         {% endif %}
+        # args:
+        #   llm-tool: gemini-cli
 
     gemini-cli:
       postToolUse:
@@ -174,6 +178,8 @@ architect-mcp:
         # tool-config:
         #   model: gemini-2.0-flash
         {% endif %}
+        # args:
+        #   llm-tool: gemini-cli
 
       postToolUse:
         {% if fallbackTool %}
@@ -189,6 +195,8 @@ architect-mcp:
         # tool-config:
         #   model: gemini-2.0-flash
         {% endif %}
+        # args:
+        #   llm-tool: gemini-cli
 
     gemini-cli:
       preToolUse:
@@ -220,38 +228,6 @@ architect-mcp:
         # tool-config:
         #   model: gemini-2.0-flash
         {% endif %}
-
-# ---------------------------------------------------------------------------
-# claude-code — generates .claude/settings.json via `aicode sync --hooks`
-# Each hook event contains a list of entries with optional matcher and commands.
-# Run `aicode sync` to write the output file.
-# ---------------------------------------------------------------------------
-
-# claude-code:
-#   hooks:
-#     PreToolUse:
-#       - matcher: Write|Edit
-#         commands:
-#           - bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.preToolUse
-#       - matcher: Write|Edit
-#         commands:
-#           - bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.preToolUse
-#     PostToolUse:
-#       - matcher: Write|Edit
-#         commands:
-#           - bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.postToolUse
-#       - matcher: mcp__one-mcp__use_tool
-#         commands:
-#           - bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.postToolUse
-#     Stop:
-#       - commands:
-#           - bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.stop
-#     UserPromptSubmit:
-#       - commands:
-#           - bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.userPromptSubmit
-#     TaskCompleted:
-#       - commands:
-#           - bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.taskCompleted
 
 # ---------------------------------------------------------------------------
 # mcp-config — generates mcp-config.yaml via `aicode sync --mcp`

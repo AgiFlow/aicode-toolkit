@@ -72,26 +72,37 @@ scaffold-mcp:
         # llm-tool: gemini-cli
         # tool-config:
         #   model: gemini-2.0-flash
+        # Extra CLI args appended to the generated hook command (key: value → --key value)
+        # args:
+        #   llm-tool: gemini-cli
 
       postToolUse:
         # llm-tool: gemini-cli
         # tool-config:
         #   model: gemini-2.0-flash
+        # args:
+        #   llm-tool: gemini-cli
 
       userPromptSubmit:
         # llm-tool: gemini-cli
         # tool-config:
         #   model: gemini-2.0-flash
+        # args:
+        #   llm-tool: gemini-cli
 
       taskCompleted:
         # llm-tool: gemini-cli
         # tool-config:
         #   model: gemini-2.0-flash
+        # args:
+        #   llm-tool: gemini-cli
 
       stop:
         # llm-tool: gemini-cli
         # tool-config:
         #   model: gemini-2.0-flash
+        # args:
+        #   llm-tool: gemini-cli
 
     gemini-cli:
       preToolUse:
@@ -166,11 +177,16 @@ architect-mcp:
         # llm-tool: gemini-cli
         # tool-config:
         #   model: gemini-2.0-flash
+        # Extra CLI args appended to the generated hook command (key: value → --key value)
+        # args:
+        #   llm-tool: gemini-cli
 
       postToolUse:
         # llm-tool: gemini-cli
         # tool-config:
         #   model: gemini-2.0-flash
+        # args:
+        #   llm-tool: gemini-cli
 
     gemini-cli:
       preToolUse:
@@ -182,38 +198,6 @@ architect-mcp:
         # llm-tool: gemini-cli
         # tool-config:
         #   model: gemini-2.0-flash
-
-# ---------------------------------------------------------------------------
-# claude-code — generates .claude/settings.json via `aicode sync --hooks`
-# Each hook event contains a list of entries with optional matcher and commands.
-# Run `aicode sync` to write the output file.
-# ---------------------------------------------------------------------------
-
-# claude-code:
-#   hooks:
-#     PreToolUse:
-#       - matcher: Write|Edit
-#         commands:
-#           - bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.preToolUse
-#       - matcher: Write|Edit
-#         commands:
-#           - bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.preToolUse
-#     PostToolUse:
-#       - matcher: Write|Edit
-#         commands:
-#           - bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.postToolUse
-#       - matcher: mcp__one-mcp__use_tool
-#         commands:
-#           - bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.postToolUse
-#     Stop:
-#       - commands:
-#           - bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.stop
-#     UserPromptSubmit:
-#       - commands:
-#           - bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.userPromptSubmit
-#     TaskCompleted:
-#       - commands:
-#           - bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.taskCompleted
 
 # ---------------------------------------------------------------------------
 # mcp-config — generates mcp-config.yaml via `aicode sync --mcp`

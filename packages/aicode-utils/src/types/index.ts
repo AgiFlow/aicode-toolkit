@@ -18,6 +18,7 @@
  * - Coupling types to implementation details
  */
 
+/** Re-exported project config types: result shape and Nx project.json schema. */
 export type { ProjectConfigResult, NxProjectJson } from './projectConfig';
 
 /**
@@ -25,8 +26,8 @@ export type { ProjectConfigResult, NxProjectJson } from './projectConfig';
  * Keys map 1-to-1 with CLI flags (camelCase).
  */
 export interface McpServeConfig {
-  /** Transport type: stdio | http | sse. Default: stdio. */
-  type?: string;
+  /** Transport type. Default: stdio. */
+  type?: 'stdio' | 'http' | 'sse';
   /** Port for http/sse transport. Default: 3000. */
   port?: number;
   /** Host to bind for http/sse transport. Default: localhost. */
@@ -39,6 +40,8 @@ export interface McpServeConfig {
   fallbackTool?: string;
   /** Config passed to the fallback LLM tool. */
   fallbackToolConfig?: Record<string, unknown>;
+  /** Extra CLI args merged into the mcp-serve command (key → --key value). */
+  args?: Record<string, string | boolean | number>;
 }
 
 /**
@@ -54,6 +57,8 @@ export interface HookMethodConfig {
   'fallback-tool'?: string;
   /** Config object forwarded to the fallback LLM tool. */
   'fallback-tool-config'?: Record<string, unknown>;
+  /** Extra CLI args appended to the generated hook command (key → --key value). */
+  args?: Record<string, string | boolean | number>;
 }
 
 /**
@@ -97,8 +102,8 @@ export interface ScaffoldMcpConfig {
  * Keys map 1-to-1 with CLI flags (camelCase).
  */
 export interface ArchitectMcpServeConfig {
-  /** Transport type: stdio | http | sse. Default: stdio. */
-  type?: string;
+  /** Transport type. Default: stdio. */
+  type?: 'stdio' | 'http' | 'sse';
   /** Port for http/sse transport. Default: 3000. */
   port?: number;
   /** Host to bind for http/sse transport. Default: localhost. */
@@ -117,6 +122,8 @@ export interface ArchitectMcpServeConfig {
   reviewTool?: string;
   /** Config passed to the review LLM tool. */
   reviewToolConfig?: Record<string, unknown>;
+  /** Extra CLI args merged into the mcp-serve command (key → --key value). */
+  args?: Record<string, string | boolean | number>;
 }
 
 /**
@@ -128,6 +135,8 @@ export interface ArchitectHookMethodConfig {
   'llm-tool'?: string;
   /** Config object forwarded to the LLM tool. */
   'tool-config'?: Record<string, unknown>;
+  /** Extra CLI args appended to the generated hook command (key → --key value). */
+  args?: Record<string, string | boolean | number>;
 }
 
 /**
@@ -159,40 +168,6 @@ export interface ArchitectMcpConfig {
   'mcp-serve'?: ArchitectMcpServeConfig;
   /** Hook method defaults keyed by agent name. */
   hook?: ArchitectHookConfig;
-}
-
-/**
- * A single hook entry in the claude-code hooks config.
- */
-export interface ClaudeCodeHookEntry {
-  /** Optional tool-name matcher (regex). Absent = no matcher field in output. */
-  matcher?: string;
-  /** Shell commands to execute for this hook entry. */
-  commands: string[];
-}
-
-/**
- * Hook event map for the claude-code section of settings.yaml.
- */
-export interface ClaudeCodeHooksConfig {
-  /** Entries invoked before the agent uses a tool. */
-  PreToolUse?: ClaudeCodeHookEntry[];
-  /** Entries invoked after the agent uses a tool. */
-  PostToolUse?: ClaudeCodeHookEntry[];
-  /** Entries invoked when the agent stops (session end). */
-  Stop?: ClaudeCodeHookEntry[];
-  /** Entries invoked when the user submits a prompt. */
-  UserPromptSubmit?: ClaudeCodeHookEntry[];
-  /** Entries invoked when the agent completes a task. */
-  TaskCompleted?: ClaudeCodeHookEntry[];
-}
-
-/**
- * Top-level claude-code configuration block in settings.yaml.
- * Generates .claude/settings.json when `aicode sync` is run.
- */
-export interface ClaudeCodeAgentConfig {
-  hooks?: ClaudeCodeHooksConfig;
 }
 
 /**
@@ -244,8 +219,6 @@ export interface ToolkitConfig {
   'scaffold-mcp'?: ScaffoldMcpConfig;
   /** architect-mcp server and hook configuration. */
   'architect-mcp'?: ArchitectMcpConfig;
-  /** Generates .claude/settings.json via `aicode sync --hooks` */
-  'claude-code'?: ClaudeCodeAgentConfig;
   /** Generates mcp-config.yaml via `aicode sync --mcp` */
   'mcp-config'?: McpConfigSection;
 }
@@ -296,9 +269,13 @@ export interface ScaffoldResult {
  * Minimal stat result returned by IFileSystemService.stat.
  */
 export interface FileStat {
-  /** Returns true when the path is a directory. */
+  /**
+   * @returns True when the path is a directory.
+   */
   isDirectory(): boolean;
-  /** Returns true when the path is a regular file. */
+  /**
+   * @returns True when the path is a regular file.
+   */
   isFile(): boolean;
 }
 
@@ -330,17 +307,20 @@ export interface IFileSystemService {
    * @param path - Absolute path of the target file.
    * @param content - Text to write.
    * @param encoding - Character encoding (default: utf-8).
+   * @returns Promise that resolves when the file is written.
    */
   writeFile(path: string, content: string, encoding?: BufferEncoding): Promise<void>;
   /**
    * Create a directory and all parent directories.
    * @param path - Absolute path of the directory to create.
+   * @returns Promise that resolves when the directory exists.
    */
   ensureDir(path: string): Promise<void>;
   /**
    * Copy a file or directory from src to dest.
    * @param src - Absolute source path.
    * @param dest - Absolute destination path.
+   * @returns Promise that resolves when the copy is complete.
    */
   copy(src: string, dest: string): Promise<void>;
   /**
@@ -365,6 +345,7 @@ export interface IVariableReplacementService {
    * Walk dirPath and apply variable substitution to every non-binary file.
    * @param dirPath - Directory to process recursively.
    * @param variables - Key/value pairs used for substitution.
+   * @returns Promise that resolves when all files have been processed.
    */
   processFilesForVariableReplacement(
     dirPath: string,
@@ -374,9 +355,14 @@ export interface IVariableReplacementService {
    * Apply variable substitution to a single file.
    * @param filePath - File to process.
    * @param variables - Key/value pairs used for substitution.
+   * @returns Promise that resolves when the file has been processed.
    */
   replaceVariablesInFile(filePath: string, variables: Record<string, unknown>): Promise<void>;
-  /** Return true when filePath should be treated as a binary (non-text) file. */
+  /**
+   * Checks if a file should be treated as a binary (non-text) file.
+   * @param filePath - Path to check.
+   * @returns True if the file is binary.
+   */
   isBinaryFile(filePath: string): boolean;
 }
 
@@ -403,13 +389,22 @@ export interface GeneratorContext {
   ScaffoldProcessingService: new (
     ...args: unknown[]
   ) => unknown;
-  /** Return the workspace root path. */
+  /**
+   * Return the workspace root path.
+   * @returns Absolute path of the workspace root.
+   */
   getRootPath: () => string;
-  /** Return the absolute path of a project relative to the workspace root. */
+  /**
+   * Return the absolute path of a project relative to the workspace root.
+   * @param projectPath - Project path relative to the workspace root.
+   * @returns Absolute path of the project.
+   */
   getProjectPath: (projectPath: string) => string;
 }
 
 /**
- * Type definition for generator functions
+ * Type definition for generator functions.
+ * @param context - The generator context bundling all scaffold dependencies.
+ * @returns A promise resolving to the scaffold result.
  */
 export type GeneratorFunction = (context: GeneratorContext) => Promise<ScaffoldResult>;

@@ -24,6 +24,7 @@ import path from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { Command } from 'commander';
 import { print, TemplatesManagerService } from '@agiflowai/aicode-utils';
+import type { ToolkitConfig } from '@agiflowai/aicode-utils';
 import yaml from 'js-yaml';
 
 // ---------------------------------------------------------------------------
@@ -44,46 +45,14 @@ interface SyncCommandOptions {
 }
 
 // ---------------------------------------------------------------------------
-// Input config interfaces (mirrors .toolkit/settings.yaml structure)
+// Local interfaces
 // ---------------------------------------------------------------------------
 
-interface ClaudeCodeHookEntry {
-  matcher?: string;
-  commands: string[];
-}
-
-interface ClaudeCodeHooksConfig {
-  PreToolUse?: ClaudeCodeHookEntry[];
-  PostToolUse?: ClaudeCodeHookEntry[];
-  Stop?: ClaudeCodeHookEntry[];
-  UserPromptSubmit?: ClaudeCodeHookEntry[];
-  TaskCompleted?: ClaudeCodeHookEntry[];
-}
-
-interface McpServerEntry {
+/** Shape of an mcp-config server entry used to derive the hook command. */
+interface McpServerDefinition {
   command: string;
   args?: string[];
-  env?: Record<string, string>;
-  instruction?: string;
 }
-
-interface McpSkillsConfig {
-  paths?: string[];
-}
-
-interface McpConfigSection {
-  servers?: Record<string, McpServerEntry>;
-  skills?: McpSkillsConfig;
-}
-
-interface RawSyncConfig {
-  'claude-code'?: { hooks?: ClaudeCodeHooksConfig };
-  'mcp-config'?: McpConfigSection;
-}
-
-// ---------------------------------------------------------------------------
-// .claude/settings.json output schema
-// ---------------------------------------------------------------------------
 
 interface ClaudeHookCommand {
   type: 'command';
@@ -91,7 +60,6 @@ interface ClaudeHookCommand {
 }
 
 interface ClaudeHookEntry {
-  matcher?: string;
   hooks: ClaudeHookCommand[];
 }
 
@@ -99,15 +67,15 @@ interface ClaudeSettingsJson {
   hooks: Record<string, ClaudeHookEntry[]>;
 }
 
-// ---------------------------------------------------------------------------
-// mcp-config.yaml output schema
-// ---------------------------------------------------------------------------
-
 interface McpServerOut {
   command: string;
   args?: string[];
   env: Record<string, string>;
   config?: { instruction: string };
+}
+
+interface McpSkillsConfig {
+  paths?: string[];
 }
 
 interface McpConfigOut {
@@ -119,54 +87,120 @@ interface McpConfigOut {
 // Runtime type guard
 // ---------------------------------------------------------------------------
 
-function isRawSyncConfig(value: unknown): value is RawSyncConfig {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return false;
-  }
-  return 'claude-code' in value || 'mcp-config' in value;
+function hasHookConfig(config: ToolkitConfig): boolean {
+  return !!(
+    config['scaffold-mcp']?.hook?.['claude-code'] || config['architect-mcp']?.hook?.['claude-code']
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Helper: convert ClaudeCodeHookEntry[] to ClaudeHookEntry[]
+// Helper: convert Record<string, string|boolean|number> to CLI flag array
 // ---------------------------------------------------------------------------
 
-function buildHookEntries(entries: ClaudeCodeHookEntry[]): ClaudeHookEntry[] {
-  return entries.map((entry): ClaudeHookEntry => {
-    const hookEntry: ClaudeHookEntry = {
-      hooks: entry.commands.map((cmd): ClaudeHookCommand => ({ type: 'command', command: cmd })),
-    };
-    if (entry.matcher) {
-      hookEntry.matcher = entry.matcher;
-    }
-    return hookEntry;
-  });
+export function argsToFlags(args: Record<string, string | boolean | number>): string[] {
+  const flags: string[] = [];
+  for (const [key, value] of Object.entries(args)) {
+    if (value === false) continue;
+    flags.push(`--${key}`);
+    if (value !== true) flags.push(String(value));
+  }
+  return flags;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: derive hook command from mcp-config server definition
+// ---------------------------------------------------------------------------
+
+export function buildHookCommand(
+  server: McpServerDefinition,
+  hookType: string,
+  extraFlags: string[],
+): string {
+  const serverArgs = server.args ?? [];
+
+  // Strategy 1: script file present — take everything up to and including it
+  const scriptIdx = serverArgs.findIndex((arg) => /\.(ts|js|mjs|cjs)$/.test(arg));
+  if (scriptIdx >= 0) {
+    const prefixArgs = serverArgs.slice(0, scriptIdx + 1);
+    return [server.command, ...prefixArgs, 'hook', '--type', hookType, ...extraFlags].join(' ');
+  }
+
+  // Strategy 2: no script file (e.g. npx @agiflowai/scaffold-mcp mcp-serve)
+  const mcpServeIdx = serverArgs.indexOf('mcp-serve');
+  const prefixArgs = mcpServeIdx >= 0 ? serverArgs.slice(0, mcpServeIdx) : serverArgs;
+  return [server.command, ...prefixArgs, 'hook', '--type', hookType, ...extraFlags].join(' ');
+}
+
+// ---------------------------------------------------------------------------
+// Helper: push a hook entry into the output map
+// ---------------------------------------------------------------------------
+
+function addHookEntry(
+  output: Record<string, ClaudeHookEntry[]>,
+  event: string,
+  command: string,
+): void {
+  if (!output[event]) output[event] = [];
+  output[event].push({ hooks: [{ type: 'command', command }] });
 }
 
 // ---------------------------------------------------------------------------
 // Helper: build and write .claude/settings.json
 // ---------------------------------------------------------------------------
 
-async function writeClaudeSettings(
-  hooksConfig: ClaudeCodeHooksConfig,
-  workspaceRoot: string,
-): Promise<void> {
+const METHOD_TO_EVENT: Record<string, string> = {
+  preToolUse: 'PreToolUse',
+  postToolUse: 'PostToolUse',
+  stop: 'Stop',
+  userPromptSubmit: 'UserPromptSubmit',
+  taskCompleted: 'TaskCompleted',
+};
+
+async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string): Promise<void> {
   try {
     const hooksOutput: Record<string, ClaudeHookEntry[]> = {};
+    let hasAny = false;
 
-    if (hooksConfig.PreToolUse?.length) {
-      hooksOutput.PreToolUse = buildHookEntries(hooksConfig.PreToolUse);
+    // --- scaffold-mcp ---
+    const scaffoldAgent = config['scaffold-mcp']?.hook?.['claude-code'];
+    const scaffoldServer = config['mcp-config']?.servers?.['scaffold-mcp'];
+    if (scaffoldAgent && scaffoldServer) {
+      for (const [method, methodConfig] of [
+        ['preToolUse', scaffoldAgent.preToolUse],
+        ['postToolUse', scaffoldAgent.postToolUse],
+        ['stop', scaffoldAgent.stop],
+        ['userPromptSubmit', scaffoldAgent.userPromptSubmit],
+        ['taskCompleted', scaffoldAgent.taskCompleted],
+      ] as const) {
+        if (!methodConfig) continue;
+        const extraFlags = methodConfig.args ? argsToFlags(methodConfig.args) : [];
+        const command = buildHookCommand(scaffoldServer, `claude-code.${method}`, extraFlags);
+        addHookEntry(hooksOutput, METHOD_TO_EVENT[method], command);
+        hasAny = true;
+      }
     }
-    if (hooksConfig.PostToolUse?.length) {
-      hooksOutput.PostToolUse = buildHookEntries(hooksConfig.PostToolUse);
+
+    // --- architect-mcp ---
+    const architectAgent = config['architect-mcp']?.hook?.['claude-code'];
+    const architectServer = config['mcp-config']?.servers?.['architect-mcp'];
+    if (architectAgent && architectServer) {
+      for (const [method, methodConfig] of [
+        ['preToolUse', architectAgent.preToolUse],
+        ['postToolUse', architectAgent.postToolUse],
+      ] as const) {
+        if (!methodConfig) continue;
+        const extraFlags = methodConfig.args ? argsToFlags(methodConfig.args) : [];
+        const command = buildHookCommand(architectServer, `claude-code.${method}`, extraFlags);
+        addHookEntry(hooksOutput, METHOD_TO_EVENT[method], command);
+        hasAny = true;
+      }
     }
-    if (hooksConfig.Stop?.length) {
-      hooksOutput.Stop = buildHookEntries(hooksConfig.Stop);
-    }
-    if (hooksConfig.UserPromptSubmit?.length) {
-      hooksOutput.UserPromptSubmit = buildHookEntries(hooksConfig.UserPromptSubmit);
-    }
-    if (hooksConfig.TaskCompleted?.length) {
-      hooksOutput.TaskCompleted = buildHookEntries(hooksConfig.TaskCompleted);
+
+    if (!hasAny) {
+      print.warning(
+        'No scaffold-mcp/architect-mcp hook.claude-code config found — skipping .claude/settings.json',
+      );
+      return;
     }
 
     const settings: ClaudeSettingsJson = { hooks: hooksOutput };
@@ -187,7 +221,10 @@ async function writeClaudeSettings(
 // Helper: build and write mcp-config.yaml
 // ---------------------------------------------------------------------------
 
-async function writeMcpConfig(mcpConfig: McpConfigSection, workspaceRoot: string): Promise<void> {
+async function writeMcpConfig(config: ToolkitConfig, workspaceRoot: string): Promise<void> {
+  const mcpConfig = config['mcp-config'];
+  if (!mcpConfig) return;
+
   try {
     const mcpServers: Record<string, McpServerOut> = {};
 
@@ -232,40 +269,30 @@ export const syncCommand = new Command('sync')
   .action(async (options: SyncCommandOptions): Promise<void> => {
     try {
       const workspaceRoot = await TemplatesManagerService.getWorkspaceRoot();
-      const rawConfig = await TemplatesManagerService.readToolkitConfig();
+      const config = await TemplatesManagerService.readToolkitConfig();
 
-      if (!rawConfig) {
+      if (!config) {
         throw new Error('No .toolkit/settings.yaml found. Run `aicode init` first.');
-      }
-
-      // Widen to unknown so isRawSyncConfig can narrow without an `as` cast
-      const config: unknown = rawConfig;
-      if (!isRawSyncConfig(config)) {
-        throw new Error(
-          "Unexpected toolkit configuration format: expected 'claude-code' or 'mcp-config' section.",
-        );
       }
 
       const all = !options.hooks && !options.mcp;
       const doHooks = all || !!options.hooks;
       const doMcp = all || !!options.mcp;
-      const hooksRaw = config['claude-code']?.hooks ?? null;
-      const mcpRaw = config['mcp-config'] ?? null;
 
-      const writeTasks: Array<Promise<void>> = [];
-      if (doHooks && hooksRaw) writeTasks.push(writeClaudeSettings(hooksRaw, workspaceRoot));
-      if (doMcp && mcpRaw) writeTasks.push(writeMcpConfig(mcpRaw, workspaceRoot));
-      await Promise.all(writeTasks);
-
+      const tasks: Array<Promise<void>> = [];
       if (doHooks) {
-        if (hooksRaw) {
-          print.success('Written .claude/settings.json');
+        if (hasHookConfig(config)) {
+          tasks.push(writeClaudeSettings(config, workspaceRoot));
         } else {
-          print.warning('No claude-code.hooks section in settings.yaml — skipping');
+          print.warning('No hook.claude-code config found in settings.yaml — skipping');
         }
       }
+      if (doMcp && config['mcp-config']) tasks.push(writeMcpConfig(config, workspaceRoot));
+      await Promise.all(tasks);
+
+      if (doHooks && hasHookConfig(config)) print.success('Written .claude/settings.json');
       if (doMcp) {
-        if (mcpRaw) {
+        if (config['mcp-config']) {
           print.success('Written mcp-config.yaml');
         } else {
           print.warning('No mcp-config section in settings.yaml — skipping');
