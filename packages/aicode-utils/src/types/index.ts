@@ -171,39 +171,6 @@ export interface ArchitectMcpConfig {
 }
 
 /**
- * A single MCP server entry in the mcp-config section of settings.yaml.
- */
-export interface McpServerEntry {
-  /** Executable used to start the server (e.g. bun, node, npx). */
-  command: string;
-  /** CLI arguments passed to the command. */
-  args?: string[];
-  /** Environment variables injected into the server process. */
-  env?: Record<string, string>;
-  /** Short instruction shown to the AI about when to use this server. */
-  instruction?: string;
-}
-
-/**
- * Skills configuration in the mcp-config section.
- */
-export interface McpSkillsConfig {
-  /** Directories containing skill markdown files, relative to workspace root. */
-  paths?: string[];
-}
-
-/**
- * Top-level mcp-config configuration block in settings.yaml.
- * Generates mcp-config.yaml when `aicode sync` is run.
- */
-export interface McpConfigSection {
-  /** MCP server definitions keyed by server name. */
-  servers?: Record<string, McpServerEntry>;
-  /** Skills configuration for skill-capable MCP servers. */
-  skills?: McpSkillsConfig;
-}
-
-/**
  * Toolkit configuration from .toolkit/settings.yaml (or legacy toolkit.yaml)
  */
 export interface ToolkitConfig {
@@ -219,8 +186,6 @@ export interface ToolkitConfig {
   'scaffold-mcp'?: ScaffoldMcpConfig;
   /** architect-mcp server and hook configuration. */
   'architect-mcp'?: ArchitectMcpConfig;
-  /** Generates mcp-config.yaml via `aicode sync --mcp` */
-  'mcp-config'?: McpConfigSection;
 }
 
 /**

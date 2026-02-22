@@ -21,14 +21,10 @@
  */
 
 import path from 'node:path';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { Command } from 'commander';
 import { print, TemplatesManagerService } from '@agiflowai/aicode-utils';
-import type {
-  ToolkitConfig,
-  HookAgentConfig,
-  ArchitectHookAgentConfig,
-} from '@agiflowai/aicode-utils';
+import type { ToolkitConfig, HookAgentConfig, ArchitectHookAgentConfig } from '@agiflowai/aicode-utils';
 import yaml from 'js-yaml';
 
 // ---------------------------------------------------------------------------
@@ -40,22 +36,18 @@ const CLAUDE_SETTINGS_FILE = 'settings.json';
 const MCP_CONFIG_FILE = 'mcp-config.yaml';
 
 // ---------------------------------------------------------------------------
-// Command options
-// ---------------------------------------------------------------------------
-
-interface SyncCommandOptions {
-  hooks?: boolean;
-  mcp?: boolean;
-}
-
-// ---------------------------------------------------------------------------
 // Local interfaces
 // ---------------------------------------------------------------------------
 
-/** Shape of an mcp-config server entry used to derive the hook command. */
+/** Shape of an mcp-config.yaml server entry used to derive the hook command. */
 interface McpServerDefinition {
   command: string;
   args?: string[];
+}
+
+/** Parsed shape of mcp-config.yaml on disk. */
+interface McpConfigYaml {
+  mcpServers?: Record<string, McpServerDefinition>;
 }
 
 interface ClaudeHookCommand {
@@ -69,22 +61,6 @@ interface ClaudeHookEntry {
 
 interface ClaudeSettingsJson {
   hooks: Record<string, ClaudeHookEntry[]>;
-}
-
-interface McpServerOut {
-  command: string;
-  args?: string[];
-  env: Record<string, string>;
-  config?: { instruction: string };
-}
-
-interface McpSkillsConfig {
-  paths?: string[];
-}
-
-interface McpConfigOut {
-  mcpServers: Record<string, McpServerOut>;
-  skills?: McpSkillsConfig;
 }
 
 // ---------------------------------------------------------------------------
@@ -127,7 +103,7 @@ export function argsToFlags(args: Record<string, string | boolean | number>): st
 }
 
 // ---------------------------------------------------------------------------
-// Helper: derive hook command from mcp-config server definition
+// Helper: derive hook command from mcp-config.yaml server definition
 // ---------------------------------------------------------------------------
 
 export function buildHookCommand(
@@ -164,6 +140,31 @@ function addHookEntry(
 }
 
 // ---------------------------------------------------------------------------
+// Helper: read mcp-config.yaml from disk
+// ---------------------------------------------------------------------------
+
+function isMcpConfigYaml(value: unknown): value is McpConfigYaml {
+  return typeof value === 'object' && value !== null;
+}
+
+async function readMcpConfigYaml(workspaceRoot: string): Promise<McpConfigYaml> {
+  try {
+    const content = await readFile(path.join(workspaceRoot, MCP_CONFIG_FILE), 'utf-8');
+    const parsed = yaml.load(content);
+    if (!isMcpConfigYaml(parsed)) {
+      throw new Error(`${MCP_CONFIG_FILE} has unexpected structure`);
+    }
+    return parsed;
+  } catch (err) {
+    if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
+      return {};
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to read ${MCP_CONFIG_FILE}: ${message}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Helper: build and write .claude/settings.json
 // ---------------------------------------------------------------------------
 
@@ -177,12 +178,15 @@ const METHOD_TO_EVENT: Record<string, string> = {
 
 async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string): Promise<void> {
   try {
+    const mcpConfigYaml = await readMcpConfigYaml(workspaceRoot);
+    const mcpServers = mcpConfigYaml.mcpServers ?? {};
+
     const hooksOutput: Record<string, ClaudeHookEntry[]> = {};
     let hasAny = false;
 
     // --- scaffold-mcp ---
     const scaffoldAgent = config['scaffold-mcp']?.hook?.['claude-code'];
-    const scaffoldServer = config['mcp-config']?.servers?.['scaffold-mcp'];
+    const scaffoldServer = mcpServers['scaffold-mcp'];
     if (scaffoldAgent && scaffoldServer) {
       for (const [method, methodConfig] of [
         ['preToolUse', scaffoldAgent.preToolUse],
@@ -201,7 +205,7 @@ async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string)
 
     // --- architect-mcp ---
     const architectAgent = config['architect-mcp']?.hook?.['claude-code'];
-    const architectServer = config['mcp-config']?.servers?.['architect-mcp'];
+    const architectServer = mcpServers['architect-mcp'];
     if (architectAgent && architectServer) {
       for (const [method, methodConfig] of [
         ['preToolUse', architectAgent.preToolUse],
@@ -237,55 +241,15 @@ async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string)
 }
 
 // ---------------------------------------------------------------------------
-// Helper: build and write mcp-config.yaml
-// ---------------------------------------------------------------------------
-
-async function writeMcpConfig(config: ToolkitConfig, workspaceRoot: string): Promise<void> {
-  const mcpConfig = config['mcp-config'];
-  if (!mcpConfig) return;
-
-  try {
-    const mcpServers: Record<string, McpServerOut> = {};
-
-    for (const [name, server] of Object.entries(mcpConfig.servers ?? {})) {
-      const entry: McpServerOut = {
-        command: server.command,
-        env: server.env ?? {},
-      };
-      if (server.args && server.args.length > 0) {
-        entry.args = server.args;
-      }
-      if (server.instruction) {
-        entry.config = { instruction: server.instruction };
-      }
-      mcpServers[name] = entry;
-    }
-
-    const output: McpConfigOut = { mcpServers };
-    if (mcpConfig.skills) {
-      output.skills = mcpConfig.skills;
-    }
-
-    const content = yaml.dump(output, { indent: 2, lineWidth: -1 });
-    await writeFile(path.join(workspaceRoot, MCP_CONFIG_FILE), content, 'utf-8');
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`Failed to write ${MCP_CONFIG_FILE}: ${message}`);
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Command definition
 // ---------------------------------------------------------------------------
 
 /**
- * Generate .claude/settings.json and mcp-config.yaml from .toolkit/settings.yaml
+ * Generate .claude/settings.json from .toolkit/settings.yaml and mcp-config.yaml
  */
 export const syncCommand = new Command('sync')
-  .description('Generate .claude/settings.json and mcp-config.yaml from .toolkit/settings.yaml')
-  .option('--hooks', 'Generate .claude/settings.json only', false)
-  .option('--mcp', 'Generate mcp-config.yaml only', false)
-  .action(async (options: SyncCommandOptions): Promise<void> => {
+  .description('Generate .claude/settings.json from .toolkit/settings.yaml and mcp-config.yaml')
+  .action(async (): Promise<void> => {
     try {
       const [workspaceRoot, config] = await Promise.all([
         TemplatesManagerService.getWorkspaceRoot(),
@@ -296,28 +260,11 @@ export const syncCommand = new Command('sync')
         throw new Error('No .toolkit/settings.yaml found. Run `aicode init` first.');
       }
 
-      const all = !options.hooks && !options.mcp;
-      const doHooks = all || !!options.hooks;
-      const doMcp = all || !!options.mcp;
-
-      const tasks: Array<Promise<void>> = [];
-      if (doHooks) {
-        if (hasHookConfig(config)) {
-          tasks.push(writeClaudeSettings(config, workspaceRoot));
-        } else {
-          print.warning('No hook.claude-code config found in settings.yaml — skipping');
-        }
-      }
-      if (doMcp && config['mcp-config']) tasks.push(writeMcpConfig(config, workspaceRoot));
-      await Promise.all(tasks);
-
-      if (doHooks && hasHookConfig(config)) print.success('Written .claude/settings.json');
-      if (doMcp) {
-        if (config['mcp-config']) {
-          print.success('Written mcp-config.yaml');
-        } else {
-          print.warning('No mcp-config section in settings.yaml — skipping');
-        }
+      if (hasHookConfig(config)) {
+        await writeClaudeSettings(config, workspaceRoot);
+        print.success('Written .claude/settings.json');
+      } else {
+        print.warning('No hook.claude-code config found in settings.yaml — skipping');
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
