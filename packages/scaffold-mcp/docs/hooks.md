@@ -15,7 +15,32 @@ Hooks let scaffold-mcp proactively suggest scaffolding methods when AI agents cr
 
 ## Claude Code Setup
 
-Add to `.claude/settings.json` or `.claude/settings.local.json`:
+### Option A — `aicode sync` (recommended)
+
+Define hooks in `.toolkit/settings.yaml` and generate `.claude/settings.json` automatically:
+
+```yaml
+claude-code:
+  hooks:
+    PreToolUse:
+      - matcher: Write
+        commands:
+          - npx @agiflowai/scaffold-mcp hook --type claude-code.preToolUse
+    PostToolUse:
+      - matcher: mcp__one-mcp__use_tool
+        commands:
+          - npx @agiflowai/scaffold-mcp hook --type claude-code.postToolUse
+```
+
+Then run:
+
+```bash
+npx @agiflowai/aicode-toolkit sync --hooks
+```
+
+### Option B — Manual setup
+
+Add directly to `.claude/settings.json` or `.claude/settings.local.json`:
 
 ```json
 {
