@@ -24,7 +24,11 @@ import path from 'node:path';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { Command } from 'commander';
 import { print, TemplatesManagerService } from '@agiflowai/aicode-utils';
-import type { ToolkitConfig, HookAgentConfig, ArchitectHookAgentConfig } from '@agiflowai/aicode-utils';
+import type {
+  ToolkitConfig,
+  HookAgentConfig,
+  ArchitectHookAgentConfig,
+} from '@agiflowai/aicode-utils';
 import yaml from 'js-yaml';
 
 // ---------------------------------------------------------------------------
