@@ -21,8 +21,6 @@ mcpServers:
       - run
       - packages/scaffold-mcp/src/cli.ts
       - mcp-serve
-      - --admin-enable
-      - --prompt-as-skill
     env: {}
     config:
       instruction: >
@@ -37,15 +35,6 @@ mcpServers:
       - run
       - packages/architect-mcp/src/cli.ts
       - mcp-serve
-      - --admin-enable
-      - --design-pattern-tool
-      - gemini-cli
-      - --design-pattern-tool-config
-      - '{"model":"gemini-3-flash-preview"}'
-      - --review-tool
-      - gemini-cli
-      - --review-tool-config
-      - '{"model":"gemini-3-flash-preview"}'
     env: {}
     config:
       instruction: >

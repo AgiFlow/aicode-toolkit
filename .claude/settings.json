@@ -2,40 +2,36 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Write",
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.preToolUse"
+            "command": "bun run packages/scaffold-mcp/src/cli.ts hook --type claude-code.preToolUse"
           }
         ]
       },
       {
-        "matcher": "Edit|Update",
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.preToolUse --llm-tool gemini-cli --tool-config '{\"model\":\"gemini-3-flash-preview\"}'"
+            "command": "bun run packages/architect-mcp/src/cli.ts hook --type claude-code.preToolUse"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|Update",
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/architect-mcp/src/cli.ts hook --type claude-code.postToolUse --llm-tool gemini-cli --tool-config '{\"model\":\"gemini-3-flash-preview\"}'"
+            "command": "bun run packages/scaffold-mcp/src/cli.ts hook --type claude-code.postToolUse"
           }
         ]
       },
       {
-        "matcher": "mcp__one-mcp__use_tool",
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.postToolUse"
+            "command": "bun run packages/architect-mcp/src/cli.ts hook --type claude-code.postToolUse"
           }
         ]
       }
@@ -45,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.stop"
+            "command": "bun run packages/scaffold-mcp/src/cli.ts hook --type claude-code.stop"
           }
         ]
       }
@@ -55,7 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.userPromptSubmit"
+            "command": "bun run packages/scaffold-mcp/src/cli.ts hook --type claude-code.userPromptSubmit"
           }
         ]
       }
@@ -65,7 +61,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun ./packages/scaffold-mcp/src/cli.ts hook --type claude-code.taskCompleted"
+            "command": "bun run packages/scaffold-mcp/src/cli.ts hook --type claude-code.taskCompleted"
           }
         ]
       }

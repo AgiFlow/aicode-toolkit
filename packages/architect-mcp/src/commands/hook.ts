@@ -29,7 +29,7 @@ import {
   type GeminiCliHookInput,
   type HookResponse,
 } from '@agiflowai/hooks-adapter';
-import { print } from '@agiflowai/aicode-utils';
+import { TemplatesManagerService, print, type ArchitectHookAgentConfig, type ArchitectHookConfig } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 
 /** Options parsed by Commander for the hook command */
@@ -142,12 +142,21 @@ export const hookCommand = new Command('hook')
 
       const { agent, hookMethod } = parseHookType(options.type);
 
+      // Read per-agent per-method config; CLI flags take precedence
+      const toolkitConfig = await TemplatesManagerService.readToolkitConfig();
+      const hookConfig = toolkitConfig?.['architect-mcp']?.hook;
+      const methodConfig =
+        hookConfig?.[agent as keyof ArchitectHookConfig]?.[hookMethod as keyof ArchitectHookAgentConfig];
+
       // Parse JSON config options
       const toolConfig = parseJsonConfigOption(options.toolConfig, '--tool-config');
-      const fallbackToolConfig = parseJsonConfigOption(options.fallbackToolConfig, '--fallback-tool-config');
+      // CLI --fallback-tool-config (JSON string) takes precedence over config object
+      const fallbackToolConfig = options.fallbackToolConfig
+        ? parseJsonConfigOption(options.fallbackToolConfig, '--fallback-tool-config')
+        : methodConfig?.['tool-config'];
 
-      // Resolve effective tool and config (specific flags take precedence over fallback)
-      const resolvedLlmTool = options.llmTool ?? options.fallbackTool;
+      // Resolve effective tool and config: --llm-tool > --fallback-tool > config file
+      const resolvedLlmTool = options.llmTool ?? options.fallbackTool ?? methodConfig?.['llm-tool'];
       const resolvedToolConfig = toolConfig ?? fallbackToolConfig;
 
       if (!isHookMethod(hookMethod)) {

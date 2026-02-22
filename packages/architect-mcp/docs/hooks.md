@@ -23,7 +23,31 @@ This creates a feedback loop where AI agents receive architectural guidance proa
 
 ### Configuration
 
-Add to your Claude Code settings (`.claude/settings.json` or `.claude/settings.local.json`):
+#### Option A — `aicode sync` (recommended)
+
+Define hooks in `.toolkit/settings.yaml` and generate `.claude/settings.json` automatically:
+
+```yaml
+architect-mcp:
+  hook:
+    claude-code:
+      preToolUse:
+        args:       # extra CLI args appended to the generated hook command
+          llm-tool: gemini-cli
+      postToolUse: {}
+```
+
+The hook command is derived from `mcp-config.servers.architect-mcp` by replacing
+`mcp-serve` with `hook --type claude-code.<method>`. Generated entries fire on all
+tool calls (no matcher). Then run:
+
+```bash
+npx @agiflowai/aicode-toolkit sync --hooks
+```
+
+#### Option B — Manual setup
+
+Add directly to `.claude/settings.json` or `.claude/settings.local.json`:
 
 ```json
 {

@@ -56,6 +56,89 @@ This will:
 | `--path <path>` | Custom templates path | `./templates` |
 | `--no-download` | Skip template download | `false` |
 
+### `sync`
+
+Generate platform config files from `.toolkit/settings.yaml` as the single source of truth.
+
+```bash
+# Generate both .claude/settings.json and mcp-config.yaml
+npx @agiflowai/aicode-toolkit sync
+
+# Generate only .claude/settings.json (Claude Code hooks)
+npx @agiflowai/aicode-toolkit sync --hooks
+
+# Generate only mcp-config.yaml (MCP server list)
+npx @agiflowai/aicode-toolkit sync --mcp
+```
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `--hooks` | Write `.claude/settings.json` only |
+| `--mcp` | Write `mcp-config.yaml` only |
+
+#### Hooks → `.claude/settings.json`
+
+Hook commands are derived automatically from `mcp-config.servers` by replacing
+`mcp-serve` with `hook --type claude-code.<method>`. Configure which methods to
+activate in `.toolkit/settings.yaml`:
+
+```yaml
+scaffold-mcp:
+  hook:
+    claude-code:
+      preToolUse:
+        args:           # extra CLI args appended to the generated hook command
+          llm-tool: gemini-cli
+      postToolUse: {}
+      stop: {}
+      userPromptSubmit: {}
+      taskCompleted: {}
+
+architect-mcp:
+  hook:
+    claude-code:
+      preToolUse:
+        args:
+          llm-tool: gemini-cli
+      postToolUse: {}
+```
+
+Generated hook entries fire on all tool calls (no matcher). Run `aicode sync --hooks`
+to write `.claude/settings.json`.
+
+#### `mcp-config` section → `mcp-config.yaml`
+
+Define MCP servers in `.toolkit/settings.yaml`:
+
+```yaml
+mcp-config:
+  servers:
+    scaffold-mcp:
+      command: bun
+      args:
+        - run
+        - packages/scaffold-mcp/src/cli.ts
+        - mcp-serve
+        - --admin-enable
+        - --prompt-as-skill
+      instruction: "Use this server for generating boilerplate code and scaffolding."
+    architect-mcp:
+      command: bun
+      args:
+        - run
+        - packages/architect-mcp/src/cli.ts
+        - mcp-serve
+      instruction: "Use this server for design pattern guidance and code review."
+  skills:
+    paths:
+      - docs/skills
+```
+
+Run `aicode sync --mcp` to write `mcp-config.yaml` from this config.
+
+---
+
 ### `add`
 
 Add templates from GitHub repositories.
