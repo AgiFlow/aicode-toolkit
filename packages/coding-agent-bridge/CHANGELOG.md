@@ -1,3 +1,9 @@
+## 1.0.19 (2026-02-22)
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.16
+
 ## 1.0.18 (2026-02-20)
 
 ### 🧱 Updated Dependencies

@@ -1,3 +1,23 @@
+## 1.0.21 (2026-02-22)
+
+### 🚀 Features
+
+- derive claude-code hooks from scaffold-mcp/architect-mcp hook config ([8515b35](https://github.com/AgiFlow/aicode-toolkit/commit/8515b35))
+- add architect-mcp config support in .toolkit/settings.yaml ([9732cd5](https://github.com/AgiFlow/aicode-toolkit/commit/9732cd5))
+- add --fallback-tool and --fallback-tool-config to hook commands ([6bbaff3](https://github.com/AgiFlow/aicode-toolkit/commit/6bbaff3))
+- add --fallback-tool and --fallback-tool-config to mcp-serve ([51b82dd](https://github.com/AgiFlow/aicode-toolkit/commit/51b82dd))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.19
+- Updated @agiflowai/hooks-adapter to 0.0.17
+- Updated @agiflowai/aicode-utils to 1.0.16
+
+### ❤️ Thank You
+
+- Claude Sonnet 4.6
+- Vuong Ngo
+
 ## 1.0.20 (2026-02-20)
 
 ### 🩹 Fixes

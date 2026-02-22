@@ -1,3 +1,28 @@
+## 1.0.22 (2026-02-22)
+
+### 🚀 Features
+
+- derive claude-code hooks from scaffold-mcp/architect-mcp hook config ([8515b35](https://github.com/AgiFlow/aicode-toolkit/commit/8515b35))
+- add aicode sync command to generate claude and mcp config from settings.yaml ([5cc3691](https://github.com/AgiFlow/aicode-toolkit/commit/5cc3691))
+- add architect-mcp config support in .toolkit/settings.yaml ([9732cd5](https://github.com/AgiFlow/aicode-toolkit/commit/9732cd5))
+- use liquid template to generate .toolkit/settings.yaml in init command ([28ad23a](https://github.com/AgiFlow/aicode-toolkit/commit/28ad23a))
+- add .toolkit/settings.yaml template to aicode-toolkit ([ab3371e](https://github.com/AgiFlow/aicode-toolkit/commit/ab3371e))
+- replace flat toolkit.yaml with .toolkit/ config folder ([5808524](https://github.com/AgiFlow/aicode-toolkit/commit/5808524))
+
+### 🩹 Fixes
+
+- handle null YAML values and fix sync.ts type safety ([c059a45](https://github.com/AgiFlow/aicode-toolkit/commit/c059a45))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.19
+- Updated @agiflowai/aicode-utils to 1.0.16
+
+### ❤️ Thank You
+
+- Claude Sonnet 4.6
+- Vuong Ngo
+
 ## 1.0.21 (2026-02-20)
 
 ### 🧱 Updated Dependencies
