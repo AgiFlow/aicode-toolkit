@@ -308,7 +308,7 @@ export const initMachine = createMachine(
             guard: ({ context }) => !context.options.skipTemplates,
           },
           {
-            target: 'checkingSkipMcp',
+            target: 'creatingConfig',
           },
         ],
       },
@@ -478,7 +478,7 @@ export const initMachine = createMachine(
       },
 
       /**
-       * Create configuration (toolkit.yaml for monolith)
+       * Create configuration (.toolkit/settings.yaml for monolith)
        */
       creatingConfig: {
         invoke: {
@@ -488,10 +488,8 @@ export const initMachine = createMachine(
             workspaceRoot: context.workspaceRoot!,
             // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             projectType: context.projectType!,
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
-            templatesPath: context.templatesPath!,
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
-            selectedTemplates: context.selectedTemplates!,
+            templatesPath: context.templatesPath,
+            selectedTemplates: context.selectedTemplates,
           }),
           onDone: {
             target: 'checkingSkipMcp',

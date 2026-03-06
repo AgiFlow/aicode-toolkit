@@ -2,14 +2,14 @@
 
 > **Experimental:** This feature is experimental and may change in future releases.
 
-Hooks let scaffold-mcp proactively suggest scaffolding methods when AI agents create new files. Instead of writing boilerplate manually, agents can use available templates.
+Hooks let scaffold-mcp suggest matching scaffolding methods when agents create new files.
 
 ---
 
 ## How It Works
 
-1. **Before file creation**: When an agent tries to write a new file, the hook shows available scaffolding methods that match the file pattern
-2. **After tool use**: The hook can provide follow-up guidance or track progress
+1. Before file creation, the hook shows matching scaffolding methods
+2. After tool use, the hook can provide follow-up guidance or track progress
 
 ---
 
@@ -80,7 +80,7 @@ When Claude tries to write a file like `src/app/about/page.tsx`:
 1. The PreToolUse hook intercepts the Write call
 2. Detects the project's `sourceTemplate` from `project.json`
 3. Finds scaffolding methods matching the file pattern
-4. Shows available options to Claude:
+4. Shows available options to Claude
 
 ```
 🎯 Scaffolding Methods Available
@@ -140,10 +140,10 @@ Add to `~/.gemini/settings.json`:
 
 ## Session Tracking
 
-Hooks automatically track executions per session:
+Hooks track executions per session:
 - Each file path is only checked once per session
-- Prevents repeated suggestions for the same file
-- Resets when the agent session ends
+- Repeated suggestions for the same file are skipped
+- Tracking resets when the session ends
 
 ---
 
@@ -173,7 +173,7 @@ Hook commands read tool context from stdin and write responses to stdout (JSON f
 
 ### No scaffolding methods shown
 
-1. Project must have `sourceTemplate` in `project.json` or `toolkit.yaml`
+1. Project must have `sourceTemplate` in `project.json` or `.toolkit/settings.yaml`
 2. Template must have `scaffold.yaml` with defined features
 3. Feature's `patterns` field must match the file path
 

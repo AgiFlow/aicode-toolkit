@@ -137,6 +137,25 @@ interface GeminiCliServiceOptions {
   toolConfig?: Record<string, unknown>;
 }
 
+const GEMINI_ALLOWED_CLI_FLAGS = new Set([
+  '--debug',
+  '--model',
+  '--sandbox',
+  '--yolo',
+  '--approval-mode',
+  '--policy',
+  '--experimental-acp',
+  '--allowed-mcp-server-names',
+  '--allowed-tools',
+  '--prompt-interactive',
+  '--extensions',
+  '--include-directories',
+  '--screen-reader',
+  '--output-format',
+  '--raw-output',
+  '--accept-raw-output-risk',
+]);
+
 /**
  * Service for interacting with Gemini CLI as a coding agent
  * Provides standard LLM interface using Gemini's headless mode with JSON output
@@ -451,9 +470,12 @@ export class GeminiCliService extends BaseCodingAgentService {
     // Add toolConfig merged with defaults as CLI args
     // toolConfig values take precedence over defaults
     args.push(
-      ...this.buildToolConfigArgs({
-        model: params.model || 'gemini-3-pro-preview', // Default model for better JSON adherence
-      }),
+      ...this.buildToolConfigArgs(
+        {
+          model: params.model || 'gemini-3-pro-preview', // Default model for better JSON adherence
+        },
+        { allowedFlags: GEMINI_ALLOWED_CLI_FLAGS },
+      ),
     );
 
     // Execute Gemini CLI

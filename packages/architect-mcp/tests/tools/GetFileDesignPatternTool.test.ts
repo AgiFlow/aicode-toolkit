@@ -18,7 +18,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as fs from 'node:fs/promises';
 import { GetFileDesignPatternTool } from '../../src/tools';
+
+const mockMatchFileToPatterns = vi.fn();
+const mockInvokeAsLlm = vi.fn();
 
 // Mock the services used by GetFileDesignPatternTool
 vi.mock('../../src/services/TemplateFinder', () => ({
@@ -43,17 +47,29 @@ vi.mock('../../src/services/ArchitectParser', () => ({
 
 vi.mock('../../src/services/PatternMatcher', () => ({
   PatternMatcher: class MockPatternMatcher {
-    matchFileToPatterns = vi.fn().mockReturnValue({
-      file_path: '/mock/file.ts',
-      matched_patterns: [],
-      recommendations: [],
-    });
+    matchFileToPatterns = mockMatchFileToPatterns;
   },
 }));
+
+vi.mock('@agiflowai/coding-agent-bridge', () => ({
+  isValidLlmTool: (value: string) => ['claude-code', 'gemini-cli', 'codex'].includes(value),
+  LlmProxyService: class MockLlmProxyService {
+    invokeAsLlm = mockInvokeAsLlm;
+  },
+}));
+
+vi.mock('node:fs/promises');
 
 describe('GetFileDesignPatternTool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockMatchFileToPatterns.mockReturnValue({
+      file_path: '/mock/file.ts',
+      matched_patterns: [],
+      recommendations: [],
+    });
+    mockInvokeAsLlm.mockResolvedValue({ content: '1', model: 'test-model' });
+    vi.mocked(fs.readFile).mockResolvedValue('export const test = true;');
   });
 
   describe('metadata', () => {
@@ -182,6 +198,62 @@ describe('GetFileDesignPatternTool', () => {
 
       expect(result.content).toBeDefined();
       expect(result.content[0].type).toBe('text');
+    });
+  });
+
+  describe('LLM filtering', () => {
+    it('skips LLM filtering when only one pattern matches', async () => {
+      mockMatchFileToPatterns.mockReturnValue({
+        file_path: '/mock/file.ts',
+        matched_patterns: [
+          {
+            name: 'service-pattern',
+            design_pattern: 'Service Pattern',
+            description: 'Service files',
+            confidence: 'exact',
+            source: 'template',
+          },
+        ],
+        recommendations: [],
+      });
+
+      const tool = new GetFileDesignPatternTool({ llmTool: 'codex' });
+      const result = await tool.execute({ file_path: '/test/file.ts' });
+
+      expect(result.isError).toBeFalsy();
+      expect(mockInvokeAsLlm).not.toHaveBeenCalled();
+    });
+
+    it('uses capped LLM filtering when multiple patterns match', async () => {
+      mockMatchFileToPatterns.mockReturnValue({
+        file_path: '/mock/file.ts',
+        matched_patterns: [
+          {
+            name: 'service-pattern',
+            design_pattern: 'Service Pattern',
+            description: 'Service files',
+            confidence: 'exact',
+            source: 'template',
+          },
+          {
+            name: 'factory-pattern',
+            design_pattern: 'Factory Pattern',
+            description: 'Factory files',
+            confidence: 'partial',
+            source: 'global',
+          },
+        ],
+        recommendations: [],
+      });
+
+      const tool = new GetFileDesignPatternTool({ llmTool: 'codex' });
+      await tool.execute({ file_path: '/test/file.ts' });
+
+      expect(mockInvokeAsLlm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          maxTokens: 50,
+        }),
+      );
     });
   });
 });

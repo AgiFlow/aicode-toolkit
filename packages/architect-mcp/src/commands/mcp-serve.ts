@@ -59,6 +59,11 @@ interface ServerOptions {
   adminEnabled: boolean;
 }
 
+interface ResolvedFallbackConfig {
+  tool?: string;
+  config?: Record<string, unknown>;
+}
+
 /**
  * Type guard to verify a parsed JSON value is a plain object.
  */
@@ -91,6 +96,21 @@ function parseJsonConfig(value: string | undefined, flagName: string): Record<st
   } catch (error) {
     throw new Error(`Invalid JSON for ${flagName}: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
+
+function resolveFallbackConfig(config: {
+  fallbackTool?: string;
+  fallbackToolConfig?: Record<string, unknown>;
+  fallbacks?: Array<{ tool: string; config?: Record<string, unknown> }>;
+}): ResolvedFallbackConfig {
+  if (config.fallbackTool) {
+    return { tool: config.fallbackTool, config: config.fallbackToolConfig };
+  }
+
+  const firstValidFallback = config.fallbacks?.find((entry) => entry?.tool);
+  return firstValidFallback
+    ? { tool: firstValidFallback.tool, config: firstValidFallback.config }
+    : {};
 }
 
 /**
@@ -172,13 +192,14 @@ export const mcpServeCommand = new Command('mcp-serve')
       const transportType = (options.type ?? fileConfig.type ?? 'stdio').toLowerCase();
       const adminEnabled = options.adminEnable || fileConfig.adminEnable || false;
 
-      const fallbackToolStr = options.fallbackTool ?? fileConfig.fallbackTool;
+      const configuredFallback = resolveFallbackConfig(fileConfig);
+      const fallbackToolStr = options.fallbackTool ?? configuredFallback.tool;
       const fallbackTool = parseLlmToolOption(fallbackToolStr, '--fallback-tool');
 
       // CLI JSON string takes precedence over config object
       const fallbackToolConfig = options.fallbackToolConfig
         ? parseJsonConfig(options.fallbackToolConfig, '--fallback-tool-config')
-        : fileConfig.fallbackToolConfig;
+        : configuredFallback.config;
 
       const designPatternToolStr = options.designPatternTool ?? fileConfig.designPatternTool;
       const designPatternTool = parseLlmToolOption(designPatternToolStr, '--design-pattern-tool');

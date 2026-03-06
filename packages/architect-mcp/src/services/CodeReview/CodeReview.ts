@@ -36,6 +36,7 @@ interface CodeReviewServiceOptions {
 }
 
 export class CodeReviewService {
+  private static readonly LARGE_FILE_REVIEW_LIMIT = 8192;
   private llmService?: LlmProxyService;
   private ruleFinder: RuleFinder;
   private llmTool?: LlmToolId;
@@ -199,7 +200,7 @@ export class CodeReviewService {
       const response = await this.llmService.invokeAsLlm({
         prompt: userPrompt,
         systemPrompt,
-        maxTokens: 4000,
+        maxTokens: 1200,
         jsonSchema, // Pass schema for native enforcement (Claude, Codex)
       });
 
@@ -266,6 +267,10 @@ RULES TO CHECK:
       }
     }
 
+    const includeShouldDoExamples =
+      (!rules.must_do || rules.must_do.length === 0) &&
+      (!rules.must_not_do || rules.must_not_do.length === 0);
+
     if (rules.should_do && rules.should_do.length > 0) {
       prompt += '\n\nSHOULD DO (Recommended):';
       for (const rule of rules.should_do) {
@@ -273,7 +278,7 @@ RULES TO CHECK:
         if (rule.example) {
           prompt += ` (Example: ${rule.example})`;
         }
-        if (rule.codeExample) {
+        if (includeShouldDoExamples && rule.codeExample) {
           prompt += `\n  Code Example:\n${rule.codeExample}`;
         }
       }
@@ -347,6 +352,14 @@ Provide your review in the specified JSON format.`;
       if (!diff) {
         // No changes, return current content as-is
         return currentContent;
+      }
+
+      if (currentContent.length > CodeReviewService.LARGE_FILE_REVIEW_LIMIT) {
+        return `=== CHANGES (diff) ===
+${diff}
+
+=== CURRENT FILE ===
+[omitted because file exceeds ${CodeReviewService.LARGE_FILE_REVIEW_LIMIT} characters; review against the diff above]`;
       }
 
       // Return file with diff context - show diff first, then full file

@@ -20,7 +20,10 @@ export const addCommand = new Command('add')
   .description('Add a template to templates folder')
   .requiredOption('--name <name>', 'Template name')
   .requiredOption('--url <url>', 'URL of the template repository to download')
-  .option('--path <path>', 'Override templates folder path (uses toolkit.yaml config by default)')
+  .option(
+    '--path <path>',
+    'Override templates folder path (uses .toolkit/settings.yaml or legacy toolkit.yaml config by default)',
+  )
   .option('--type <type>', 'Template type: boilerplate or scaffold', 'boilerplate')
   .action(async (options) => {
     try {
@@ -31,7 +34,7 @@ export const addCommand = new Command('add')
 
       if (!foundTemplatesPath) {
         messages.error(
-          'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
+          'Templates folder not found. Create a templates folder or specify templatesPath in .toolkit/settings.yaml',
         );
         process.exit(1);
       }

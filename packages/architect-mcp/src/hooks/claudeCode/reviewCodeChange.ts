@@ -24,11 +24,12 @@ import {
   DECISION_DENY,
   DECISION_ALLOW,
 } from '@agiflowai/hooks-adapter';
-import { CLAUDE_CODE, isValidLlmTool, type LlmToolId } from '@agiflowai/coding-agent-bridge';
+import { isValidLlmTool, type LlmToolId } from '@agiflowai/coding-agent-bridge';
 import { CodeReviewService } from '../../services/CodeReview';
 import { TemplateFinder } from '../../services/TemplateFinder';
 import { ArchitectParser } from '../../services/ArchitectParser';
 import { PatternMatcher } from '../../services/PatternMatcher';
+import { isMutatingFileTool, summarizeRulesForAgentReview } from '../shared';
 import path from 'node:path';
 
 /**
@@ -72,7 +73,7 @@ export class ReviewCodeChangeHook {
     const filePath = context.tool_input?.file_path;
 
     // Only process file operations
-    if (!filePath) {
+    if (!filePath || !isMutatingFileTool(context.tool_name)) {
       return {
         decision: DECISION_SKIP,
         message: 'Not a file operation',
@@ -135,10 +136,7 @@ export class ReviewCodeChangeHook {
       const operation = extractOperation(context.tool_name);
 
       // Check if file has changed since last review (skip if unchanged)
-      const fileChanged = await executionLog.hasFileChanged(
-        filePath,
-        DECISION_ALLOW, // Check against last successful review
-      );
+      const fileChanged = await hasFileChangedSinceLastReview(executionLog, filePath);
 
       if (!fileChanged) {
         return {
@@ -149,7 +147,7 @@ export class ReviewCodeChangeHook {
 
       // Execute: Review the code change using service directly
       // Validate and use context.llm_tool if provided, otherwise fallback to CLAUDE_CODE constant
-      let llmTool: LlmToolId = CLAUDE_CODE;
+      let llmTool: LlmToolId | undefined;
       if (context.llm_tool && isValidLlmTool(context.llm_tool)) {
         llmTool = context.llm_tool;
       }
@@ -159,6 +157,22 @@ export class ReviewCodeChangeHook {
         toolConfig: context.tool_config,
       });
       const data = await service.reviewCodeChange(filePath);
+
+      if (!llmTool && data.rules) {
+        await executionLog.logExecution({
+          filePath: filePath,
+          operation: operation,
+          decision: DECISION_ALLOW,
+          filePattern: filePatterns,
+          fileMtime: fileMetadata?.mtime,
+          fileChecksum: fileMetadata?.checksum,
+        });
+
+        return {
+          decision: DECISION_ALLOW,
+          message: summarizeRulesForAgentReview(data.rules),
+        };
+      }
 
       // If fixes are required (must_do or must_not_do violations), block with full response
       if (data.fix_required) {
@@ -222,8 +236,23 @@ export class ReviewCodeChangeHook {
  * Extract operation type from tool name
  */
 function extractOperation(toolName: string): 'edit' | 'write' | 'read' | 'unknown' {
-  if (toolName === 'Edit' || toolName === 'Update') return 'edit';
+  if (toolName === 'Edit' || toolName === 'MultiEdit' || toolName === 'Update') return 'edit';
   if (toolName === 'Write') return 'write';
   if (toolName === 'Read') return 'read';
   return 'unknown';
+}
+
+async function hasFileChangedSinceLastReview(
+  executionLog: ExecutionLogService,
+  filePath: string,
+): Promise<boolean> {
+  const logWithReviewCheck = executionLog as ExecutionLogService & {
+    hasFileChangedSinceLastReview?: (path: string) => Promise<boolean>;
+  };
+
+  if (logWithReviewCheck.hasFileChangedSinceLastReview) {
+    return await logWithReviewCheck.hasFileChangedSinceLastReview(filePath);
+  }
+
+  return await executionLog.hasFileChanged(filePath, DECISION_ALLOW);
 }

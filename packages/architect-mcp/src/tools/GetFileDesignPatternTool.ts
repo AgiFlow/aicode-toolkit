@@ -45,6 +45,7 @@ interface GetFileDesignPatternToolOptions {
 
 export class GetFileDesignPatternTool implements Tool<GetFileDesignPatternToolInput> {
   static readonly TOOL_NAME = 'get-file-design-pattern';
+  private static readonly MAX_FILTER_INPUT_CHARS = 8192;
 
   private templateFinder: TemplateFinder;
   private architectParser: ArchitectParser;
@@ -118,7 +119,7 @@ export class GetFileDesignPatternTool implements Tool<GetFileDesignPatternToolIn
 
       // If LLM service is available, filter patterns based on file content
       let filteredPatterns = result.matched_patterns;
-      if (this.llmService && result.matched_patterns.length > 0) {
+      if (this.llmService && result.matched_patterns.length > 1) {
         filteredPatterns = await this.filterPatternsWithLLM(
           input.file_path,
           result.matched_patterns,
@@ -178,6 +179,10 @@ export class GetFileDesignPatternTool implements Tool<GetFileDesignPatternToolIn
         ? filePath
         : path.join(process.cwd(), filePath);
       const fileContent = await fs.readFile(normalizedPath, 'utf-8');
+      const truncatedContent =
+        fileContent.length > GetFileDesignPatternTool.MAX_FILTER_INPUT_CHARS
+          ? `${fileContent.slice(0, GetFileDesignPatternTool.MAX_FILTER_INPUT_CHARS)}\n\n[truncated for budget]`
+          : fileContent;
 
       // Build prompt for LLM
       const systemPrompt = `You are an expert code analyst. Your task is to analyze a code file and determine which design patterns are actually relevant to it based on the file's content, structure, and purpose.`;
@@ -188,7 +193,7 @@ FILE PATH: ${filePath}
 
 FILE CONTENT:
 \`\`\`
-${fileContent}
+${truncatedContent}
 \`\`\`
 
 POTENTIAL DESIGN PATTERNS:
@@ -204,6 +209,7 @@ Your response (numbers only):`;
       const response = await this.llmService.invokeAsLlm({
         prompt: userPrompt,
         systemPrompt,
+        maxTokens: 50,
       });
 
       // Parse LLM response

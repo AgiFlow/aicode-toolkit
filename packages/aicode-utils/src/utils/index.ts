@@ -37,6 +37,10 @@ export {
   writeFileSync,
 } from './fsHelpers';
 
+// Fallback config helpers
+export { resolveFallbackConfig } from './fallbacks';
+export type { ResolvedFallbackConfig } from './fallbacks';
+
 // ID generation
 export { generateStableId } from './generateStableId';
 

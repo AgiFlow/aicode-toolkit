@@ -8,7 +8,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { argsToFlags, buildHookCommand } from '../../src/commands/sync';
+import {
+  argsToFlags,
+  buildMcpConfigYaml,
+  buildHookCommand,
+  resolveArchitectClaudeMatcher,
+} from '../../src/commands/sync';
 
 // ---------------------------------------------------------------------------
 // argsToFlags
@@ -160,5 +165,54 @@ describe('buildHookCommand with argsToFlags', () => {
     expect(buildHookCommand(server, 'claude-code.postToolUse', argsToFlags({}))).toBe(
       'npx @agiflowai/architect-mcp hook --type claude-code.postToolUse',
     );
+  });
+});
+
+describe('resolveArchitectClaudeMatcher', () => {
+  it('returns the architect default matcher when unset', () => {
+    expect(resolveArchitectClaudeMatcher(undefined)).toBe('Edit|MultiEdit|Write');
+    expect(resolveArchitectClaudeMatcher({})).toBe('Edit|MultiEdit|Write');
+  });
+
+  it('preserves an explicit matcher override', () => {
+    expect(resolveArchitectClaudeMatcher({ matcher: 'Write' })).toBe('Write');
+  });
+});
+
+describe('buildMcpConfigYaml', () => {
+  it('returns null when no mcp-config section is present', () => {
+    expect(buildMcpConfigYaml({})).toBeNull();
+  });
+
+  it('maps mcp-config servers and skills into mcp-config.yaml shape', () => {
+    expect(
+      buildMcpConfigYaml({
+        'mcp-config': {
+          servers: {
+            'scaffold-mcp': {
+              command: 'bun',
+              args: ['run', 'packages/scaffold-mcp/src/cli.ts', 'mcp-serve'],
+              instruction: 'Use scaffold-mcp for scaffolding.',
+            },
+          },
+          skills: {
+            paths: ['docs/skills'],
+          },
+        },
+      } as any),
+    ).toEqual({
+      mcpServers: {
+        'scaffold-mcp': {
+          command: 'bun',
+          args: ['run', 'packages/scaffold-mcp/src/cli.ts', 'mcp-serve'],
+          config: {
+            instruction: 'Use scaffold-mcp for scaffolding.',
+          },
+        },
+      },
+      skills: {
+        paths: ['docs/skills'],
+      },
+    });
   });
 });

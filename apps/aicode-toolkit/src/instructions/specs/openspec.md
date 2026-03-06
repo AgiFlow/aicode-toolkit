@@ -23,13 +23,13 @@ When implementing new features or changes, use scaffold-mcp MCP tools:
 {% if projectType == 'monolith' %}
 *This is a monolith project:*
 - Single project at workspace root
-- Config file: `toolkit.yaml` at root
+- Config file: `.toolkit/settings.yaml` at root
 - All code in workspace root (src/, lib/, etc.)
 - When scaffolding: Use `monolith: true` parameter
 - When using scaffold methods: `projectPath` = workspace root
 
 Example: For workspace at `/path/to/project`:
-- Project config: `/path/to/project/toolkit.yaml`
+- Project config: `/path/to/project/.toolkit/settings.yaml`
 - Source code: `/path/to/project/src/`
 - OpenSpec: `/path/to/project/openspec/`
 {% else %}

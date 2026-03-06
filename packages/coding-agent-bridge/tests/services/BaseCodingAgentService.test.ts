@@ -55,6 +55,13 @@ class TestCodingAgentService extends BaseCodingAgentService {
     return this.buildToolConfigArgs(defaults);
   }
 
+  public testBuildToolConfigArgsWithAllowedFlags(
+    defaults: Record<string, unknown> | undefined,
+    allowedFlags: ReadonlySet<string>,
+  ): string[] {
+    return this.buildToolConfigArgs(defaults, { allowedFlags });
+  }
+
   // Expose protected method for testing merge logic
   public testMergeWithDefaults(defaults: Record<string, unknown>): Record<string, unknown> {
     return this.mergeWithDefaults(defaults);
@@ -279,6 +286,14 @@ describe('BaseCodingAgentService', () => {
       const argsWithoutDefaults = service.testBuildToolConfigArgs();
       const argsWithEmptyDefaults = service.testBuildToolConfigArgs({});
       expect(argsWithoutDefaults).toEqual(argsWithEmptyDefaults);
+    });
+
+    test('filters args to the allowed CLI flag set', () => {
+      const service = new TestCodingAgentService({
+        toolConfig: { model: 'custom-model', timeout: 3000, config: '/tmp/config.json' },
+      });
+      const args = service.testBuildToolConfigArgsWithAllowedFlags(undefined, new Set(['--model']));
+      expect(args).toEqual(['--model', 'custom-model']);
     });
   });
 });

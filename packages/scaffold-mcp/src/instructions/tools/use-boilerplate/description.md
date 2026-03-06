@@ -1,7 +1,7 @@
 {% if isMonolith %}
 This tool is not available for monolith projects.
 
-Monolith projects use a single template specified in `toolkit.yaml` (sourceTemplate field). The template cannot be changed through this tool - it's determined by the workspace configuration.
+Monolith projects use a single template specified in `.toolkit/settings.yaml` (`sourceTemplate`). The template cannot be changed through this tool - it's determined by the workspace configuration.
 
 Use `list-scaffolding-methods` and `use-scaffold-method` to add features to your monolith project instead.
 {% else %}

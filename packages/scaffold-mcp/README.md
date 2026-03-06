@@ -2,17 +2,7 @@
 
 > MCP server for scaffolding applications with templates and feature generators
 
-Generate consistent, convention-following code for your AI coding agents. scaffold-mcp provides templates for common patterns (routes, components, services) so agents don't write boilerplate from scratch.
-
-## Why Use This?
-
-When you ask an AI agent to "add a new page," it generates working code—but not necessarily code that follows your team's patterns. scaffold-mcp solves this by:
-
-1. **Providing templates** for common patterns your team has standardized
-2. **Enforcing structure** so every route, component, or service looks the same
-3. **Reducing boilerplate** by generating the repetitive parts automatically
-
-Think of it as "Rails generators" or "Angular schematics" for any stack.
+Use this server to generate projects and feature boilerplate from template-defined scaffolds.
 
 ---
 
@@ -45,7 +35,7 @@ Add to your MCP config (`.mcp.json`, `.cursor/mcp.json`, etc.):
 
 ### 3. Start Using
 
-Your AI agent now has access to scaffolding tools:
+Your agent can now call scaffold tools:
 
 ```
 You: "Create a new Next.js app called dashboard"
@@ -93,9 +83,9 @@ apps/
 │           └── page.tsx                   └── src/             ← Template files (.liquid)
 ```
 
-1. **Templates define patterns**: Each template has a `scaffold.yaml` that defines boilerplates and features
-2. **Projects reference templates**: Your `project.json` has a `sourceTemplate` field pointing to the template
-3. **Tools generate code**: MCP tools read the template and generate files in your project
+1. Templates define boilerplates and features in `scaffold.yaml`
+2. Projects reference templates with `sourceTemplate`
+3. Tools read the template and generate files
 
 ---
 
@@ -162,6 +152,22 @@ npx @agiflowai/scaffold-mcp mcp-serve \
   --fallback-tool-config '{"model":"claude-sonnet-4-6"}'
 ```
 
+For `.toolkit/settings.yaml` or `.toolkit/settings.local.yaml`, you can define multiple ordered fallbacks:
+
+```yaml
+scaffold-mcp:
+  mcp-serve:
+    fallbacks:
+      - tool: gemini-cli
+        config:
+          model: gemini-2.0-flash
+      - tool: codex
+        config:
+          model: gpt-5.2-mini
+```
+
+The first valid entry is used when `fallbackTool` is not set.
+
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-t, --type` | Transport: `stdio`, `http`, `sse` | `stdio` |
@@ -170,13 +176,13 @@ npx @agiflowai/scaffold-mcp mcp-serve \
 | `--admin-enable` | Enable template creation tools | `false` |
 | `--prompt-as-skill` | Render MCP prompts with Claude Code skill front matter, exposing them as `/skill` commands | `false` |
 | `--fallback-tool` | LLM tool for scaffold operations (`claude-code`, `gemini-cli`, `codex`) | disabled |
-| `--fallback-tool-config` | JSON config for the fallback tool (e.g., `{"model":"claude-sonnet-4-6"}`) | `{}` |
+| `--fallback-tool-config` | JSON config for the CLI fallback tool; settings files may also use ordered `fallbacks` entries | `{}` |
 
 ---
 
 ## Creating Custom Templates
 
-### Option 1: Using Admin Tools (Recommended)
+### Option 1: Using Admin Tools
 
 Ask your AI agent:
 ```
@@ -184,8 +190,8 @@ Ask your AI agent:
 ```
 
 The agent will use:
-1. `generate-boilerplate` - Creates scaffold.yaml entry
-2. `generate-boilerplate-file` - Adds template files
+1. `generate-boilerplate`
+2. `generate-boilerplate-file`
 
 ### Option 2: Manually
 

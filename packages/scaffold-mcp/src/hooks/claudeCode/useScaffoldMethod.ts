@@ -36,6 +36,7 @@ import { TemplatesManagerService, ProjectFinderService } from '@agiflowai/aicode
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import os from 'node:os';
+import { formatScaffoldMethodsHookMessage, resolveNewFileWriteTarget } from '../shared';
 
 /**
  * Scaffold method definition from list-scaffolding-methods tool
@@ -107,47 +108,16 @@ export class UseScaffoldMethodHook {
         return { decision: DECISION_SKIP, message: 'Not a tool use event' };
       }
 
-      // Only intercept Write operations with a file path
       const filePath = context.tool_input?.file_path;
-
-      if (!filePath || context.tool_name !== 'Write') {
+      const absoluteFilePath = await resolveNewFileWriteTarget(
+        context.cwd,
+        context.tool_name,
+        filePath,
+      );
+      if (!absoluteFilePath || !filePath) {
         return {
           decision: DECISION_SKIP,
-          message: 'Not a file write operation',
-        };
-      }
-
-      // Only block files within the working directory
-      const absoluteFilePath = path.isAbsolute(filePath)
-        ? filePath
-        : path.join(context.cwd, filePath);
-
-      if (
-        !absoluteFilePath.startsWith(context.cwd + path.sep) &&
-        absoluteFilePath !== context.cwd
-      ) {
-        return {
-          decision: DECISION_SKIP,
-          message: 'File is outside working directory - skipping scaffold method check',
-        };
-      }
-
-      // Skip if the file already exists — Write on an existing file is an overwrite, not new creation
-      let fileExists = false;
-      try {
-        await fs.access(absoluteFilePath);
-        fileExists = true;
-      } catch (accessErr) {
-        // ENOENT means the file does not exist — expected case, proceed with scaffold check
-        // Re-throw any other unexpected filesystem errors
-        if (!(accessErr instanceof Error && 'code' in accessErr && accessErr.code === 'ENOENT')) {
-          throw accessErr;
-        }
-      }
-      if (fileExists) {
-        return {
-          decision: DECISION_SKIP,
-          message: 'File already exists - skipping scaffold method check',
+          message: 'Not a new file write operation',
         };
       }
 
@@ -236,17 +206,7 @@ export class UseScaffoldMethodHook {
         };
       }
 
-      // Format available methods as a concise list (name + description only)
-      let message =
-        'Before writing new files, use `use-scaffold-method` if any of these match your needs:\n\n';
-
-      for (const method of data.methods) {
-        message += `- **${method.name}**: ${method.description || 'No description available'}\n`;
-      }
-
-      if (data.nextCursor) {
-        message += `\n_More methods available (cursor: "${data.nextCursor}")._\n`;
-      }
+      const message = formatScaffoldMethodsHookMessage(data.methods);
 
       // Log that we showed methods for this file path (decision: deny)
       await executionLog.logExecution({

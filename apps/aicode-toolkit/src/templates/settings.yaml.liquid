@@ -4,26 +4,36 @@
 # Local overrides go in .toolkit/settings.local.yaml (add to .gitignore).
 # Local settings are shallow-merged over this file — useful for per-developer
 # LLM tool preferences or API keys without committing them.
+#
+# All fields are optional. Uncomment and edit what you need.
 
 # ---------------------------------------------------------------------------
 # Project identity
 # ---------------------------------------------------------------------------
+
+{% comment %}Project type: monolith (single app) or monorepo (multiple packages/apps){% endcomment %}
 {% if projectType %}
 projectType: {{ projectType }}
 {% else %}
 # projectType: monolith
 {% endif %}
+
+{% comment %}Path to the scaffold templates directory, relative to workspace root.{% endcomment %}
 {% if templatesPath %}
 templatesPath: {{ templatesPath }}
 {% else %}
 # templatesPath: ./templates
 {% endif %}
+
+{% comment %}Active template name (monolith only — monorepo reads from project.json).{% endcomment %}
 {% if sourceTemplate %}
 sourceTemplate: {{ sourceTemplate }}
 {% else %}
 # sourceTemplate: react-vite
 {% endif %}
-version: '1.0'
+
+# Config schema version.
+# version: '1.0'
 
 # ---------------------------------------------------------------------------
 # scaffold-mcp — configuration for the scaffold-mcp CLI
@@ -36,27 +46,53 @@ scaffold-mcp:
   # mcp-serve — defaults for `scaffold-mcp mcp-serve`
   # -------------------------------------------------------------------------
   mcp-serve:
+    # Transport type: stdio | http | sse  (default: stdio)
     # type: stdio
+
+    # Port for http/sse transport (default: 3000)
     # port: 3000
+
+    # Host to bind for http/sse transport (default: localhost)
     # host: localhost
+
+    # Enable admin tools such as generate-boilerplate (default: false)
     # adminEnable: false
+
+    # Render prompts with skill front matter for Claude Code (default: false)
     # promptAsSkill: false
+
+    # Fallback LLM tool used when scaffold-mcp needs AI assistance.
+    # Supported: claude-code | gemini-cli | codex
     {% if fallbackTool %}
     fallbackTool: {{ fallbackTool }}
     {% if fallbackToolConfig %}
+    # Config passed to the fallback LLM tool.
     fallbackToolConfig:
       {% for pair in fallbackToolConfig %}
       {{ pair[0] }}: {{ pair[1] }}
       {% endfor %}
     {% else %}
+    # Config passed to the fallback LLM tool.
     # fallbackToolConfig:
     #   model: gemini-2.0-flash
     {% endif %}
     {% else %}
     # fallbackTool: gemini-cli
+    # Config passed to the fallback LLM tool.
     # fallbackToolConfig:
     #   model: gemini-2.0-flash
     {% endif %}
+
+    # Ordered fallback chain used when fallbackTool is not set.
+    # The first valid entry wins.
+    # fallbacks:
+    #   - tool: gemini-cli
+    #     config:
+    #       model: gemini-2.0-flash
+    #   - tool: codex
+    #     config:
+    #       model: gpt-5.2-mini
+
     # Extra CLI args merged into the mcp-serve command (key: value → --key value)
     # args:
     #   review-tool: gemini-cli
@@ -66,11 +102,58 @@ scaffold-mcp:
   # Keyed by agent name, then by hook method.
   # Supported agents  : claude-code | gemini-cli
   # Supported methods : preToolUse | postToolUse | userPromptSubmit | taskCompleted | stop
+  # CLI flags --fallback-tool and --fallback-tool-config still take precedence.
   # -------------------------------------------------------------------------
   hook:
 
     claude-code:
       preToolUse:
+        # LLM tool to use for this hook. Supported: claude-code | gemini-cli | codex
+        {% if fallbackTool %}
+        llm-tool: {{ fallbackTool }}
+        {% if fallbackToolConfig %}
+        tool-config:
+          {% for pair in fallbackToolConfig %}
+          {{ pair[0] }}: {{ pair[1] }}
+          {% endfor %}
+        {% endif %}
+        {% else %}
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+        {% endif %}
+        # fallbacks:
+        #   - tool: codex
+        #     config:
+        #       model: gpt-5.2-mini
+        # matcher: Edit|MultiEdit|Write
+        # Extra CLI args appended to the generated hook command (key: value → --key value)
+        # args:
+        #   llm-tool: gemini-cli
+
+      postToolUse:
+        # matcher: Edit|MultiEdit|Write
+        {% if fallbackTool %}
+        llm-tool: {{ fallbackTool }}
+        {% if fallbackToolConfig %}
+        tool-config:
+          {% for pair in fallbackToolConfig %}
+          {{ pair[0] }}: {{ pair[1] }}
+          {% endfor %}
+        {% endif %}
+        {% else %}
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+        {% endif %}
+        # fallbacks:
+        #   - tool: codex
+        #     config:
+        #       model: gpt-5.2-mini
+        # args:
+        #   llm-tool: gemini-cli
+
+      userPromptSubmit:
         {% if fallbackTool %}
         llm-tool: {{ fallbackTool }}
         {% if fallbackToolConfig %}
@@ -87,7 +170,24 @@ scaffold-mcp:
         # args:
         #   llm-tool: gemini-cli
 
-      postToolUse:
+      taskCompleted:
+        {% if fallbackTool %}
+        llm-tool: {{ fallbackTool }}
+        {% if fallbackToolConfig %}
+        tool-config:
+          {% for pair in fallbackToolConfig %}
+          {{ pair[0] }}: {{ pair[1] }}
+          {% endfor %}
+        {% endif %}
+        {% else %}
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+        {% endif %}
+        # args:
+        #   llm-tool: gemini-cli
+
+      stop:
         {% if fallbackTool %}
         llm-tool: {{ fallbackTool }}
         {% if fallbackToolConfig %}
@@ -105,6 +205,21 @@ scaffold-mcp:
         #   llm-tool: gemini-cli
 
     gemini-cli:
+      preToolUse:
+        {% if fallbackTool %}
+        llm-tool: {{ fallbackTool }}
+        {% if fallbackToolConfig %}
+        tool-config:
+          {% for pair in fallbackToolConfig %}
+          {{ pair[0] }}: {{ pair[1] }}
+          {% endfor %}
+        {% endif %}
+        {% else %}
+        # llm-tool: gemini-cli
+        # tool-config:
+        #   model: gemini-2.0-flash
+        {% endif %}
+
       postToolUse:
         {% if fallbackTool %}
         llm-tool: {{ fallbackTool }}
@@ -131,32 +246,66 @@ architect-mcp:
   # mcp-serve — defaults for `architect-mcp mcp-serve`
   # -------------------------------------------------------------------------
   mcp-serve:
+    # Transport type: stdio | http | sse  (default: stdio)
     # type: stdio
+
+    # Port for http/sse transport (default: 3000)
     # port: 3000
+
+    # Host to bind for http/sse transport (default: localhost)
     # host: localhost
+
+    # Enable admin tools such as add-design-pattern and add-rule (default: false)
     # adminEnable: false
+
+    # Fallback LLM tool used for both design-pattern and review when specific tools are not set.
+    # Supported: claude-code | gemini-cli | codex
     {% if fallbackTool %}
     fallbackTool: {{ fallbackTool }}
     {% if fallbackToolConfig %}
+    # Config passed to the fallback LLM tool.
     fallbackToolConfig:
       {% for pair in fallbackToolConfig %}
       {{ pair[0] }}: {{ pair[1] }}
       {% endfor %}
     {% else %}
+    # Config passed to the fallback LLM tool.
     # fallbackToolConfig:
     #   model: gemini-2.0-flash
     {% endif %}
     {% else %}
     # fallbackTool: gemini-cli
+    # Config passed to the fallback LLM tool.
     # fallbackToolConfig:
     #   model: gemini-2.0-flash
     {% endif %}
+
+    # Ordered fallback chain used when fallbackTool is not set.
+    # The first valid entry wins.
+    # fallbacks:
+    #   - tool: gemini-cli
+    #     config:
+    #       model: gemini-2.0-flash
+    #   - tool: codex
+    #     config:
+    #       model: gpt-5.2-mini
+
+    # LLM tool used specifically for get-file-design-pattern analysis.
+    # Overrides fallbackTool for design pattern operations.
     # designPatternTool: gemini-cli
+
+    # Config passed to the design pattern LLM tool.
     # designPatternToolConfig:
     #   model: gemini-2.0-flash
+
+    # LLM tool used specifically for review-code-change analysis.
+    # Overrides fallbackTool for code review operations.
     # reviewTool: gemini-cli
+
+    # Config passed to the review LLM tool.
     # reviewToolConfig:
     #   model: gemini-2.0-flash
+
     # Extra CLI args merged into the mcp-serve command (key: value → --key value)
     # args:
     #   review-tool: gemini-cli
@@ -166,28 +315,39 @@ architect-mcp:
   # Keyed by agent name, then by hook method.
   # Supported agents  : claude-code | gemini-cli
   # Supported methods : preToolUse | postToolUse
+  # CLI flags --llm-tool, --fallback-tool, and --tool-config still take precedence.
   # -------------------------------------------------------------------------
   hook:
 
     claude-code:
       preToolUse:
+        # Static pattern matching is usually enough here. Leave llm-tool unset unless
+        # you want extra pattern filtering via LLM.
         {% if fallbackTool %}
-        llm-tool: {{ fallbackTool }}
+        fallback-tool: {{ fallbackTool }}
         {% if fallbackToolConfig %}
-        tool-config:
+        fallback-tool-config:
           {% for pair in fallbackToolConfig %}
           {{ pair[0] }}: {{ pair[1] }}
           {% endfor %}
         {% endif %}
         {% else %}
-        # llm-tool: gemini-cli
-        # tool-config:
+        # fallback-tool: gemini-cli
+        # fallback-tool-config:
         #   model: gemini-2.0-flash
         {% endif %}
+        # fallbacks:
+        #   - tool: codex
+        #     config:
+        #       model: gpt-5.2-mini
+        # matcher: Edit|MultiEdit|Write
+        # Extra CLI args appended to the generated hook command (key: value → --key value)
         # args:
         #   llm-tool: gemini-cli
 
       postToolUse:
+        # matcher: Edit|MultiEdit|Write
+        # Set llm-tool only if you want LLM-based review. A cheap model is recommended.
         {% if fallbackTool %}
         llm-tool: {{ fallbackTool }}
         {% if fallbackToolConfig %}
@@ -201,6 +361,10 @@ architect-mcp:
         # tool-config:
         #   model: gemini-2.0-flash
         {% endif %}
+        # fallbacks:
+        #   - tool: codex
+        #     config:
+        #       model: gpt-5.2-mini
         # args:
         #   llm-tool: gemini-cli
 

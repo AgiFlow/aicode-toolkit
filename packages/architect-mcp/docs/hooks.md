@@ -2,15 +2,12 @@
 
 > **Experimental:** Hooks integration is currently experimental and the API may change in future releases.
 
-architect-mcp integrates with AI coding agents' hook systems to automatically provide design patterns before file edits and review code after changes. This provides real-time guidance without requiring manual MCP tool calls.
+Hooks let architect-mcp provide patterns before file edits and review feedback after changes.
 
 ## Overview
 
-Hooks allow architect-mcp to:
-- **Before edits**: Provide relevant design patterns and coding standards from `architect.yaml`
-- **After edits**: Review changes against `RULES.yaml` and provide feedback on violations
-
-This creates a feedback loop where AI agents receive architectural guidance proactively, improving code quality without manual intervention.
+- Before edits: provide patterns and coding rules from `architect.yaml` and `RULES.yaml`
+- After edits: review changes against `RULES.yaml`
 
 ## Supported Agents
 
@@ -32,14 +29,14 @@ architect-mcp:
   hook:
     claude-code:
       preToolUse:
-        args:       # extra CLI args appended to the generated hook command
-          llm-tool: gemini-cli
-      postToolUse: {}
+        matcher: Edit|MultiEdit|Write
+      postToolUse:
+        matcher: Edit|MultiEdit|Write
 ```
 
 The hook command is derived from `mcp-config.servers.architect-mcp` by replacing
-`mcp-serve` with `hook --type claude-code.<method>`. Generated entries fire on all
-tool calls (no matcher). Then run:
+`mcp-serve` with `hook --type claude-code.<method>`. Generated architect entries
+default to the matcher `Edit|MultiEdit|Write`. Then run:
 
 ```bash
 npx @agiflowai/aicode-toolkit sync --hooks
@@ -54,7 +51,7 @@ Add directly to `.claude/settings.json` or `.claude/settings.local.json`:
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|MultiEdit|Write",
         "hooks": [
           {
             "type": "command",
@@ -65,7 +62,7 @@ Add directly to `.claude/settings.json` or `.claude/settings.local.json`:
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|MultiEdit|Write",
         "hooks": [
           {
             "type": "command",
@@ -80,7 +77,7 @@ Add directly to `.claude/settings.json` or `.claude/settings.local.json`:
 
 ### How It Works
 
-#### PreToolUse (Edit|Write)
+#### PreToolUse (Edit|MultiEdit|Write)
 
 Before Claude edits or writes a file, the hook:
 1. Extracts the file path from the tool input
@@ -88,15 +85,13 @@ Before Claude edits or writes a file, the hook:
 3. Retrieves applicable coding rules from `RULES.yaml`
 4. Returns guidance to Claude as a hook message
 
-This helps Claude follow your project's architectural guidelines before making changes.
-
-#### PostToolUse (Edit|Write)
+#### PostToolUse (Edit|MultiEdit|Write)
 
 After Claude edits or writes a file, the hook:
 1. Reads the modified file content
 2. Checks for violations against `RULES.yaml` rules
 3. Returns feedback on any issues found
-4. Claude can then fix violations in subsequent edits
+4. Claude can fix violations in later edits
 
 ### Hook Decisions
 
@@ -109,10 +104,10 @@ After Claude edits or writes a file, the hook:
 
 ### Execution Tracking
 
-Hooks automatically track executions per session to avoid duplicate processing:
+Hooks track executions per session to avoid duplicate processing:
 - Each file is only analyzed once per tool use cycle
-- Tracking is session-based (resets when the agent session ends)
-- Uses stable IDs based on file path and tool input hash
+- Tracking resets when the session ends
+- Stable IDs are based on file path and tool input hash
 
 ## Gemini CLI Hooks (WIP)
 
@@ -188,11 +183,10 @@ These commands are called by the AI agent's hook system, not directly by users.
 
 ## Architecture
 
-The hooks system uses `@agiflowai/hooks-adapter` internally for normalized hook handling across different AI coding agents. This provides:
-
-- **Unified interface**: Same hook logic works across different agents
-- **Adapter pattern**: Agent-specific input/output formats are handled transparently
-- **Execution logging**: Track which files have been processed to avoid duplicates
+The hooks system uses `@agiflowai/hooks-adapter` for:
+- shared hook logic across agents
+- agent-specific input/output adapters
+- execution logging
 
 ## Troubleshooting
 

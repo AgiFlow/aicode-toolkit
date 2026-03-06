@@ -87,7 +87,7 @@ describe('GenerateFeatureScaffoldPrompt', () => {
       const messages = monolithPrompt.getMessages();
 
       expect(messages[0].content.text).toContain('auto-detected');
-      expect(messages[0].content.text).toContain('toolkit.yaml');
+      expect(messages[0].content.text).toContain('.toolkit/settings.yaml');
     });
 
     it('should mention template name auto-detection', () => {

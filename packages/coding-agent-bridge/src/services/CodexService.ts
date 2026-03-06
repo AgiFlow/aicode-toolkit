@@ -71,6 +71,29 @@ interface CodexServiceOptions {
   toolConfig?: Record<string, unknown>;
 }
 
+const CODEX_EXEC_ALLOWED_CLI_FLAGS = new Set([
+  '--config',
+  '--enable',
+  '--disable',
+  '--image',
+  '--model',
+  '--oss',
+  '--local-provider',
+  '--sandbox',
+  '--profile',
+  '--full-auto',
+  '--dangerously-bypass-approvals-and-sandbox',
+  '--cd',
+  '--skip-git-repo-check',
+  '--add-dir',
+  '--ephemeral',
+  '--output-schema',
+  '--color',
+  '--progress-cursor',
+  '--json',
+  '--output-last-message',
+]);
+
 /**
  * Service for interacting with Codex CLI as a coding agent
  * Provides standard LLM interface using Codex's exec mode with JSON output
@@ -280,9 +303,12 @@ export class CodexService extends BaseCodingAgentService {
     // Add toolConfig merged with defaults as CLI args
     // toolConfig values take precedence over defaults
     args.push(
-      ...this.buildToolConfigArgs({
-        ...(params.model && { model: params.model }),
-      }),
+      ...this.buildToolConfigArgs(
+        {
+          ...(params.model && { model: params.model }),
+        },
+        { allowedFlags: CODEX_EXEC_ALLOWED_CLI_FLAGS },
+      ),
     );
 
     // Write JSON schema to temp file if provided

@@ -30,7 +30,8 @@ import {
   DECISION_ALLOW,
 } from '@agiflowai/hooks-adapter';
 import { ListScaffoldingMethodsTool } from '../../tools/ListScaffoldingMethodsTool';
-import { TemplatesManagerService } from '@agiflowai/aicode-utils';
+import { TemplatesManagerService, ProjectFinderService } from '@agiflowai/aicode-utils';
+import { formatScaffoldMethodsHookMessage, resolveNewFileWriteTarget } from '../shared';
 
 /**
  * Scaffold method definition from list-scaffolding-methods tool
@@ -76,11 +77,24 @@ export class UseScaffoldMethodHook {
    */
   async preToolUse(context: GeminiCliHookInput): Promise<HookResponse> {
     try {
+      const filePath = context.tool_input?.file_path;
+      const absoluteFilePath = await resolveNewFileWriteTarget(
+        context.cwd,
+        context.tool_name,
+        filePath,
+      );
+      if (!absoluteFilePath || !filePath) {
+        return {
+          decision: DECISION_SKIP,
+          message: 'Not a new file write operation',
+        };
+      }
+
       // Create execution log service for this session
       const executionLog = new ExecutionLogService(context.session_id);
 
-      // Check if we already showed scaffold methods in this session
-      const sessionKey = `list-scaffold-methods-${context.session_id}`;
+      // Check if we already showed scaffold methods for this file in this session
+      const sessionKey = filePath;
       const alreadyShown = await executionLog.hasExecuted({
         filePath: sessionKey,
         decision: DECISION_DENY,
@@ -110,8 +124,13 @@ export class UseScaffoldMethodHook {
       }
       const tool = new ListScaffoldingMethodsTool(templatesPath, false);
 
+      const workspaceRoot = await TemplatesManagerService.getWorkspaceRoot(context.cwd);
+      const projectFinder = new ProjectFinderService(workspaceRoot);
+      const projectConfig = await projectFinder.findProjectForFile(absoluteFilePath);
+      const projectPath = projectConfig?.root || context.cwd;
+
       // Execute the tool to get scaffolding methods
-      const result = await tool.execute(context.tool_input || {});
+      const result = await tool.execute({ projectPath });
 
       // Validate response type first
       const firstContent = result.content[0];
@@ -162,32 +181,9 @@ export class UseScaffoldMethodHook {
         };
       }
 
-      // Format all available methods for LLM guidance
-      let message = '🎯 **Scaffolding Methods Available**\n\n';
-      message +=
-        'Before writing new files, check if any of these scaffolding methods match your needs:\n\n';
-
-      for (const method of data.methods) {
-        message += `**${method.name}**\n`;
-        message += `${method.instruction || method.description || 'No description available'}\n`;
-
-        if (method.variables_schema?.required && method.variables_schema.required.length > 0) {
-          message += `Required: ${method.variables_schema.required.join(', ')}\n`;
-        }
-        message += '\n';
-      }
-
-      if (data.nextCursor) {
-        message += `\n_Note: More methods available. Use cursor "${data.nextCursor}" to see more._\n\n`;
-      }
-
-      message += '\n**Instructions:**\n';
-      message +=
-        '1. If one of these scaffold methods matches what you need to create, use the `use-scaffold-method` MCP tool instead of writing files manually\n';
-      message +=
-        '2. If none of these methods are relevant to your task, proceed to write new files directly using the Write tool\n';
-      message +=
-        '3. Using scaffold methods ensures consistency with project patterns and includes all necessary boilerplate\n';
+      const message = formatScaffoldMethodsHookMessage(data.methods, {
+        includeRequiredVars: true,
+      });
 
       // Log that we showed methods (decision: deny)
       await executionLog.logExecution({

@@ -4,6 +4,7 @@
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import * as fs from 'node:fs/promises';
+import * as crypto from 'node:crypto';
 
 // Mock the fs module
 vi.mock('node:fs/promises');
@@ -443,6 +444,51 @@ describe('ExecutionLogService', () => {
 
       // Should return false because skip decisions are not actual reviews
       expect(result).toBe(false);
+    });
+  });
+
+  describe('hasFileChangedSinceLastReview', () => {
+    test('returns false when the last review was deny and checksum is unchanged', async () => {
+      const currentContent = 'current file content';
+      const logEntry = JSON.stringify({
+        timestamp: Date.now() - 5000,
+        sessionId: 'session-123',
+        filePath: '/test/file.ts',
+        operation: 'edit',
+        decision: 'deny',
+        fileChecksum: crypto.createHash('md5').update(currentContent).digest('hex'),
+      });
+
+      vi.mocked(fs.readFile).mockResolvedValueOnce(logEntry).mockResolvedValueOnce(currentContent);
+      vi.mocked(fs.stat).mockResolvedValue({ mtimeMs: 123456789 } as Awaited<
+        ReturnType<typeof fs.stat>
+      >);
+
+      const result = await service.hasFileChangedSinceLastReview('/test/file.ts');
+
+      expect(result).toBe(false);
+    });
+
+    test('returns true when the last review was deny and checksum changed', async () => {
+      const logEntry = JSON.stringify({
+        timestamp: Date.now() - 5000,
+        sessionId: 'session-123',
+        filePath: '/test/file.ts',
+        operation: 'edit',
+        decision: 'deny',
+        fileChecksum: 'old-checksum',
+      });
+
+      vi.mocked(fs.readFile)
+        .mockResolvedValueOnce(logEntry)
+        .mockResolvedValueOnce('current file content');
+      vi.mocked(fs.stat).mockResolvedValue({ mtimeMs: 123456789 } as Awaited<
+        ReturnType<typeof fs.stat>
+      >);
+
+      const result = await service.hasFileChangedSinceLastReview('/test/file.ts');
+
+      expect(result).toBe(true);
     });
   });
 
