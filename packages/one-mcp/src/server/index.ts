@@ -26,6 +26,7 @@ import { SkillService } from '../services/SkillService';
 import { DescribeToolsTool } from '../tools/DescribeToolsTool';
 import { UseToolTool } from '../tools/UseToolTool';
 import { parseToolName, generateServerId } from '../utils';
+import packageJson from '../../package.json' assert { type: 'json' };
 
 /**
  * Configuration options for creating an MCP server instance
@@ -40,6 +41,7 @@ export interface ServerOptions {
   skills?: { paths: string[] };
   serverId?: string;
   definitionsCachePath?: string;
+  clearDefinitionsCache?: boolean;
 }
 
 export async function createServer(options?: ServerOptions): Promise<Server> {
@@ -62,6 +64,9 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
   // Track config values from config file (will be set if config is loaded)
   let configSkills: { paths: string[] } | undefined;
   let configId: string | undefined;
+  let configHash: string | undefined;
+  let effectiveDefinitionsCachePath: string | undefined;
+  let shouldStartFromCache = false;
 
   // Load and connect to MCP servers if config is provided
   if (options?.configFilePath) {
@@ -84,36 +89,66 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
     // Get config values from config file
     configSkills = config.skills;
     configId = config.id;
+    configHash = DefinitionsCacheService.generateConfigHash(config);
+    effectiveDefinitionsCachePath =
+      options.definitionsCachePath ||
+      DefinitionsCacheService.getDefaultCachePath(options.configFilePath);
+    clientManager.registerServerConfigs(config.mcpServers);
 
-    // Connect to all configured MCP servers and track failures
-    const failedConnections: Array<{ serverName: string; error: Error }> = [];
-    const connectionPromises = Object.entries(config.mcpServers).map(
-      async ([serverName, serverConfig]) => {
-        try {
-          await clientManager.connectToServer(serverName, serverConfig);
-          console.error(`Connected to MCP server: ${serverName}`);
-        } catch (error) {
-          const err = error instanceof Error ? error : new Error(String(error));
-          failedConnections.push({ serverName, error: err });
-          console.error(`Failed to connect to ${serverName}:`, error);
-        }
-      }
-    );
-
-    await Promise.all(connectionPromises);
-
-    // Log warning for partial failures
-    if (failedConnections.length > 0 && failedConnections.length < Object.keys(config.mcpServers).length) {
-      console.error(
-        `Warning: Some MCP server connections failed: ${failedConnections.map((f) => f.serverName).join(', ')}`
-      );
+    if (options.clearDefinitionsCache && effectiveDefinitionsCachePath) {
+      await DefinitionsCacheService.clearFile(effectiveDefinitionsCachePath);
+      console.error(`[definitions-cache] Cleared ${effectiveDefinitionsCachePath}`);
     }
 
-    // If all connections failed, throw an error
-    if (failedConnections.length > 0 && failedConnections.length === Object.keys(config.mcpServers).length) {
-      throw new Error(
-        `All MCP server connections failed: ${failedConnections.map((f) => `${f.serverName}: ${f.error.message}`).join(', ')}`
+    if (effectiveDefinitionsCachePath) {
+      try {
+        const cacheData = await DefinitionsCacheService.readFromFile(effectiveDefinitionsCachePath);
+        if (
+          DefinitionsCacheService.isCacheValid(cacheData, {
+            configHash,
+            oneMcpVersion: packageJson.version,
+          })
+        ) {
+          shouldStartFromCache = true;
+        }
+      } catch {
+        // Ignore cache read failures here; bootstrap will fall back to eager connect below.
+      }
+    }
+
+    if (!shouldStartFromCache) {
+      // Connect to all configured MCP servers and track failures
+      const failedConnections: Array<{ serverName: string; error: Error }> = [];
+      const connectionPromises = Object.entries(config.mcpServers).map(
+        async ([serverName, serverConfig]) => {
+          try {
+            await clientManager.connectToServer(serverName, serverConfig);
+            console.error(`Connected to MCP server: ${serverName}`);
+          } catch (error) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            failedConnections.push({ serverName, error: err });
+            console.error(`Failed to connect to ${serverName}:`, error);
+          }
+        }
       );
+
+      await Promise.all(connectionPromises);
+
+      // Log warning for partial failures
+      if (failedConnections.length > 0 && failedConnections.length < Object.keys(config.mcpServers).length) {
+        console.error(
+          `Warning: Some MCP server connections failed: ${failedConnections.map((f) => f.serverName).join(', ')}`
+        );
+      }
+
+      // If all connections failed, throw an error
+      if (failedConnections.length > 0 && failedConnections.length === Object.keys(config.mcpServers).length) {
+        throw new Error(
+          `All MCP server connections failed: ${failedConnections.map((f) => `${f.serverName}: ${f.error.message}`).join(', ')}`
+        );
+      }
+    } else {
+      console.error(`[definitions-cache] Using cached definitions from ${effectiveDefinitionsCachePath}`);
     }
   }
 
@@ -139,15 +174,24 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
     : undefined;
 
   let definitionsCacheService: DefinitionsCacheService;
-  if (options?.definitionsCachePath) {
+  if (effectiveDefinitionsCachePath) {
     try {
-      const cacheData = await DefinitionsCacheService.readFromFile(options.definitionsCachePath);
-      definitionsCacheService = new DefinitionsCacheService(clientManager, skillService, {
-        cacheData,
-      });
+      const cacheData = await DefinitionsCacheService.readFromFile(effectiveDefinitionsCachePath);
+      if (
+        DefinitionsCacheService.isCacheValid(cacheData, {
+          configHash,
+          oneMcpVersion: packageJson.version,
+        })
+      ) {
+        definitionsCacheService = new DefinitionsCacheService(clientManager, skillService, {
+          cacheData,
+        });
+      } else {
+        definitionsCacheService = new DefinitionsCacheService(clientManager, skillService);
+      }
     } catch (error) {
       console.error(
-        `[definitions-cache] Failed to load ${options.definitionsCachePath}, falling back to live discovery: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `[definitions-cache] Failed to load ${effectiveDefinitionsCachePath}, falling back to live discovery: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       definitionsCacheService = new DefinitionsCacheService(clientManager, skillService);
     }
@@ -162,7 +206,12 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
     serverId,
     definitionsCacheService,
   );
-  const useTool = new UseToolTool(clientManager, skillService, serverId);
+  const useToolWithCache = new UseToolTool(
+    clientManager,
+    skillService,
+    serverId,
+    definitionsCacheService,
+  );
 
   // Assign to reference for cache invalidation callback
   toolsRef.describeTools = describeTools;
@@ -178,7 +227,7 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
       await describeTools.getDefinition(),
-      useTool.getDefinition(),
+      useToolWithCache.getDefinition(),
     ],
   }));
 
@@ -197,7 +246,7 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
 
     if (name === UseToolTool.TOOL_NAME) {
       try {
-        return await useTool.execute(args as any);
+        return await useToolWithCache.execute(args as any);
       } catch (error) {
         throw new Error(
           `Failed to execute ${name}: ${error instanceof Error ? error.message : String(error)}`
@@ -255,10 +304,7 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
 
     if (serverName) {
       // Prefixed format: {serverName}__{promptName} - call specific server
-      const client = clientManager.getClient(serverName);
-      if (!client) {
-        throw new Error(`Server not found: ${serverName}`);
-      }
+      const client = await clientManager.ensureConnected(serverName);
       return await client.getPrompt(actualPromptName, args);
     }
 
@@ -284,10 +330,31 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
     // Unique prompt - call the single server that has it
     const client = clientManager.getClient(serversWithPrompt[0]);
     if (!client) {
-      throw new Error(`Server not found: ${serversWithPrompt[0]}`);
+      return await (await clientManager.ensureConnected(serversWithPrompt[0])).getPrompt(name, args);
     }
     return await client.getPrompt(name, args);
   });
+
+  if (!shouldStartFromCache && effectiveDefinitionsCachePath && options?.configFilePath) {
+    void definitionsCacheService
+      .collectForCache({
+        configPath: options.configFilePath,
+        configHash,
+        oneMcpVersion: packageJson.version,
+        serverId,
+      })
+      .then((definitionsCache) =>
+        DefinitionsCacheService.writeToFile(effectiveDefinitionsCachePath!, definitionsCache),
+      )
+      .then(() => {
+        console.error(`[definitions-cache] Wrote ${effectiveDefinitionsCachePath}`);
+      })
+      .catch((error) => {
+        console.error(
+          `[definitions-cache] Failed to persist ${effectiveDefinitionsCachePath}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+      });
+  }
 
   return server;
 }

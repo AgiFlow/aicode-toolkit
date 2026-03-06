@@ -309,8 +309,10 @@ export interface CachedFileSkillInfo {
  */
 export interface DefinitionsCacheFile {
   version: 1;
+  oneMcpVersion?: string;
   generatedAt: string;
   configPath?: string;
+  configHash?: string;
   serverId?: string;
   servers: Record<string, CachedServerDefinition>;
   skills: CachedFileSkillInfo[];

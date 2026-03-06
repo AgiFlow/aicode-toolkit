@@ -31,6 +31,7 @@ import {
   type PackageManager,
 } from '../services';
 import { generateServerId, findConfigFile } from '../utils';
+import packageJson from '../../package.json' assert { type: 'json' };
 
 /**
  * Options for the prefetch command
@@ -42,6 +43,7 @@ interface PrefetchOptions {
   filter?: PackageManager;
   definitionsOut?: string;
   skipPackages: boolean;
+  clearDefinitionsCache: boolean;
 }
 
 /**
@@ -55,6 +57,7 @@ export const prefetchCommand = new Command('prefetch')
   .option('-f, --filter <type>', 'Filter by package manager type: npx, pnpx, uvx, or uv')
   .option('--definitions-out <path>', 'Write discovered definitions to a JSON or YAML cache file')
   .option('--skip-packages', 'Skip package prefetch and only build definitions cache', false)
+  .option('--clear-definitions-cache', 'Delete the definitions cache file before continuing', false)
   .action(async (options: PrefetchOptions): Promise<void> => {
     try {
       // Find config file: use provided path, or search PROJECT_PATH then cwd
@@ -78,6 +81,9 @@ export const prefetchCommand = new Command('prefetch')
 
       const mcpConfig = await configService.fetchConfiguration(true);
       const serverId = mcpConfig.id || generateServerId();
+      const configHash = DefinitionsCacheService.generateConfigHash(mcpConfig);
+      const effectiveDefinitionsPath =
+        options.definitionsOut || DefinitionsCacheService.getDefaultCachePath(configFilePath);
 
       // Create PrefetchService with configuration
       const prefetchService = new PrefetchService({
@@ -90,6 +96,15 @@ export const prefetchCommand = new Command('prefetch')
       const packages = prefetchService.extractPackages();
       const shouldPrefetchPackages = !options.skipPackages;
       const shouldWriteDefinitions = Boolean(options.definitionsOut);
+
+      if (options.clearDefinitionsCache) {
+        if (options.dryRun) {
+          print.info(`Would clear definitions cache: ${effectiveDefinitionsPath}`);
+        } else {
+          await DefinitionsCacheService.clearFile(effectiveDefinitionsPath);
+          print.success(`Cleared definitions cache: ${effectiveDefinitionsPath}`);
+        }
+      }
 
       if (shouldPrefetchPackages) {
         if (packages.length === 0) {
@@ -118,7 +133,7 @@ export const prefetchCommand = new Command('prefetch')
         }
         if (shouldWriteDefinitions) {
           print.newline();
-          print.info(`Would write definitions cache to: ${options.definitionsOut}`);
+          print.info(`Would write definitions cache to: ${effectiveDefinitionsPath}`);
         }
         return;
       }
@@ -153,7 +168,7 @@ export const prefetchCommand = new Command('prefetch')
         }
       }
 
-      if (shouldWriteDefinitions && options.definitionsOut) {
+      if (shouldWriteDefinitions) {
         print.newline();
         print.info('Collecting definitions cache...');
 
@@ -178,11 +193,13 @@ export const prefetchCommand = new Command('prefetch')
 
         const definitionsCache = await definitionsCacheService.collectForCache({
           configPath: configFilePath,
+          configHash,
+          oneMcpVersion: packageJson.version,
           serverId,
         });
-        await DefinitionsCacheService.writeToFile(options.definitionsOut, definitionsCache);
+        await DefinitionsCacheService.writeToFile(effectiveDefinitionsPath, definitionsCache);
         print.success(
-          `Definitions cache written: ${options.definitionsOut} (${Object.keys(definitionsCache.servers).length} servers, ${definitionsCache.skills.length} skills)`,
+          `Definitions cache written: ${effectiveDefinitionsPath} (${Object.keys(definitionsCache.servers).length} servers, ${definitionsCache.skills.length} skills)`,
         );
 
         if (definitionsCache.failures.length > 0) {

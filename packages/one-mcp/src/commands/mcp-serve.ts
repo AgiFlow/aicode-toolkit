@@ -52,6 +52,7 @@ interface McpServeOptions {
   cache: boolean;
   id?: string;
   definitionsCache?: string;
+  clearDefinitionsCache: boolean;
 }
 
 /**
@@ -96,6 +97,7 @@ export const mcpServeCommand = new Command('mcp-serve')
     '--definitions-cache <path>',
     'Path to prefetched tool/prompt/skill definitions cache file',
   )
+  .option('--clear-definitions-cache', 'Delete definitions cache before startup', false)
   .option(
     '--id <id>',
     'Unique server identifier (overrides config file id, auto-generated if not provided)',
@@ -118,6 +120,7 @@ export const mcpServeCommand = new Command('mcp-serve')
         noCache: options.cache === false, // Commander transforms --no-cache to cache: false
         serverId: options.id, // CLI ID takes precedence over config file
         definitionsCachePath: options.definitionsCache,
+        clearDefinitionsCache: options.clearDefinitionsCache,
       };
 
       if (transportType === 'stdio') {

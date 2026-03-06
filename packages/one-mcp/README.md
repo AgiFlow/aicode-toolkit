@@ -414,6 +414,9 @@ Execute a tool from any connected server:
 # Start MCP server (stdio, for Claude Code/Cursor)
 npx @agiflowai/one-mcp mcp-serve --config ./mcp-config.yaml
 
+# Start and clear the cached definitions first
+npx @agiflowai/one-mcp mcp-serve --config ./mcp-config.yaml --clear-definitions-cache
+
 # Start with HTTP transport
 npx @agiflowai/one-mcp mcp-serve --config ./mcp-config.yaml --type http --port 3000
 
@@ -468,6 +471,9 @@ npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --definitions-out ./.
 # Build only the definitions cache
 npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --definitions-out ./.cache/one-mcp-definitions.yaml --skip-packages
 
+# Clear the default project-local definitions cache
+npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --clear-definitions-cache --skip-packages
+
 # Dry run - see what would be prefetched
 npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --dry-run
 
@@ -486,10 +492,15 @@ npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --filter npx
 | `-f, --filter` | Filter by package manager: `npx`, `pnpx`, `uvx`, or `uv` |
 | `--definitions-out` | Write a JSON or YAML definitions cache file for `mcp-serve` |
 | `--skip-packages` | Skip package prefetch and only write the definitions cache |
+| `--clear-definitions-cache` | Delete the effective definitions cache file before continuing |
 
 ### Definitions Cache Workflow
 
-For installations with many MCP servers, especially stdio-backed servers, you can warm the package manager cache and precompute the metadata used by `describe_tools` and prompt listing before starting `one-mcp`:
+For installations with many MCP servers, especially stdio-backed servers, `mcp-serve` now tries to use a project-local definitions cache automatically. The default cache path is derived from the config file, for example `mcp-config.yaml` -> `mcp-config.definitions-cache.json`.
+
+If that cache file exists and matches the current config, `one-mcp` starts from cached tool/prompt metadata and connects to downstream MCP servers on demand. If the cache is missing or stale, `one-mcp` keeps the current eager startup behavior and writes a fresh cache in the background for the next run.
+
+You can still prebuild the cache explicitly:
 
 ```bash
 # Step 1: Warm packages and cache definitions
@@ -499,7 +510,7 @@ npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --definitions-out ./.
 npx @agiflowai/one-mcp mcp-serve --config ./mcp-config.yaml --definitions-cache ./.cache/one-mcp-definitions.json
 ```
 
-The definitions cache stores tool schemas, prompt metadata, and prompt-based skill metadata. If the cache is missing or unreadable, `mcp-serve` falls back to live discovery.
+The definitions cache stores tool schemas, prompt metadata, and prompt-based skill metadata. Use `--clear-definitions-cache` on `mcp-serve` or `prefetch` to delete the cache and force a cold start.
 
 ### Server Options
 
@@ -510,7 +521,8 @@ The definitions cache stores tool schemas, prompt metadata, and prompt-based ski
 | `-p, --port` | Port for HTTP/SSE | `3000` |
 | `--host` | Host for HTTP/SSE | `localhost` |
 | `--no-cache` | Force reload config, bypass cache | `false` |
-| `--definitions-cache` | Read tool/prompt/skill definitions from a prefetched JSON or YAML cache file | None |
+| `--definitions-cache` | Read tool/prompt/skill definitions from a specific JSON or YAML cache file | Auto-derived from config path |
+| `--clear-definitions-cache` | Delete the effective definitions cache file before startup | `false` |
 
 ---
 

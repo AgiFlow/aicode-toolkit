@@ -426,15 +426,8 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
     const promptSkill = await this.findPromptSkill(skillName);
     if (!promptSkill) return undefined;
 
-    const client = this.clientManager.getClient(promptSkill.serverName);
-    if (!client) {
-      console.error(
-        `Client not found for server '${promptSkill.serverName}' when fetching prompt skill '${skillName}'`,
-      );
-      return undefined;
-    }
-
     try {
+      const client = await this.clientManager.ensureConnected(promptSkill.serverName);
       const promptResult = await client.getPrompt(promptSkill.promptName);
       // Prompt messages can contain either string content or TextContent objects with text field
       const rawInstructions =

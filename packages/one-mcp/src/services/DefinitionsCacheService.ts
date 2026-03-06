@@ -6,8 +6,9 @@
  * mcp-serve startup and describe_tools generation.
  */
 
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { createHash } from 'node:crypto';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { basename, dirname, extname, join } from 'node:path';
 import yaml from 'js-yaml';
 import type { SkillService } from './SkillService';
 import type { McpClientManagerService } from './McpClientManagerService';
@@ -38,6 +39,8 @@ interface PromptSkillMatch {
 interface CollectOptions {
   serverId?: string;
   configPath?: string;
+  configHash?: string;
+  oneMcpVersion?: string;
 }
 
 function isYamlPath(filePath: string): boolean {
@@ -114,6 +117,33 @@ export class DefinitionsCacheService {
     await writeFile(filePath, serialized, 'utf-8');
   }
 
+  static getDefaultCachePath(configFilePath: string): string {
+    const extension = extname(configFilePath);
+    const fileName = basename(configFilePath, extension);
+    return join(dirname(configFilePath), `${fileName}.definitions-cache.json`);
+  }
+
+  static generateConfigHash(config: unknown): string {
+    return createHash('sha256').update(JSON.stringify(config)).digest('hex');
+  }
+
+  static isCacheValid(
+    cache: DefinitionsCacheFile,
+    options: { configHash?: string; oneMcpVersion?: string },
+  ): boolean {
+    if (options.configHash && cache.configHash && cache.configHash !== options.configHash) {
+      return false;
+    }
+    if (options.oneMcpVersion && cache.oneMcpVersion && cache.oneMcpVersion !== options.oneMcpVersion) {
+      return false;
+    }
+    return true;
+  }
+
+  static async clearFile(filePath: string): Promise<void> {
+    await rm(filePath, { force: true });
+  }
+
   clearLiveCache(): void {
     this.liveDefinitionsPromise = null;
     this.mergedDefinitionsPromise = null;
@@ -181,12 +211,22 @@ export class DefinitionsCacheService {
 
   async getServerDefinitions(): Promise<CachedServerDefinition[]> {
     const definitions = await this.getDefinitions();
-    const clients = this.clientManager.getAllClients();
-    const serverOrder = clients.map((client) => client.serverName);
+    const serverOrder = this.clientManager.getKnownServerNames();
+
+    if (serverOrder.length === 0) {
+      return Object.values(definitions.servers);
+    }
 
     return serverOrder
       .map((serverName) => definitions.servers[serverName])
       .filter((server): server is CachedServerDefinition => server !== undefined);
+  }
+
+  async getServersForTool(toolName: string): Promise<string[]> {
+    const serverDefinitions = await this.getServerDefinitions();
+    return serverDefinitions
+      .filter((serverDefinition) => serverDefinition.tools.some((tool) => tool.name === toolName))
+      .map((serverDefinition) => serverDefinition.serverName);
   }
 
   async getPromptSkillByName(skillName: string): Promise<PromptSkillMatch | undefined> {
@@ -265,8 +305,10 @@ export class DefinitionsCacheService {
 
     return {
       version: 1,
+      oneMcpVersion: options?.oneMcpVersion,
       generatedAt: new Date().toISOString(),
       configPath: options?.configPath,
+      configHash: options?.configHash,
       serverId: options?.serverId,
       servers,
       skills: await this.collectFileSkills(),

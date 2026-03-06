@@ -138,6 +138,8 @@ class McpClient implements McpClientConnection {
  */
 export class McpClientManagerService {
   private clients: Map<string, McpClient> = new Map();
+  private serverConfigs: Map<string, McpServerConfig> = new Map();
+  private connectionPromises: Map<string, Promise<McpClient>> = new Map();
 
   constructor() {
     // Cleanup resources on exit
@@ -188,10 +190,51 @@ export class McpClientManagerService {
    * Uses the timeout from server config, falling back to default (30s)
    */
   async connectToServer(serverName: string, config: McpServerConfig): Promise<void> {
-    const timeoutMs = config.timeout ?? DEFAULT_CONNECTION_TIMEOUT_MS;
-    if (this.clients.has(serverName)) {
-      throw new Error(`Client for ${serverName} is already connected`);
+    this.serverConfigs.set(serverName, config);
+    await this.ensureConnected(serverName);
+  }
+
+  registerServerConfigs(configs: Record<string, McpServerConfig>): void {
+    for (const [serverName, config] of Object.entries(configs)) {
+      this.serverConfigs.set(serverName, config);
     }
+  }
+
+  getKnownServerNames(): string[] {
+    return Array.from(this.serverConfigs.keys());
+  }
+
+  async ensureConnected(serverName: string): Promise<McpClientConnection> {
+    const existingClient = this.clients.get(serverName);
+    if (existingClient) {
+      return existingClient;
+    }
+
+    const inflightConnection = this.connectionPromises.get(serverName);
+    if (inflightConnection) {
+      return await inflightConnection;
+    }
+
+    const config = this.serverConfigs.get(serverName);
+    if (!config) {
+      throw new Error(`No configuration found for server "${serverName}"`);
+    }
+
+    const connectionPromise = this.createConnection(serverName, config);
+    this.connectionPromises.set(serverName, connectionPromise);
+
+    try {
+      return await connectionPromise;
+    } finally {
+      this.connectionPromises.delete(serverName);
+    }
+  }
+
+  private async createConnection(
+    serverName: string,
+    config: McpServerConfig,
+  ): Promise<McpClient> {
+    const timeoutMs = config.timeout ?? DEFAULT_CONNECTION_TIMEOUT_MS;
 
     const client = new Client(
       {
@@ -236,6 +279,7 @@ export class McpClientManagerService {
       }
 
       this.clients.set(serverName, mcpClient);
+      return mcpClient;
     } catch (error) {
       await mcpClient.close();
       throw error;
@@ -323,6 +367,7 @@ export class McpClientManagerService {
     const disconnectPromises = Array.from(this.clients.values()).map((client) => client.close());
     await Promise.all(disconnectPromises);
     this.clients.clear();
+    this.connectionPromises.clear();
   }
 
   /**

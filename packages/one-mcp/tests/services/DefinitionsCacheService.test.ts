@@ -73,6 +73,7 @@ describe('DefinitionsCacheService', () => {
     tempDir = await mkdtemp(join(tmpdir(), 'one-mcp-definitions-'));
     mockClientManager = {
       getAllClients: vi.fn().mockReturnValue([createMockClient('server-a')]),
+      getKnownServerNames: vi.fn().mockReturnValue(['server-a']),
     } as unknown as McpClientManagerService;
     mockSkillService = {
       getSkills: vi.fn().mockResolvedValue([createMockSkill('local-skill', 'Local skill')]),
@@ -172,6 +173,7 @@ describe('DefinitionsCacheService', () => {
 
     const clientManager = {
       getAllClients: vi.fn().mockReturnValue([client]),
+      getKnownServerNames: vi.fn().mockReturnValue(['server-a']),
     } as unknown as McpClientManagerService;
 
     const service = new DefinitionsCacheService(clientManager, undefined, { cacheData: cache });
@@ -180,5 +182,41 @@ describe('DefinitionsCacheService', () => {
     expect(serverDefinitions[0].tools[0].name).toBe('cached_tool');
     expect(client.listTools).not.toHaveBeenCalled();
     expect(client.listPrompts).not.toHaveBeenCalled();
+  });
+
+  it('derives a project-local default cache path and validates cache metadata', () => {
+    expect(
+      DefinitionsCacheService.getDefaultCachePath('/tmp/project/mcp-config.yaml'),
+    ).toBe('/tmp/project/mcp-config.definitions-cache.json');
+
+    expect(
+      DefinitionsCacheService.isCacheValid(
+        {
+          version: 1,
+          generatedAt: new Date().toISOString(),
+          configHash: 'abc',
+          oneMcpVersion: '1.0.0',
+          servers: {},
+          skills: [],
+          failures: [],
+        },
+        { configHash: 'abc', oneMcpVersion: '1.0.0' },
+      ),
+    ).toBe(true);
+
+    expect(
+      DefinitionsCacheService.isCacheValid(
+        {
+          version: 1,
+          generatedAt: new Date().toISOString(),
+          configHash: 'abc',
+          oneMcpVersion: '1.0.0',
+          servers: {},
+          skills: [],
+          failures: [],
+        },
+        { configHash: 'xyz', oneMcpVersion: '1.0.0' },
+      ),
+    ).toBe(false);
   });
 });

@@ -27,6 +27,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Tool, ToolDefinition, Skill, PromptSkillConfig } from '../types';
 import type { McpClientManagerService } from '../services/McpClientManagerService';
 import type { SkillService } from '../services/SkillService';
+import { DefinitionsCacheService } from '../services/DefinitionsCacheService';
 import { parseToolName } from '../utils';
 import { DEFAULT_SERVER_ID, SKILL_PREFIX } from '../constants';
 
@@ -69,6 +70,7 @@ export class UseToolTool implements Tool<UseToolToolInput> {
   static readonly TOOL_NAME = 'use_tool';
   private clientManager: McpClientManagerService;
   private skillService: SkillService | undefined;
+  private definitionsCacheService: DefinitionsCacheService;
   /** Unique server identifier for this one-mcp instance */
   private serverId: string;
 
@@ -82,9 +84,12 @@ export class UseToolTool implements Tool<UseToolToolInput> {
     clientManager: McpClientManagerService,
     skillService?: SkillService,
     serverId?: string,
+    definitionsCacheService?: DefinitionsCacheService,
   ) {
     this.clientManager = clientManager;
     this.skillService = skillService;
+    this.definitionsCacheService =
+      definitionsCacheService || new DefinitionsCacheService(clientManager, skillService);
     this.serverId = serverId || DEFAULT_SERVER_ID;
   }
 
@@ -151,26 +156,9 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverI
    * @param skillName - The skill name to search for
    * @returns PromptSkillMatch if found, undefined otherwise
    */
-  private findPromptSkill(skillName: string): PromptSkillMatch | undefined {
+  private async findPromptSkill(skillName: string): Promise<PromptSkillMatch | undefined> {
     if (!skillName) return undefined;
-
-    const clients = this.clientManager.getAllClients();
-
-    for (const client of clients) {
-      if (!client.prompts) continue;
-
-      for (const [promptName, promptConfig] of Object.entries(client.prompts)) {
-        if (promptConfig.skill && promptConfig.skill.name === skillName) {
-          return {
-            serverName: client.serverName,
-            promptName,
-            skill: promptConfig.skill,
-          };
-        }
-      }
-    }
-
-    return undefined;
+    return await this.definitionsCacheService.getPromptSkillByName(skillName);
   }
 
   /**
@@ -225,7 +213,7 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverI
         }
 
         // Then check prompt-based skills
-        const promptSkill = this.findPromptSkill(skillName);
+        const promptSkill = await this.findPromptSkill(skillName);
         if (promptSkill) {
           return this.executePromptSkill(promptSkill);
         }
@@ -242,40 +230,28 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverI
       }
 
       // Handle MCP tool execution
-      const clients = this.clientManager.getAllClients();
+      const knownServerNames = this.clientManager.getKnownServerNames();
 
       // Parse tool name to check for server prefix (serverName__toolName format)
       const { serverName, actualToolName } = parseToolName(inputToolName);
 
       // If server name is specified (via prefix), use that server directly
       if (serverName) {
-        const client = this.clientManager.getClient(serverName);
-        if (!client) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Server "${serverName}" not found. Available servers: ${clients.map((c) => c.serverName).join(', ')}`,
-              },
-            ],
-            isError: true,
-          };
-        }
-
-        // Check if tool is blacklisted
-        if (client.toolBlacklist?.includes(actualToolName)) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Tool "${actualToolName}" is blacklisted on server "${serverName}" and cannot be executed.`,
-              },
-            ],
-            isError: true,
-          };
-        }
-
         try {
+          const client = await this.clientManager.ensureConnected(serverName);
+
+          if (client.toolBlacklist?.includes(actualToolName)) {
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `Tool "${actualToolName}" is blacklisted on server "${serverName}" and cannot be executed.`,
+                },
+              ],
+              isError: true,
+            };
+          }
+
           const result = await client.callTool(actualToolName, toolArgs);
           return result;
         } catch (error) {
@@ -283,7 +259,7 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverI
             content: [
               {
                 type: 'text',
-                text: `Failed to call tool "${actualToolName}" on server "${serverName}": ${error instanceof Error ? error.message : 'Unknown error'}`,
+                text: `Failed to call tool "${actualToolName}" on server "${serverName}". Available servers: ${knownServerNames.join(', ')}. ${error instanceof Error ? error.message : 'Unknown error'}`,
               },
             ],
             isError: true,
@@ -291,31 +267,7 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverI
         }
       }
 
-      // No server prefix - search all servers for the tool
-      const matchingServers: string[] = [];
-
-      const results = await Promise.all(
-        clients.map(async (client) => {
-          try {
-            // Skip if tool is blacklisted on this server
-            if (client.toolBlacklist?.includes(actualToolName)) {
-              return null;
-            }
-
-            const tools = await client.listTools();
-            const hasTool = tools.some((t) => t.name === actualToolName);
-
-            if (hasTool) {
-              return client.serverName;
-            }
-          } catch (error) {
-            console.error(`Failed to list tools from ${client.serverName}:`, error);
-          }
-          return null;
-        }),
-      );
-
-      matchingServers.push(...results.filter((r) => r !== null));
+      const matchingServers = await this.definitionsCacheService.getServersForTool(actualToolName);
 
       if (matchingServers.length === 0) {
         // Tool not found in MCP servers - check if it's a skill by plain name
@@ -330,7 +282,7 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverI
         }
 
         // Then check prompt-based skills
-        const promptSkill = this.findPromptSkill(actualToolName);
+        const promptSkill = await this.findPromptSkill(actualToolName);
         if (promptSkill) {
           return this.executePromptSkill(promptSkill);
         }
@@ -360,23 +312,10 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverI
         };
       }
 
-      // Single match found - call the tool
-      const targetServerName = matchingServers[0];
-      const client = this.clientManager.getClient(targetServerName);
-
-      if (!client) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Internal error: Server "${targetServerName}" was found but is not connected`,
-            },
-          ],
-          isError: true,
-        };
-      }
-
+      // Single match found - connect on demand and call the tool
       try {
+        const targetServerName = matchingServers[0];
+        const client = await this.clientManager.ensureConnected(targetServerName);
         const result = await client.callTool(actualToolName, toolArgs);
         return result;
       } catch (error) {
