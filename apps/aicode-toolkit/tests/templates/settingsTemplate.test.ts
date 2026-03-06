@@ -29,7 +29,9 @@ describe('settings.yaml.liquid', () => {
     expect(content).toContain('model: gemini-2.0-flash');
     expect(content).toContain('# fallbacks:');
     expect(content).toContain('# matcher: Edit|MultiEdit|Write');
-    expect(content).toContain('# Set llm-tool only if you want LLM-based review. A cheap model is recommended.');
+    expect(content).toContain(
+      '# Set llm-tool only if you want LLM-based review. A cheap model is recommended.',
+    );
     expect(content).toContain('# Local overrides go in .toolkit/settings.local.yaml');
     expect(content).toContain('userPromptSubmit:');
     expect(content).toContain('taskCompleted:');

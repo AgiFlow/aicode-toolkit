@@ -331,11 +331,17 @@ async function writeMcpConfig(config: ToolkitConfig, workspaceRoot: string): Pro
   try {
     const mcpConfig = buildMcpConfigYaml(config);
     if (!mcpConfig) {
-      print.warning('No mcp-config.servers or mcp-config.skills config found — skipping mcp-config.yaml');
+      print.warning(
+        'No mcp-config.servers or mcp-config.skills config found — skipping mcp-config.yaml',
+      );
       return;
     }
 
-    await writeFile(path.join(workspaceRoot, MCP_CONFIG_FILE), yaml.dump(mcpConfig, { indent: 2 }), 'utf-8');
+    await writeFile(
+      path.join(workspaceRoot, MCP_CONFIG_FILE),
+      yaml.dump(mcpConfig, { indent: 2 }),
+      'utf-8',
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`Failed to write ${MCP_CONFIG_FILE}: ${message}`);
@@ -384,7 +390,9 @@ export const syncCommand = new Command('sync')
           await writeMcpConfig(config, workspaceRoot);
           print.success('Written mcp-config.yaml');
         } else {
-          print.warning('No mcp-config.servers or mcp-config.skills config found — skipping mcp-config.yaml');
+          print.warning(
+            'No mcp-config.servers or mcp-config.skills config found — skipping mcp-config.yaml',
+          );
         }
       }
     } catch (error) {

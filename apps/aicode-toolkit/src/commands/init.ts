@@ -802,8 +802,10 @@ export function resolveGeneratedSettingsValues(input: {
   sourceTemplate?: string;
 } {
   const resolvedTemplatesPath =
-    input.templatesPath ?? path.join(input.workspaceRoot, TemplatesManagerService.getTemplatesFolderName());
-  const relativeTemplatesPath = path.relative(input.workspaceRoot, resolvedTemplatesPath) || 'templates';
+    input.templatesPath ??
+    path.join(input.workspaceRoot, TemplatesManagerService.getTemplatesFolderName());
+  const relativeTemplatesPath =
+    path.relative(input.workspaceRoot, resolvedTemplatesPath) || 'templates';
 
   return {
     relativeTemplatesPath,
