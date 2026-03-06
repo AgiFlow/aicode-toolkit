@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DECISION_ALLOW, DECISION_DENY, DECISION_SKIP } from '@agiflowai/hooks-adapter';
+import { DECISION_DENY, DECISION_SKIP } from '@agiflowai/hooks-adapter';
 import fs from 'node:fs/promises';
 
 const mockExecute = vi.fn();
