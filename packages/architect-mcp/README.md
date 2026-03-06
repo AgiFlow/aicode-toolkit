@@ -2,20 +2,7 @@
 
 > MCP server for design pattern guidance and code review
 
-Help AI coding agents write code that follows your team's architectural patterns and coding standards. architect-mcp provides context-aware guidance before editing files and validates code against rules after changes.
-
-## Why Use This?
-
-When AI agents edit code, they don't know your team's conventions:
-- Which patterns apply to service files vs. tool files?
-- What are the must-do and must-not-do rules?
-- How should errors be handled in this codebase?
-
-architect-mcp solves this by:
-
-1. **Providing patterns before editing** - Agent sees relevant design patterns for the file
-2. **Validating code after editing** - Agent gets feedback on rule violations
-3. **Enforcing standards automatically** - Rules from RULES.yaml are checked programmatically
+Use this server to provide file-specific patterns before edits and rule-based review after edits.
 
 ---
 
@@ -55,7 +42,7 @@ Add to your MCP config (`.mcp.json`, `.cursor/mcp.json`, etc.):
 
 ### 3. Start Using
 
-Your AI agent now has access to architecture tools:
+Your agent can now call architect tools:
 
 ```
 You: "Add error handling to the user service"
@@ -150,7 +137,7 @@ architect-mcp supports a three-level configuration hierarchy:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Example: Override template pattern for a specific project**
+Example: override a template pattern for one project
 
 Template pattern (`templates/typescript-mcp-package/architect.yaml`):
 ```yaml
@@ -172,7 +159,7 @@ features:
       This project requires additional input validation...
 ```
 
-When a file in `packages/my-custom-mcp/src/tools/` is checked, the project-level pattern takes precedence.
+For files in `packages/my-custom-mcp/src/tools/`, the project-level pattern takes precedence.
 
 ### RULES.yaml - Coding Standards
 
@@ -207,8 +194,7 @@ npx @agiflowai/architect-mcp mcp-serve
 ```
 
 - Returns all applicable patterns and rules
-- AI agent does its own analysis
-- Fast, no external API calls
+- No external LLM calls
 
 ### Mode 2: LLM-Enhanced (LLM flags enabled)
 
@@ -218,9 +204,8 @@ npx @agiflowai/architect-mcp mcp-serve \
   --review-tool claude-code
 ```
 
-- Filters patterns based on file content
+- Filters patterns by file content
 - Reviews code and returns specific violations
-- Precise, context-aware feedback
 
 ### Mode 3: Fallback Tool (single flag for both)
 

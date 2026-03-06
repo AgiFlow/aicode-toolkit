@@ -5,7 +5,7 @@ Use this MCP server to {% if isMonolith %}create your monolith project and add f
 1. **Creating New Project**: Use `list-boilerplates` → `use-boilerplate`
 2. **Adding Features**: Use `list-scaffolding-methods` → `use-scaffold-method`
 {% else %}
-1. **Creating Project**: Use `use-boilerplate` (boilerplateName auto-detected from toolkit.yaml)
+1. **Creating Project**: Use `use-boilerplate` (boilerplateName auto-detected from `.toolkit/settings.yaml`)
 2. **Adding Features**: Use `list-scaffolding-methods` → `use-scaffold-method`
 {% endif %}
 
@@ -18,7 +18,7 @@ Use this MCP server to {% if isMonolith %}create your monolith project and add f
 {% if not isMonolith %}
 - Use kebab-case for project names (e.g., "my-new-app")
 {% else %}
-- In monolith mode, parameters like `boilerplateName` and `templateName` are auto-detected from toolkit.yaml
+- In monolith mode, parameters like `boilerplateName` and `templateName` are auto-detected from `.toolkit/settings.yaml`
 - You only need to provide `variables` when calling `use-boilerplate` or `use-scaffold-method`
 {% endif %}
 - The tools automatically handle file placement, imports, and code generation

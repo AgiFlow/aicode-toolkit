@@ -2,9 +2,9 @@ Lists all available scaffolding methods (features) that can be added to an exist
 
 This tool:
 {% if isMonolith %}
-- Reads your project's sourceTemplate from toolkit.yaml at workspace root
+- Reads your project's sourceTemplate from .toolkit/settings.yaml at workspace root
 {% else %}
-- Reads the project's sourceTemplate from project.json (monorepo) or toolkit.yaml (monolith), OR
+- Reads the project's sourceTemplate from project.json (monorepo) or .toolkit/settings.yaml (monolith), OR
 - Directly uses the provided templateName to list available features
 {% endif %}
 - Returns available features for that template type

@@ -2,7 +2,7 @@
 
 > CLI for initializing projects and managing AI Code Toolkit templates
 
-The main entry point for setting up AI Code Toolkit in your workspace. Handles project initialization, template management, and MCP server configuration.
+Use this CLI to initialize templates, generate `.toolkit/settings.yaml`, and sync agent-facing config files.
 
 ## Quick Start
 
@@ -28,9 +28,9 @@ npx @agiflowai/aicode-toolkit init
 ```
 
 This will:
-1. Create `templates/` folder in your workspace
-2. Download official templates (Next.js 15, TypeScript lib, MCP package)
-3. Detect installed AI coding agents (Claude Code, Cursor, etc.)
+1. Create `templates/`
+2. Download built-in templates
+3. Detect installed coding agents
 4. Optionally configure MCP servers
 
 **For new projects:**
@@ -43,10 +43,10 @@ npx @agiflowai/aicode-toolkit init --name my-app --project-type monolith
 ```
 
 This will:
-1. Create project directory
-2. Initialize git repository
+1. Create the project directory
+2. Initialize Git
 3. Download templates
-4. Create `.toolkit/settings.yaml` configuration
+4. Create `.toolkit/settings.yaml`
 
 **Options:**
 | Option | Description | Default |
@@ -173,7 +173,7 @@ npx @agiflowai/aicode-toolkit add \
 
 ## What Gets Installed
 
-When you run `init`, these official templates are downloaded:
+When you run `init`, these built-in templates are downloaded:
 
 | Template | Description |
 |----------|-------------|
@@ -225,7 +225,7 @@ my-workspace/
 
 ## Coding Agent Detection
 
-The CLI automatically detects installed AI coding agents:
+The CLI checks for these agent configs:
 
 | Agent | Config Location | Status |
 |-------|-----------------|--------|
@@ -235,7 +235,7 @@ The CLI automatically detects installed AI coding agents:
 | Codex CLI | `.codex/config.json` | Supported |
 | GitHub Copilot | VS Code settings | Supported |
 
-When detected, the CLI offers to configure MCP servers (scaffold-mcp, architect-mcp) automatically.
+If detected, the CLI can add MCP server config for them.
 
 ---
 

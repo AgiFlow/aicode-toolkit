@@ -1,5 +1,5 @@
 {% if isMonolith %}
-Not available for monolith projects. Monolith uses a single template defined in `toolkit.yaml`.
+Not available for monolith projects. Monolith uses a single template defined in `.toolkit/settings.yaml`.
 
 Use `list-scaffolding-methods` for available features instead.
 {% else %}

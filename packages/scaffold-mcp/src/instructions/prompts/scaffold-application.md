@@ -10,7 +10,7 @@ description: Create a new application or project from a boilerplate template. Us
 Your task is to scaffold a new application by following this workflow:
 
 ## Step 1: {% if isMonolith %}Prepare to Create Application{% else %}List Available Boilerplates{% endif %}
-{% if isMonolith %}You will use the `use-boilerplate` tool to create your monolith application. The boilerplate name will be auto-detected from your toolkit.yaml file.{% else %}Use the `list-boilerplates` tool to see all available project templates.
+{% if isMonolith %}You will use the `use-boilerplate` tool to create your monolith application. The boilerplate name will be auto-detected from your `.toolkit/settings.yaml` file (or legacy `toolkit.yaml` if present).{% else %}Use the `list-boilerplates` tool to see all available project templates.
 
 **What to look for:**
 - Boilerplate name (e.g., "scaffold-nextjs-app", "scaffold-vite-app")
@@ -19,7 +19,7 @@ Your task is to scaffold a new application by following this workflow:
 - Required and optional variables in the variables_schema{% endif %}
 
 ## Step 2: Gather Required Information
-Based on the {% if isMonolith %}toolkit.yaml{% else %}selected boilerplate's variables_schema{% endif %}, collect:
+Based on the {% if isMonolith %}`.toolkit/settings.yaml` sourceTemplate{% else %}selected boilerplate's variables_schema{% endif %}, collect:
 {% if not isMonolith %}- **Project name**: Must be kebab-case (e.g., "my-new-app", not "MyNewApp")
 {% endif %}- **Required variables**: All variables marked as required: true
 - **Optional variables**: Variables with required: false (ask user if needed)
@@ -47,7 +47,7 @@ Use the `use-boilerplate` tool with:
 ```
 
 ## Important Guidelines:
-{% if not isMonolith %}- **Always call `list-boilerplates` first** to see available options and their schemas{% else %}- The boilerplate name is auto-detected from toolkit.yaml{% endif %}
+{% if not isMonolith %}- **Always call `list-boilerplates` first** to see available options and their schemas{% else %}- The boilerplate name is auto-detected from `.toolkit/settings.yaml` (or legacy `toolkit.yaml`){% endif %}
 - **Use exact variable names** from the schema (case-sensitive)
 - **Provide all required variables** - the tool will fail if any are missing
 {% if not isMonolith %}- **Use kebab-case for project names** (e.g., "user-dashboard", not "UserDashboard")
@@ -76,7 +76,7 @@ Generated `.ts`/`.tsx`/`.js`/`.jsx` files contain `// @scaffold-generated` at th
 {% if not isMonolith %}1. Call `list-boilerplates` → See available templates
 2. Ask user which template to use (or infer from request)
 3. Collect required variables based on schema
-4. Call `use-boilerplate` with boilerplateName and variables{% else %}1. Collect required variables based on toolkit.yaml variables_schema
+4. Call `use-boilerplate` with boilerplateName and variables{% else %}1. Collect required variables based on the monolith template's variables_schema from `.toolkit/settings.yaml`
 2. Call `use-boilerplate` with variables (boilerplateName auto-detected){% endif %}
 5. **Review if user requested specific features (tools, prompts, etc.)**
 6. **If features needed**: Add them using `list-scaffolding-methods` and `use-scaffold-method`

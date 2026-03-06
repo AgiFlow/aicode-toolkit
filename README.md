@@ -4,28 +4,19 @@
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg?style=flat-square)](https://opensource.org/licenses/AGPL-3.0)
 [![Discord](https://dcbadge.limes.pink/api/server/https://discord.gg/NsB6q9Vas9?style=flat-square)](https://discord.gg/NsB6q9Vas9)
 
-![AI Code Toolkit Banner](./docs/workflow.jpg)
-
-Enforce AI coding agents your team's conventions and existing practices. Setup once, work across multiple AI tools.
-
----
-
-## Why This Exists
-
-As projects grow from MVP to production, you accumulate patterns, conventions, components, and style guides. Your `AGENTS.md`, `CLAUDE.md` and rule files keep growing — consuming precious context window and documentation maintenance becomes difficult.
-
-This toolkit encodes your team's conventions in a centralized, shareable location with hierarchical inheritant. Instead of preloading AI agents with plain-text documentation, you encode your best practices and guideline in `yaml`, and our tools with extract the configs to get relevant patterns and enforce boundaries before and after AI agent writing code in **progressive discovery** manner.
-
-If you use multiple AI tools to assist your development, this toolkit enable your team to encode your knowledge and workflow once; and reuse it across AI tools seamlessly.
-
----
+This repo provides:
+- project and feature scaffolding via templates
+- file-level design guidance before edits
+- rule-based review after edits
+- design-system discovery for frontend work
 
 ## Quick Start
 
-**Requirements:** Node.js >= 18, MCP-compatible agent (Claude Code, Cursor, Gemini CLI)
+Requirements:
+- Node.js >= 18
+- an MCP-compatible agent such as Claude Code, Cursor, or Gemini CLI
 
-### 1. Initialize
-Use [aicode-toolkit](./apps/aicode-toolkit) to help you setup the project quickly. This includes download templates, setup MCPs and spec tool to assist with your development.   
+### 1. Initialize a Workspace
 
 ```bash
 # Existing project
@@ -35,15 +26,13 @@ npx @agiflowai/aicode-toolkit init
 npx @agiflowai/aicode-toolkit init --name my-app --project-type monolith
 ```
 
-Creates `templates/` with scaffold definitions, patterns, and rules. Your development knowledge stayed within templates folder, and is linked to actual project via `project.json`'s `sourceTemplate` setting.
+This creates `templates/` and `.toolkit/settings.yaml`. Projects reference templates through `sourceTemplate` in `project.json` or `.toolkit/settings.yaml`.
 
 ### 2. Configure MCP
 
-We recomment to use MCP for plug-and-play capabilities. For folks who don't liked context hog problem with MCP, our libraries also have cli commands equivalent to the MCP's tools; or you can use our [one-mcp](./packages/one-mcp) to support `progressive discovery`. 
+`init` can configure MCP automatically. For manual setup, add the servers you need to your agent config.
 
-The init command configures MCP automatically. For manual setup:
-
-**Claude Code** (`.mcp.json`):
+Example for Claude Code:
 
 ```json
 {
@@ -69,175 +58,138 @@ The init command configures MCP automatically. For manual setup:
 }
 ```
 
-**Cursor**: Same config in `.cursor/mcp.json`
-
-**Flags:**
-- `--admin-enable` - Allow template creation
-- `--design-pattern-tool claude-code` - AI-powered pattern analysis
-- `--review-tool claude-code` - AI-powered code review
+Useful flags:
+- `--admin-enable`: enable admin/template-authoring tools
+- `--design-pattern-tool <tool>`: use an LLM to filter design patterns
+- `--review-tool <tool>`: use an LLM for review output
 
 ### 3. Verify
-When the MCPs are setup, you can interact with the agent using natural language.  
 
-Ask your agent: *"What boilerplates are available?"*
+Ask the agent:
 
-Should call `list-boilerplates`. If not recognized, restart the agent.
+`What boilerplates are available?`
 
----
+It should call `list-boilerplates`. If not, restart the agent.
 
-## Architecture
-We recommend to use [scaffold-mcp](./packages/scaffold-mcp), [architect-mcp](architect-mcp) and [style-system](style-system) together for full-stack development. This will help you creating new project quickly, add new feature at the right place, write code which follow your conventions and design guideline.  
+## Repo Layout
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Your AI Agent                           │
-│         (Claude Code, Cursor, Gemini CLI, etc.)             │
-└─────────────────────────────────────────────────────────────┘
-                              │
-       ┌──────────────────────┼──────────────────────┐
-       ▼                      ▼                      ▼
-┌─────────────┐        ┌──────────────┐       ┌─────────────┐
-│ scaffold-mcp│        │ architect-mcp│       │ style-system│
-│             │        │              │       │             │
-│ Generates   │        │ Guides and   │       │ Design      │
-│ code from   │        │ validates    │       │ system &    │
-│ templates   │        │ code quality │       │ components  │
-└─────────────┘        └──────────────┘       └─────────────┘
-       │                      │                      │
-       └──────────────────────┼──────────────────────┘
-                              ▼
-                    ┌─────────────────┐
-                    │    templates/   │
-                    │                 │
-                    │ scaffold.yaml   │  ← Generation rules
-                    │ architect.yaml  │  ← Design patterns
-                    │ RULES.yaml      │  ← Coding standards
-                    └─────────────────┘
+```text
+AI agent
+  ├─ scaffold-mcp
+  ├─ architect-mcp
+  ├─ style-system
+  └─ one-mcp
+        ↓
+     templates/
+       ├─ scaffold.yaml
+       ├─ architect.yaml
+       └─ RULES.yaml
 ```
 
 ### scaffold-mcp
 
-Add new apps, libraries, or features that follow your company conventions. Generates minimal boilerplate code and uses guided generation to fill in the blanks.
+Generates projects and feature boilerplate from templates.
 
-| Tool | Description |
-|------|-------------|
-| `list-boilerplates` | Available project templates |
-| `use-boilerplate` | Create project from template |
-| `list-scaffolding-methods` | Available features for a project |
-| `use-scaffold-method` | Add feature (page, route, service) |
+Core tools:
+- `list-boilerplates`
+- `use-boilerplate`
+- `list-scaffolding-methods`
+- `use-scaffold-method`
 
-**Admin tools** (`--admin-enable`):
-
-| Tool | Description |
-|------|-------------|
-| `generate-boilerplate` | Create project template |
-| `generate-feature-scaffold` | Create feature scaffold |
-| `generate-boilerplate-file` | Add template files |
+Admin tools:
+- `generate-boilerplate`
+- `generate-feature-scaffold`
+- `generate-boilerplate-file`
 
 ### architect-mcp
 
-Pre-flight suggestions to ensure AI-generated code follows best practices and design patterns based on your file structure. Post-check with RULES.yaml to enforce styles and patterns using an LLM as a judge.
+Provides file-specific patterns before edits and reviews changes against `RULES.yaml`.
 
-| Tool | Description |
-|------|-------------|
-| `get-file-design-pattern` | Get patterns/rules before editing |
-| `review-code-change` | Validate code after editing |
+Core tools:
+- `get-file-design-pattern`
+- `review-code-change`
 
-**Admin tools** (`--admin-enable`):
+Admin tools:
+- `add-design-pattern`
+- `add-rule`
 
-| Tool | Description |
-|------|-------------|
-| `add-design-pattern` | Add to `architect.yaml` |
-| `add-rule` | Add to `RULES.yaml` |
+### style-system
 
-### style-system (NEW)
+Provides theme, CSS class, and component discovery tools.
 
-Design system operations for theme management, CSS class discovery, and component visualization. Helps AI agents use existing design tokens and components instead of creating duplicates.
+Core tools:
+- `list_themes`
+- `get_css_classes`
+- `get_component_visual`
+- `list_shared_components`
+- `list_app_components`
 
-| Tool | Description |
-|------|-------------|
-| `list_themes` | List available theme configurations |
-| `get_css_classes` | Extract CSS classes from theme (use before styling) |
-| `get_component_visual` | Preview UI component without running the app |
-| `list_shared_components` | Find shared UI components (use before creating new ones) |
-| `list_app_components` | List app-specific and package components |
+### one-mcp
 
-NOTE: This package hasn't been integrated to [aicode-toolkit](./apps/aicode-toolkit) yet.
+Provides progressive tool discovery to reduce MCP prompt overhead.
 
----
+## Typical Workflow
 
-## Workflow
-We suggest to plan your task in advanced. Then simply give the task to agent to run autonomously. In copilot mode, you can prompt the agent using natural language or troubleshoot with the packages' cli commands.  
+### Create a Project
 
-### Creating Projects
-
-```
+```text
 User: "Create a Next.js app called dashboard"
 
 Agent:
-1. list-boilerplates → finds nextjs-drizzle
-2. use-boilerplate projectName:"dashboard"
-3. Done: full project with patterns configured
+1. list-boilerplates
+2. use-boilerplate
+3. Project is generated
 ```
 
-### Before Editing Files
+### Add a Feature
 
-```
-User: "Add a products page"
-
-Agent:
-1. get-file-design-pattern for src/app/products/page.tsx
-2. Receives: patterns, must-do rules, must-not-do rules, examples
-3. Writes code following patterns
-```
-
-### Adding Features
-
-```
+```text
 User: "Add a products API route"
 
 Agent:
 1. list-scaffolding-methods
-2. use-scaffold-method method:"add-route" name:"products"
-3. Done: route with team's boilerplate
+2. use-scaffold-method
+3. Feature files are generated
 ```
 
-### After Editing
+### Edit a File Safely
 
-```
+```text
+User: "Add a products page"
+
 Agent:
-1. review-code-change for edited file
-2. Gets: violations (critical/warning/suggestion)
-3. Fixes violations
+1. get-file-design-pattern
+2. edit the file using the returned patterns and rules
+3. review-code-change
+4. fix any violations
 ```
 
-### Styling Components
+### Style a Component
 
-```
+```text
 User: "Style the button with our theme colors"
 
 Agent:
-1. get_css_classes → discovers available theme classes
-2. list_shared_components → checks for existing button components
-3. Applies existing classes or extends component
-4. get_component_visual → previews the result
+1. get_css_classes
+2. list_shared_components
+3. update the component
+4. get_component_visual
 ```
-
----
 
 ## Template Structure
 
-```
+```text
 templates/
 └── nextjs-15/
-    ├── scaffold.yaml      # What to generate
-    ├── architect.yaml     # Design patterns
-    ├── RULES.yaml         # Coding standards
-    └── boilerplate/       # Template files (Liquid)
+    ├── scaffold.yaml
+    ├── architect.yaml
+    ├── RULES.yaml
+    └── boilerplate/
 ```
 
-### scaffold.yaml
-This is where you configure the template for scaffolding. We use `structured output` (supported by mcp) to generate minimal files with `Comment header` to guide the AI tool to fill-in the blank.  
+### `scaffold.yaml`
+
+Defines boilerplates and feature scaffolds.
 
 ```yaml
 boilerplates:
@@ -256,8 +208,9 @@ features:
       - features/route/**/*
 ```
 
-### architect.yaml
-Before the AI tool actually write the code, `architect.yaml` is where you steer the AI by giving it clues how to actually write the code. Don't wait until the code violates your conventions, steer it first.  
+### `architect.yaml`
+
+Defines file-level patterns that should be shown before edits.
 
 ```yaml
 patterns:
@@ -271,10 +224,9 @@ patterns:
       - Move business logic to server actions
 ```
 
-### RULES.yaml
-There is no guarantee the AI follow your guidance. This file defines enforceable rules that the AI must, must not or should follow. The toolkit provide capability for a different AI agent to do code review and enforce the rules and not being affected by noisy context. 
+### `RULES.yaml`
 
-First, we extract the rules based on the file pattern; then we give the file diff plus rules to another agent to identify violation. Anything in must_do or must_not_do rules violations we explicitly ask the agent to fix (and other agent also provide fixing recommendation). You can inherit global RULES.yaml file in `templates/RULES.yaml` for maximum reusability.  
+Defines review rules. Rules can be inherited from a global `templates/RULES.yaml`.
 
 ```yaml
 version: '1.0'
@@ -303,81 +255,26 @@ rules:
           export function format(s: string): string {}
 ```
 
----
-
-## Built-in Templates
-Below templates are examples; you can clone the repo and start exploring how the mechanism works using existing templates.  
-
-| Template | Stack | Includes |
-|----------|-------|----------|
-| `nextjs-drizzle` | Next.js 15, App Router | TypeScript, Tailwind 4, Drizzle, Storybook |
-| `typescript-lib` | TypeScript Library | ESM/CJS, Vitest, TSDoc |
-| `typescript-mcp-package` | MCP Server | Commander, MCP SDK |
-
-### Custom Templates
-We suggest to build your own template from your existing repo. It's quite simple by using slash command:
-
-``` 
-/generate-boilerplate
-```
-Use this slash command and reference your directory to create template. This will create `scaffold.yaml` with boillerplate config and relevant files extracted from your production application.  
-
-``` 
-/generate-feature-scaffold
-```
-After boilerplate is generated, you can now use this command to add `feature` scaffolding. Think of feature as a group of files that generated together per your requirement (new page, new service, etc...)
-
-The `scaffold-mcp` will automatically add this new template to the discovery.
-
-NOTE: MPC's prompts are added as commands in Claude Code; other tools might not have the same implementation. We plan to fix it with [aicode-toolkit](./apps/aicode-toolkit) soon.  
-
-### Custom Design Pattern
-`add-design-pattern` is the tool from `architect-mcp` (with `--admin-enable` flag) that help you add a new design pattern to `architect.yaml` the template.
-Simply ask the AI agent to add a design pattern to a template by giving it a source file reference.
-
-### Custom Rule
-`add-rule` is the tool from `architect-mcp` (with `--admin-enable` flag) that help you add a new rule to the `RULES.yaml` in template.
-Simply ask the AI agent to add a new rule to a template by giving it a source file reference and your rule requirement. 
-
----
-
 ## Project Types
-The toolkit exists because we had scaling problem with mono-repo. Mono-repo has first-citizen support in this toolkit. Monolith is also support and we plan to make it more robust on single-purpose project ASAP!
 
 ### Monorepo
-Mono-repo can be complex for root level blob matching. Considering you can have multiple `apis` built with different languages, or same language but support different design patterns. Then you need to create duplicated rule files just to match a file within particular project. Eg: 
 
-Backend lib utils.
-``` mdx
----
-file: packages/backend-lib-a/utils/*.ts 
----
-...[RULES]
-```
+Each project references its template in `project.json`.
 
-Frontend lib utils.
-``` mdx
----
-file: packages/frontend-lib-a/utils/*.ts 
----
-...[RULES]
-```
-
-A slightly diverted pattern requires your team to write a different rule file. With our toolkit, your package/project reference template in `project.json`; so the match can be collocated per project. (We will support architect and rules override per project soon if you have edge cases).   
-
-```
+```text
 my-workspace/
 ├── apps/
 │   └── web-app/
-│       └── project.json  ← { "sourceTemplate": "nextjs-15" }
+│       └── project.json
 ├── packages/
 │   └── shared-lib/
-│       └── project.json  ← { "sourceTemplate": "typescript-lib" }
+│       └── project.json
 └── templates/
 ```
 
 ### Monolith
-Single purpose project follow same template approach but simplier. Configuration in `toolkit.yaml` is enough for most use cases.  
+
+Monoliths use `.toolkit/settings.yaml`.
 
 ```yaml
 version: "1.0"
@@ -385,29 +282,28 @@ projectType: monolith
 sourceTemplate: nextjs-15
 ```
 
-Auto-detected based on config files.
+## Built-in Templates
 
----
+Included templates:
 
-## Token Optimization
-For daily development work, the MCP context hog lies in the `json-schema` input definition. We create one-mcp to help you save context token by progressively disclose tools' schema per request.  
+| Template | Stack | Includes |
+|----------|-------|----------|
+| `nextjs-drizzle` | Next.js 15, App Router | TypeScript, Tailwind 4, Drizzle, Storybook |
+| `typescript-lib` | TypeScript Library | ESM/CJS, Vitest, TSDoc |
+| `typescript-mcp-package` | MCP Server | Commander, MCP SDK |
 
-If you want to use Anthropic skills for agent to automatically invoke commands for you on tools which does not support skills. One-mcp also support that. By the end of the day, skill is just a tool call.  
+## Custom Templates
 
-```json
-{
-  "mcpServers": {
-    "one-mcp": {
-      "command": "npx",
-      "args": ["-y", "@agiflowai/one-mcp", "--config", ".mcp-servers.yaml"]
-    }
-  }
-}
+For template authoring, start from an existing repo or template and use the admin prompts:
+
+```text
+/generate-boilerplate
+/generate-feature-scaffold
 ```
 
-See [@agiflowai/one-mcp](./packages/one-mcp).
-
----
+For design/rule authoring, use:
+- `add-design-pattern`
+- `add-rule`
 
 ## Supported Agents
 
@@ -418,21 +314,17 @@ See [@agiflowai/one-mcp](./packages/one-mcp).
 | Gemini CLI | `.gemini/settings.json` | Supported |
 | Codex CLI | `.codex/config.json` | Supported |
 | GitHub Copilot | VS Code settings | Supported |
-| Windsurf | - | Coming Soon |
-
----
+| Windsurf | - | Planned |
 
 ## Packages
 
 | Package | Description |
 |---------|-------------|
-| [@agiflowai/aicode-toolkit](./apps/aicode-toolkit) | CLI for init and template management |
-| [@agiflowai/scaffold-mcp](./packages/scaffold-mcp) | Code scaffolding server |
-| [@agiflowai/architect-mcp](./packages/architect-mcp) | Patterns and review server |
-| [@agiflowai/style-system](./packages/style-system) | Design system and component server |
-| [@agiflowai/one-mcp](./packages/one-mcp) | MCP proxy for token reduction |
-
----
+| [@agiflowai/aicode-toolkit](./apps/aicode-toolkit) | CLI for init and config sync |
+| [@agiflowai/scaffold-mcp](./packages/scaffold-mcp) | Scaffolding server |
+| [@agiflowai/architect-mcp](./packages/architect-mcp) | Pattern and review server |
+| [@agiflowai/style-system](./packages/style-system) | Design-system server |
+| [@agiflowai/one-mcp](./packages/one-mcp) | MCP proxy for progressive discovery |
 
 ## Contributing
 

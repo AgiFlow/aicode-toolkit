@@ -10,7 +10,7 @@ description: Create a new feature scaffold configuration for adding features to 
 Your task:
 
 1. **Gather Information**: Ask for any missing details:
-   {% if not isMonolith %}- Template name (e.g., "nextjs-15", "react-vite"){% else %}- Template name (will be auto-detected from toolkit.yaml){% endif %}
+   {% if not isMonolith %}- Template name (e.g., "nextjs-15", "react-vite"){% else %}- Template name (will be auto-detected from `.toolkit/settings.yaml`){% endif %}
    - Feature name (prefixed with "scaffold-", e.g., "scaffold-nextjs-page")
    - Feature type (page, component, service, etc.)
    - Variables needed
@@ -26,7 +26,7 @@ Important:
 - Feature names: prefix with "scaffold-"
 - Conditional includes: use "file.tsx?withLayout=true"
 - Template syntax: use {{ variableName }}
-{% if isMonolith %}- Template name will be auto-detected from toolkit.yaml{% endif %}
+{% if isMonolith %}- Template name will be auto-detected from `.toolkit/settings.yaml`{% endif %}
 
 **Description Field Guidelines (CRITICAL)**:
 The description should explain what the feature scaffold generates (2-3 sentences):
