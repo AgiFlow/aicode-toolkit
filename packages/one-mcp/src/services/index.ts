@@ -6,6 +6,7 @@
  */
 
 export { ConfigFetcherService } from './ConfigFetcherService';
+export { DefinitionsCacheService } from './DefinitionsCacheService';
 export { McpClientManagerService } from './McpClientManagerService';
 export { SkillService } from './SkillService';
 export {

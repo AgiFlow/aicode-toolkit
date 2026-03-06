@@ -11,6 +11,7 @@
  */
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { RuleSection } from '../schemas';
 
 /**
  * Tool definition for MCP
@@ -24,6 +25,7 @@ export interface ToolDefinition {
     required?: string[];
     additionalProperties?: boolean;
   };
+  _meta?: Record<string, unknown>;
 }
 
 /**

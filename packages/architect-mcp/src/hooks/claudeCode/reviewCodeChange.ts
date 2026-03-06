@@ -61,6 +61,13 @@ export class ReviewCodeChangeHook {
    * @returns Hook response with code review feedback or skip
    */
   async postToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+    if (context.hook_event_name !== 'PostToolUse') {
+      return {
+        decision: DECISION_SKIP,
+        message: 'Not a PostToolUse event',
+      };
+    }
+
     // Extract file path from tool input
     const filePath = context.tool_input?.file_path;
 

@@ -22,8 +22,16 @@
 
 import { Command } from 'commander';
 import { print } from '@agiflowai/aicode-utils';
-import { ConfigFetcherService, PrefetchService, type PackageManager } from '../services';
-import { findConfigFile } from '../utils';
+import {
+  ConfigFetcherService,
+  DefinitionsCacheService,
+  McpClientManagerService,
+  PrefetchService,
+  SkillService,
+  type PackageManager,
+} from '../services';
+import { generateServerId, findConfigFile } from '../utils';
+import packageJson from '../../package.json' assert { type: 'json' };
 
 /**
  * Options for the prefetch command
@@ -33,6 +41,9 @@ interface PrefetchOptions {
   parallel: boolean;
   dryRun: boolean;
   filter?: PackageManager;
+  definitionsOut?: string;
+  skipPackages: boolean;
+  clearDefinitionsCache: boolean;
 }
 
 /**
@@ -44,6 +55,9 @@ export const prefetchCommand = new Command('prefetch')
   .option('-p, --parallel', 'Run prefetch commands in parallel', false)
   .option('-d, --dry-run', 'Show what would be prefetched without executing', false)
   .option('-f, --filter <type>', 'Filter by package manager type: npx, pnpx, uvx, or uv')
+  .option('--definitions-out <path>', 'Write discovered definitions to a JSON or YAML cache file')
+  .option('--skip-packages', 'Skip package prefetch and only build definitions cache', false)
+  .option('--clear-definitions-cache', 'Delete the definitions cache file before continuing', false)
   .action(async (options: PrefetchOptions): Promise<void> => {
     try {
       // Find config file: use provided path, or search PROJECT_PATH then cwd
@@ -66,6 +80,10 @@ export const prefetchCommand = new Command('prefetch')
       });
 
       const mcpConfig = await configService.fetchConfiguration(true);
+      const serverId = mcpConfig.id || generateServerId();
+      const configHash = DefinitionsCacheService.generateConfigHash(mcpConfig);
+      const effectiveDefinitionsPath =
+        options.definitionsOut || DefinitionsCacheService.getDefaultCachePath(configFilePath);
 
       // Create PrefetchService with configuration
       const prefetchService = new PrefetchService({
@@ -76,53 +94,124 @@ export const prefetchCommand = new Command('prefetch')
 
       // Extract packages to prefetch
       const packages = prefetchService.extractPackages();
+      const shouldPrefetchPackages = !options.skipPackages;
+      const shouldWriteDefinitions = Boolean(options.definitionsOut);
 
-      if (packages.length === 0) {
-        print.warning('No packages found to prefetch.');
-        print.info('Prefetch supports: npx, pnpx, uvx, and uv run commands');
-        return;
+      if (options.clearDefinitionsCache) {
+        if (options.dryRun) {
+          print.info(`Would clear definitions cache: ${effectiveDefinitionsPath}`);
+        } else {
+          await DefinitionsCacheService.clearFile(effectiveDefinitionsPath);
+          print.success(`Cleared definitions cache: ${effectiveDefinitionsPath}`);
+        }
       }
 
-      print.info(`Found ${packages.length} package(s) to prefetch:`);
-      for (const pkg of packages) {
-        print.item(`${pkg.serverName}: ${pkg.packageManager} ${pkg.packageName}`);
+      if (shouldPrefetchPackages) {
+        if (packages.length === 0) {
+          print.warning('No packages found to prefetch.');
+          print.info('Prefetch supports: npx, pnpx, uvx, and uv run commands');
+        } else {
+          print.info(`Found ${packages.length} package(s) to prefetch:`);
+          for (const pkg of packages) {
+            print.item(`${pkg.serverName}: ${pkg.packageManager} ${pkg.packageName}`);
+          }
+        }
+      }
+
+      if (!shouldPrefetchPackages && !shouldWriteDefinitions) {
+        print.warning('Nothing to do. Use package prefetch or provide --definitions-out.');
+        return;
       }
 
       if (options.dryRun) {
-        print.newline();
-        print.header('Dry run mode - commands that would be executed:');
-        for (const pkg of packages) {
-          print.indent(pkg.fullCommand.join(' '));
+        if (shouldPrefetchPackages && packages.length > 0) {
+          print.newline();
+          print.header('Dry run mode - commands that would be executed:');
+          for (const pkg of packages) {
+            print.indent(pkg.fullCommand.join(' '));
+          }
+        }
+        if (shouldWriteDefinitions) {
+          print.newline();
+          print.info(`Would write definitions cache to: ${effectiveDefinitionsPath}`);
         }
         return;
       }
 
-      print.newline();
-      print.info('Prefetching packages...');
-
-      // Run prefetch
-      const summary = await prefetchService.prefetch();
-
-      // Report results
-      print.newline();
-      if (summary.failed === 0) {
-        print.success(
-          `Prefetch complete: ${summary.successful} succeeded, ${summary.failed} failed`,
-        );
-      } else {
-        print.warning(
-          `Prefetch complete: ${summary.successful} succeeded, ${summary.failed} failed`,
-        );
-      }
-
-      if (summary.failed > 0) {
+      let packagePrefetchFailed = false;
+      if (shouldPrefetchPackages && packages.length > 0) {
         print.newline();
-        print.error('Failed packages:');
-        for (const result of summary.results.filter((r) => !r.success)) {
-          print.item(
-            `${result.package.serverName} (${result.package.packageName}): ${result.output.trim()}`,
+        print.info('Prefetching packages...');
+
+        const summary = await prefetchService.prefetch();
+
+        print.newline();
+        if (summary.failed === 0) {
+          print.success(
+            `Package prefetch complete: ${summary.successful} succeeded, ${summary.failed} failed`,
+          );
+        } else {
+          print.warning(
+            `Package prefetch complete: ${summary.successful} succeeded, ${summary.failed} failed`,
           );
         }
+
+        if (summary.failed > 0) {
+          packagePrefetchFailed = true;
+          print.newline();
+          print.error('Failed packages:');
+          for (const result of summary.results.filter((r) => !r.success)) {
+            print.item(
+              `${result.package.serverName} (${result.package.packageName}): ${result.output.trim()}`,
+            );
+          }
+        }
+      }
+
+      if (shouldWriteDefinitions) {
+        print.newline();
+        print.info('Collecting definitions cache...');
+
+        const clientManager = new McpClientManagerService();
+        const skillPaths = mcpConfig.skills?.paths || [];
+        const skillService =
+          skillPaths.length > 0 ? new SkillService(process.cwd(), skillPaths) : undefined;
+        const definitionsCacheService = new DefinitionsCacheService(clientManager, skillService);
+
+        await Promise.all(
+          Object.entries(mcpConfig.mcpServers).map(async ([serverName, serverConfig]) => {
+            try {
+              await clientManager.connectToServer(serverName, serverConfig);
+              print.item(`Connected for definitions: ${serverName}`);
+            } catch (error) {
+              print.warning(
+                `Failed to connect for definitions: ${serverName} (${error instanceof Error ? error.message : String(error)})`,
+              );
+            }
+          }),
+        );
+
+        const definitionsCache = await definitionsCacheService.collectForCache({
+          configPath: configFilePath,
+          configHash,
+          oneMcpVersion: packageJson.version,
+          serverId,
+        });
+        await DefinitionsCacheService.writeToFile(effectiveDefinitionsPath, definitionsCache);
+        print.success(
+          `Definitions cache written: ${effectiveDefinitionsPath} (${Object.keys(definitionsCache.servers).length} servers, ${definitionsCache.skills.length} skills)`,
+        );
+
+        if (definitionsCache.failures.length > 0) {
+          print.warning(
+            `Definitions cache completed with ${definitionsCache.failures.length} server failure(s)`,
+          );
+        }
+
+        await clientManager.disconnectAll();
+      }
+
+      if (packagePrefetchFailed) {
         process.exit(1);
       }
     } catch (error) {

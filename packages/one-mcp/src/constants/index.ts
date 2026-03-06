@@ -15,6 +15,11 @@ export const SKILL_PREFIX = 'skill__';
 export const LOG_PREFIX_SKILL_DETECTION = '[skill-detection]';
 
 /**
+ * Log prefix for general MCP capability discovery messages.
+ */
+export const LOG_PREFIX_CAPABILITY_DISCOVERY = '[capability-discovery]';
+
+/**
  * Prefix for prompt-based skill locations.
  * Format: "prompt:{serverName}:{promptName}"
  */

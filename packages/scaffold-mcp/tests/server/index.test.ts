@@ -91,6 +91,36 @@ describe('Server', () => {
         expect(toolNames).toContain('generate-feature-scaffold');
       }
     });
+
+    it('should attach capability metadata to listed tools', async () => {
+      const server = createServer({ adminEnabled: true });
+
+      const listToolsHandler = Array.from(server.requestHandlers.values())[0];
+      const result = await listToolsHandler({});
+
+      expect(result.tools).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'list-boilerplates',
+            _meta: {
+              'agiflowai/capabilities': expect.arrayContaining(['boilerplates', 'templates']),
+            },
+          }),
+          expect.objectContaining({
+            name: 'use-scaffold-method',
+            _meta: {
+              'agiflowai/capabilities': expect.arrayContaining(['scaffolding', 'code-generation']),
+            },
+          }),
+          expect.objectContaining({
+            name: 'generate-feature-scaffold',
+            _meta: {
+              'agiflowai/capabilities': expect.arrayContaining(['template-authoring', 'admin']),
+            },
+          }),
+        ]),
+      );
+    });
   });
 
   describe('Instructions', () => {

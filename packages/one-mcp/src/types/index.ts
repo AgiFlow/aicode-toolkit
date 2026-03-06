@@ -31,6 +31,7 @@ export interface ToolDefinition {
     required?: string[];
     additionalProperties?: boolean;
   };
+  _meta?: Record<string, unknown>;
 }
 
 /**
@@ -207,6 +208,7 @@ export interface McpToolInfo {
   name: string;
   description?: string;
   inputSchema: Record<string, unknown>;
+  _meta?: Record<string, unknown>;
 }
 
 /**
@@ -269,6 +271,58 @@ export interface McpClientConnection {
   getPrompt(name: string, args?: Record<string, unknown>): Promise<GetPromptResult>;
   /** Close the connection */
   close(): Promise<void>;
+}
+
+/**
+ * Cached prompt-based skill metadata.
+ * Used to avoid re-fetching prompt front matter during startup discovery.
+ */
+export interface CachedPromptSkillInfo {
+  promptName: string;
+  skill: PromptSkillConfig;
+  autoDetected?: boolean;
+}
+
+/**
+ * Cached server metadata used for startup-time capability discovery.
+ */
+export interface CachedServerDefinition {
+  serverName: string;
+  serverInstruction?: string;
+  omitToolDescription?: boolean;
+  toolBlacklist?: string[];
+  tools: McpToolInfo[];
+  resources: McpResourceInfo[];
+  prompts: McpPromptInfo[];
+  promptSkills: CachedPromptSkillInfo[];
+}
+
+/**
+ * Cached file-based skill metadata.
+ */
+export interface CachedFileSkillInfo {
+  name: string;
+  description: string;
+  location: 'project' | 'user';
+  basePath: string;
+}
+
+/**
+ * Cache file storing precomputed definitions for one-mcp startup.
+ */
+export interface DefinitionsCacheFile {
+  version: 1;
+  oneMcpVersion?: string;
+  generatedAt: string;
+  configPath?: string;
+  configHash?: string;
+  serverId?: string;
+  servers: Record<string, CachedServerDefinition>;
+  skills: CachedFileSkillInfo[];
+  failures: Array<{
+    serverName: string;
+    error: string;
+  }>;
 }
 
 /**

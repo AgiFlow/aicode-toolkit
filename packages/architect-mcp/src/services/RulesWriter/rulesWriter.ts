@@ -34,7 +34,7 @@ import {
   YAML_INDENT,
   YAML_NO_LINE_WRAP,
 } from '../../constants';
-import type { RulesWriterConfig, AddRuleResult } from './types';
+import type { RulesWriterConfig, AddRuleResult, AddRuleErrorType } from './types';
 
 /**
  * RulesWriter handles YAML rule file operations for RULES.yaml.
@@ -154,7 +154,7 @@ export class RulesWriter {
     templateName?: string,
   ): Promise<
     | { success: true; rulesPath: string; templateRef: string }
-    | { success: false; errorType: string; error: string; availableHint?: string }
+    | { success: false; errorType: AddRuleErrorType; error: string; availableHint?: string }
   > {
     if (isGlobal) {
       return {

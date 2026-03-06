@@ -7,9 +7,11 @@
 
 export { initCommand } from './init';
 export { mcpServeCommand } from './mcp-serve';
-export { listToolsCommand } from './list-tools';
+export { searchToolsCommand } from './list-tools';
 export { describeToolsCommand } from './describe-tools';
 export { useToolCommand } from './use-tool';
 export { listResourcesCommand } from './list-resources';
 export { readResourceCommand } from './read-resource';
+export { listPromptsCommand } from './list-prompts';
+export { getPromptCommand } from './get-prompt';
 export { prefetchCommand } from './prefetch';

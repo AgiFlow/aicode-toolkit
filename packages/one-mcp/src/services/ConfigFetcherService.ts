@@ -280,19 +280,23 @@ export class ConfigFetcherService {
       case 'local-priority':
         // Local servers override remote servers with the same name
         return {
+          id: localConfig.id ?? remoteConfig.id,
           mcpServers: {
             ...remoteConfig.mcpServers,
             ...localConfig.mcpServers,
           },
+          skills: localConfig.skills ?? remoteConfig.skills,
         };
 
       case 'remote-priority':
         // Remote servers override local servers with the same name
         return {
+          id: remoteConfig.id ?? localConfig.id,
           mcpServers: {
             ...localConfig.mcpServers,
             ...remoteConfig.mcpServers,
           },
+          skills: remoteConfig.skills ?? localConfig.skills,
         };
 
       case 'merge-deep': {
@@ -342,7 +346,11 @@ export class ConfigFetcherService {
           }
         }
 
-        return { mcpServers: merged };
+        return {
+          id: localConfig.id ?? remoteConfig.id,
+          mcpServers: merged,
+          skills: localConfig.skills ?? remoteConfig.skills,
+        };
       }
 
       default:

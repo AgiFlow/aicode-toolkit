@@ -11,4 +11,5 @@ export interface ToolDefinition {
     required?: string[];
     additionalProperties: boolean;
   };
+  _meta?: Record<string, unknown>;
 }

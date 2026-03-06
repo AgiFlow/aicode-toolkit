@@ -42,8 +42,15 @@ export class GetFileDesignPatternHook {
    * @returns Hook response with design patterns or error message
    */
   async preToolUse(context: ClaudeCodeHookInput): Promise<HookResponse> {
+    if (context.hook_event_name !== 'PreToolUse') {
+      return {
+        decision: DECISION_SKIP,
+        message: 'Not a PreToolUse event',
+      };
+    }
+
     // Extract file path from tool input
-    const filePath = context.tool_input.file_path;
+    const filePath = context.tool_input?.file_path;
 
     // Only process file operations
     if (!filePath || !['Read', 'Write', 'Edit'].includes(context.tool_name)) {
@@ -146,7 +153,7 @@ export class GetFileDesignPatternHook {
         // Error getting patterns - skip and let Claude continue
         await executionLog.logExecution({
           filePath: context.tool_input?.file_path,
-          operation: context.tool_name || 'unknown',
+          operation: context.tool_name.toLowerCase() as 'read' | 'write' | 'edit',
           decision: DECISION_SKIP,
           filePattern: filePatterns,
           projectPath,
@@ -178,7 +185,7 @@ export class GetFileDesignPatternHook {
       // Log that we showed patterns (decision: allow)
       await executionLog.logExecution({
         filePath: context.tool_input?.file_path,
-        operation: context.tool_name || 'unknown',
+        operation: context.tool_name.toLowerCase() as 'read' | 'write' | 'edit',
         decision: DECISION_ALLOW,
         filePattern: filePatterns,
         projectPath,

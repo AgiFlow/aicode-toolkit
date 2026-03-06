@@ -130,7 +130,10 @@ export class ArchitectParser {
 
       if (!parseResult.success) {
         const issues = parseResult.error.issues.map((issue) => ({
-          path: issue.path,
+          path: issue.path.filter(
+            (segment): segment is string | number =>
+              typeof segment === 'string' || typeof segment === 'number',
+          ),
           message: issue.message,
           code: issue.code,
         }));

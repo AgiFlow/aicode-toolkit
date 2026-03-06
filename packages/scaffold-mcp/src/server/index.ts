@@ -26,6 +26,19 @@ import {
   UseScaffoldMethodTool,
   WriteToFileTool,
 } from '../tools';
+import type { ToolDefinition } from '../tools/types';
+
+const TOOL_CAPABILITIES_META_KEY = 'agiflowai/capabilities';
+
+function withCapabilities(definition: ToolDefinition, capabilities: string[]): ToolDefinition {
+  return {
+    ...definition,
+    _meta: {
+      ...definition._meta,
+      [TOOL_CAPABILITIES_META_KEY]: capabilities,
+    },
+  };
+}
 
 export interface ServerOptions {
   adminEnabled?: boolean;
@@ -109,20 +122,74 @@ export function createServer(options: ServerOptions = {}): Server {
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     try {
       const tools = [
-        listScaffoldingMethodsTool.getDefinition(),
-        useScaffoldMethodTool.getDefinition(),
-        writeToFileTool.getDefinition(),
+        withCapabilities(listScaffoldingMethodsTool.getDefinition(), [
+          'scaffolding',
+          'templates',
+          'feature-discovery',
+        ]),
+        withCapabilities(useScaffoldMethodTool.getDefinition(), [
+          'scaffolding',
+          'code-generation',
+          'feature-implementation',
+        ]),
+        withCapabilities(writeToFileTool.getDefinition(), [
+          'filesystem',
+          'file-writing',
+          'code-generation',
+        ]),
       ];
 
       if (!isMonolith) {
-        if (listBoilerplatesTool) tools.unshift(listBoilerplatesTool.getDefinition());
-        if (useBoilerplateTool) tools.splice(1, 0, useBoilerplateTool.getDefinition());
+        if (listBoilerplatesTool) {
+          tools.unshift(
+            withCapabilities(listBoilerplatesTool.getDefinition(), [
+              'boilerplates',
+              'templates',
+              'project-discovery',
+            ]),
+          );
+        }
+        if (useBoilerplateTool) {
+          tools.splice(
+            1,
+            0,
+            withCapabilities(useBoilerplateTool.getDefinition(), [
+              'boilerplates',
+              'project-generation',
+              'code-generation',
+            ]),
+          );
+        }
       }
 
       if (adminEnabled) {
-        if (generateBoilerplateTool) tools.push(generateBoilerplateTool.getDefinition());
-        if (generateBoilerplateFileTool) tools.push(generateBoilerplateFileTool.getDefinition());
-        if (generateFeatureScaffoldTool) tools.push(generateFeatureScaffoldTool.getDefinition());
+        if (generateBoilerplateTool) {
+          tools.push(
+            withCapabilities(generateBoilerplateTool.getDefinition(), [
+              'boilerplates',
+              'template-authoring',
+              'admin',
+            ]),
+          );
+        }
+        if (generateBoilerplateFileTool) {
+          tools.push(
+            withCapabilities(generateBoilerplateFileTool.getDefinition(), [
+              'template-authoring',
+              'file-generation',
+              'admin',
+            ]),
+          );
+        }
+        if (generateFeatureScaffoldTool) {
+          tools.push(
+            withCapabilities(generateFeatureScaffoldTool.getDefinition(), [
+              'scaffolding',
+              'template-authoring',
+              'admin',
+            ]),
+          );
+        }
       }
 
       return { tools };

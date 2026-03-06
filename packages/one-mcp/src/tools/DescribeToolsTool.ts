@@ -29,6 +29,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Tool, ToolDefinition } from '../types';
 import type { McpClientManagerService } from '../services/McpClientManagerService';
 import type { SkillService } from '../services/SkillService';
+import { DefinitionsCacheService } from '../services/DefinitionsCacheService';
 import { parseToolName, extractSkillFrontMatter } from '../utils';
 import {
   SKILL_PREFIX,
@@ -230,6 +231,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
   static readonly TOOL_NAME = 'describe_tools';
   private clientManager: McpClientManagerService;
   private skillService: SkillService | undefined;
+  private definitionsCacheService: DefinitionsCacheService;
   private readonly liquid = new Liquid();
   /** Cache for auto-detected skills from prompt front-matter */
   private autoDetectedSkillsCache: AutoDetectedSkill[] | null = null;
@@ -246,10 +248,13 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
     clientManager: McpClientManagerService,
     skillService?: SkillService,
     serverId?: string,
+    definitionsCacheService?: DefinitionsCacheService,
   ) {
     this.clientManager = clientManager;
     this.skillService = skillService;
     this.serverId = serverId || DEFAULT_SERVER_ID;
+    this.definitionsCacheService =
+      definitionsCacheService || new DefinitionsCacheService(clientManager, skillService);
   }
 
   /**
@@ -259,6 +264,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
    */
   clearAutoDetectedSkillsCache(): void {
     this.autoDetectedSkillsCache = null;
+    this.definitionsCacheService.clearLiveCache();
   }
 
   /**
@@ -380,32 +386,17 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
    * @returns Array of skill template data derived from prompts
    */
   private async collectPromptSkills(): Promise<SkillTemplateData[]> {
-    const clients = this.clientManager.getAllClients();
     const promptSkills: SkillTemplateData[] = [];
+    const serverDefinitions = await this.definitionsCacheService.getServerDefinitions();
 
-    // Collect explicitly configured prompt skills
-    for (const client of clients) {
-      if (!client.prompts) continue;
-
-      for (const promptConfig of Object.values(client.prompts)) {
-        if (promptConfig.skill) {
-          promptSkills.push({
-            name: promptConfig.skill.name,
-            displayName: promptConfig.skill.name,
-            description: promptConfig.skill.description,
-          });
-        }
+    for (const serverDefinition of serverDefinitions) {
+      for (const promptSkill of serverDefinition.promptSkills) {
+        promptSkills.push({
+          name: promptSkill.skill.name,
+          displayName: promptSkill.skill.name,
+          description: promptSkill.skill.description,
+        });
       }
-    }
-
-    // Collect auto-detected skills from prompt front-matter
-    const autoDetectedSkills = await this.detectSkillsFromPromptFrontMatter();
-    for (const autoSkill of autoDetectedSkills) {
-      promptSkills.push({
-        name: autoSkill.skill.name,
-        displayName: autoSkill.skill.name,
-        description: autoSkill.skill.description,
-      });
     }
 
     return promptSkills;
@@ -420,38 +411,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
    */
   private async findPromptSkill(skillName: string): Promise<PromptSkillMatch | undefined> {
     if (!skillName) return undefined;
-
-    const clients = this.clientManager.getAllClients();
-
-    // First, search explicitly configured prompt skills
-    for (const client of clients) {
-      if (!client.prompts) continue;
-
-      for (const [promptName, promptConfig] of Object.entries(client.prompts)) {
-        if (promptConfig.skill && promptConfig.skill.name === skillName) {
-          return {
-            serverName: client.serverName,
-            promptName,
-            skill: promptConfig.skill,
-          };
-        }
-      }
-    }
-
-    // Then, search auto-detected skills from front-matter
-    const autoDetectedSkills = await this.detectSkillsFromPromptFrontMatter();
-    for (const autoSkill of autoDetectedSkills) {
-      if (autoSkill.skill.name === skillName) {
-        return {
-          serverName: autoSkill.serverName,
-          promptName: autoSkill.promptName,
-          skill: autoSkill.skill,
-          autoDetected: true,
-        };
-      }
-    }
-
-    return undefined;
+    return await this.definitionsCacheService.getPromptSkillByName(skillName);
   }
 
   /**
@@ -466,15 +426,8 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
     const promptSkill = await this.findPromptSkill(skillName);
     if (!promptSkill) return undefined;
 
-    const client = this.clientManager.getClient(promptSkill.serverName);
-    if (!client) {
-      console.error(
-        `Client not found for server '${promptSkill.serverName}' when fetching prompt skill '${skillName}'`,
-      );
-      return undefined;
-    }
-
     try {
+      const client = await this.clientManager.ensureConnected(promptSkill.serverName);
       const promptResult = await client.getPrompt(promptSkill.promptName);
       // Prompt messages can contain either string content or TextContent objects with text field
       const rawInstructions =
@@ -518,35 +471,19 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
    * @returns Object with rendered description and set of all tool names
    */
   private async buildToolkitDescription(): Promise<ServersSectionResult> {
-    const clients = this.clientManager.getAllClients();
+    const serverDefinitions = await this.definitionsCacheService.getServerDefinitions();
 
     // First pass: collect all tools from all servers to detect name clashes
     const toolToServers = new Map<string, string[]>();
-    const serverToolsMap = new Map<string, Array<{ name: string; description?: string }>>();
 
-    await Promise.all(
-      clients.map(async (client): Promise<void> => {
-        try {
-          const tools = await client.listTools();
-          // Filter out blacklisted tools
-          const blacklist = new Set(client.toolBlacklist || []);
-          const filteredTools = tools.filter((t) => !blacklist.has(t.name));
-
-          serverToolsMap.set(client.serverName, filteredTools);
-
-          // Track which servers have each tool for clash detection
-          for (const tool of filteredTools) {
-            if (!toolToServers.has(tool.name)) {
-              toolToServers.set(tool.name, []);
-            }
-            toolToServers.get(tool.name)?.push(client.serverName);
-          }
-        } catch (error) {
-          console.error(`Failed to list tools from ${client.serverName}:`, error);
-          serverToolsMap.set(client.serverName, []);
+    for (const serverDefinition of serverDefinitions) {
+      for (const tool of serverDefinition.tools) {
+        if (!toolToServers.has(tool.name)) {
+          toolToServers.set(tool.name, []);
         }
-      }),
-    );
+        toolToServers.get(tool.name)?.push(serverDefinition.serverName);
+      }
+    }
 
     /**
      * Formats tool name with server prefix if the tool exists on multiple servers
@@ -558,10 +495,10 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
 
     // Build server data for template and collect all tool names
     const allToolNames = new Set<string>();
-    const servers: ServerTemplateData[] = clients.map((client) => {
-      const tools = serverToolsMap.get(client.serverName) || [];
+    const servers: ServerTemplateData[] = serverDefinitions.map((serverDefinition) => {
+      const tools = serverDefinition.tools;
       const formattedTools = tools.map((t) => ({
-        displayName: formatToolName(t.name, client.serverName),
+        displayName: formatToolName(t.name, serverDefinition.serverName),
         description: t.description,
       }));
 
@@ -571,17 +508,18 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
       }
 
       return {
-        name: client.serverName,
-        instruction: client.serverInstruction,
-        omitToolDescription: client.omitToolDescription || false,
+        name: serverDefinition.serverName,
+        instruction: serverDefinition.serverInstruction,
+        omitToolDescription: serverDefinition.omitToolDescription || false,
         tools: formattedTools,
         toolNames: formattedTools.map((t) => t.displayName),
       };
     });
 
     // Collect skills
-    const [rawSkills, promptSkills] = await Promise.all([
+    const [rawSkills, cachedSkills, promptSkills] = await Promise.all([
       this.skillService ? this.skillService.getSkills() : Promise.resolve([]),
+      this.definitionsCacheService.getCachedFileSkills(),
       this.collectPromptSkills(),
     ]);
 
@@ -591,6 +529,17 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
 
     // Add file-based skills first (they take precedence)
     for (const skill of rawSkills) {
+      if (!seenSkillNames.has(skill.name)) {
+        seenSkillNames.add(skill.name);
+        allSkillsData.push({
+          name: skill.name,
+          displayName: skill.name,
+          description: skill.description,
+        });
+      }
+    }
+
+    for (const skill of cachedSkills) {
       if (!seenSkillNames.has(skill.name)) {
         seenSkillNames.add(skill.name);
         allSkillsData.push({
@@ -680,7 +629,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
   async execute(input: DescribeToolsToolInput): Promise<CallToolResult> {
     try {
       const { toolNames } = input;
-      const clients = this.clientManager.getAllClients();
+      const serverDefinitions = await this.definitionsCacheService.getServerDefinitions();
 
       if (!toolNames || toolNames.length === 0) {
         return {
@@ -698,36 +647,22 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
       const serverToolsMap = new Map<string, McpToolInfo[]>();
       const toolToServers = new Map<string, string[]>();
 
-      await Promise.all(
-        clients.map(async (client): Promise<void> => {
-          try {
-            const tools = await client.listTools();
-            // Filter out blacklisted tools
-            const blacklist = new Set(client.toolBlacklist || []);
-            const filteredTools = tools.filter((t) => !blacklist.has(t.name));
+      for (const serverDefinition of serverDefinitions) {
+        const typedTools: McpToolInfo[] = serverDefinition.tools.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          inputSchema: tool.inputSchema as JsonSchemaDefinition,
+        }));
 
-            // Map to McpToolInfo with proper typing
-            const typedTools: McpToolInfo[] = filteredTools.map((t) => ({
-              name: t.name,
-              description: t.description,
-              inputSchema: t.inputSchema as JsonSchemaDefinition,
-            }));
+        serverToolsMap.set(serverDefinition.serverName, typedTools);
 
-            serverToolsMap.set(client.serverName, typedTools);
-
-            // Track which servers have each tool for clash detection
-            for (const tool of typedTools) {
-              if (!toolToServers.has(tool.name)) {
-                toolToServers.set(tool.name, []);
-              }
-              toolToServers.get(tool.name)?.push(client.serverName);
-            }
-          } catch (error) {
-            console.error(`Failed to list tools from ${client.serverName}:`, error);
-            serverToolsMap.set(client.serverName, []);
+        for (const tool of typedTools) {
+          if (!toolToServers.has(tool.name)) {
+            toolToServers.set(tool.name, []);
           }
-        }),
-      );
+          toolToServers.get(tool.name)?.push(serverDefinition.serverName);
+        }
+      }
 
       // Process each tool name lookup in parallel for better performance
       const lookupResults = await Promise.all(

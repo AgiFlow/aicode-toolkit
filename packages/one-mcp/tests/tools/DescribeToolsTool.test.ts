@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DescribeToolsTool } from '../../src/tools/DescribeToolsTool';
+import { DefinitionsCacheService } from '../../src/services/DefinitionsCacheService';
 import type { McpClientManagerService } from '../../src/services/McpClientManagerService';
 import type { SkillService } from '../../src/services/SkillService';
-import type { McpClientConnection, Skill, PromptConfig } from '../../src/types';
+import type { DefinitionsCacheFile, McpClientConnection, Skill, PromptConfig } from '../../src/types';
 
 /**
  * Text content shape returned by tool execution
@@ -151,6 +152,8 @@ describe('DescribeToolsTool', () => {
     mockClientManager = {
       getAllClients: vi.fn().mockReturnValue([]),
       getClient: vi.fn(),
+      getKnownServerNames: vi.fn().mockReturnValue([]),
+      ensureConnected: vi.fn(),
       addClient: vi.fn(),
       removeClient: vi.fn(),
     } as unknown as McpClientManagerService;
@@ -191,6 +194,7 @@ describe('DescribeToolsTool', () => {
       ]);
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
+      vi.mocked(mockClientManager.getKnownServerNames).mockReturnValue(['test-server']);
 
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
       const definition = await tool.getDefinition();
@@ -198,6 +202,50 @@ describe('DescribeToolsTool', () => {
       expect(definition.description).toContain('test-server');
       expect(definition.description).toContain('tool_one');
       expect(definition.description).toContain('tool_two');
+    });
+
+    it('should use cached definitions when provided', async () => {
+      const mockClient = createMockClient('test-server', [{ name: 'live_tool' }]);
+      vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
+      vi.mocked(mockClientManager.getKnownServerNames).mockReturnValue(['test-server']);
+
+      const cache: DefinitionsCacheFile = {
+        version: 1,
+        generatedAt: new Date().toISOString(),
+        servers: {
+          'test-server': {
+            serverName: 'test-server',
+            serverInstruction: 'Cached instruction',
+            tools: [
+              {
+                name: 'cached_tool',
+                description: 'Cached tool description',
+                inputSchema: { type: 'object', properties: {} },
+              },
+            ],
+            resources: [],
+            prompts: [],
+            promptSkills: [],
+          },
+        },
+        skills: [],
+        failures: [],
+      };
+      const definitionsCacheService = new DefinitionsCacheService(mockClientManager, undefined, {
+        cacheData: cache,
+      });
+
+      const tool = new DescribeToolsTool(
+        mockClientManager,
+        mockSkillService,
+        undefined,
+        definitionsCacheService,
+      );
+      const definition = await tool.getDefinition();
+
+      expect(definition.description).toContain('cached_tool');
+      expect(definition.description).not.toContain('live_tool');
+      expect(mockClient.listTools).not.toHaveBeenCalled();
     });
 
     it('should include skills in description when available', async () => {
@@ -222,6 +270,7 @@ describe('DescribeToolsTool', () => {
       ]);
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient1, mockClient2]);
+      vi.mocked(mockClientManager.getKnownServerNames).mockReturnValue(['server-a', 'server-b']);
 
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
       const definition = await tool.getDefinition();
@@ -235,6 +284,7 @@ describe('DescribeToolsTool', () => {
       const mockClient2 = createMockClient('server-b', [{ name: 'unique_tool_b' }]);
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient1, mockClient2]);
+      vi.mocked(mockClientManager.getKnownServerNames).mockReturnValue(['server-a', 'server-b']);
 
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
       const definition = await tool.getDefinition();
@@ -488,7 +538,7 @@ describe('DescribeToolsTool', () => {
       });
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
-      vi.mocked(mockClientManager.getClient).mockReturnValue(mockClient);
+      vi.mocked(mockClientManager.ensureConnected).mockResolvedValue(mockClient);
 
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
       const result = await tool.execute({ toolNames: ['skill__code-reviewer'] });
@@ -516,7 +566,7 @@ describe('DescribeToolsTool', () => {
       });
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
-      vi.mocked(mockClientManager.getClient).mockReturnValue(mockClient);
+      vi.mocked(mockClientManager.ensureConnected).mockResolvedValue(mockClient);
 
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
       const result = await tool.execute({ toolNames: ['doc-generator'] });
@@ -540,7 +590,7 @@ describe('DescribeToolsTool', () => {
       });
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
-      vi.mocked(mockClientManager.getClient).mockReturnValue(mockClient);
+      vi.mocked(mockClientManager.ensureConnected).mockResolvedValue(mockClient);
 
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
       const result = await tool.execute({ toolNames: ['skill__code-reviewer'] });
@@ -561,7 +611,7 @@ describe('DescribeToolsTool', () => {
       });
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
-      vi.mocked(mockClientManager.getClient).mockReturnValue(mockClient);
+      vi.mocked(mockClientManager.ensureConnected).mockResolvedValue(mockClient);
 
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
       const result = await tool.execute({ toolNames: ['skill__my-skill'] });
@@ -584,7 +634,7 @@ describe('DescribeToolsTool', () => {
       mockClient.getPrompt = vi.fn().mockRejectedValue(new Error('Connection failed'));
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
-      vi.mocked(mockClientManager.getClient).mockReturnValue(mockClient);
+      vi.mocked(mockClientManager.ensureConnected).mockResolvedValue(mockClient);
 
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
       const result = await tool.execute({ toolNames: ['skill__failing-skill'] });
@@ -604,8 +654,9 @@ describe('DescribeToolsTool', () => {
       });
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
-      // Return undefined to simulate client not found
-      vi.mocked(mockClientManager.getClient).mockReturnValue(undefined);
+      vi.mocked(mockClientManager.ensureConnected).mockRejectedValue(
+        new Error('Client not found'),
+      );
 
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
       const result = await tool.execute({ toolNames: ['skill__orphan-skill'] });
@@ -684,7 +735,7 @@ describe('DescribeToolsTool', () => {
         },
       });
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
-      vi.mocked(mockClientManager.getClient).mockReturnValue(mockClient);
+      vi.mocked(mockClientManager.ensureConnected).mockResolvedValue(mockClient);
 
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
       const result = await tool.execute({ toolNames: ['skill__fallback-skill'] });

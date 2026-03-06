@@ -21,57 +21,76 @@
  */
 
 import { Command } from 'commander';
-import { ConfigFetcherService, McpClientManagerService, SkillService } from '../services';
-import type { McpToolInfo, Skill } from '../types';
+import { ConfigFetcherService, DefinitionsCacheService, McpClientManagerService } from '../services';
+import { SearchListToolsTool } from '../tools/SearchListToolsTool';
 import { findConfigFile } from '../utils';
 
-interface ListToolsOptions {
+interface SearchToolsOptions {
   config?: string;
   server?: string;
+  capability?: string;
   json: boolean;
-}
-
-interface ServerToolResult {
-  serverName: string;
-  tools: McpToolInfo[];
-  error: unknown;
-}
-
-interface SkillSummary {
-  name: string;
-  description: string;
+  definitionsCache?: string;
 }
 
 function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/**
- * List all available tools from connected MCP servers
- */
-export const listToolsCommand = new Command('list-tools')
-  .description('List all available tools from connected MCP servers')
+function printSearchResults(result: {
+  servers: Array<{
+    server: string;
+    capabilities?: string[];
+    summary?: string;
+    tools: Array<{ name: string; description?: string; capabilities?: string[] }>;
+  }>;
+}): void {
+  for (const server of result.servers) {
+    console.log(`\n${server.server}:`);
+    if (server.capabilities && server.capabilities.length > 0) {
+      console.log(`  capabilities: ${server.capabilities.join(', ')}`);
+    }
+    if (server.summary) {
+      console.log(`  summary: ${server.summary}`);
+    }
+    if (server.tools.length === 0) {
+      console.log('  no tools');
+      continue;
+    }
+
+    for (const tool of server.tools) {
+      const capabilitySummary =
+        tool.capabilities && tool.capabilities.length > 0
+          ? ` [${tool.capabilities.join(', ')}]`
+          : '';
+      console.log(`  - ${tool.name}${capabilitySummary}`);
+      if (tool.description) {
+        console.log(`    ${tool.description}`);
+      }
+    }
+  }
+}
+
+export const searchToolsCommand = new Command('search-tools')
+  .description('Search proxied MCP tools by capability or server')
   .option('-c, --config <path>', 'Path to MCP server configuration file')
   .option('-s, --server <name>', 'Filter by server name')
+  .option('--capability <name>', 'Filter by capability tag, summary, tool name, or description')
+  .option('--definitions-cache <path>', 'Path to definitions cache file')
   .option('-j, --json', 'Output as JSON', false)
-  .action(async (options: ListToolsOptions): Promise<void> => {
+  .action(async (options: SearchToolsOptions): Promise<void> => {
     try {
-      // Find config file: use provided path, or search PROJECT_PATH then cwd
       const configFilePath = options.config || findConfigFile();
 
       if (!configFilePath) {
         throw new Error('No config file found. Use --config or create mcp-config.yaml');
       }
 
-      // Initialize services
-      const configFetcher = new ConfigFetcherService({
-        configFilePath,
-      });
-
+      const configFetcher = new ConfigFetcherService({ configFilePath });
       const config = await configFetcher.fetchConfiguration();
       const clientManager = new McpClientManagerService();
+      clientManager.registerServerConfigs(config.mcpServers);
 
-      // Connect to all configured MCP servers
       const connectionPromises = Object.entries(config.mcpServers).map(
         async ([serverName, serverConfig]): Promise<void> => {
           try {
@@ -89,99 +108,42 @@ export const listToolsCommand = new Command('list-tools')
 
       await Promise.all(connectionPromises);
 
-      // Get all clients
-      const clients = options.server
-        ? [clientManager.getClient(options.server)].filter(
-            (c): c is NonNullable<typeof c> => c !== undefined,
-          )
-        : clientManager.getAllClients();
-
-      if (clients.length === 0) {
+      if (clientManager.getAllClients().length === 0) {
         throw new Error('No MCP servers connected');
       }
 
-      // Collect tools from all servers in parallel
-      const toolsByServer: Record<string, McpToolInfo[]> = {};
-
-      const toolResults: ServerToolResult[] = await Promise.all(
-        clients.map(async (client): Promise<ServerToolResult> => {
-          try {
-            const tools = await client.listTools();
-            // Filter out blacklisted tools
-            const blacklist = new Set(client.toolBlacklist || []);
-            const filteredTools = tools.filter((t): boolean => !blacklist.has(t.name));
-            return { serverName: client.serverName, tools: filteredTools, error: null };
-          } catch (error) {
-            const tools: McpToolInfo[] = [];
-            return { serverName: client.serverName, tools, error };
-          }
-        }),
-      );
-
-      for (const { serverName, tools, error } of toolResults) {
-        if (error && !options.json) {
-          console.error(`Failed to list tools from ${serverName}: ${toErrorMessage(error)}`);
-        }
-        toolsByServer[serverName] = tools;
+      const cachePath =
+        options.definitionsCache || DefinitionsCacheService.getDefaultCachePath(configFilePath);
+      let cacheData;
+      try {
+        cacheData = await DefinitionsCacheService.readFromFile(cachePath);
+      } catch {
+        cacheData = undefined;
       }
 
-      // Load skills if configured
-      const cwd = process.env.PROJECT_PATH || process.cwd();
-      const skillPaths = config.skills?.paths || [];
-      let skills: Skill[] = [];
+      const definitionsCacheService = new DefinitionsCacheService(clientManager, undefined, {
+        cacheData,
+      });
+      const tool = new SearchListToolsTool(clientManager, definitionsCacheService);
+      const result = await tool.execute({
+        capability: options.capability,
+        serverName: options.server,
+      });
+      const textBlock = result.content.find((content) => content.type === 'text');
+      const parsed = textBlock?.type === 'text' ? JSON.parse(textBlock.text) : { servers: [] };
 
-      if (skillPaths.length > 0) {
-        try {
-          const skillService = new SkillService(cwd, skillPaths);
-          skills = await skillService.getSkills();
-        } catch (error) {
-          if (!options.json) {
-            console.error(`Failed to load skills: ${toErrorMessage(error)}`);
-          }
-        }
-      }
-
-      // Output results
       if (options.json) {
-        const output: Record<string, McpToolInfo[] | SkillSummary[]> = { ...toolsByServer };
-        if (skills.length > 0) {
-          output.__skills__ = skills.map((s): SkillSummary => ({ name: s.name, description: s.description }));
-        }
-        console.log(JSON.stringify(output, null, 2));
+        console.log(JSON.stringify(parsed, null, 2));
       } else {
-        for (const [serverName, tools] of Object.entries(toolsByServer)) {
-          const client = clients.find((c): boolean => c.serverName === serverName);
-          const omitDescription = client?.omitToolDescription || false;
-
-          console.log(`\n${serverName}:`);
-          if (tools.length === 0) {
-            console.log('  No tools available');
-          } else {
-            if (omitDescription) {
-              // Show tools as comma-separated list without descriptions
-              const toolNames = tools.map((t): string => t.name).join(', ');
-              console.log(`  ${toolNames}`);
-            } else {
-              // Show tools with descriptions (default)
-              for (const tool of tools) {
-                console.log(`  - ${tool.name}: ${tool.description || 'No description'}`);
-              }
-            }
-          }
+        if (!parsed.servers || parsed.servers.length === 0) {
+          throw new Error('No tools matched the requested filters');
         }
-
-        if (skills.length > 0) {
-          console.log('\nskills:');
-          for (const skill of skills) {
-            console.log(`  - ${skill.name}: ${skill.description}`);
-          }
-        }
+        printSearchResults(parsed);
       }
 
-      // Cleanup
       await clientManager.disconnectAll();
     } catch (error) {
-      console.error(`Error executing list-tools: ${toErrorMessage(error)}`);
+      console.error(`Error executing search-tools: ${toErrorMessage(error)}`);
       process.exit(1);
     }
   });

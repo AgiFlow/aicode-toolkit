@@ -432,6 +432,57 @@ mcpServers:
       expect(result.mcpServers['shared-server'].config.args).toEqual(['remote.py']);
     });
 
+    it('preserves optional top-level id and skills when merging remote configs', async () => {
+      const localConfig = {
+        id: 'local-id',
+        mcpServers: {
+          'local-server': {
+            command: 'node',
+            args: ['local.js'],
+          },
+        },
+        remoteConfigs: [
+          {
+            url: 'https://example.com/mcp-config.json',
+            mergeStrategy: 'local-priority',
+          },
+        ],
+      };
+
+      const remoteConfig = {
+        mcpServers: {
+          'remote-server': {
+            command: 'node',
+            args: ['remote.js'],
+          },
+        },
+        skills: {
+          paths: ['.claude/skills'],
+        },
+      };
+
+      await writeFile(tempConfigPath, JSON.stringify(localConfig));
+
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => remoteConfig,
+      });
+
+      const service = new ConfigFetcherService({
+        configFilePath: tempConfigPath,
+        useCache: false,
+      });
+
+      const result = await service.fetchConfiguration();
+
+      expect(result.id).toBe('local-id');
+      expect(result.skills).toEqual({
+        paths: ['.claude/skills'],
+      });
+      expect(result.mcpServers['local-server']).toBeDefined();
+      expect(result.mcpServers['remote-server']).toBeDefined();
+    });
+
     it('should interpolate environment variables in remote URL and headers', async () => {
       process.env.TEST_API_URL = 'https://example.com';
       process.env.TEST_API_KEY = 'secret-key';

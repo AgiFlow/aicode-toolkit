@@ -41,6 +41,10 @@ function isValidTransportType(type: string): type is ValidTransportType {
   return type === 'stdio' || type === 'http' || type === 'sse';
 }
 
+function isValidProxyMode(mode: string): mode is McpServeOptions['proxyMode'] {
+  return mode === 'meta' || mode === 'flat' || mode === 'search';
+}
+
 /**
  * Options for the mcp-serve command
  */
@@ -51,6 +55,9 @@ interface McpServeOptions {
   config?: string;
   cache: boolean;
   id?: string;
+  definitionsCache?: string;
+  clearDefinitionsCache: boolean;
+  proxyMode: 'meta' | 'flat' | 'search';
 }
 
 /**
@@ -92,6 +99,16 @@ export const mcpServeCommand = new Command('mcp-serve')
   .option('-c, --config <path>', 'Path to MCP server configuration file')
   .option('--no-cache', 'Disable configuration caching, always reload from config file')
   .option(
+    '--definitions-cache <path>',
+    'Path to prefetched tool/prompt/skill definitions cache file',
+  )
+  .option('--clear-definitions-cache', 'Delete definitions cache before startup', false)
+  .option(
+    '--proxy-mode <mode>',
+    'How one-mcp exposes downstream tools: meta, flat, or search',
+    'meta',
+  )
+  .option(
     '--id <id>',
     'Unique server identifier (overrides config file id, auto-generated if not provided)',
   )
@@ -104,6 +121,11 @@ export const mcpServeCommand = new Command('mcp-serve')
       process.exit(1);
     }
 
+    if (!isValidProxyMode(options.proxyMode)) {
+      console.error(`Unknown proxy mode: '${options.proxyMode}'. Valid options: meta, flat, search`);
+      process.exit(1);
+    }
+
     try {
       // Find config file: use provided path, or search PROJECT_PATH then cwd
       const configFilePath = options.config || findConfigFile() || undefined;
@@ -112,6 +134,9 @@ export const mcpServeCommand = new Command('mcp-serve')
         configFilePath,
         noCache: options.cache === false, // Commander transforms --no-cache to cache: false
         serverId: options.id, // CLI ID takes precedence over config file
+        definitionsCachePath: options.definitionsCache,
+        clearDefinitionsCache: options.clearDefinitionsCache,
+        proxyMode: options.proxyMode,
       };
 
       if (transportType === 'stdio') {

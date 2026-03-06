@@ -37,4 +37,4 @@ export type AddRuleInput = z.infer<typeof addRuleInputSchema>;
 /**
  * Validation result type for safe parsing
  */
-export type RulesYamlConfigParseResult = z.SafeParseReturnType<unknown, RulesYamlConfig>;
+export type RulesYamlConfigParseResult = z.ZodSafeParseResult<RulesYamlConfig>;
