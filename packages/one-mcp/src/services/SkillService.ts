@@ -22,6 +22,8 @@ import { join, dirname, isAbsolute } from 'node:path';
 import type { Skill } from '../types';
 import { parseFrontMatter } from '../utils';
 
+type FileSnapshot = Map<string, number>;
+
 /**
  * Error thrown when skill loading fails
  */
@@ -84,6 +86,8 @@ export class SkillService {
   private skillsByName: Map<string, Skill> | null = null;
   /** Active file watchers for skill directories */
   private watchers: AbortController[] = [];
+  /** Polling timers used when native file watching is unavailable */
+  private pollingTimers: ReturnType<typeof setInterval>[] = [];
   /** Callback invoked when cache is invalidated due to file changes */
   private onCacheInvalidated?: () => void;
 
@@ -199,6 +203,10 @@ export class SkillService {
       this.watchDirectory(skillsDir, abortController.signal).catch((error) => {
         // Only log if not aborted
         if (error?.name !== 'AbortError') {
+          if (this.isWatchResourceLimitError(error)) {
+            this.startPollingDirectory(skillsDir, abortController.signal);
+            return;
+          }
           console.error(
             `[skill-watcher] Error watching ${skillsDir}: ${error instanceof Error ? error.message : 'Unknown error'}`,
           );
@@ -216,6 +224,11 @@ export class SkillService {
       controller.abort();
     }
     this.watchers = [];
+
+    for (const timer of this.pollingTimers) {
+      clearInterval(timer);
+    }
+    this.pollingTimers = [];
   }
 
   /**
@@ -229,10 +242,104 @@ export class SkillService {
     for await (const event of watcher) {
       // Only invalidate cache when SKILL.md files change
       if (event.filename?.endsWith('SKILL.md')) {
-        this.clearCache();
-        this.onCacheInvalidated?.();
+        this.invalidateCache();
       }
     }
+  }
+
+  private invalidateCache(): void {
+    this.clearCache();
+    this.onCacheInvalidated?.();
+  }
+
+  private isWatchResourceLimitError(error: unknown): boolean {
+    return (
+      error instanceof Error &&
+      'code' in error &&
+      (error.code === 'EMFILE' || error.code === 'ENOSPC')
+    );
+  }
+
+  private startPollingDirectory(dirPath: string, signal: AbortSignal): void {
+    void this.createSkillSnapshot(dirPath).then((initialSnapshot) => {
+      let previousSnapshot = initialSnapshot;
+      const timer = setInterval(() => {
+        if (signal.aborted) {
+          clearInterval(timer);
+          return;
+        }
+
+        void this.createSkillSnapshot(dirPath)
+          .then((nextSnapshot) => {
+            if (!this.snapshotsEqual(previousSnapshot, nextSnapshot)) {
+              previousSnapshot = nextSnapshot;
+              this.invalidateCache();
+            }
+          })
+          .catch((error) => {
+            console.error(
+              `[skill-watcher] Polling failed for ${dirPath}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            );
+          });
+      }, 100);
+
+      this.pollingTimers.push(timer);
+      signal.addEventListener(
+        'abort',
+        () => {
+          clearInterval(timer);
+          this.pollingTimers = this.pollingTimers.filter((activeTimer) => activeTimer !== timer);
+        },
+        { once: true },
+      );
+    });
+  }
+
+  private async createSkillSnapshot(dirPath: string): Promise<FileSnapshot> {
+    const snapshot = new Map<string, number>();
+    await this.collectSkillSnapshots(dirPath, snapshot);
+    return snapshot;
+  }
+
+  private async collectSkillSnapshots(dirPath: string, snapshot: FileSnapshot): Promise<void> {
+    let entries: string[];
+    try {
+      entries = await readdir(dirPath);
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        return;
+      }
+      throw error;
+    }
+
+    await Promise.all(
+      entries.map(async (entry) => {
+        const entryPath = join(dirPath, entry);
+        const entryStat = await stat(entryPath);
+        if (entryStat.isDirectory()) {
+          await this.collectSkillSnapshots(entryPath, snapshot);
+          return;
+        }
+
+        if (entry === 'SKILL.md') {
+          snapshot.set(entryPath, entryStat.mtimeMs);
+        }
+      }),
+    );
+  }
+
+  private snapshotsEqual(left: FileSnapshot, right: FileSnapshot): boolean {
+    if (left.size !== right.size) {
+      return false;
+    }
+
+    for (const [filePath, mtimeMs] of left) {
+      if (right.get(filePath) !== mtimeMs) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /**
