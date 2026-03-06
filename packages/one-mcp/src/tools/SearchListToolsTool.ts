@@ -1,6 +1,7 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Tool, ToolDefinition } from '../types';
 import { DefinitionsCacheService } from '../services/DefinitionsCacheService';
+import { getToolCapabilities, getUniqueSortedCapabilities } from '../utils/toolCapabilities';
 
 interface SearchListToolsToolInput {
   capability?: string;
@@ -10,10 +11,12 @@ interface SearchListToolsToolInput {
 interface SearchListToolsResult {
   servers: Array<{
     server: string;
-    capabilities?: string;
+    capabilities: string[];
+    summary?: string;
     tools: Array<{
       name: string;
       description?: string;
+      capabilities: string[];
     }>;
   }>;
 }
@@ -40,8 +43,13 @@ export class SearchListToolsTool implements Tool<SearchListToolsToolInput> {
     const capabilitySummary = serverDefinitions.length > 0
       ? serverDefinitions
           .map(
-            (server) =>
-              `${server.serverName}: ${server.serverInstruction || 'No capability summary available'}`,
+            (server) => {
+              const capabilities = getUniqueSortedCapabilities(server.tools);
+              const summary = capabilities.length > 0
+                ? capabilities.join(', ')
+                : server.serverInstruction || 'No capability summary available';
+              return `${server.serverName}: ${summary}`;
+            },
           )
           .join('\n')
       : 'No proxied servers available.';
@@ -57,7 +65,7 @@ export class SearchListToolsTool implements Tool<SearchListToolsToolInput> {
           capability: {
             type: 'string',
             description:
-              'Optional capability filter. Matches server capability summaries, server names, tool names, and tool descriptions.',
+              'Optional capability filter. Matches explicit capability tags first, then server summaries, server names, tool names, and tool descriptions.',
           },
           serverName: {
             type: 'string',
@@ -99,20 +107,31 @@ export class SearchListToolsTool implements Tool<SearchListToolsToolInput> {
           return true;
         }
 
+        const serverCapabilities = getUniqueSortedCapabilities(serverDefinition.tools);
+        if (serverCapabilities.some((capability) => capability.toLowerCase().includes(capabilityFilter))) {
+          return true;
+        }
+
         return serverDefinition.tools.some((tool) => {
           const toolName = this.formatToolName(tool.name, serverDefinition.serverName, toolToServers);
+          const toolCapabilities = getToolCapabilities(tool);
           return (
             toolName.toLowerCase().includes(capabilityFilter) ||
-            (tool.description || '').toLowerCase().includes(capabilityFilter)
+            (tool.description || '').toLowerCase().includes(capabilityFilter) ||
+            toolCapabilities.some((capability) =>
+              capability.toLowerCase().includes(capabilityFilter)
+            )
           );
         });
       })
       .map((serverDefinition) => ({
         server: serverDefinition.serverName,
-        capabilities: serverDefinition.serverInstruction,
+        capabilities: getUniqueSortedCapabilities(serverDefinition.tools),
+        summary: serverDefinition.serverInstruction,
         tools: serverDefinition.tools.map((tool) => ({
           name: this.formatToolName(tool.name, serverDefinition.serverName, toolToServers),
           description: serverDefinition.omitToolDescription ? undefined : tool.description,
+          capabilities: getToolCapabilities(tool),
         })),
       }))
       .filter((server) => server.tools.length > 0);

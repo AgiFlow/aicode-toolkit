@@ -19,6 +19,19 @@ import { AddDesignPatternTool } from '../tools/AddDesignPatternTool';
 import { AddRuleTool } from '../tools/AddRuleTool';
 import { ValidateArchitectTool } from '../tools/ValidateArchitectTool';
 import type { LlmToolId } from '@agiflowai/coding-agent-bridge';
+import type { ToolDefinition } from '../types';
+
+const TOOL_CAPABILITIES_META_KEY = 'agiflowai/capabilities';
+
+function withCapabilities(definition: ToolDefinition, capabilities: string[]): ToolDefinition {
+  return {
+    ...definition,
+    _meta: {
+      ...definition._meta,
+      [TOOL_CAPABILITIES_META_KEY]: capabilities,
+    },
+  };
+}
 
 export function createServer(options?: {
   designPatternTool?: LlmToolId;
@@ -110,13 +123,47 @@ Example workflow:
   const validateArchitectTool = adminEnabled ? new ValidateArchitectTool() : null;
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const tools = [getFileDesignPatternTool.getDefinition(), reviewCodeChangeTool.getDefinition()];
+    const tools = [
+      withCapabilities(getFileDesignPatternTool.getDefinition(), [
+        'architecture',
+        'design-patterns',
+        'file-analysis',
+        'coding-standards',
+      ]),
+      withCapabilities(reviewCodeChangeTool.getDefinition(), [
+        'code-review',
+        'rules',
+        'quality-checks',
+        'compliance',
+      ]),
+    ];
 
     // Add admin tools if enabled
     if (adminEnabled && addDesignPatternTool && addRuleTool && validateArchitectTool) {
-      tools.push(addDesignPatternTool.getDefinition());
-      tools.push(addRuleTool.getDefinition());
-      tools.push(validateArchitectTool.getDefinition());
+      tools.push(
+        withCapabilities(addDesignPatternTool.getDefinition(), [
+          'architecture',
+          'design-patterns',
+          'configuration',
+          'admin',
+        ]),
+      );
+      tools.push(
+        withCapabilities(addRuleTool.getDefinition(), [
+          'rules',
+          'coding-standards',
+          'configuration',
+          'admin',
+        ]),
+      );
+      tools.push(
+        withCapabilities(validateArchitectTool.getDefinition(), [
+          'validation',
+          'architecture',
+          'configuration',
+          'admin',
+        ]),
+      );
     }
 
     return { tools };

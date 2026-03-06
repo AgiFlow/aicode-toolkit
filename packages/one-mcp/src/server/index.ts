@@ -28,6 +28,7 @@ import { SkillService } from '../services/SkillService';
 import { DescribeToolsTool } from '../tools/DescribeToolsTool';
 import { SearchListToolsTool } from '../tools/SearchListToolsTool';
 import { UseToolTool } from '../tools/UseToolTool';
+import { getToolCapabilities, getUniqueSortedCapabilities } from '../utils/toolCapabilities';
 import { parseToolName, generateServerId } from '../utils';
 import type { CachedServerDefinition, ToolDefinition } from '../types';
 import packageJson from '../../package.json' assert { type: 'json' };
@@ -51,10 +52,14 @@ export interface ServerOptions {
 
 export function summarizeServerTools(serverDefinition: CachedServerDefinition): string {
   const toolNames = serverDefinition.tools.map((tool) => tool.name);
+  const capabilities = getUniqueSortedCapabilities(serverDefinition.tools);
+  const capabilitySummary = capabilities.length > 0
+    ? `; capabilities: ${capabilities.join(', ')}`
+    : '';
   if (toolNames.length === 0) {
-    return `${serverDefinition.serverName} (no tools cached)`;
+    return `${serverDefinition.serverName} (no tools cached${capabilitySummary})`;
   }
-  return `${serverDefinition.serverName} (${toolNames.join(', ')})`;
+  return `${serverDefinition.serverName} (${toolNames.join(', ')})${capabilitySummary}`;
 }
 
 export function buildFlatToolDescription(
@@ -71,6 +76,11 @@ export function buildFlatToolDescription(
 
   if (tool.description && !serverDefinition.omitToolDescription) {
     parts.push(tool.description);
+  }
+
+  const capabilities = getToolCapabilities(tool);
+  if (capabilities.length > 0) {
+    parts.push(`Capabilities: ${capabilities.join(', ')}`);
   }
 
   return parts.join('\n\n');
@@ -96,6 +106,7 @@ export function buildFlatToolDefinitions(serverDefinitions: CachedServerDefiniti
         name: hasClash ? `${serverDefinition.serverName}__${tool.name}` : tool.name,
         description: buildFlatToolDescription(serverDefinition, tool),
         inputSchema: tool.inputSchema as ToolDefinition['inputSchema'],
+        _meta: tool._meta,
       });
     }
   }

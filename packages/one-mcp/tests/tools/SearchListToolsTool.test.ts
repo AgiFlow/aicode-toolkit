@@ -5,6 +5,8 @@ import type { DefinitionsCacheFile } from '../../src/types';
 import type { McpClientManagerService } from '../../src/services/McpClientManagerService';
 
 describe('SearchListToolsTool', () => {
+  const metaKey = 'agiflowai/capabilities';
+
   let mockClientManager: McpClientManagerService;
   let cache: DefinitionsCacheFile;
 
@@ -26,6 +28,9 @@ describe('SearchListToolsTool', () => {
               name: 'search_docs',
               description: 'Search docs',
               inputSchema: { type: 'object', properties: {} },
+              _meta: {
+                [metaKey]: ['documentation', 'search'],
+              },
             },
           ],
           resources: [],
@@ -40,11 +45,17 @@ describe('SearchListToolsTool', () => {
               name: 'search_docs',
               description: 'Search code notes',
               inputSchema: { type: 'object', properties: {} },
+              _meta: {
+                [metaKey]: ['documentation', 'search'],
+              },
             },
             {
               name: 'review_code',
               description: 'Review code changes',
               inputSchema: { type: 'object', properties: {} },
+              _meta: {
+                [metaKey]: ['code-review', 'quality-checks'],
+              },
             },
           ],
           resources: [],
@@ -70,19 +81,33 @@ describe('SearchListToolsTool', () => {
     expect(parsed.servers[0].tools[0].name).toBe('alpha__search_docs');
     expect(parsed.servers[1].tools[0].name).toBe('beta__search_docs');
     expect(parsed.servers[1].tools[1].name).toBe('review_code');
+    expect(parsed.servers[0].capabilities).toEqual(['documentation', 'search']);
+    expect(parsed.servers[1].tools[1].capabilities).toEqual(['code-review', 'quality-checks']);
   });
 
-  it('filters by capability summary', async () => {
+  it('filters by explicit capability tags', async () => {
     const definitions = new DefinitionsCacheService(mockClientManager, undefined, {
       cacheData: cache,
     });
     const tool = new SearchListToolsTool(mockClientManager, definitions);
 
-    const result = await tool.execute({ capability: 'review' });
+    const result = await tool.execute({ capability: 'code-review' });
     const parsed = JSON.parse(String(result.content[0].text));
 
     expect(parsed.servers).toHaveLength(1);
     expect(parsed.servers[0].server).toBe('beta');
+  });
+
+  it('includes capability tags in the tool definition summary', async () => {
+    const definitions = new DefinitionsCacheService(mockClientManager, undefined, {
+      cacheData: cache,
+    });
+    const tool = new SearchListToolsTool(mockClientManager, definitions);
+
+    const definition = await tool.getDefinition();
+
+    expect(definition.description).toContain('alpha: documentation, search');
+    expect(definition.description).toContain('beta: code-review, documentation, quality-checks, search');
   });
 
   it('filters by server name', async () => {

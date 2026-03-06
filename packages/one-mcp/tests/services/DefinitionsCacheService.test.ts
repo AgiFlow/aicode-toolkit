@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { rm, mkdtemp, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DefinitionsCacheService } from '../../src/services/DefinitionsCacheService';
@@ -25,6 +26,9 @@ function createMockClient(serverName: string): McpClientConnection {
         name: 'tool_one',
         description: 'Tool one description',
         inputSchema: { type: 'object', properties: {} },
+        _meta: {
+          'agiflowai/capabilities': ['search', 'documentation'],
+        },
       },
     ]),
     listResources: vi.fn().mockResolvedValue([]),
@@ -102,6 +106,9 @@ describe('DefinitionsCacheService', () => {
       },
     ]);
     expect(cache.servers['server-a'].tools).toHaveLength(1);
+    expect(cache.servers['server-a'].tools[0]._meta).toEqual({
+      'agiflowai/capabilities': ['search', 'documentation'],
+    });
     expect(cache.servers['server-a'].resources).toEqual([]);
     expect(cache.servers['server-a'].prompts).toHaveLength(2);
     expect(cache.servers['server-a'].promptSkills).toEqual([
@@ -257,10 +264,19 @@ describe('DefinitionsCacheService', () => {
     ]);
   });
 
-  it('derives a project-local default cache path and validates cache metadata', () => {
+  it('derives a home-directory cache path from the sanitized absolute config path', () => {
     expect(
       DefinitionsCacheService.getDefaultCachePath('/tmp/project/mcp-config.yaml'),
-    ).toBe('/tmp/project/mcp-config.definitions-cache.json');
+    ).toBe(
+      join(
+        homedir(),
+        '.aicode-toolkit',
+        'tmp_project_mcp-config.yaml.definitions-cache.json',
+      ),
+    );
+  });
+
+  it('validates cache metadata', () => {
 
     expect(
       DefinitionsCacheService.isCacheValid(

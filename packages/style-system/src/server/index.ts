@@ -22,6 +22,19 @@ import {
   ListSharedComponentsTool,
   ListThemesTool,
 } from '../tools';
+import type { ToolDefinition } from '../types';
+
+const TOOL_CAPABILITIES_META_KEY = 'agiflowai/capabilities';
+
+function withCapabilities(definition: ToolDefinition, capabilities: string[]): ToolDefinition {
+  return {
+    ...definition,
+    _meta: {
+      ...definition._meta,
+      [TOOL_CAPABILITIES_META_KEY]: capabilities,
+    },
+  };
+}
 
 export function createServer(themePath = 'packages/frontend/web-theme/src/agimon-theme.css'): Server {
   const server = new Server(
@@ -47,11 +60,28 @@ export function createServer(themePath = 'packages/frontend/web-theme/src/agimon
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     const tools = [
-      listThemesTool.getDefinition(),
-      getCSSClassesTool.getDefinition(),
-      getComponentVisualTool.getDefinition(),
-      listSharedComponentsTool.getDefinition(),
-      listAppComponentsTool.getDefinition(),
+      withCapabilities(listThemesTool.getDefinition(), ['themes', 'design-system', 'styling']),
+      withCapabilities(getCSSClassesTool.getDefinition(), [
+        'css',
+        'tailwind',
+        'design-system',
+        'styling',
+      ]),
+      withCapabilities(getComponentVisualTool.getDefinition(), [
+        'components',
+        'visual-preview',
+        'design-review',
+      ]),
+      withCapabilities(listSharedComponentsTool.getDefinition(), [
+        'components',
+        'design-system',
+        'component-discovery',
+      ]),
+      withCapabilities(listAppComponentsTool.getDefinition(), [
+        'components',
+        'app-components',
+        'component-discovery',
+      ]),
     ];
 
     return { tools };

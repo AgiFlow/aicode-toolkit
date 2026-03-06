@@ -31,6 +31,7 @@ export interface ToolDefinition {
     required?: string[];
     additionalProperties?: boolean;
   };
+  _meta?: Record<string, unknown>;
 }
 
 /**
@@ -207,6 +208,7 @@ export interface McpToolInfo {
   name: string;
   description?: string;
   inputSchema: Record<string, unknown>;
+  _meta?: Record<string, unknown>;
 }
 
 /**

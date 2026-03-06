@@ -8,7 +8,8 @@
 
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { basename, dirname, extname, join } from 'node:path';
+import { homedir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import yaml from 'js-yaml';
 import type { SkillService } from './SkillService';
 import type { McpClientManagerService } from './McpClientManagerService';
@@ -136,9 +137,13 @@ export class DefinitionsCacheService {
   }
 
   static getDefaultCachePath(configFilePath: string): string {
-    const extension = extname(configFilePath);
-    const fileName = basename(configFilePath, extension);
-    return join(dirname(configFilePath), `${fileName}.definitions-cache.json`);
+    const absoluteConfigPath = resolve(configFilePath);
+    const sanitizedPath = absoluteConfigPath
+      .replace(/^[A-Za-z]:/, (drive) => drive[0].toLowerCase())
+      .replace(/[^A-Za-z0-9._-]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+    return join(homedir(), '.aicode-toolkit', `${sanitizedPath}.definitions-cache.json`);
   }
 
   static generateConfigHash(config: unknown): string {
@@ -311,6 +316,7 @@ export class DefinitionsCacheService {
               name: tool.name,
               description: tool.description,
               inputSchema: tool.inputSchema,
+              _meta: tool._meta,
             })),
             resources,
             prompts,

@@ -441,7 +441,7 @@ npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --definitions-out ./.
 # Build only the definitions cache
 npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --definitions-out ./.cache/one-mcp-definitions.yaml --skip-packages
 
-# Clear the default project-local definitions cache
+# Clear the default definitions cache
 npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --clear-definitions-cache --skip-packages
 
 # Dry run - see what would be prefetched
@@ -466,7 +466,7 @@ npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --filter npx
 
 ### Definitions Cache Workflow
 
-For installations with many MCP servers, especially stdio-backed servers, `mcp-serve` now tries to use a project-local definitions cache automatically. The default cache path is derived from the config file, for example `mcp-config.yaml` -> `mcp-config.definitions-cache.json`.
+For installations with many MCP servers, especially stdio-backed servers, `mcp-serve` now tries to use a definitions cache automatically. The default cache path is under `~/.aicode-toolkit/`, and the filename is derived from the sanitized absolute config path. For example, `/tmp/project/mcp-config.yaml` becomes `~/.aicode-toolkit/tmp_project_mcp-config.yaml.definitions-cache.json`.
 
 If that cache file exists and matches the current config, `one-mcp` starts from cached tool/prompt metadata and connects to downstream MCP servers on demand. If the cache is missing or stale, `one-mcp` keeps the current eager startup behavior and writes a fresh cache in the background for the next run.
 
