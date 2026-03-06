@@ -44,17 +44,32 @@ export abstract class BaseCodingAgentService implements CodingAgentService {
   }
 
   /**
+   * Convert a config key to its CLI flag name.
+   * Example: modelName -> --model-name
+   */
+  protected toCliFlag(key: string): string {
+    return `--${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+  }
+
+  /**
    * Convert toolConfig object to CLI arguments array
    * Converts { model: "gpt-5.2-high", timeout: 60000 } to ["--model", "gpt-5.2-high", "--timeout", "60000"]
    * @param defaults - Optional default params to merge with toolConfig before building args
    */
-  protected buildToolConfigArgs(defaults?: Record<string, unknown>): string[] {
+  protected buildToolConfigArgs(
+    defaults?: Record<string, unknown>,
+    options?: {
+      allowedFlags?: ReadonlySet<string>;
+    },
+  ): string[] {
     const merged = defaults ? this.mergeWithDefaults(defaults) : this.toolConfig;
     const args: string[] = [];
     for (const [key, value] of Object.entries(merged)) {
       if (value !== undefined && value !== null) {
-        // Convert camelCase to kebab-case for CLI flags
-        const flag = `--${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+        const flag = this.toCliFlag(key);
+        if (options?.allowedFlags && !options.allowedFlags.has(flag)) {
+          continue;
+        }
         args.push(flag, String(value));
       }
     }

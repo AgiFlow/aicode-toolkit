@@ -119,7 +119,7 @@ describe('ClaudeCodeService', () => {
       mockExeca.mockImplementation(() => Promise.resolve(createMockResponse('1.0.0')) as never);
 
       const service = new ClaudeCodeService({
-        toolConfig: { model: toolConfigModel, maxTokens: 8000 },
+        toolConfig: { model: toolConfigModel, permissionMode: 'plan' },
       });
 
       try {
@@ -130,7 +130,7 @@ describe('ClaudeCodeService', () => {
 
       const args = getCliArgs(mockExeca);
       expect(countFlag(args, '--model')).toBe(1);
-      expect(countFlag(args, '--max-tokens')).toBe(1);
+      expect(countFlag(args, '--permission-mode')).toBe(1);
     });
 
     it('should throw error when CLI is not found', async () => {
@@ -141,6 +141,30 @@ describe('ClaudeCodeService', () => {
       });
 
       await expect(service.invokeAsLlm({ prompt: 'test prompt' })).rejects.toThrow();
+    });
+
+    it('should filter unsupported toolConfig flags like --max-tokens', async () => {
+      mockExeca.mockImplementation(() => Promise.resolve(createMockResponse('1.0.0')) as never);
+
+      const service = new ClaudeCodeService({
+        toolConfig: {
+          model: 'claude-opus-4',
+          permissionMode: 'plan',
+          maxTokens: 8000,
+        },
+      });
+
+      try {
+        await service.invokeAsLlm({ prompt: 'test prompt' });
+      } catch {
+        // Expected to fail due to mock
+      }
+
+      const args = getCliArgs(mockExeca);
+      expect(args).toContain('--permission-mode');
+      expect(args).toContain('plan');
+      expect(args).not.toContain('--max-tokens');
+      expect(args).not.toContain('8000');
     });
   });
 });

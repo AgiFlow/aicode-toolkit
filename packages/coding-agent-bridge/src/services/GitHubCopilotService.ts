@@ -116,6 +116,59 @@ interface GitHubCopilotServiceOptions {
   toolConfig?: Record<string, unknown>;
 }
 
+const GITHUB_COPILOT_ALLOWED_CLI_FLAGS = new Set([
+  '--acp',
+  '--add-dir',
+  '--add-github-mcp-tool',
+  '--add-github-mcp-toolset',
+  '--additional-mcp-config',
+  '--agent',
+  '--allow-all',
+  '--allow-all-paths',
+  '--allow-all-tools',
+  '--allow-all-urls',
+  '--allow-tool',
+  '--allow-url',
+  '--alt-screen',
+  '--autopilot',
+  '--available-tools',
+  '--banner',
+  '--bash-env',
+  '--config-dir',
+  '--continue',
+  '--deny-tool',
+  '--deny-url',
+  '--disable-builtin-mcps',
+  '--disable-mcp-server',
+  '--disallow-temp-dir',
+  '--enable-all-github-mcp-tools',
+  '--excluded-tools',
+  '--experimental',
+  '--log-dir',
+  '--log-level',
+  '--max-autopilot-continues',
+  '--model',
+  '--mouse',
+  '--no-alt-screen',
+  '--no-ask-user',
+  '--no-auto-update',
+  '--no-bash-env',
+  '--no-color',
+  '--no-custom-instructions',
+  '--no-experimental',
+  '--no-mouse',
+  '--output-format',
+  '--plain-diff',
+  '--plugin-dir',
+  '--resume',
+  '--screen-reader',
+  '--secret-env-vars',
+  '--share',
+  '--share-gist',
+  '--stream',
+  '--yolo',
+]);
+
 export class GitHubCopilotService extends BaseCodingAgentService {
   private mcpSettings: McpSettings = {};
   private promptConfig: PromptConfig = {};
@@ -502,7 +555,7 @@ Respond with ONLY the raw JSON object.`;
       const args = ['-p', fullPrompt, '-s'];
 
       // Add toolConfig as CLI args (e.g., { model: "claude-opus-4" } -> ["--model", "claude-opus-4"])
-      args.push(...this.buildToolConfigArgs());
+      args.push(...this.buildToolConfigArgs(undefined, { allowedFlags: GITHUB_COPILOT_ALLOWED_CLI_FLAGS }));
 
       // Execute GitHub Copilot CLI
       const timeout = (params.timeout as number | undefined) || this.defaultTimeout;

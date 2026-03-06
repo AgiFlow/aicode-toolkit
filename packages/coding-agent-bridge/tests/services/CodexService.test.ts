@@ -127,7 +127,7 @@ describe('CodexService', () => {
       mockExeca.mockImplementation(() => Promise.resolve(createMockResponse('1.0.0')) as never);
 
       const service = new CodexService({
-        toolConfig: { model: toolConfigModel, maxTokens: 8000 },
+        toolConfig: { model: toolConfigModel, color: 'never' },
       });
 
       try {
@@ -138,7 +138,7 @@ describe('CodexService', () => {
 
       const args = getCliArgs(mockExeca);
       expect(countFlag(args, '--model')).toBe(1);
-      expect(countFlag(args, '--max-tokens')).toBe(1);
+      expect(countFlag(args, '--color')).toBe(1);
     });
 
     it('should throw error when CLI is not found', async () => {
@@ -149,6 +149,30 @@ describe('CodexService', () => {
       });
 
       await expect(service.invokeAsLlm({ prompt: 'test prompt' })).rejects.toThrow();
+    });
+
+    it('should filter unsupported toolConfig flags like --timeout', async () => {
+      mockExeca.mockImplementation(() => Promise.resolve(createMockResponse('1.0.0')) as never);
+
+      const service = new CodexService({
+        toolConfig: {
+          model: 'gpt-4o',
+          config: 'model="gpt-5"',
+          timeout: 5000,
+        },
+      });
+
+      try {
+        await service.invokeAsLlm({ prompt: 'test prompt' });
+      } catch {
+        // Expected to fail due to mock
+      }
+
+      const args = getCliArgs(mockExeca);
+      expect(args).toContain('--config');
+      expect(args).toContain('model="gpt-5"');
+      expect(args).not.toContain('--timeout');
+      expect(args).not.toContain('5000');
     });
   });
 });

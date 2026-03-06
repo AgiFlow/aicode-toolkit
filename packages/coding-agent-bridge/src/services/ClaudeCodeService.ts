@@ -100,6 +100,53 @@ interface ClaudeCodeServiceOptions {
   toolConfig?: Record<string, unknown>;
 }
 
+const CLAUDE_ALLOWED_CLI_FLAGS = new Set([
+  '--add-dir',
+  '--agent',
+  '--agents',
+  '--allow-dangerously-skip-permissions',
+  '--allowed-tools',
+  '--append-system-prompt',
+  '--betas',
+  '--chrome',
+  '--continue',
+  '--dangerously-skip-permissions',
+  '--debug',
+  '--debug-file',
+  '--disable-slash-commands',
+  '--disallowed-tools',
+  '--effort',
+  '--fallback-model',
+  '--file',
+  '--fork-session',
+  '--from-pr',
+  '--ide',
+  '--include-partial-messages',
+  '--input-format',
+  '--json-schema',
+  '--max-budget-usd',
+  '--mcp-config',
+  '--mcp-debug',
+  '--model',
+  '--no-chrome',
+  '--no-session-persistence',
+  '--output-format',
+  '--permission-mode',
+  '--plugin-dir',
+  '--print',
+  '--replay-user-messages',
+  '--resume',
+  '--session-id',
+  '--setting-sources',
+  '--settings',
+  '--strict-mcp-config',
+  '--system-prompt',
+  '--tmux',
+  '--tools',
+  '--verbose',
+  '--worktree',
+]);
+
 /**
  * Service for interacting with Claude Code CLI as a coding agent
  * Provides standard LLM interface using Claude Code's stream-json output format
@@ -306,7 +353,7 @@ export class ClaudeCodeService extends BaseCodingAgentService {
     args.push(
       ...this.buildToolConfigArgs({
         ...(params.model && { model: params.model }),
-      }),
+      }, { allowedFlags: CLAUDE_ALLOWED_CLI_FLAGS }),
     );
 
     // Apply system prompt from params (priority) or promptConfig (fallback)

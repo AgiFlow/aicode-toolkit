@@ -140,5 +140,29 @@ describe('GeminiCliService', () => {
 
       await expect(service.invokeAsLlm({ prompt: 'test prompt' })).rejects.toThrow();
     });
+
+    it('should filter unsupported toolConfig flags like --config', async () => {
+      mockExeca.mockImplementation(() => Promise.resolve(createMockResponse('1.0.0')) as never);
+
+      const service = new GeminiCliService({
+        toolConfig: {
+          model: 'gemini-2.0-flash',
+          config: '/tmp/gemini.json',
+          includeDirectories: '/tmp/project',
+        },
+      });
+
+      try {
+        await service.invokeAsLlm({ prompt: 'test prompt' });
+      } catch {
+        // Expected to fail due to mock
+      }
+
+      const args = getCliArgs(mockExeca);
+      expect(args).not.toContain('--config');
+      expect(args).not.toContain('/tmp/gemini.json');
+      expect(args).toContain('--include-directories');
+      expect(args).toContain('/tmp/project');
+    });
   });
 });
