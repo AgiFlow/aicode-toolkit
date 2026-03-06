@@ -20,6 +20,7 @@ import {
   GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { ConfigFetcherService } from '../services/ConfigFetcherService';
+import { DefinitionsCacheService } from '../services/DefinitionsCacheService';
 import { McpClientManagerService } from '../services/McpClientManagerService';
 import { SkillService } from '../services/SkillService';
 import { DescribeToolsTool } from '../tools/DescribeToolsTool';
@@ -38,6 +39,7 @@ export interface ServerOptions {
   noCache?: boolean;
   skills?: { paths: string[] };
   serverId?: string;
+  definitionsCachePath?: string;
 }
 
 export async function createServer(options?: ServerOptions): Promise<Server> {
@@ -136,8 +138,30 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
       })
     : undefined;
 
+  let definitionsCacheService: DefinitionsCacheService;
+  if (options?.definitionsCachePath) {
+    try {
+      const cacheData = await DefinitionsCacheService.readFromFile(options.definitionsCachePath);
+      definitionsCacheService = new DefinitionsCacheService(clientManager, skillService, {
+        cacheData,
+      });
+    } catch (error) {
+      console.error(
+        `[definitions-cache] Failed to load ${options.definitionsCachePath}, falling back to live discovery: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      definitionsCacheService = new DefinitionsCacheService(clientManager, skillService);
+    }
+  } else {
+    definitionsCacheService = new DefinitionsCacheService(clientManager, skillService);
+  }
+
   // Initialize tools with dependencies and server ID
-  const describeTools = new DescribeToolsTool(clientManager, skillService, serverId);
+  const describeTools = new DescribeToolsTool(
+    clientManager,
+    skillService,
+    serverId,
+    definitionsCacheService,
+  );
   const useTool = new UseToolTool(clientManager, skillService, serverId);
 
   // Assign to reference for cache invalidation callback
@@ -186,43 +210,33 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
 
   // Prompt handlers - aggregate prompts from all connected MCP servers
   server.setRequestHandler(ListPromptsRequestSchema, async () => {
-    const clients = clientManager.getAllClients();
+    const serverDefinitions = await definitionsCacheService.getServerDefinitions();
 
     // Collect all prompts from all servers to detect name clashes
     const promptToServers = new Map<string, string[]>();
     const serverPromptsMap = new Map<string, Array<{ name: string; description?: string; arguments?: Array<{ name: string; description?: string; required?: boolean }> }>>();
 
-    await Promise.all(
-      clients.map(async (client) => {
-        try {
-          const prompts = await client.listPrompts();
-          serverPromptsMap.set(client.serverName, prompts);
-
-          // Track which servers have each prompt for clash detection
-          for (const prompt of prompts) {
-            if (!promptToServers.has(prompt.name)) {
-              promptToServers.set(prompt.name, []);
-            }
-            promptToServers.get(prompt.name)!.push(client.serverName);
-          }
-        } catch (error) {
-          console.error(`Failed to list prompts from ${client.serverName}:`, error);
-          serverPromptsMap.set(client.serverName, []);
+    for (const serverDefinition of serverDefinitions) {
+      serverPromptsMap.set(serverDefinition.serverName, serverDefinition.prompts);
+      for (const prompt of serverDefinition.prompts) {
+        if (!promptToServers.has(prompt.name)) {
+          promptToServers.set(prompt.name, []);
         }
-      })
-    );
+        promptToServers.get(prompt.name)!.push(serverDefinition.serverName);
+      }
+    }
 
     // Build aggregated prompt list with server prefix when there are clashes
     const aggregatedPrompts: Array<{ name: string; description?: string; arguments?: Array<{ name: string; description?: string; required?: boolean }> }> = [];
 
-    for (const client of clients) {
-      const prompts = serverPromptsMap.get(client.serverName) || [];
+    for (const serverDefinition of serverDefinitions) {
+      const prompts = serverPromptsMap.get(serverDefinition.serverName) || [];
       for (const prompt of prompts) {
         const servers = promptToServers.get(prompt.name) || [];
         const hasClash = servers.length > 1;
 
         aggregatedPrompts.push({
-          name: hasClash ? `${client.serverName}__${prompt.name}` : prompt.name,
+          name: hasClash ? `${serverDefinition.serverName}__${prompt.name}` : prompt.name,
           description: prompt.description,
           arguments: prompt.arguments,
         });
@@ -234,7 +248,7 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
 
   server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-    const clients = clientManager.getAllClients();
+    const serverDefinitions = await definitionsCacheService.getServerDefinitions();
 
     // Parse the prompt name to determine target server
     const { serverName, actualToolName: actualPromptName } = parseToolName(name);
@@ -250,19 +264,11 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
 
     // Plain prompt name - find which server(s) have this prompt
     const serversWithPrompt: string[] = [];
-
-    await Promise.all(
-      clients.map(async (client) => {
-        try {
-          const prompts = await client.listPrompts();
-          if (prompts.some(p => p.name === name)) {
-            serversWithPrompt.push(client.serverName);
-          }
-        } catch (error) {
-          console.error(`Failed to list prompts from ${client.serverName}:`, error);
-        }
-      })
-    );
+    for (const serverDefinition of serverDefinitions) {
+      if (serverDefinition.prompts.some((prompt) => prompt.name === name)) {
+        serversWithPrompt.push(serverDefinition.serverName);
+      }
+    }
 
     if (serversWithPrompt.length === 0) {
       throw new Error(`Prompt not found: ${name}`);

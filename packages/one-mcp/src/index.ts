@@ -37,5 +37,6 @@ export { UseToolTool } from './tools/UseToolTool';
 
 // Services - Exported for library usage (e.g., Clawdbot plugin)
 export { ConfigFetcherService } from './services/ConfigFetcherService';
+export { DefinitionsCacheService } from './services/DefinitionsCacheService';
 export { McpClientManagerService } from './services/McpClientManagerService';
 export { SkillService } from './services/SkillService';

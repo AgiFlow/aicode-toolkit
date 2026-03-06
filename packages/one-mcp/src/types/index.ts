@@ -272,6 +272,55 @@ export interface McpClientConnection {
 }
 
 /**
+ * Cached prompt-based skill metadata.
+ * Used to avoid re-fetching prompt front matter during startup discovery.
+ */
+export interface CachedPromptSkillInfo {
+  promptName: string;
+  skill: PromptSkillConfig;
+  autoDetected?: boolean;
+}
+
+/**
+ * Cached server metadata used for startup-time capability discovery.
+ */
+export interface CachedServerDefinition {
+  serverName: string;
+  serverInstruction?: string;
+  omitToolDescription?: boolean;
+  toolBlacklist?: string[];
+  tools: McpToolInfo[];
+  prompts: McpPromptInfo[];
+  promptSkills: CachedPromptSkillInfo[];
+}
+
+/**
+ * Cached file-based skill metadata.
+ */
+export interface CachedFileSkillInfo {
+  name: string;
+  description: string;
+  location: 'project' | 'user';
+  basePath: string;
+}
+
+/**
+ * Cache file storing precomputed definitions for one-mcp startup.
+ */
+export interface DefinitionsCacheFile {
+  version: 1;
+  generatedAt: string;
+  configPath?: string;
+  serverId?: string;
+  servers: Record<string, CachedServerDefinition>;
+  skills: CachedFileSkillInfo[];
+  failures: Array<{
+    serverName: string;
+    error: string;
+  }>;
+}
+
+/**
  * Skill metadata from YAML frontmatter in SKILL.md files
  * @property name - Skill identifier used with skill__ prefix
  * @property description - Short description shown in describe_tools

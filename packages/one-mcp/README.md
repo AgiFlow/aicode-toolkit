@@ -423,6 +423,9 @@ npx @agiflowai/one-mcp init --output mcp-config.yaml
 # Pre-download packages for faster startup
 npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml
 
+# Pre-download packages and build a definitions cache for faster discovery
+npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --definitions-out ./.cache/one-mcp-definitions.json
+
 # List all tools from configured servers (also shows configured skills)
 npx @agiflowai/one-mcp list-tools --config ./mcp-config.yaml
 
@@ -453,11 +456,17 @@ npx @agiflowai/one-mcp read-resource --config ./mcp-config.yaml --server my-serv
 
 ### Prefetch Command
 
-Pre-download packages used by MCP servers (npx, pnpx, uvx, uv) to speed up initial connections:
+Pre-download packages used by MCP servers (npx, pnpx, uvx, uv) and optionally build a cached definitions file for faster tool/prompt discovery during `mcp-serve` startup:
 
 ```bash
 # Prefetch all packages
 npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml
+
+# Prefetch packages and write a definitions cache
+npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --definitions-out ./.cache/one-mcp-definitions.json
+
+# Build only the definitions cache
+npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --definitions-out ./.cache/one-mcp-definitions.yaml --skip-packages
 
 # Dry run - see what would be prefetched
 npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --dry-run
@@ -475,6 +484,22 @@ npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --filter npx
 | `-p, --parallel` | Run prefetch commands in parallel |
 | `-d, --dry-run` | Show what would be prefetched without executing |
 | `-f, --filter` | Filter by package manager: `npx`, `pnpx`, `uvx`, or `uv` |
+| `--definitions-out` | Write a JSON or YAML definitions cache file for `mcp-serve` |
+| `--skip-packages` | Skip package prefetch and only write the definitions cache |
+
+### Definitions Cache Workflow
+
+For installations with many MCP servers, especially stdio-backed servers, you can warm the package manager cache and precompute the metadata used by `describe_tools` and prompt listing before starting `one-mcp`:
+
+```bash
+# Step 1: Warm packages and cache definitions
+npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --definitions-out ./.cache/one-mcp-definitions.json
+
+# Step 2: Start one-mcp using the prefetched definitions
+npx @agiflowai/one-mcp mcp-serve --config ./mcp-config.yaml --definitions-cache ./.cache/one-mcp-definitions.json
+```
+
+The definitions cache stores tool schemas, prompt metadata, and prompt-based skill metadata. If the cache is missing or unreadable, `mcp-serve` falls back to live discovery.
 
 ### Server Options
 
@@ -485,6 +510,7 @@ npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --filter npx
 | `-p, --port` | Port for HTTP/SSE | `3000` |
 | `--host` | Host for HTTP/SSE | `localhost` |
 | `--no-cache` | Force reload config, bypass cache | `false` |
+| `--definitions-cache` | Read tool/prompt/skill definitions from a prefetched JSON or YAML cache file | None |
 
 ---
 
