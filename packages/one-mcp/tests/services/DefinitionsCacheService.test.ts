@@ -276,6 +276,18 @@ describe('DefinitionsCacheService', () => {
     );
   });
 
+  it('collapses repeated unsafe characters when sanitizing the config path', () => {
+    expect(
+      DefinitionsCacheService.getDefaultCachePath('/tmp///project///nested config///mcp config.yaml'),
+    ).toBe(
+      join(
+        homedir(),
+        '.aicode-toolkit',
+        'tmp_project_nested_config_mcp_config.yaml.definitions-cache.json',
+      ),
+    );
+  });
+
   it('validates cache metadata', () => {
 
     expect(

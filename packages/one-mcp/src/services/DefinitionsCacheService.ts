@@ -53,6 +53,54 @@ function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function sanitizeConfigPathForFilename(configFilePath: string): string {
+  const absoluteConfigPath = resolve(configFilePath);
+  const normalizedPath =
+    absoluteConfigPath.length >= 2 &&
+    absoluteConfigPath[1] === ':' &&
+    ((absoluteConfigPath[0] >= 'A' && absoluteConfigPath[0] <= 'Z') ||
+      (absoluteConfigPath[0] >= 'a' && absoluteConfigPath[0] <= 'z'))
+      ? `${absoluteConfigPath[0].toLowerCase()}${absoluteConfigPath.slice(1)}`
+      : absoluteConfigPath;
+
+  let result = '';
+  let previousWasUnderscore = false;
+
+  for (const char of normalizedPath) {
+    const isSafeCharacter =
+      (char >= 'a' && char <= 'z') ||
+      (char >= 'A' && char <= 'Z') ||
+      (char >= '0' && char <= '9') ||
+      char === '.' ||
+      char === '_' ||
+      char === '-';
+
+    if (isSafeCharacter) {
+      result += char;
+      previousWasUnderscore = false;
+      continue;
+    }
+
+    if (!previousWasUnderscore) {
+      result += '_';
+      previousWasUnderscore = true;
+    }
+  }
+
+  let start = 0;
+  let end = result.length;
+
+  while (start < end && result[start] === '_') {
+    start += 1;
+  }
+
+  while (end > start && result[end - 1] === '_') {
+    end -= 1;
+  }
+
+  return result.slice(start, end);
+}
+
 function cloneCache(cache: DefinitionsCacheFile): DefinitionsCacheFile {
   return {
     ...cache,
@@ -137,11 +185,7 @@ export class DefinitionsCacheService {
   }
 
   static getDefaultCachePath(configFilePath: string): string {
-    const absoluteConfigPath = resolve(configFilePath);
-    const sanitizedPath = absoluteConfigPath
-      .replace(/^[A-Za-z]:/, (drive) => drive[0].toLowerCase())
-      .replace(/[^A-Za-z0-9._-]+/g, '_')
-      .replace(/^_+|_+$/g, '');
+    const sanitizedPath = sanitizeConfigPathForFilename(configFilePath);
 
     return join(homedir(), '.aicode-toolkit', `${sanitizedPath}.definitions-cache.json`);
   }
