@@ -54,19 +54,19 @@ function toErrorMessage(error: unknown): string {
 function cloneCache(cache: DefinitionsCacheFile): DefinitionsCacheFile {
   return {
     ...cache,
-    failures: [...cache.failures],
-    skills: cache.skills.map((skill) => ({ ...skill })),
+    failures: [...(cache.failures ?? [])],
+    skills: (cache.skills ?? []).map((skill) => ({ ...skill })),
     servers: Object.fromEntries(
       Object.entries(cache.servers).map(([serverName, server]) => [
         serverName,
         {
           ...server,
-          tools: server.tools.map((tool) => ({ ...tool })),
-          prompts: server.prompts.map((prompt) => ({
+          tools: (server.tools ?? []).map((tool) => ({ ...tool })),
+          prompts: (server.prompts ?? []).map((prompt) => ({
             ...prompt,
             arguments: prompt.arguments?.map((arg) => ({ ...arg })),
           })),
-          promptSkills: server.promptSkills.map((promptSkill) => ({
+          promptSkills: (server.promptSkills ?? []).map((promptSkill) => ({
             ...promptSkill,
             skill: { ...promptSkill.skill },
           })),
@@ -102,11 +102,26 @@ export class DefinitionsCacheService {
     }
 
     const cache = parsed as DefinitionsCacheFile;
-    if (cache.version !== 1 || !cache.servers || !Array.isArray(cache.skills)) {
+    if (cache.version !== 1 || !cache.servers) {
       throw new Error('Definitions cache is missing required fields');
     }
 
-    return cache;
+    return {
+      ...cache,
+      failures: Array.isArray(cache.failures) ? cache.failures : [],
+      skills: Array.isArray(cache.skills) ? cache.skills : [],
+      servers: Object.fromEntries(
+        Object.entries(cache.servers).map(([serverName, server]) => [
+          serverName,
+          {
+            ...server,
+            tools: Array.isArray(server.tools) ? server.tools : [],
+            prompts: Array.isArray(server.prompts) ? server.prompts : [],
+            promptSkills: Array.isArray(server.promptSkills) ? server.promptSkills : [],
+          },
+        ]),
+      ),
+    };
   }
 
   static async writeToFile(filePath: string, cache: DefinitionsCacheFile): Promise<void> {

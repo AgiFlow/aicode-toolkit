@@ -159,13 +159,14 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
   // Initialize skill service only if skills are explicitly configured
   // Skills are disabled by default since Claude Code already handles skills natively
   const skillsConfig = options?.skills || configSkills;
+  const skillPaths = skillsConfig?.paths ?? [];
 
   // Use a reference object to safely capture describeTools in the callback closure
   // This avoids the temporal dead zone issue with forward references
   const toolsRef: { describeTools: DescribeToolsTool | null } = { describeTools: null };
 
-  const skillService = skillsConfig && skillsConfig.paths.length > 0
-    ? new SkillService(process.cwd(), skillsConfig.paths, {
+  const skillService = skillPaths.length > 0
+    ? new SkillService(process.cwd(), skillPaths, {
         // When skill files change, also invalidate the auto-detected skills cache
         onCacheInvalidated: () => {
           toolsRef.describeTools?.clearAutoDetectedSkillsCache();

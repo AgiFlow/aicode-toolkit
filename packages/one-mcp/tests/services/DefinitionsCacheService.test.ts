@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { rm, mkdtemp } from 'node:fs/promises';
+import { rm, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DefinitionsCacheService } from '../../src/services/DefinitionsCacheService';
@@ -145,6 +145,45 @@ describe('DefinitionsCacheService', () => {
     const loaded = await DefinitionsCacheService.readFromFile(cachePath);
 
     expect(loaded).toEqual(cache);
+  });
+
+  it('defaults missing optional cache skill fields to empty arrays', async () => {
+    const cachePath = join(tempDir, 'legacy-definitions.json');
+    await DefinitionsCacheService.writeToFile(cachePath, {
+      version: 1,
+      generatedAt: new Date().toISOString(),
+      servers: {
+        'server-a': {
+          serverName: 'server-a',
+          tools: [],
+          prompts: [],
+          promptSkills: [],
+        },
+      },
+      skills: [],
+      failures: [],
+    });
+
+    const rawContent = JSON.stringify({
+      version: 1,
+      generatedAt: new Date().toISOString(),
+      servers: {
+        'server-a': {
+          serverName: 'server-a',
+        },
+      },
+    });
+
+    await rm(cachePath, { force: true });
+    await writeFile(cachePath, rawContent, 'utf-8');
+
+    const loaded = await DefinitionsCacheService.readFromFile(cachePath);
+
+    expect(loaded.skills).toEqual([]);
+    expect(loaded.failures).toEqual([]);
+    expect(loaded.servers['server-a'].tools).toEqual([]);
+    expect(loaded.servers['server-a'].prompts).toEqual([]);
+    expect(loaded.servers['server-a'].promptSkills).toEqual([]);
   });
 
   it('uses cached definitions without re-listing live tools', async () => {
