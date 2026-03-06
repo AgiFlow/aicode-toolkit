@@ -5,6 +5,7 @@ import {
   ProjectType,
   print,
   findWorkspaceRoot,
+  TemplatesManagerService,
 } from '@agiflowai/aicode-utils';
 import { confirm, input, select } from '@inquirer/prompts';
 import { Command } from 'commander';
@@ -517,23 +518,23 @@ const initActors = {
       input: {
         workspaceRoot: string;
         projectType: ProjectType;
-        templatesPath: string;
-        selectedTemplates: string[];
+        templatesPath?: string;
+        selectedTemplates?: string[];
       };
     }) => {
       // Only create settings.yaml for monolith
       if (actorInput.projectType === ProjectType.MONOLITH) {
-        // Calculate relative path from workspace root
-        const relativeTemplatesPath = path.relative(
-          actorInput.workspaceRoot,
-          actorInput.templatesPath,
-        );
+        const { relativeTemplatesPath, sourceTemplate } = resolveGeneratedSettingsValues({
+          workspaceRoot: actorInput.workspaceRoot,
+          templatesPath: actorInput.templatesPath,
+          selectedTemplates: actorInput.selectedTemplates,
+        });
 
         const liquid = new Liquid();
         const content = await liquid.parseAndRender(settingsLiquidTemplate, {
           projectType: 'monolith',
-          templatesPath: relativeTemplatesPath || 'templates',
-          sourceTemplate: actorInput.selectedTemplates[0],
+          templatesPath: relativeTemplatesPath,
+          sourceTemplate,
         });
 
         const toolkitDir = path.join(actorInput.workspaceRoot, '.toolkit');
@@ -791,6 +792,24 @@ const initActors = {
     },
   ),
 };
+
+export function resolveGeneratedSettingsValues(input: {
+  workspaceRoot: string;
+  templatesPath?: string;
+  selectedTemplates?: string[];
+}): {
+  relativeTemplatesPath: string;
+  sourceTemplate?: string;
+} {
+  const resolvedTemplatesPath =
+    input.templatesPath ?? path.join(input.workspaceRoot, TemplatesManagerService.getTemplatesFolderName());
+  const relativeTemplatesPath = path.relative(input.workspaceRoot, resolvedTemplatesPath) || 'templates';
+
+  return {
+    relativeTemplatesPath,
+    sourceTemplate: input.selectedTemplates?.[0],
+  };
+}
 
 /**
  * Init command - improved V2 implementation

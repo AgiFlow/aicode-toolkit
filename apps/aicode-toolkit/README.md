@@ -46,7 +46,7 @@ This will:
 1. Create project directory
 2. Initialize git repository
 3. Download templates
-4. Create `toolkit.yaml` configuration
+4. Create `.toolkit/settings.yaml` configuration
 
 **Options:**
 | Option | Description | Default |
@@ -192,11 +192,12 @@ Each template includes:
 
 ### Monolith
 
-Single application with `toolkit.yaml` at root:
+Single application with `.toolkit/settings.yaml` as the primary config:
 
 ```
 my-app/
-├── toolkit.yaml          # sourceTemplate: "nextjs-15"
+├── .toolkit/
+│   └── settings.yaml     # sourceTemplate: "nextjs-15"
 ├── templates/
 │   └── nextjs-15/
 ├── src/

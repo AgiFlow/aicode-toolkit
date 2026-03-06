@@ -10,6 +10,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   argsToFlags,
+  buildMcpConfigYaml,
   buildHookCommand,
   resolveArchitectClaudeMatcher,
 } from '../../src/commands/sync';
@@ -175,5 +176,43 @@ describe('resolveArchitectClaudeMatcher', () => {
 
   it('preserves an explicit matcher override', () => {
     expect(resolveArchitectClaudeMatcher({ matcher: 'Write' })).toBe('Write');
+  });
+});
+
+describe('buildMcpConfigYaml', () => {
+  it('returns null when no mcp-config section is present', () => {
+    expect(buildMcpConfigYaml({})).toBeNull();
+  });
+
+  it('maps mcp-config servers and skills into mcp-config.yaml shape', () => {
+    expect(
+      buildMcpConfigYaml({
+        'mcp-config': {
+          servers: {
+            'scaffold-mcp': {
+              command: 'bun',
+              args: ['run', 'packages/scaffold-mcp/src/cli.ts', 'mcp-serve'],
+              instruction: 'Use scaffold-mcp for scaffolding.',
+            },
+          },
+          skills: {
+            paths: ['docs/skills'],
+          },
+        },
+      } as any),
+    ).toEqual({
+      mcpServers: {
+        'scaffold-mcp': {
+          command: 'bun',
+          args: ['run', 'packages/scaffold-mcp/src/cli.ts', 'mcp-serve'],
+          config: {
+            instruction: 'Use scaffold-mcp for scaffolding.',
+          },
+        },
+      },
+      skills: {
+        paths: ['docs/skills'],
+      },
+    });
   });
 });

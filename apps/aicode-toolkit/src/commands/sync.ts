@@ -54,6 +54,21 @@ interface McpConfigYaml {
   mcpServers?: Record<string, McpServerDefinition>;
 }
 
+interface SettingsMcpServerDefinition {
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+  instruction?: string;
+  config?: Record<string, unknown>;
+}
+
+interface SettingsMcpConfig {
+  servers?: Record<string, SettingsMcpServerDefinition>;
+  skills?: {
+    paths?: string[];
+  };
+}
+
 interface ClaudeHookCommand {
   type: 'command';
   command: string;
@@ -66,6 +81,21 @@ interface ClaudeHookEntry {
 
 interface ClaudeSettingsJson {
   hooks: Record<string, ClaudeHookEntry[]>;
+}
+
+interface OutputMcpConfigYaml {
+  mcpServers?: Record<
+    string,
+    {
+      command: string;
+      args?: string[];
+      env?: Record<string, string>;
+      config?: Record<string, unknown>;
+    }
+  >;
+  skills?: {
+    paths?: string[];
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -91,6 +121,10 @@ function hasHookConfig(config: ToolkitConfig): config is ToolkitConfigWithHooks 
   return !!(
     config['scaffold-mcp']?.hook?.['claude-code'] || config['architect-mcp']?.hook?.['claude-code']
   );
+}
+
+function getSettingsMcpConfig(config: ToolkitConfig): SettingsMcpConfig | undefined {
+  return (config as ToolkitConfig & { 'mcp-config'?: SettingsMcpConfig })['mcp-config'];
 }
 
 // ---------------------------------------------------------------------------
@@ -135,6 +169,45 @@ export function resolveArchitectClaudeMatcher(
   methodConfig?: ArchitectHookAgentConfig[keyof ArchitectHookAgentConfig],
 ): string {
   return (methodConfig as { matcher?: string } | undefined)?.matcher ?? 'Edit|MultiEdit|Write';
+}
+
+export function buildMcpConfigYaml(config: ToolkitConfig): OutputMcpConfigYaml | null {
+  const settingsMcpConfig = getSettingsMcpConfig(config);
+  const servers = settingsMcpConfig?.servers ?? {};
+  const serverEntries = Object.entries(servers);
+
+  if (serverEntries.length === 0 && !settingsMcpConfig?.skills?.paths?.length) {
+    return null;
+  }
+
+  return {
+    ...(serverEntries.length > 0
+      ? {
+          mcpServers: Object.fromEntries(
+            serverEntries.map(([name, server]) => {
+              const instructionConfig = server.instruction
+                ? { instruction: server.instruction }
+                : undefined;
+              const mergedConfig =
+                server.config || instructionConfig
+                  ? { ...(server.config ?? {}), ...(instructionConfig ?? {}) }
+                  : undefined;
+
+              return [
+                name,
+                {
+                  command: server.command,
+                  ...(server.args ? { args: server.args } : {}),
+                  ...(server.env ? { env: server.env } : {}),
+                  ...(mergedConfig ? { config: mergedConfig } : {}),
+                },
+              ];
+            }),
+          ),
+        }
+      : {}),
+    ...(settingsMcpConfig?.skills?.paths?.length ? { skills: settingsMcpConfig.skills } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -254,6 +327,21 @@ async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string)
   }
 }
 
+async function writeMcpConfig(config: ToolkitConfig, workspaceRoot: string): Promise<void> {
+  try {
+    const mcpConfig = buildMcpConfigYaml(config);
+    if (!mcpConfig) {
+      print.warning('No mcp-config.servers or mcp-config.skills config found — skipping mcp-config.yaml');
+      return;
+    }
+
+    await writeFile(path.join(workspaceRoot, MCP_CONFIG_FILE), yaml.dump(mcpConfig, { indent: 2 }), 'utf-8');
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to write ${MCP_CONFIG_FILE}: ${message}`);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Command definition
 // ---------------------------------------------------------------------------
@@ -263,7 +351,9 @@ async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string)
  */
 export const syncCommand = new Command('sync')
   .description('Generate .claude/settings.json from .toolkit/settings.yaml and mcp-config.yaml')
-  .action(async (): Promise<void> => {
+  .option('--hooks', 'Write .claude/settings.json only')
+  .option('--mcp', 'Write mcp-config.yaml only')
+  .action(async (options: { hooks?: boolean; mcp?: boolean }): Promise<void> => {
     try {
       const [workspaceRoot, config] = await Promise.all([
         TemplatesManagerService.getWorkspaceRoot(),
@@ -271,14 +361,31 @@ export const syncCommand = new Command('sync')
       ]);
 
       if (!config) {
-        throw new Error('No .toolkit/settings.yaml found. Run `aicode init` first.');
+        throw new Error(
+          'No toolkit settings config found (.toolkit/settings.yaml or legacy toolkit.yaml). Run `aicode init` first.',
+        );
       }
 
-      if (hasHookConfig(config)) {
-        await writeClaudeSettings(config, workspaceRoot);
-        print.success('Written .claude/settings.json');
-      } else {
-        print.warning('No hook.claude-code config found in settings.yaml — skipping');
+      const shouldWriteHooks = options.hooks || (!options.hooks && !options.mcp);
+      const shouldWriteMcp = options.mcp || (!options.hooks && !options.mcp);
+
+      if (shouldWriteHooks) {
+        if (hasHookConfig(config)) {
+          await writeClaudeSettings(config, workspaceRoot);
+          print.success('Written .claude/settings.json');
+        } else {
+          print.warning('No hook.claude-code config found in toolkit settings — skipping');
+        }
+      }
+
+      if (shouldWriteMcp) {
+        const mcpConfig = buildMcpConfigYaml(config);
+        if (mcpConfig) {
+          await writeMcpConfig(config, workspaceRoot);
+          print.success('Written mcp-config.yaml');
+        } else {
+          print.warning('No mcp-config.servers or mcp-config.skills config found — skipping mcp-config.yaml');
+        }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
