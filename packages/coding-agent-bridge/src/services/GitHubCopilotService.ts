@@ -555,7 +555,9 @@ Respond with ONLY the raw JSON object.`;
       const args = ['-p', fullPrompt, '-s'];
 
       // Add toolConfig as CLI args (e.g., { model: "claude-opus-4" } -> ["--model", "claude-opus-4"])
-      args.push(...this.buildToolConfigArgs(undefined, { allowedFlags: GITHUB_COPILOT_ALLOWED_CLI_FLAGS }));
+      args.push(
+        ...this.buildToolConfigArgs(undefined, { allowedFlags: GITHUB_COPILOT_ALLOWED_CLI_FLAGS }),
+      );
 
       // Execute GitHub Copilot CLI
       const timeout = (params.timeout as number | undefined) || this.defaultTimeout;

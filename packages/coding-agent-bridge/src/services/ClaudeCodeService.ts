@@ -351,9 +351,12 @@ export class ClaudeCodeService extends BaseCodingAgentService {
     // Add toolConfig merged with defaults as CLI args
     // toolConfig values take precedence over defaults
     args.push(
-      ...this.buildToolConfigArgs({
-        ...(params.model && { model: params.model }),
-      }, { allowedFlags: CLAUDE_ALLOWED_CLI_FLAGS }),
+      ...this.buildToolConfigArgs(
+        {
+          ...(params.model && { model: params.model }),
+        },
+        { allowedFlags: CLAUDE_ALLOWED_CLI_FLAGS },
+      ),
     );
 
     // Apply system prompt from params (priority) or promptConfig (fallback)

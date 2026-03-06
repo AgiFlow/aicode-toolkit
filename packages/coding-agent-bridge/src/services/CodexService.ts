@@ -303,9 +303,12 @@ export class CodexService extends BaseCodingAgentService {
     // Add toolConfig merged with defaults as CLI args
     // toolConfig values take precedence over defaults
     args.push(
-      ...this.buildToolConfigArgs({
-        ...(params.model && { model: params.model }),
-      }, { allowedFlags: CODEX_EXEC_ALLOWED_CLI_FLAGS }),
+      ...this.buildToolConfigArgs(
+        {
+          ...(params.model && { model: params.model }),
+        },
+        { allowedFlags: CODEX_EXEC_ALLOWED_CLI_FLAGS },
+      ),
     );
 
     // Write JSON schema to temp file if provided
