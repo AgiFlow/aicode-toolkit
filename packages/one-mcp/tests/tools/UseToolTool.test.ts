@@ -58,6 +58,7 @@ describe('UseToolTool', () => {
               inputSchema: { type: 'object', properties: {} },
             },
           ],
+          resources: [],
           prompts: [],
           promptSkills: [],
         },
@@ -94,6 +95,7 @@ describe('UseToolTool', () => {
         'server-a': {
           serverName: 'server-a',
           tools: [],
+          resources: [],
           prompts: [],
           promptSkills: [
             {

@@ -223,6 +223,7 @@ describe('DescribeToolsTool', () => {
                 inputSchema: { type: 'object', properties: {} },
               },
             ],
+            resources: [],
             prompts: [],
             promptSkills: [],
           },

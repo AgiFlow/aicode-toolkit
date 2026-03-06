@@ -102,6 +102,7 @@ describe('DefinitionsCacheService', () => {
       },
     ]);
     expect(cache.servers['server-a'].tools).toHaveLength(1);
+    expect(cache.servers['server-a'].resources).toEqual([]);
     expect(cache.servers['server-a'].prompts).toHaveLength(2);
     expect(cache.servers['server-a'].promptSkills).toEqual([
       {
@@ -133,6 +134,7 @@ describe('DefinitionsCacheService', () => {
         'server-a': {
           serverName: 'server-a',
           tools: [],
+          resources: [],
           prompts: [],
           promptSkills: [],
         },
@@ -156,6 +158,7 @@ describe('DefinitionsCacheService', () => {
         'server-a': {
           serverName: 'server-a',
           tools: [],
+          resources: [],
           prompts: [],
           promptSkills: [],
         },
@@ -182,6 +185,7 @@ describe('DefinitionsCacheService', () => {
     expect(loaded.skills).toEqual([]);
     expect(loaded.failures).toEqual([]);
     expect(loaded.servers['server-a'].tools).toEqual([]);
+    expect(loaded.servers['server-a'].resources).toEqual([]);
     expect(loaded.servers['server-a'].prompts).toEqual([]);
     expect(loaded.servers['server-a'].promptSkills).toEqual([]);
   });
@@ -202,6 +206,7 @@ describe('DefinitionsCacheService', () => {
               inputSchema: { type: 'object', properties: {} },
             },
           ],
+          resources: [],
           prompts: [],
           promptSkills: [],
         },
@@ -221,6 +226,35 @@ describe('DefinitionsCacheService', () => {
     expect(serverDefinitions[0].tools[0].name).toBe('cached_tool');
     expect(client.listTools).not.toHaveBeenCalled();
     expect(client.listPrompts).not.toHaveBeenCalled();
+  });
+
+  it('finds matching servers for cached resources', async () => {
+    const cache: DefinitionsCacheFile = {
+      version: 1,
+      generatedAt: new Date().toISOString(),
+      servers: {
+        'server-a': {
+          serverName: 'server-a',
+          tools: [],
+          resources: [
+            {
+              uri: 'file:///tmp/example.txt',
+              name: 'example.txt',
+            },
+          ],
+          prompts: [],
+          promptSkills: [],
+        },
+      },
+      skills: [],
+      failures: [],
+    };
+
+    const service = new DefinitionsCacheService(mockClientManager, undefined, { cacheData: cache });
+
+    await expect(service.getServersForResource('file:///tmp/example.txt')).resolves.toEqual([
+      'server-a',
+    ]);
   });
 
   it('derives a project-local default cache path and validates cache metadata', () => {

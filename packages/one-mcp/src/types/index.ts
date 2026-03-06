@@ -290,6 +290,7 @@ export interface CachedServerDefinition {
   omitToolDescription?: boolean;
   toolBlacklist?: string[];
   tools: McpToolInfo[];
+  resources: McpResourceInfo[];
   prompts: McpPromptInfo[];
   promptSkills: CachedPromptSkillInfo[];
 }

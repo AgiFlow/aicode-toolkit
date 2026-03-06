@@ -18,12 +18,13 @@ import type {
   CachedServerDefinition,
   DefinitionsCacheFile,
   McpPromptInfo,
+  McpResourceInfo,
   McpToolInfo,
   PromptSkillConfig,
   Skill,
 } from '../types';
 import { extractSkillFrontMatter } from '../utils';
-import { LOG_PREFIX_SKILL_DETECTION } from '../constants';
+import { LOG_PREFIX_CAPABILITY_DISCOVERY, LOG_PREFIX_SKILL_DETECTION } from '../constants';
 
 interface DefinitionsCacheServiceOptions {
   cacheData?: DefinitionsCacheFile;
@@ -62,6 +63,7 @@ function cloneCache(cache: DefinitionsCacheFile): DefinitionsCacheFile {
         {
           ...server,
           tools: (server.tools ?? []).map((tool) => ({ ...tool })),
+          resources: (server.resources ?? []).map((resource) => ({ ...resource })),
           prompts: (server.prompts ?? []).map((prompt) => ({
             ...prompt,
             arguments: prompt.arguments?.map((arg) => ({ ...arg })),
@@ -116,6 +118,7 @@ export class DefinitionsCacheService {
           {
             ...server,
             tools: Array.isArray(server.tools) ? server.tools : [],
+            resources: Array.isArray(server.resources) ? server.resources : [],
             prompts: Array.isArray(server.prompts) ? server.prompts : [],
             promptSkills: Array.isArray(server.promptSkills) ? server.promptSkills : [],
           },
@@ -244,6 +247,15 @@ export class DefinitionsCacheService {
       .map((serverDefinition) => serverDefinition.serverName);
   }
 
+  async getServersForResource(uri: string): Promise<string[]> {
+    const serverDefinitions = await this.getServerDefinitions();
+    return serverDefinitions
+      .filter((serverDefinition) =>
+        serverDefinition.resources.some((resource) => resource.uri === uri),
+      )
+      .map((serverDefinition) => serverDefinition.serverName);
+  }
+
   async getPromptSkillByName(skillName: string): Promise<PromptSkillMatch | undefined> {
     const definitions = await this.getDefinitions();
 
@@ -284,6 +296,7 @@ export class DefinitionsCacheService {
       clients.map(async (client): Promise<CachedServerDefinition | null> => {
         try {
           const tools = await client.listTools();
+          const resources = await this.listResourcesSafe(client);
           const prompts = await this.listPromptsSafe(client);
           const blacklist = new Set(client.toolBlacklist || []);
           const filteredTools = tools.filter((tool) => !blacklist.has(tool.name));
@@ -299,6 +312,7 @@ export class DefinitionsCacheService {
               description: tool.description,
               inputSchema: tool.inputSchema,
             })),
+            resources,
             prompts,
             promptSkills,
           };
@@ -363,6 +377,28 @@ export class DefinitionsCacheService {
     } catch (error) {
       console.error(
         `${LOG_PREFIX_SKILL_DETECTION} Failed to list prompts from ${client.serverName}: ${toErrorMessage(error)}`,
+      );
+      return [];
+    }
+  }
+
+  private async listResourcesSafe(client: {
+    serverName: string;
+    listResources(): Promise<
+      Array<{ uri: string; name?: string; description?: string; mimeType?: string }>
+    >;
+  }): Promise<McpResourceInfo[]> {
+    try {
+      const resources = await client.listResources();
+      return resources.map((resource) => ({
+        uri: resource.uri,
+        name: resource.name,
+        description: resource.description,
+        mimeType: resource.mimeType,
+      }));
+    } catch (error) {
+      console.error(
+        `${LOG_PREFIX_CAPABILITY_DISCOVERY} Failed to list resources from ${client.serverName}: ${toErrorMessage(error)}`,
       );
       return [];
     }

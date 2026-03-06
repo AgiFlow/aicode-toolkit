@@ -16,6 +16,8 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
@@ -24,8 +26,10 @@ import { DefinitionsCacheService } from '../services/DefinitionsCacheService';
 import { McpClientManagerService } from '../services/McpClientManagerService';
 import { SkillService } from '../services/SkillService';
 import { DescribeToolsTool } from '../tools/DescribeToolsTool';
+import { SearchListToolsTool } from '../tools/SearchListToolsTool';
 import { UseToolTool } from '../tools/UseToolTool';
 import { parseToolName, generateServerId } from '../utils';
+import type { CachedServerDefinition, ToolDefinition } from '../types';
 import packageJson from '../../package.json' assert { type: 'json' };
 
 /**
@@ -42,22 +46,179 @@ export interface ServerOptions {
   serverId?: string;
   definitionsCachePath?: string;
   clearDefinitionsCache?: boolean;
+  proxyMode?: 'meta' | 'flat' | 'search';
+}
+
+export function summarizeServerTools(serverDefinition: CachedServerDefinition): string {
+  const toolNames = serverDefinition.tools.map((tool) => tool.name);
+  if (toolNames.length === 0) {
+    return `${serverDefinition.serverName} (no tools cached)`;
+  }
+  return `${serverDefinition.serverName} (${toolNames.join(', ')})`;
+}
+
+export function buildFlatToolDescription(
+  serverDefinition: CachedServerDefinition,
+  tool: CachedServerDefinition['tools'][number],
+): string {
+  const parts = [
+    `Proxied from server "${serverDefinition.serverName}" as tool "${tool.name}".`,
+  ];
+
+  if (serverDefinition.serverInstruction) {
+    parts.push(`Server summary: ${serverDefinition.serverInstruction}`);
+  }
+
+  if (tool.description && !serverDefinition.omitToolDescription) {
+    parts.push(tool.description);
+  }
+
+  return parts.join('\n\n');
+}
+
+export function buildFlatToolDefinitions(serverDefinitions: CachedServerDefinition[]): ToolDefinition[] {
+  const toolToServers = new Map<string, string[]>();
+
+  for (const serverDefinition of serverDefinitions) {
+    for (const tool of serverDefinition.tools) {
+      if (!toolToServers.has(tool.name)) {
+        toolToServers.set(tool.name, []);
+      }
+      toolToServers.get(tool.name)?.push(serverDefinition.serverName);
+    }
+  }
+
+  const definitions: ToolDefinition[] = [];
+  for (const serverDefinition of serverDefinitions) {
+    for (const tool of serverDefinition.tools) {
+      const hasClash = (toolToServers.get(tool.name) || []).length > 1;
+      definitions.push({
+        name: hasClash ? `${serverDefinition.serverName}__${tool.name}` : tool.name,
+        description: buildFlatToolDescription(serverDefinition, tool),
+        inputSchema: tool.inputSchema as ToolDefinition['inputSchema'],
+      });
+    }
+  }
+
+  return definitions;
+}
+
+async function hasAnySkills(
+  definitionsCacheService: DefinitionsCacheService,
+  skillService?: SkillService,
+): Promise<boolean> {
+  const [fileSkills, serverDefinitions] = await Promise.all([
+    skillService ? skillService.getSkills() : definitionsCacheService.getCachedFileSkills(),
+    definitionsCacheService.getServerDefinitions(),
+  ]);
+
+  return fileSkills.length > 0 || serverDefinitions.some((server) => server.promptSkills.length > 0);
+}
+
+export function buildSkillsDescribeDefinition(
+  serverDefinitions: CachedServerDefinition[],
+  serverId: string,
+): ToolDefinition {
+  const proxySummary = serverDefinitions.length > 0
+    ? serverDefinitions.map(summarizeServerTools).join('; ')
+    : 'No proxied servers available.';
+
+  return {
+    name: DescribeToolsTool.TOOL_NAME,
+    description:
+      `Get detailed skill instructions for file-based skills and prompt-based skills proxied by one-mcp.\n\n` +
+      `Proxy summary: ${proxySummary}\n\n` +
+      `Use this when you need the full instructions for a skill. For MCP tools, call the flat tool names directly. ` +
+      `Only use skills discovered from describe_tools with id="${serverId}".`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        toolNames: {
+          type: 'array',
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+          description: 'List of skill names to get detailed information about',
+          minItems: 1,
+        },
+      },
+      required: ['toolNames'],
+      additionalProperties: false,
+    },
+  };
+}
+
+export function buildSearchDescribeDefinition(
+  serverDefinitions: CachedServerDefinition[],
+  serverId: string,
+): ToolDefinition {
+  const summary = serverDefinitions.length > 0
+    ? serverDefinitions.map(summarizeServerTools).join('; ')
+    : 'No proxied servers available.';
+
+  return {
+    name: DescribeToolsTool.TOOL_NAME,
+    description:
+      `Get detailed schemas and skill instructions for proxied MCP capabilities.\n\n` +
+      `Proxy summary: ${summary}\n\n` +
+      `Use list_tools first to search capability summaries and discover tool names. ` +
+      `Then use describe_tools to fetch full schemas or skill instructions. ` +
+      `Only use capabilities discovered from one-mcp id="${serverId}".`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        toolNames: {
+          type: 'array',
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+          description: 'List of tool or skill names to get detailed information about',
+          minItems: 1,
+        },
+      },
+      required: ['toolNames'],
+      additionalProperties: false,
+    },
+  };
+}
+
+export function buildProxyInstructions(
+  serverDefinitions: CachedServerDefinition[],
+  mode: 'meta' | 'flat' | 'search',
+  includeSkillsTool: boolean,
+): string {
+  const summary = serverDefinitions.length > 0
+    ? serverDefinitions.map(summarizeServerTools).join('; ')
+    : 'No proxied servers available.';
+
+  if (mode === 'flat') {
+    return [
+      'one-mcp proxies downstream MCP servers and exposes their tools and resources directly.',
+      `Proxied servers and tools: ${summary}`,
+      includeSkillsTool
+        ? 'Skills are still exposed through describe_tools when file-based skills or prompt-backed skills are configured.'
+        : 'No skills are currently exposed through describe_tools.',
+    ].join('\n\n');
+  }
+
+  if (mode === 'search') {
+    return [
+      'one-mcp proxies downstream MCP servers in search mode.',
+      `Proxied servers and tools: ${summary}`,
+      'Use list_tools to search capability summaries and discover tool names, describe_tools to fetch schemas or skill instructions, and use_tool to execute tools.',
+    ].join('\n\n');
+  }
+
+  return [
+    'one-mcp proxies downstream MCP servers in meta mode.',
+    `Proxied servers and tools: ${summary}`,
+    'Use describe_tools to inspect capabilities and use_tool to execute them.',
+  ].join('\n\n');
 }
 
 export async function createServer(options?: ServerOptions): Promise<Server> {
-  const server = new Server(
-    {
-      name: '@agiflowai/one-mcp',
-      version: '0.1.0',
-    },
-    {
-      capabilities: {
-        tools: {},
-        prompts: {},
-      },
-    }
-  );
-
   // Initialize services
   const clientManager = new McpClientManagerService();
 
@@ -213,9 +374,29 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
     serverId,
     definitionsCacheService,
   );
+  const searchListTools = new SearchListToolsTool(clientManager, definitionsCacheService);
 
   // Assign to reference for cache invalidation callback
   toolsRef.describeTools = describeTools;
+
+  const serverDefinitions = await definitionsCacheService.getServerDefinitions();
+  const includeSkillsTool = await hasAnySkills(definitionsCacheService, skillService);
+  const proxyMode = options?.proxyMode || 'meta';
+
+  const server = new Server(
+    {
+      name: '@agiflowai/one-mcp',
+      version: '0.1.0',
+    },
+    {
+      capabilities: {
+        tools: {},
+        resources: {},
+        prompts: {},
+      },
+      instructions: buildProxyInstructions(serverDefinitions, proxyMode, includeSkillsTool),
+    }
+  );
 
   // Start watching skill directories for changes (non-critical - cache still works without watcher)
   if (skillService) {
@@ -226,10 +407,31 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
   }
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [
-      await describeTools.getDefinition(),
-      useToolWithCache.getDefinition(),
-    ],
+    tools: proxyMode === 'flat'
+      ? await (async () => {
+          const currentServerDefinitions = await definitionsCacheService.getServerDefinitions();
+          const shouldIncludeSkillsTool = await hasAnySkills(definitionsCacheService, skillService);
+
+          return [
+            ...buildFlatToolDefinitions(currentServerDefinitions),
+            ...(shouldIncludeSkillsTool
+              ? [buildSkillsDescribeDefinition(currentServerDefinitions, serverId)]
+              : []),
+          ];
+        })()
+      : proxyMode === 'search'
+        ? await (async () => {
+            const currentServerDefinitions = await definitionsCacheService.getServerDefinitions();
+            return [
+              buildSearchDescribeDefinition(currentServerDefinitions, serverId),
+              await searchListTools.getDefinition(),
+              useToolWithCache.getDefinition(),
+            ];
+          })()
+      : [
+          await describeTools.getDefinition(),
+          useToolWithCache.getDefinition(),
+        ],
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -255,7 +457,77 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
       }
     }
 
+    if (name === SearchListToolsTool.TOOL_NAME && proxyMode === 'search') {
+      try {
+        return await searchListTools.execute(args as any);
+      } catch (error) {
+        throw new Error(
+          `Failed to execute ${name}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
+    if (proxyMode === 'flat') {
+      return await useToolWithCache.execute({
+        toolName: name,
+        toolArgs: (args as Record<string, unknown> | undefined) || {},
+      });
+    }
+
     throw new Error(`Unknown tool: ${name}`);
+  });
+
+  server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    const serverDefinitions = await definitionsCacheService.getServerDefinitions();
+    const resourceToServers = new Map<string, string[]>();
+
+    for (const serverDefinition of serverDefinitions) {
+      for (const resource of serverDefinition.resources) {
+        if (!resourceToServers.has(resource.uri)) {
+          resourceToServers.set(resource.uri, []);
+        }
+        resourceToServers.get(resource.uri)?.push(serverDefinition.serverName);
+      }
+    }
+
+    const resources = [];
+    for (const serverDefinition of serverDefinitions) {
+      for (const resource of serverDefinition.resources) {
+        const hasClash = (resourceToServers.get(resource.uri) || []).length > 1;
+        resources.push({
+          ...resource,
+          uri: hasClash ? `${serverDefinition.serverName}__${resource.uri}` : resource.uri,
+        });
+      }
+    }
+
+    return { resources };
+  });
+
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    const { uri } = request.params;
+    const { serverName, actualToolName: actualUri } = parseToolName(uri);
+
+    if (serverName) {
+      const client = await clientManager.ensureConnected(serverName);
+      return await client.readResource(actualUri);
+    }
+
+    const matchingServers = await definitionsCacheService.getServersForResource(actualUri);
+
+    if (matchingServers.length === 0) {
+      throw new Error(`Resource not found: ${uri}`);
+    }
+
+    if (matchingServers.length > 1) {
+      throw new Error(
+        `Resource "${actualUri}" exists on multiple servers: ${matchingServers.join(', ')}. ` +
+          `Use the prefixed format (e.g., "${matchingServers[0]}__${actualUri}") to specify which server to use.`,
+      );
+    }
+
+    const client = await clientManager.ensureConnected(matchingServers[0]);
+    return await client.readResource(actualUri);
   });
 
   // Prompt handlers - aggregate prompts from all connected MCP servers

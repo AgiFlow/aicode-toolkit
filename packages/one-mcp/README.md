@@ -1,49 +1,17 @@
 # @agiflowai/one-mcp
 
-> MCP proxy server for progressive tool discovery and reduced token usage
+MCP proxy for aggregating multiple MCP servers behind one endpoint.
 
-Connect to multiple MCP servers through a single proxy that loads tools on-demand, reducing initial token usage by 90%+.
+`one-mcp` supports three proxy modes:
 
-## The Problem
+- `meta`: expose `describe_tools` and `use_tool`
+- `flat`: expose proxied tools and resources directly
+- `search`: expose `describe_tools`, `list_tools`, and `use_tool`
 
-When connecting to multiple MCP servers directly, AI agents load ALL tools from ALL servers at startup:
-
-```
-10 MCP Servers:
-  Server 1: 20 tools × 200 tokens = 4,000 tokens
-  Server 2: 15 tools × 200 tokens = 3,000 tokens
-  Server 3: 30 tools × 200 tokens = 6,000 tokens
-  ...
-  Total: ~40,000+ tokens consumed BEFORE you even start coding
-```
-
-This wastes context window on tool descriptions you may never use.
-
-## The Solution
-
-one-mcp acts as a smart proxy with progressive discovery:
-
-```
-Traditional (High Token Cost):          Progressive Discovery (Low Token Cost):
-┌─────────────────┐                    ┌─────────────────┐
-│  AI Agent       │ ← 40,000+ tokens   │  AI Agent       │ ← 400 tokens
-├─────────────────┤                    ├─────────────────┤
-│ Server 1 (20)   │                    │  one-mcp        │ ← 2 meta-tools
-│ Server 2 (15)   │                    │  (proxy)        │
-│ Server 3 (30)   │                    └────────┬────────┘
-│ ...             │                             │ loads on-demand
-└─────────────────┘                        ┌────┴────┬────────┐
-                                           │ Srv 1   │ Srv 2  │ ...
-                                           └─────────┴────────┘
-```
-
-1. **Initial**: Agent sees only 2 meta-tools (`describe_tools`, `use_tool`) - ~400 tokens
-2. **Discovery**: Agent calls `describe_tools` for specific servers when needed
-3. **Execution**: Agent calls `use_tool` to run tools through the proxy
-
-**Result: 90%+ reduction in initial token usage**
-
----
+Use this when:
+- you want one MCP entry instead of many
+- you want cached startup metadata across multiple downstream servers
+- you want to choose between meta-tool routing and direct flat exposure
 
 ## Quick Start
 
@@ -91,13 +59,46 @@ Add to your MCP config (`.mcp.json`, `.cursor/mcp.json`, etc.):
 }
 ```
 
+To change proxy behavior, set `--proxy-mode`:
+
+```json
+{
+  "mcpServers": {
+    "one-mcp": {
+      "command": "npx",
+      "args": ["-y", "@agiflowai/one-mcp", "mcp-serve", "--proxy-mode", "search", "--config", "./mcp-config.yaml"]
+    }
+  }
+}
+```
+
 ### 3. Start Using
 
-Your agent now has access to all tools from all configured servers through one connection.
+`one-mcp` now fronts the configured downstream servers through one MCP server.
 
 ---
 
 ## Configuration
+
+### Proxy Modes
+
+Use `mcp-serve --proxy-mode <mode>` to control how one-mcp exposes downstream tools.
+
+`meta` mode:
+- Default mode
+- Exposes `describe_tools` and `use_tool`
+- `describe_tools` includes the proxied capability catalog in its description
+
+`flat` mode:
+- Exposes proxied tools directly in `tools/list`
+- Exposes proxied resources directly in `resources/list`
+- Name clashes are prefixed as `serverName__toolName` or `serverName__resourceUri`
+- `describe_tools` is still exposed when file-based skills or prompt-based skills exist
+
+`search` mode:
+- Exposes `describe_tools`, `list_tools`, and `use_tool`
+- `describe_tools` stays compact and is used for schemas and skill instructions
+- `list_tools` shows server capability summaries and can filter results by capability or server
 
 ### Server Types
 
@@ -153,7 +154,7 @@ mcpServers:
 
 ### Tool Blacklisting
 
-Block specific tools from being listed or executed:
+Prevent specific downstream tools from being listed or executed:
 
 ```yaml
 mcpServers:
@@ -174,7 +175,7 @@ Blacklisted tools:
 
 ### Compact Tool Descriptions
 
-Reduce token usage by omitting verbose descriptions:
+Omit downstream tool descriptions from capability listings:
 
 ```yaml
 mcpServers:
@@ -200,11 +201,11 @@ filesystem:
 
 ### Skills
 
-Skills are reusable prompt templates that provide specialized capabilities to AI agents. They are markdown files with YAML frontmatter that get loaded and made available through the `describe_tools` output.
+File-based skills are loaded from `SKILL.md` files and exposed through `describe_tools`.
 
 #### Configuration
 
-Enable skills by adding a `skills` section to your config:
+Enable file-based skills by adding a `skills` section:
 
 ```yaml
 mcpServers:
@@ -218,9 +219,7 @@ skills:
 
 #### Skill File Structure
 
-Skills can be organized in two ways:
-
-**Flat structure:**
+Example:
 ```
 .claude/skills/
 ├── pdf/
@@ -229,7 +228,7 @@ Skills can be organized in two ways:
     └── SKILL.md
 ```
 
-**Skill file format (`SKILL.md`):**
+`SKILL.md` format:
 ```markdown
 ---
 name: pdf
@@ -246,16 +245,9 @@ This skill helps you work with PDF files...
 
 #### Required Frontmatter
 
-Each `SKILL.md` must have:
+Each `SKILL.md` must define:
 - `name`: Unique identifier for the skill
-- `description`: Brief description shown to AI agents
-
-#### How Skills Work
-
-1. Skills are discovered from configured paths at startup
-2. Available skills are listed in the `describe_tools` output
-3. AI agents can invoke skills by name (e.g., `skill: "pdf"`)
-4. The skill's content expands as a prompt providing specialized instructions
+- `description`: Brief description shown to clients
 
 #### Precedence
 
@@ -263,13 +255,13 @@ When multiple paths are configured, skills from earlier paths take precedence ov
 
 ### Prompt-Based Skills
 
-You can also convert MCP server prompts into skills. This allows you to expose prompts from MCP servers as executable skills that AI agents can invoke.
+You can also expose MCP prompts as skills.
 
-#### Auto-Detection from Front-Matter (Recommended)
+#### Auto-Detection From Frontmatter
 
-The easiest way to create prompt-based skills is to add YAML front-matter directly in your prompt content. one-mcp automatically detects prompts with `name` and `description` front-matter and exposes them as skills.
+If prompt content contains YAML frontmatter with `name` and `description`, `one-mcp` can expose it as a skill.
 
-**Prompt content with front-matter:**
+Prompt content example:
 ```markdown
 ---
 name: code-reviewer
@@ -281,7 +273,7 @@ description: Review code for best practices and potential issues
 When reviewing code, follow these guidelines...
 ```
 
-MCP servers like `@agiflowai/scaffold-mcp` support the `--prompt-as-skill` flag to automatically add front-matter to prompts:
+Some servers, such as `@agiflowai/scaffold-mcp`, support `--prompt-as-skill` and can emit that frontmatter automatically:
 
 ```yaml
 mcpServers:
@@ -294,7 +286,7 @@ mcpServers:
       - "--prompt-as-skill"  # Enables front-matter in prompts
 ```
 
-**Multi-line descriptions** are supported using YAML block scalars:
+Multi-line descriptions are supported:
 
 ```markdown
 ---
@@ -307,9 +299,9 @@ description: |
 ---
 ```
 
-#### Explicit Configuration (Alternative)
+#### Explicit Configuration
 
-You can also explicitly configure which prompts should be exposed as skills:
+You can also configure prompt-to-skill mappings explicitly:
 
 ```yaml
 mcpServers:
@@ -332,20 +324,11 @@ mcpServers:
             description: "Generate documentation from code"
 ```
 
-#### How Prompt-Based Skills Work
-
-1. **Discovery**: one-mcp scans all prompts from connected servers for front-matter with `name` and `description`
-2. **Fallback**: Explicitly configured prompts (in `config.prompts`) take precedence over auto-detected ones
-3. **Invocation**: When an AI agent requests a prompt-based skill, one-mcp:
-   - Fetches the prompt content from the MCP server
-   - Returns the prompt messages as skill instructions
-4. **Execution**: The AI agent follows the skill instructions
-
 #### Skill Configuration Fields (Explicit Config)
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `name` | Yes | Unique skill identifier shown to AI agents |
+| `name` | Yes | Unique skill identifier shown to clients |
 | `description` | Yes | Brief description of what the skill does |
 | `folder` | No | Optional folder path for skill resources |
 
@@ -355,54 +338,41 @@ mcpServers:
 - Skills are only prefixed with `skill__` when they clash with MCP tool names
 - Skills that only clash with other skills are deduplicated (first one wins, no prefix)
 
-#### Example Use Case
-
-Convert a complex prompt from an MCP server into a reusable skill:
-
-```yaml
-mcpServers:
-  architect-mcp:
-    command: npx
-    args: ["-y", "@agiflowai/architect-mcp", "mcp-serve"]
-    config:
-      instruction: "Architecture and design patterns"
-      prompts:
-        design-review:
-          skill:
-            name: design-reviewer
-            description: "Review code architecture and suggest improvements"
-```
-
-When the AI agent invokes `design-reviewer`, it receives the full prompt content from `architect-mcp`'s `design-review` prompt, enabling sophisticated code review capabilities.
-
----
-
 ## MCP Tools
 
-When running as an MCP server, one-mcp provides:
+The MCP tools exposed by `one-mcp` depend on `--proxy-mode`.
 
 ### `describe_tools`
 
-Get information about available tools:
+Returns detailed tool schemas and skill instructions.
 
 ```json
 {
-  "toolNames": ["read_file", "write_file"],
-  "serverName": "filesystem"  // optional
+  "toolNames": ["read_file", "write_file"]
 }
 ```
 
 ### `use_tool`
 
-Execute a tool from any connected server:
+Executes a proxied tool in `meta` and `search` modes.
 
 ```json
 {
   "toolName": "read_file",
   "toolArgs": {
     "path": "/path/to/file"
-  },
-  "serverName": "filesystem"  // optional, auto-detected if unique
+  }
+}
+```
+
+### `list_tools`
+
+Only available in `search` mode. Returns tool names grouped by proxied server, with server capability summaries and optional filtering.
+
+```json
+{
+  "capability": "review",
+  "serverName": "architect-mcp"
 }
 ```
 
@@ -524,94 +494,12 @@ The definitions cache stores tool schemas, prompt metadata, and prompt-based ski
 | `--definitions-cache` | Read tool/prompt/skill definitions from a specific JSON or YAML cache file | Auto-derived from config path |
 | `--clear-definitions-cache` | Delete the effective definitions cache file before startup | `false` |
 
----
+## Notes
 
-## Use Cases
-
-### 1. Consolidate Multiple Servers
-
-**Before (10 server configs):**
-```json
-{
-  "mcpServers": {
-    "filesystem": { "command": "npx", "args": ["..."] },
-    "database": { "command": "npx", "args": ["..."] },
-    "web-search": { "command": "npx", "args": ["..."] }
-    // ... 7 more
-  }
-}
-```
-
-**After (1 config):**
-```json
-{
-  "mcpServers": {
-    "one-mcp": {
-      "command": "npx",
-      "args": ["-y", "@agiflowai/one-mcp", "mcp-serve", "--config", "./mcp-config.yaml"]
-    }
-  }
-}
-```
-
-### 2. Mix Local and Remote Servers
-
-```yaml
-mcpServers:
-  # Local development tools
-  filesystem:
-    command: npx
-    args: ["-y", "@modelcontextprotocol/server-filesystem", "${HOME}/dev"]
-
-  # Company-wide remote tools
-  company-apis:
-    url: https://mcp.company.com/api
-    type: sse
-    headers:
-      Authorization: "Bearer ${COMPANY_TOKEN}"
-```
-
-### 3. Environment-Specific Configs
-
-```bash
-# Development
-npx @agiflowai/one-mcp mcp-serve --config ./mcp-dev.yaml
-
-# Production
-npx @agiflowai/one-mcp mcp-serve --config ./mcp-prod.yaml
-```
-
----
-
-## Architecture
-
-```
-┌─────────────────┐
-│  AI Agent       │
-│  (Claude/etc)   │
-└────────┬────────┘
-         │ Single MCP Connection (2 tools)
-         │
-┌────────▼────────────────────────────┐
-│         @agiflowai/one-mcp          │
-│                                     │
-│  • Load configs (YAML/JSON)         │
-│  • Environment interpolation        │
-│  • Connect to servers on-demand     │
-│  • Route tool calls                 │
-│  • Apply blacklists                 │
-└──────┬──────┬───────┬───────────────┘
-       │      │       │
-       │      │       │ Multiple MCP Connections
-       │      │       │
-   ┌───▼──┐ ┌─▼────┐ ┌▼─────────┐
-   │ MCP  │ │ MCP  │ │   MCP    │
-   │Server│ │Server│ │  Server  │
-   │  1   │ │  2   │ │    3     │
-   └──────┘ └──────┘ └──────────┘
-```
-
----
+- `one-mcp` reads YAML or JSON config files
+- environment variables use `${VAR_NAME}` interpolation
+- downstream stdio/http/sse servers can be mixed in one config
+- definitions cache is keyed by config content and one-mcp version
 
 ## Related Packages
 

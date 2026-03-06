@@ -41,6 +41,10 @@ function isValidTransportType(type: string): type is ValidTransportType {
   return type === 'stdio' || type === 'http' || type === 'sse';
 }
 
+function isValidProxyMode(mode: string): mode is McpServeOptions['proxyMode'] {
+  return mode === 'meta' || mode === 'flat' || mode === 'search';
+}
+
 /**
  * Options for the mcp-serve command
  */
@@ -53,6 +57,7 @@ interface McpServeOptions {
   id?: string;
   definitionsCache?: string;
   clearDefinitionsCache: boolean;
+  proxyMode: 'meta' | 'flat' | 'search';
 }
 
 /**
@@ -99,6 +104,11 @@ export const mcpServeCommand = new Command('mcp-serve')
   )
   .option('--clear-definitions-cache', 'Delete definitions cache before startup', false)
   .option(
+    '--proxy-mode <mode>',
+    'How one-mcp exposes downstream tools: meta, flat, or search',
+    'meta',
+  )
+  .option(
     '--id <id>',
     'Unique server identifier (overrides config file id, auto-generated if not provided)',
   )
@@ -108,6 +118,11 @@ export const mcpServeCommand = new Command('mcp-serve')
     // Validate transport type
     if (!isValidTransportType(transportType)) {
       console.error(`Unknown transport type: '${transportType}'. Valid options: stdio, http, sse`);
+      process.exit(1);
+    }
+
+    if (!isValidProxyMode(options.proxyMode)) {
+      console.error(`Unknown proxy mode: '${options.proxyMode}'. Valid options: meta, flat, search`);
       process.exit(1);
     }
 
@@ -121,6 +136,7 @@ export const mcpServeCommand = new Command('mcp-serve')
         serverId: options.id, // CLI ID takes precedence over config file
         definitionsCachePath: options.definitionsCache,
         clearDefinitionsCache: options.clearDefinitionsCache,
+        proxyMode: options.proxyMode,
       };
 
       if (transportType === 'stdio') {

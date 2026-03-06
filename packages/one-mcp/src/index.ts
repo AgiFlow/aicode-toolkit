@@ -33,6 +33,7 @@ export { HttpTransportHandler } from './transports/http';
 
 // Tools - Exported for library usage (e.g., Clawdbot plugin)
 export { DescribeToolsTool } from './tools/DescribeToolsTool';
+export { SearchListToolsTool } from './tools/SearchListToolsTool';
 export { UseToolTool } from './tools/UseToolTool';
 
 // Services - Exported for library usage (e.g., Clawdbot plugin)
