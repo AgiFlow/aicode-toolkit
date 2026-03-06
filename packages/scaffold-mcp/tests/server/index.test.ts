@@ -103,28 +103,19 @@ describe('Server', () => {
           expect.objectContaining({
             name: 'list-boilerplates',
             _meta: {
-              'agiflowai/capabilities': expect.arrayContaining([
-                'boilerplates',
-                'templates',
-              ]),
+              'agiflowai/capabilities': expect.arrayContaining(['boilerplates', 'templates']),
             },
           }),
           expect.objectContaining({
             name: 'use-scaffold-method',
             _meta: {
-              'agiflowai/capabilities': expect.arrayContaining([
-                'scaffolding',
-                'code-generation',
-              ]),
+              'agiflowai/capabilities': expect.arrayContaining(['scaffolding', 'code-generation']),
             },
           }),
           expect.objectContaining({
             name: 'generate-feature-scaffold',
             _meta: {
-              'agiflowai/capabilities': expect.arrayContaining([
-                'template-authoring',
-                'admin',
-              ]),
+              'agiflowai/capabilities': expect.arrayContaining(['template-authoring', 'admin']),
             },
           }),
         ]),

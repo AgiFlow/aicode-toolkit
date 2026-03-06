@@ -3,7 +3,7 @@
     "one-mcp": {
       "type": "stdio",
       "command": "bun",
-      "args": ["run", "packages/one-mcp/src/cli.ts", "mcp-serve", "--config", "mcp-config.yaml", "--proxy-mode", "search"],
+      "args": ["run", "packages/one-mcp/src/cli.ts", "mcp-serve", "--config", "mcp-config.yaml"],
       "disabled": false
     }
   }

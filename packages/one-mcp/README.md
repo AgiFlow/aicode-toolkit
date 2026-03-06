@@ -399,14 +399,15 @@ npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml
 # Pre-download packages and build a definitions cache for faster discovery
 npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --definitions-out ./.cache/one-mcp-definitions.json
 
-# List all tools from configured servers (also shows configured skills)
-npx @agiflowai/one-mcp list-tools --config ./mcp-config.yaml
+# Search tools across configured servers
+npx @agiflowai/one-mcp search-tools --config ./mcp-config.yaml
 
-# List tools as JSON (includes __skills__ key)
-npx @agiflowai/one-mcp list-tools --config ./mcp-config.yaml --json
+# Search tools as JSON
+npx @agiflowai/one-mcp search-tools --config ./mcp-config.yaml --json
 
-# Filter tools by server
-npx @agiflowai/one-mcp list-tools --config ./mcp-config.yaml --server filesystem
+# Filter tools by capability or server
+npx @agiflowai/one-mcp search-tools --config ./mcp-config.yaml --capability review
+npx @agiflowai/one-mcp search-tools --config ./mcp-config.yaml --server filesystem
 
 # Get tool details
 npx @agiflowai/one-mcp describe-tools --config ./mcp-config.yaml --tools read_file,write_file
@@ -425,6 +426,15 @@ npx @agiflowai/one-mcp read-resource --config ./mcp-config.yaml file:///readme.m
 
 # Read from a specific server
 npx @agiflowai/one-mcp read-resource --config ./mcp-config.yaml --server my-server file:///readme.md
+
+# List prompts from configured servers
+npx @agiflowai/one-mcp list-prompts --config ./mcp-config.yaml
+
+# Get a prompt by name
+npx @agiflowai/one-mcp get-prompt --config ./mcp-config.yaml scaffold-feature
+
+# Get a prompt from a specific server with arguments
+npx @agiflowai/one-mcp get-prompt --config ./mcp-config.yaml --server scaffold-mcp --args '{"projectPath":"apps/web"}' scaffold-feature
 ```
 
 ### Prefetch Command

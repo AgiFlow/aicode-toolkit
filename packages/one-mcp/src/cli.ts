@@ -21,11 +21,13 @@ import { Command } from 'commander';
 import {
   initCommand,
   mcpServeCommand,
-  listToolsCommand,
+  searchToolsCommand,
   describeToolsCommand,
   useToolCommand,
   listResourcesCommand,
   readResourceCommand,
+  listPromptsCommand,
+  getPromptCommand,
   prefetchCommand,
 } from './commands';
 import packageJson from '../package.json' assert { type: 'json' };
@@ -45,11 +47,13 @@ async function main() {
     // Add all commands
     program.addCommand(initCommand);
     program.addCommand(mcpServeCommand);
-    program.addCommand(listToolsCommand);
+    program.addCommand(searchToolsCommand);
     program.addCommand(describeToolsCommand);
     program.addCommand(useToolCommand);
     program.addCommand(listResourcesCommand);
     program.addCommand(readResourceCommand);
+    program.addCommand(listPromptsCommand);
+    program.addCommand(getPromptCommand);
     program.addCommand(prefetchCommand);
 
     // Parse arguments
