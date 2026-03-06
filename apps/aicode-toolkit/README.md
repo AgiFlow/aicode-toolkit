@@ -99,13 +99,15 @@ architect-mcp:
   hook:
     claude-code:
       preToolUse:
-        args:
-          llm-tool: gemini-cli
-      postToolUse: {}
+        matcher: Edit|MultiEdit|Write
+      postToolUse:
+        matcher: Edit|MultiEdit|Write
 ```
 
-Generated hook entries fire on all tool calls (no matcher). Run `aicode sync --hooks`
-to write `.claude/settings.json`.
+Generated architect hook entries default to `Edit|MultiEdit|Write`. Run
+`aicode sync --hooks` to write `.claude/settings.json`.
+
+Both `.toolkit/settings.yaml` and `.toolkit/settings.local.yaml` now support ordered `fallbacks` lists in `scaffold-mcp` and `architect-mcp` config blocks; the first valid fallback is used when the singular fallback fields are unset.
 
 #### `mcp-config` section → `mcp-config.yaml`
 

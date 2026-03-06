@@ -57,6 +57,16 @@ scaffold-mcp:
     # fallbackToolConfig:
     #   model: gemini-2.0-flash
 
+    # Ordered fallback chain used when fallbackTool is not set.
+    # The first valid entry wins.
+    # fallbacks:
+    #   - tool: gemini-cli
+    #     config:
+    #       model: gemini-2.0-flash
+    #   - tool: codex
+    #     config:
+    #       model: gpt-5.2-mini
+
     # Extra CLI args merged into the mcp-serve command (key: value → --key value)
     # args:
     #   review-tool: gemini-cli
@@ -76,11 +86,17 @@ scaffold-mcp:
         # llm-tool: gemini-cli
         # tool-config:
         #   model: gemini-2.0-flash
+        # fallbacks:
+        #   - tool: codex
+        #     config:
+        #       model: gpt-5.2-mini
+        # matcher: Edit|MultiEdit|Write
         # Extra CLI args appended to the generated hook command (key: value → --key value)
         # args:
         #   llm-tool: gemini-cli
 
       postToolUse:
+        # matcher: Edit|MultiEdit|Write
         # llm-tool: gemini-cli
         # tool-config:
         #   model: gemini-2.0-flash
@@ -150,6 +166,16 @@ architect-mcp:
     # fallbackToolConfig:
     #   model: gemini-2.0-flash
 
+    # Ordered fallback chain used when fallbackTool is not set.
+    # The first valid entry wins.
+    # fallbacks:
+    #   - tool: gemini-cli
+    #     config:
+    #       model: gemini-2.0-flash
+    #   - tool: codex
+    #     config:
+    #       model: gpt-5.2-mini
+
     # LLM tool used specifically for get-file-design-pattern analysis.
     # Overrides fallbackTool for design pattern operations.
     # designPatternTool: gemini-cli
@@ -181,18 +207,30 @@ architect-mcp:
 
     claude-code:
       preToolUse:
-        # LLM tool to use for this hook. Supported: claude-code | gemini-cli | codex
-        # llm-tool: gemini-cli
-        # tool-config:
+        # Static pattern matching is usually enough here. Leave llm-tool unset unless
+        # you want extra pattern filtering via LLM.
+        # fallback-tool: gemini-cli
+        # fallback-tool-config:
         #   model: gemini-2.0-flash
+        # fallbacks:
+        #   - tool: codex
+        #     config:
+        #       model: gpt-5.2-mini
+        # matcher: Edit|MultiEdit|Write
         # Extra CLI args appended to the generated hook command (key: value → --key value)
         # args:
         #   llm-tool: gemini-cli
 
       postToolUse:
+        # matcher: Edit|MultiEdit|Write
+        # Set llm-tool only if you want LLM-based review. A cheap model is recommended.
         # llm-tool: gemini-cli
         # tool-config:
         #   model: gemini-2.0-flash
+        # fallbacks:
+        #   - tool: codex
+        #     config:
+        #       model: gpt-5.2-mini
         # args:
         #   llm-tool: gemini-cli
 

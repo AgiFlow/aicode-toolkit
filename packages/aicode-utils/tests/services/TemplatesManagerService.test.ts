@@ -83,6 +83,8 @@ const LOCAL_MODEL = chance.word();
 const LOCAL_VERSION = chance.word();
 const BASE_AGENT_TOOL = chance.word();
 const LOCAL_AGENT_TOOL = chance.word();
+const SECONDARY_FALLBACK_TOOL = chance.word();
+const SECONDARY_MODEL = chance.word();
 
 // ---------------------------------------------------------------------------
 // YAML fixtures — values are generated above so assertions stay in sync
@@ -94,6 +96,13 @@ scaffold-mcp:
     fallbackTool: ${BASE_FALLBACK_TOOL}
     fallbackToolConfig:
       model: ${BASE_MODEL}
+    fallbacks:
+      - tool: ${BASE_FALLBACK_TOOL}
+        config:
+          model: ${BASE_MODEL}
+      - tool: ${SECONDARY_FALLBACK_TOOL}
+        config:
+          model: ${SECONDARY_MODEL}
   hook:
     claude-code:
       preToolUse:
@@ -139,6 +148,15 @@ scaffold-mcp:
     claude-code:
       preToolUse:
         llm-tool: ${LOCAL_AGENT_TOOL}
+`;
+
+const LOCAL_FALLBACK_LIST = `
+scaffold-mcp:
+  mcp-serve:
+    fallbacks:
+      - tool: ${LOCAL_FALLBACK_TOOL}
+        config:
+          model: ${LOCAL_MODEL}
 `;
 
 const LEGACY_YAML = `
@@ -522,6 +540,33 @@ describe('TemplatesManagerService', (): void => {
       expect(scaffoldMcp?.hook?.['gemini-cli']?.postToolUse?.['llm-tool']).toBe(BASE_AGENT_TOOL);
       // Top-level sibling not mentioned in local is preserved
       expect(result['architect-mcp']?.['mcp-serve']?.fallbackTool).toBe(BASE_FALLBACK_TOOL);
+    });
+
+    it('should replace fallback arrays from settings.local.yaml while preserving sibling keys', async (): Promise<void> => {
+      vi.mocked(fsHelpers.pathExists).mockImplementation(async (p: string): Promise<boolean> => {
+        if (p === MOCK_GIT_PATH) return true;
+        if (p === MOCK_SETTINGS_PATH) return true;
+        if (p === MOCK_SETTINGS_LOCAL_PATH) return true;
+        return false;
+      });
+      vi.mocked(fs.readFile)
+        .mockResolvedValueOnce(BASE_YAML)
+        .mockResolvedValueOnce(LOCAL_FALLBACK_LIST);
+
+      const result = await TemplatesManagerService.readToolkitConfig(MOCK_WORKSPACE);
+
+      expect(isToolkitConfig(result)).toBe(true);
+      if (!isToolkitConfig(result)) return;
+
+      const scaffoldMcp = result['scaffold-mcp'];
+      expect(scaffoldMcp?.['mcp-serve']?.fallbackTool).toBe(BASE_FALLBACK_TOOL);
+      expect(scaffoldMcp?.['mcp-serve']?.fallbacks).toEqual([
+        {
+          tool: LOCAL_FALLBACK_TOOL,
+          config: { model: LOCAL_MODEL },
+        },
+      ]);
+      expect(scaffoldMcp?.hook?.['claude-code']?.preToolUse?.['llm-tool']).toBe(BASE_AGENT_TOOL);
     });
   });
 

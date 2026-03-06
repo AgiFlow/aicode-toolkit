@@ -52,6 +52,11 @@ interface HookAdapterConfig {
   llm_tool?: string;
 }
 
+interface ResolvedFallbackConfig {
+  tool?: string;
+  config?: Record<string, unknown>;
+}
+
 /** Type guard to validate parsed JSON is a record object */
 function isRecordObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -109,6 +114,25 @@ function parseJsonConfigOption(
   }
 }
 
+function resolveFallbackConfig(config?: {
+  'fallback-tool'?: string;
+  'fallback-tool-config'?: Record<string, unknown>;
+  fallbacks?: Array<{ tool: string; config?: Record<string, unknown> }>;
+}): ResolvedFallbackConfig {
+  if (!config) return {};
+  if (config['fallback-tool']) {
+    return {
+      tool: config['fallback-tool'],
+      config: config['fallback-tool-config'],
+    };
+  }
+
+  const firstValidFallback = config.fallbacks?.find((entry) => entry?.tool);
+  return firstValidFallback
+    ? { tool: firstValidFallback.tool, config: firstValidFallback.config }
+    : {};
+}
+
 /**
  * Hook command for executing scaffold hooks
  */
@@ -144,12 +168,19 @@ export const hookCommand = new Command('hook')
         hookConfig?.[agent as keyof HookConfig]?.[hookMethod as keyof HookAgentConfig];
 
       const marker = options.marker ?? '@scaffold-generated';
-      const fallbackToolStr = options.fallbackTool ?? methodConfig?.['llm-tool'];
+      const configuredFallback = resolveFallbackConfig(methodConfig as never);
+      const fallbackToolStr =
+        options.fallbackTool ??
+        methodConfig?.['fallback-tool'] ??
+        methodConfig?.['llm-tool'] ??
+        configuredFallback.tool;
 
       // CLI --fallback-tool-config (JSON string) takes precedence over config object
       const fallbackToolConfig = options.fallbackToolConfig
         ? parseJsonConfigOption(options.fallbackToolConfig, '--fallback-tool-config')
-        : methodConfig?.['tool-config'];
+        : (methodConfig?.['fallback-tool-config'] ??
+          methodConfig?.['tool-config'] ??
+          configuredFallback.config);
 
       // Validate fallback tool if provided
       if (fallbackToolStr && !isValidLlmTool(fallbackToolStr)) {

@@ -60,6 +60,7 @@ interface ClaudeHookCommand {
 }
 
 interface ClaudeHookEntry {
+  matcher?: string;
   hooks: ClaudeHookCommand[];
 }
 
@@ -130,6 +131,12 @@ export function buildHookCommand(
   return [server.command, ...prefixArgs, 'hook', '--type', hookType, ...extraFlags].join(' ');
 }
 
+export function resolveArchitectClaudeMatcher(
+  methodConfig?: ArchitectHookAgentConfig[keyof ArchitectHookAgentConfig],
+): string {
+  return (methodConfig as { matcher?: string } | undefined)?.matcher ?? 'Edit|MultiEdit|Write';
+}
+
 // ---------------------------------------------------------------------------
 // Helper: push a hook entry into the output map
 // ---------------------------------------------------------------------------
@@ -138,9 +145,10 @@ function addHookEntry(
   output: Record<string, ClaudeHookEntry[]>,
   event: string,
   command: string,
+  matcher?: string,
 ): void {
   if (!output[event]) output[event] = [];
-  output[event].push({ hooks: [{ type: 'command', command }] });
+  output[event].push({ ...(matcher ? { matcher } : {}), hooks: [{ type: 'command', command }] });
 }
 
 // ---------------------------------------------------------------------------
@@ -202,7 +210,8 @@ async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string)
         if (methodConfig === undefined) continue;
         const extraFlags = methodConfig?.args ? argsToFlags(methodConfig?.args) : [];
         const command = buildHookCommand(scaffoldServer, `claude-code.${method}`, extraFlags);
-        addHookEntry(hooksOutput, METHOD_TO_EVENT[method], command);
+        const matcher = (methodConfig as { matcher?: string } | undefined)?.matcher;
+        addHookEntry(hooksOutput, METHOD_TO_EVENT[method], command, matcher);
         hasAny = true;
       }
     }
@@ -218,7 +227,8 @@ async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string)
         if (methodConfig === undefined) continue;
         const extraFlags = methodConfig?.args ? argsToFlags(methodConfig?.args) : [];
         const command = buildHookCommand(architectServer, `claude-code.${method}`, extraFlags);
-        addHookEntry(hooksOutput, METHOD_TO_EVENT[method], command);
+        const matcher = resolveArchitectClaudeMatcher(methodConfig);
+        addHookEntry(hooksOutput, METHOD_TO_EVENT[method], command, matcher);
         hasAny = true;
       }
     }

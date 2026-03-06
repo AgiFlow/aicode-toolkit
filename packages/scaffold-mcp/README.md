@@ -162,6 +162,22 @@ npx @agiflowai/scaffold-mcp mcp-serve \
   --fallback-tool-config '{"model":"claude-sonnet-4-6"}'
 ```
 
+For `.toolkit/settings.yaml` or `.toolkit/settings.local.yaml`, you can define multiple ordered fallbacks:
+
+```yaml
+scaffold-mcp:
+  mcp-serve:
+    fallbacks:
+      - tool: gemini-cli
+        config:
+          model: gemini-2.0-flash
+      - tool: codex
+        config:
+          model: gpt-5.2-mini
+```
+
+The first valid entry is used when `fallbackTool` is not set.
+
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-t, --type` | Transport: `stdio`, `http`, `sse` | `stdio` |
@@ -170,7 +186,7 @@ npx @agiflowai/scaffold-mcp mcp-serve \
 | `--admin-enable` | Enable template creation tools | `false` |
 | `--prompt-as-skill` | Render MCP prompts with Claude Code skill front matter, exposing them as `/skill` commands | `false` |
 | `--fallback-tool` | LLM tool for scaffold operations (`claude-code`, `gemini-cli`, `codex`) | disabled |
-| `--fallback-tool-config` | JSON config for the fallback tool (e.g., `{"model":"claude-sonnet-4-6"}`) | `{}` |
+| `--fallback-tool-config` | JSON config for the CLI fallback tool; settings files may also use ordered `fallbacks` entries | `{}` |
 
 ---
 

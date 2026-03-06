@@ -22,6 +22,16 @@
 export type { ProjectConfigResult, NxProjectJson } from './projectConfig';
 
 /**
+ * Ordered fallback LLM entry used in toolkit settings.
+ */
+export interface FallbackConfigEntry {
+  /** Fallback LLM tool identifier. */
+  tool: string;
+  /** Config object forwarded when this fallback tool is selected. */
+  config?: Record<string, unknown>;
+}
+
+/**
  * Configuration for the scaffold-mcp mcp-serve command.
  * Keys map 1-to-1 with CLI flags (camelCase).
  */
@@ -40,6 +50,8 @@ export interface McpServeConfig {
   fallbackTool?: string;
   /** Config passed to the fallback LLM tool. */
   fallbackToolConfig?: Record<string, unknown>;
+  /** Ordered fallback LLM chain consulted when fallbackTool is not set. */
+  fallbacks?: FallbackConfigEntry[];
   /** Extra CLI args merged into the mcp-serve command (key → --key value). */
   args?: Record<string, string | boolean | number>;
 }
@@ -57,6 +69,10 @@ export interface HookMethodConfig {
   'fallback-tool'?: string;
   /** Config object forwarded to the fallback LLM tool. */
   'fallback-tool-config'?: Record<string, unknown>;
+  /** Ordered fallback LLM chain consulted when fallback-tool is not set. */
+  fallbacks?: FallbackConfigEntry[];
+  /** Optional Claude Code tool matcher written to .claude/settings.json. */
+  matcher?: string;
   /** Extra CLI args appended to the generated hook command (key → --key value). */
   args?: Record<string, string | boolean | number>;
 }
@@ -114,6 +130,8 @@ export interface ArchitectMcpServeConfig {
   fallbackTool?: string;
   /** Config passed to the fallback LLM tool. */
   fallbackToolConfig?: Record<string, unknown>;
+  /** Ordered fallback LLM chain consulted when fallbackTool is not set. */
+  fallbacks?: FallbackConfigEntry[];
   /** LLM tool used specifically for get-file-design-pattern analysis. */
   designPatternTool?: string;
   /** Config passed to the design-pattern LLM tool. */
@@ -135,6 +153,14 @@ export interface ArchitectHookMethodConfig {
   'llm-tool'?: string;
   /** Config object forwarded to the LLM tool. */
   'tool-config'?: Record<string, unknown>;
+  /** Fallback LLM tool used when llm-tool is not set. */
+  'fallback-tool'?: string;
+  /** Config object forwarded to the fallback LLM tool. */
+  'fallback-tool-config'?: Record<string, unknown>;
+  /** Ordered fallback LLM chain consulted when fallback-tool is not set. */
+  fallbacks?: FallbackConfigEntry[];
+  /** Optional Claude Code tool matcher written to .claude/settings.json. */
+  matcher?: string;
   /** Extra CLI args appended to the generated hook command (key → --key value). */
   args?: Record<string, string | boolean | number>;
 }

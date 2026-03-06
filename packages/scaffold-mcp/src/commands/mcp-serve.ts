@@ -50,6 +50,11 @@ interface McpServeOptions {
   fallbackToolConfig?: string;
 }
 
+interface ResolvedFallbackConfig {
+  tool?: string;
+  config?: Record<string, unknown>;
+}
+
 /**
  * Type guard to verify a parsed JSON value is a plain object.
  */
@@ -87,6 +92,21 @@ function parseJsonConfig(
       `Invalid JSON for ${flagName}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
+}
+
+function resolveFallbackConfig(config: {
+  fallbackTool?: string;
+  fallbackToolConfig?: Record<string, unknown>;
+  fallbacks?: Array<{ tool: string; config?: Record<string, unknown> }>;
+}): ResolvedFallbackConfig {
+  if (config.fallbackTool) {
+    return { tool: config.fallbackTool, config: config.fallbackToolConfig };
+  }
+
+  const firstValidFallback = config.fallbacks?.find((entry) => entry?.tool);
+  return firstValidFallback
+    ? { tool: firstValidFallback.tool, config: firstValidFallback.config }
+    : {};
 }
 
 /**
@@ -162,13 +182,14 @@ export const mcpServeCommand = new Command('mcp-serve')
       const adminEnable = options.adminEnable || fileConfig.adminEnable || false;
       const promptAsSkill = options.promptAsSkill || fileConfig.promptAsSkill || false;
 
-      const fallbackToolStr = options.fallbackTool ?? fileConfig.fallbackTool;
+      const configuredFallback = resolveFallbackConfig(fileConfig);
+      const fallbackToolStr = options.fallbackTool ?? configuredFallback.tool;
       const fallbackTool = parseLlmToolOption(fallbackToolStr, '--fallback-tool');
 
       // CLI --fallback-tool-config (JSON string) takes precedence over config object
       const fallbackToolConfig = options.fallbackToolConfig
         ? parseJsonConfig(options.fallbackToolConfig, '--fallback-tool-config')
-        : fileConfig.fallbackToolConfig;
+        : configuredFallback.config;
 
       // Detect if current workspace is monolith
       let isMonolith = false;

@@ -32,14 +32,14 @@ architect-mcp:
   hook:
     claude-code:
       preToolUse:
-        args:       # extra CLI args appended to the generated hook command
-          llm-tool: gemini-cli
-      postToolUse: {}
+        matcher: Edit|MultiEdit|Write
+      postToolUse:
+        matcher: Edit|MultiEdit|Write
 ```
 
 The hook command is derived from `mcp-config.servers.architect-mcp` by replacing
-`mcp-serve` with `hook --type claude-code.<method>`. Generated entries fire on all
-tool calls (no matcher). Then run:
+`mcp-serve` with `hook --type claude-code.<method>`. Generated architect entries
+default to the matcher `Edit|MultiEdit|Write`. Then run:
 
 ```bash
 npx @agiflowai/aicode-toolkit sync --hooks
@@ -54,7 +54,7 @@ Add directly to `.claude/settings.json` or `.claude/settings.local.json`:
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|MultiEdit|Write",
         "hooks": [
           {
             "type": "command",
@@ -65,7 +65,7 @@ Add directly to `.claude/settings.json` or `.claude/settings.local.json`:
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|MultiEdit|Write",
         "hooks": [
           {
             "type": "command",
@@ -80,7 +80,7 @@ Add directly to `.claude/settings.json` or `.claude/settings.local.json`:
 
 ### How It Works
 
-#### PreToolUse (Edit|Write)
+#### PreToolUse (Edit|MultiEdit|Write)
 
 Before Claude edits or writes a file, the hook:
 1. Extracts the file path from the tool input
@@ -90,7 +90,7 @@ Before Claude edits or writes a file, the hook:
 
 This helps Claude follow your project's architectural guidelines before making changes.
 
-#### PostToolUse (Edit|Write)
+#### PostToolUse (Edit|MultiEdit|Write)
 
 After Claude edits or writes a file, the hook:
 1. Reads the modified file content

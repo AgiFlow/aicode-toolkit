@@ -24,6 +24,7 @@ import { GetFileDesignPatternTool } from '../../tools/GetFileDesignPatternTool';
 import { TemplateFinder } from '../../services/TemplateFinder';
 import { ArchitectParser } from '../../services/ArchitectParser';
 import { PatternMatcher } from '../../services/PatternMatcher';
+import { isMutatingFileTool } from '../shared';
 
 /**
  * GetFileDesignPattern Hook class for Gemini CLI
@@ -45,7 +46,7 @@ export class GetFileDesignPatternHook {
     const filePath = context.tool_input?.file_path;
 
     // Only process file operations
-    if (!filePath) {
+    if (!filePath || !isMutatingFileTool(context.tool_name)) {
       return {
         decision: DECISION_SKIP,
         message: 'Not a file operation',

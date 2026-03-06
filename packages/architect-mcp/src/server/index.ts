@@ -47,20 +47,22 @@ export function createServer(options?: {
 
 ## Workflow:
 
-1. **Before Editing Files**: Use \`get-file-design-pattern\` to understand applicable patterns and rules
-2. **After Editing Files**: Use \`review-code-change\` to check for violations and code smells
+1. **Before First Edit**: Use \`get-file-design-pattern\` once per file to understand applicable patterns and rules
+2. **After Meaningful Changes**: Use \`review-code-change\` after a substantive edit pass or before finalizing a file
 
 ## AI Usage Guidelines:
 
-- Always call \`get-file-design-pattern\` BEFORE editing a file to understand:
+- Call \`get-file-design-pattern\` before the first edit of a file to understand:
   - Project information and source template
   - Applicable design patterns from architect.yaml
   - Coding rules from RULES.yaml (must_do, should_do, must_not_do)
   - Code examples showing the patterns
-- Always call \`review-code-change\` AFTER editing a file to check for:
+- Call \`review-code-change\` after meaningful edits to check for:
   - Must not do violations (critical issues)
   - Must do missing (required patterns not followed)
   - Should do suggestions (best practices)
+- Do not re-run either tool on an unchanged file
+- If hooks already supplied the same guidance in this session, avoid calling the tool again unless you need a refreshed check
 - Fix any violations found before proceeding to the next task
 - The tools work with architect.yaml (project patterns) and RULES.yaml (coding rules) in your project`;
 

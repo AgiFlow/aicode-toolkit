@@ -3,6 +3,7 @@ import { UseScaffoldMethodHook } from '../../../src/hooks/claudeCode';
 import { DECISION_ALLOW, DECISION_DENY, DECISION_SKIP } from '@agiflowai/hooks-adapter';
 import type { ClaudeCodePreToolUseInput, ClaudeCodeStopInput } from '@agiflowai/hooks-adapter';
 import { TemplatesManagerService } from '@agiflowai/aicode-utils';
+import fs from 'node:fs/promises';
 
 // ---------------------------------------------------------------------------
 // Interfaces (declared before vi.mock so factories can reference them)
@@ -104,6 +105,13 @@ vi.mock('../../../src/tools', (): object => ({
   }),
 }));
 
+vi.mock('node:fs/promises', (): object => ({
+  default: {
+    access: vi.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+  },
+  access: vi.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -159,6 +167,13 @@ describe('UseScaffoldMethodHook.preToolUse', (): void => {
 
   it('should skip non-Write tool names', async (): Promise<void> => {
     const result = await hook.preToolUse(makePreToolUseContext({ tool_name: 'Edit' }));
+    expect(result.decision).toBe(DECISION_SKIP);
+  });
+
+  it('should skip when the file already exists', async (): Promise<void> => {
+    vi.mocked(fs.access).mockResolvedValueOnce(undefined);
+
+    const result = await hook.preToolUse(makePreToolUseContext());
     expect(result.decision).toBe(DECISION_SKIP);
   });
 
@@ -228,7 +243,27 @@ describe('UseScaffoldMethodHook.preToolUse', (): void => {
     const result = await hook.preToolUse(makePreToolUseContext());
 
     expect(result.decision).toBe(DECISION_DENY);
-    expect(result.message).toContain('abc123');
+    expect(result.message).toContain('scaffold-route');
+  });
+
+  it('should cap the number of methods shown and summarize the remainder', async (): Promise<void> => {
+    mockExecute.mockResolvedValue(
+      makeMethodsResult([
+        { name: 'one', description: '1' },
+        { name: 'two', description: '2' },
+        { name: 'three', description: '3' },
+        { name: 'four', description: '4' },
+        { name: 'five', description: '5' },
+        { name: 'six', description: '6' },
+      ]),
+    );
+
+    const result = await hook.preToolUse(makePreToolUseContext());
+
+    expect(result.message).toContain('- **one**: 1');
+    expect(result.message).toContain('- **five**: 5');
+    expect(result.message).not.toContain('- **six**: 6');
+    expect(result.message).toContain('...and 1 more methods');
   });
 
   it('should fall back to "No description available" for methods without a description', async (): Promise<void> => {

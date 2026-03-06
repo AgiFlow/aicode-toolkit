@@ -244,6 +244,22 @@ npx @agiflowai/architect-mcp mcp-serve \
 
 **Precedence:** `--design-pattern-tool` > `--fallback-tool` (same for `--review-tool`).
 
+For `.toolkit/settings.yaml` or `.toolkit/settings.local.yaml`, you can also define an ordered fallback chain:
+
+```yaml
+architect-mcp:
+  mcp-serve:
+    fallbacks:
+      - tool: gemini-cli
+        config:
+          model: gemini-2.0-flash
+      - tool: codex
+        config:
+          model: gpt-5.2-mini
+```
+
+The first valid entry is used when `fallbackTool` is not set.
+
 ---
 
 ## CLI Commands
@@ -302,7 +318,7 @@ Hooks let architect-mcp provide guidance automatically when files are edited.
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|MultiEdit|Write",
         "hooks": [
           {
             "type": "command",
@@ -313,7 +329,7 @@ Hooks let architect-mcp provide guidance automatically when files are edited.
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|MultiEdit|Write",
         "hooks": [
           {
             "type": "command",
@@ -370,6 +386,20 @@ npx @agiflowai/architect-mcp mcp-serve \
   --review-tool gemini-cli
 ```
 
+For settings-file based configuration, `fallbackTool` / `fallbackToolConfig` still work, and `fallbacks` adds ordered multi-fallback support:
+
+```yaml
+architect-mcp:
+  mcp-serve:
+    fallbacks:
+      - tool: gemini-cli
+        config:
+          model: gemini-2.0-flash
+      - tool: codex
+        config:
+          model: gpt-5.2-mini
+```
+
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-t, --type` | Transport: `stdio`, `http`, `sse` | `stdio` |
@@ -380,7 +410,7 @@ npx @agiflowai/architect-mcp mcp-serve \
 | `--review-tool` | LLM for code review (`claude-code`, `gemini-cli`, `codex`) | disabled |
 | `--review-tool-config` | JSON config for review LLM tool (e.g., `{"model":"gpt-5.2"}`) | `{}` |
 | `--fallback-tool` | LLM used for both tools when the specific flag is not set | disabled |
-| `--fallback-tool-config` | JSON config applied to the fallback tool (e.g., `{"model":"claude-sonnet-4-6"}`) | `{}` |
+| `--fallback-tool-config` | JSON config applied to the CLI fallback tool; settings files may also use ordered `fallbacks` entries | `{}` |
 
 ---
 

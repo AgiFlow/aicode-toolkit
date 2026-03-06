@@ -385,6 +385,40 @@ export class ExecutionLogService {
   }
 
   /**
+   * Check if a file has changed since the most recent review in this session.
+   * Reviews are executions with an allow/deny decision and a stored checksum.
+   */
+  async hasFileChangedSinceLastReview(filePath: string): Promise<boolean> {
+    try {
+      const entries = await this.loadLog();
+
+      let lastReview: LogEntry | null = null;
+      for (let i = entries.length - 1; i >= 0; i--) {
+        const entry = entries[i];
+        const isReviewDecision = entry.decision === 'allow' || entry.decision === 'deny';
+        if (entry.filePath === filePath && isReviewDecision && entry.fileChecksum) {
+          lastReview = entry;
+          break;
+        }
+      }
+
+      if (!lastReview?.fileChecksum) {
+        return true;
+      }
+
+      const currentMetadata = await this.getFileMetadata(filePath);
+      if (!currentMetadata) {
+        return true;
+      }
+
+      return currentMetadata.checksum !== lastReview.fileChecksum;
+    } catch (error: unknown) {
+      console.error(`Error checking if file changed since last review for ${filePath}:`, error);
+      return true;
+    }
+  }
+
+  /**
    * Check if file was recently reviewed (within debounce window)
    * Prevents noisy feedback during rapid successive edits
    *

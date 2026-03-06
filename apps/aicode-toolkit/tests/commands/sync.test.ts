@@ -8,7 +8,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { argsToFlags, buildHookCommand } from '../../src/commands/sync';
+import {
+  argsToFlags,
+  buildHookCommand,
+  resolveArchitectClaudeMatcher,
+} from '../../src/commands/sync';
 
 // ---------------------------------------------------------------------------
 // argsToFlags
@@ -160,5 +164,16 @@ describe('buildHookCommand with argsToFlags', () => {
     expect(buildHookCommand(server, 'claude-code.postToolUse', argsToFlags({}))).toBe(
       'npx @agiflowai/architect-mcp hook --type claude-code.postToolUse',
     );
+  });
+});
+
+describe('resolveArchitectClaudeMatcher', () => {
+  it('returns the architect default matcher when unset', () => {
+    expect(resolveArchitectClaudeMatcher(undefined)).toBe('Edit|MultiEdit|Write');
+    expect(resolveArchitectClaudeMatcher({})).toBe('Edit|MultiEdit|Write');
+  });
+
+  it('preserves an explicit matcher override', () => {
+    expect(resolveArchitectClaudeMatcher({ matcher: 'Write' })).toBe('Write');
   });
 });

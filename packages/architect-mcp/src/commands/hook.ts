@@ -29,7 +29,12 @@ import {
   type GeminiCliHookInput,
   type HookResponse,
 } from '@agiflowai/hooks-adapter';
-import { TemplatesManagerService, print, type ArchitectHookAgentConfig, type ArchitectHookConfig } from '@agiflowai/aicode-utils';
+import {
+  TemplatesManagerService,
+  print,
+  type ArchitectHookAgentConfig,
+  type ArchitectHookConfig,
+} from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 
 /** Options parsed by Commander for the hook command */
@@ -45,6 +50,11 @@ interface HookOptions {
 interface HookAdapterConfig {
   tool_config?: Record<string, unknown>;
   llm_tool?: string;
+}
+
+interface ResolvedFallbackConfig {
+  tool?: string;
+  config?: Record<string, unknown>;
 }
 
 /** Type guard to validate parsed JSON is a record object */
@@ -102,6 +112,25 @@ function parseJsonConfigOption(
   }
 }
 
+function resolveFallbackConfig(config?: {
+  'fallback-tool'?: string;
+  'fallback-tool-config'?: Record<string, unknown>;
+  fallbacks?: Array<{ tool: string; config?: Record<string, unknown> }>;
+}): ResolvedFallbackConfig {
+  if (!config) return {};
+  if (config['fallback-tool']) {
+    return {
+      tool: config['fallback-tool'],
+      config: config['fallback-tool-config'],
+    };
+  }
+
+  const firstValidFallback = config.fallbacks?.find((entry) => entry?.tool);
+  return firstValidFallback
+    ? { tool: firstValidFallback.tool, config: firstValidFallback.config }
+    : {};
+}
+
 /**
  * Hook command for executing architect hooks
  */
@@ -150,14 +179,19 @@ export const hookCommand = new Command('hook')
 
       // Parse JSON config options
       const toolConfig = parseJsonConfigOption(options.toolConfig, '--tool-config');
+      const configuredFallback = resolveFallbackConfig(methodConfig as never);
       // CLI --fallback-tool-config (JSON string) takes precedence over config object
       const fallbackToolConfig = options.fallbackToolConfig
         ? parseJsonConfigOption(options.fallbackToolConfig, '--fallback-tool-config')
-        : methodConfig?.['tool-config'];
+        : configuredFallback.config;
 
-      // Resolve effective tool and config: --llm-tool > --fallback-tool > config file
-      const resolvedLlmTool = options.llmTool ?? options.fallbackTool ?? methodConfig?.['llm-tool'];
-      const resolvedToolConfig = toolConfig ?? fallbackToolConfig;
+      // Resolve effective tool and config: explicit llm config > fallback chain
+      const resolvedLlmTool =
+        options.llmTool ??
+        options.fallbackTool ??
+        methodConfig?.['llm-tool'] ??
+        configuredFallback.tool;
+      const resolvedToolConfig = toolConfig ?? methodConfig?.['tool-config'] ?? fallbackToolConfig;
 
       if (!isHookMethod(hookMethod)) {
         print.error(

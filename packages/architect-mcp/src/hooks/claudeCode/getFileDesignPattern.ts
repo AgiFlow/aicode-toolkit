@@ -24,6 +24,7 @@ import { GetFileDesignPatternTool } from '../../tools/GetFileDesignPatternTool';
 import { TemplateFinder } from '../../services/TemplateFinder';
 import { ArchitectParser } from '../../services/ArchitectParser';
 import { PatternMatcher } from '../../services/PatternMatcher';
+import { isMutatingFileTool } from '../shared';
 import path from 'node:path';
 
 /**
@@ -53,7 +54,7 @@ export class GetFileDesignPatternHook {
     const filePath = context.tool_input?.file_path;
 
     // Only process file operations
-    if (!filePath || !['Read', 'Write', 'Edit'].includes(context.tool_name)) {
+    if (!filePath || !isMutatingFileTool(context.tool_name)) {
       return {
         decision: DECISION_SKIP,
         message: 'Not a file operation',
