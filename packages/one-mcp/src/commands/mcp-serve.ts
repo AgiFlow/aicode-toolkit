@@ -331,10 +331,11 @@ async function removeRuntimeRecordDuringStop(
 async function createStdioHttpInternalTransport(
   serverOptions: ServerOptions,
   config: TransportConfig,
+  adminOptions?: HttpTransportAdminOptions,
 ): Promise<HttpTransportHandler> {
   try {
     const server = await createServer(serverOptions);
-    return new HttpTransportHandler(server, config);
+    return new HttpTransportHandler(server, config, adminOptions);
   } catch (error) {
     throw new Error(
       `Failed to create internal HTTP transport for stdio-http proxy: ${toErrorMessage(error)}`,
@@ -479,13 +480,42 @@ async function startSseTransport(
 async function startStdioHttpTransport(
   serverOptions: ServerOptions,
   config: TransportConfig,
+  resolvedConfigPath: string | undefined,
 ): Promise<void> {
   try {
     const endpoint = new URL(`http://${config.host}:${config.port}${MCP_ENDPOINT_PATH}`);
     const stdioHttpHandler = new StdioHttpTransportHandler({ endpoint });
 
+    const runtimeStateService = new RuntimeStateService();
+    const serverId = serverOptions.serverId ?? generateServerId();
+    const shutdownToken = randomUUID();
+
     let httpHandler: HttpTransportHandler | null = null;
     let ownsInternalHttpTransport = false;
+    let isStopping = false;
+
+    const stopOwnedRuntime = async (): Promise<void> => {
+      if (isStopping) {
+        return;
+      }
+
+      isStopping = true;
+
+      try {
+        await Promise.all([
+          stopInternalHttpTransport(stdioHttpHandler, httpHandler, ownsInternalHttpTransport),
+          removeRuntimeRecord(runtimeStateService, serverId),
+        ]);
+
+        ownsInternalHttpTransport = false;
+        process.exit(0);
+      } catch (error) {
+        console.error(`Unexpected error during admin shutdown: ${toErrorMessage(error)}`);
+        process.exit(1);
+      }
+    };
+
+    const adminOptions = createHttpAdminOptions(serverId, shutdownToken, stopOwnedRuntime);
 
     const handler: TransportHandler = {
       async start(): Promise<void> {
@@ -499,7 +529,7 @@ async function startStdioHttpTransport(
         }
 
         try {
-          httpHandler = await createStdioHttpInternalTransport(serverOptions, config);
+          httpHandler = await createStdioHttpInternalTransport(serverOptions, config, adminOptions);
           await httpHandler.start();
           ownsInternalHttpTransport = true;
         } catch (error) {
@@ -534,10 +564,31 @@ async function startStdioHttpTransport(
             `Failed to start stdio-http proxy bridge: initial connect failed (${initialErrorMessage}); retry failed (${retryErrorMessage})${rollbackMessage}`,
           );
         }
+
+        if (ownsInternalHttpTransport) {
+          try {
+            const runtimeRecord = createRuntimeRecord(serverId, config, shutdownToken, resolvedConfigPath);
+            await writeRuntimeRecord(runtimeStateService, runtimeRecord);
+          } catch (error) {
+            throw new Error(
+              `Failed to persist runtime state for stdio-http server '${serverId}': ${toErrorMessage(error)}`,
+            );
+          }
+        }
       },
       async stop(): Promise<void> {
-        await stopInternalHttpTransport(stdioHttpHandler, httpHandler, ownsInternalHttpTransport);
-        ownsInternalHttpTransport = false;
+        try {
+          await Promise.all([
+            stopInternalHttpTransport(stdioHttpHandler, httpHandler, ownsInternalHttpTransport),
+            removeRuntimeRecord(runtimeStateService, serverId),
+          ]);
+          ownsInternalHttpTransport = false;
+        } catch (error) {
+          ownsInternalHttpTransport = false;
+          throw new Error(
+            `Failed during stdio-http shutdown for '${serverId}': ${toErrorMessage(error)}`,
+          );
+        }
       },
     };
 
@@ -572,7 +623,7 @@ async function startTransport(
     }
 
     const config = createTransportConfig(options, TRANSPORT_MODE.HTTP);
-    await startStdioHttpTransport(serverOptions, config);
+    await startStdioHttpTransport(serverOptions, config, resolvedConfigPath);
   } catch (error) {
     throw new Error(`Failed to start transport '${transportType}': ${toErrorMessage(error)}`);
   }
