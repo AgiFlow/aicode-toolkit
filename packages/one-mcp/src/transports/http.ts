@@ -196,9 +196,20 @@ export class HttpTransportHandler implements IHttpTransportHandler {
       res.json(payload);
     });
 
-    // Authenticated shutdown endpoint
+    // Authenticated shutdown endpoint (rate-limited)
     this.app.post('/admin/shutdown', async (req: Request, res: Response) => {
       try {
+        const clientIp = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+        if (!this.adminRateLimiter.isAllowed(clientIp)) {
+          const payload: HttpTransportShutdownResponse = {
+            ok: false,
+            message: 'Too many shutdown requests. Try again later.',
+            serverId: this.adminOptions?.serverId,
+          };
+          res.status(429).json(payload);
+          return;
+        }
+
         await this.handleAdminShutdownRequest(req, res);
       } catch (error) {
         console.error(`Failed to process shutdown request: ${toErrorMessage(error)}`);
@@ -229,17 +240,6 @@ export class HttpTransportHandler implements IHttpTransportHandler {
 
   private async handleAdminShutdownRequest(req: Request, res: Response): Promise<void> {
     try {
-      const clientIp = req.ip ?? req.socket.remoteAddress ?? 'unknown';
-      if (!this.adminRateLimiter.isAllowed(clientIp)) {
-        const payload: HttpTransportShutdownResponse = {
-          ok: false,
-          message: 'Too many shutdown requests. Try again later.',
-          serverId: this.adminOptions?.serverId,
-        };
-        res.status(429).json(payload);
-        return;
-      }
-
       if (!this.adminOptions?.onShutdownRequested) {
         const payload: HttpTransportShutdownResponse = {
           ok: false,
