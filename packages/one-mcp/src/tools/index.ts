@@ -5,5 +5,6 @@
  * Add new tool exports here as you create them.
  */
 
-export * from './DescribeToolsTool';
-export * from './UseToolTool';
+export { DescribeToolsTool } from './DescribeToolsTool';
+export { SearchListToolsTool } from './SearchListToolsTool';
+export { UseToolTool } from './UseToolTool';
