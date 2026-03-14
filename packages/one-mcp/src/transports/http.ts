@@ -83,6 +83,34 @@ function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+const ADMIN_RATE_LIMIT_WINDOW_MS = 60_000;
+const ADMIN_RATE_LIMIT_MAX_REQUESTS = 5;
+
+/**
+ * Simple in-memory rate limiter for the admin shutdown endpoint.
+ * Tracks request timestamps per IP within a sliding window.
+ */
+class AdminRateLimiter {
+  private requests = new Map<string, number[]>();
+
+  isAllowed(ip: string): boolean {
+    const now = Date.now();
+    const windowStart = now - ADMIN_RATE_LIMIT_WINDOW_MS;
+    const timestamps = (this.requests.get(ip) ?? []).filter(
+      (t): boolean => t > windowStart,
+    );
+
+    if (timestamps.length >= ADMIN_RATE_LIMIT_MAX_REQUESTS) {
+      this.requests.set(ip, timestamps);
+      return false;
+    }
+
+    timestamps.push(now);
+    this.requests.set(ip, timestamps);
+    return true;
+  }
+}
+
 /**
  * HTTP transport handler using Streamable HTTP (protocol version 2025-03-26)
  * Provides stateful session management with resumability support
@@ -94,6 +122,7 @@ export class HttpTransportHandler implements IHttpTransportHandler {
   private sessionManager: HttpFullSessionManager;
   private config: Required<TransportConfig>;
   private adminOptions?: HttpTransportAdminOptions;
+  private adminRateLimiter = new AdminRateLimiter();
 
   constructor(
     serverFactory: McpServer | (() => McpServer),
@@ -199,37 +228,48 @@ export class HttpTransportHandler implements IHttpTransportHandler {
   }
 
   private async handleAdminShutdownRequest(req: Request, res: Response): Promise<void> {
-    if (!this.adminOptions?.onShutdownRequested) {
-      const payload: HttpTransportShutdownResponse = {
-        ok: false,
-        message: 'Shutdown endpoint is not enabled for this server instance.',
-        serverId: this.adminOptions?.serverId,
-      };
-      res.status(404).json(payload);
-      return;
-    }
-
-    if (!this.isAuthorizedShutdownRequest(req)) {
-      const payload: HttpTransportShutdownResponse = {
-        ok: false,
-        message: 'Unauthorized shutdown request: invalid or missing shutdown token.',
-        serverId: this.adminOptions?.serverId,
-      };
-      res.status(401).json(payload);
-      return;
-    }
-
-    const payload: HttpTransportShutdownResponse = {
-      ok: true,
-      message: 'Shutdown request accepted. Stopping server gracefully.',
-      serverId: this.adminOptions?.serverId,
-    };
-    res.json(payload);
-
     try {
+      const clientIp = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+      if (!this.adminRateLimiter.isAllowed(clientIp)) {
+        const payload: HttpTransportShutdownResponse = {
+          ok: false,
+          message: 'Too many shutdown requests. Try again later.',
+          serverId: this.adminOptions?.serverId,
+        };
+        res.status(429).json(payload);
+        return;
+      }
+
+      if (!this.adminOptions?.onShutdownRequested) {
+        const payload: HttpTransportShutdownResponse = {
+          ok: false,
+          message: 'Shutdown endpoint is not enabled for this server instance.',
+          serverId: this.adminOptions?.serverId,
+        };
+        res.status(404).json(payload);
+        return;
+      }
+
+      if (!this.isAuthorizedShutdownRequest(req)) {
+        const payload: HttpTransportShutdownResponse = {
+          ok: false,
+          message: 'Unauthorized shutdown request: invalid or missing shutdown token.',
+          serverId: this.adminOptions?.serverId,
+        };
+        res.status(401).json(payload);
+        return;
+      }
+
+      const payload: HttpTransportShutdownResponse = {
+        ok: true,
+        message: 'Shutdown request accepted. Stopping server gracefully.',
+        serverId: this.adminOptions?.serverId,
+      };
+      res.json(payload);
+
       await this.adminOptions.onShutdownRequested();
     } catch (error) {
-      throw new Error(`Failed to execute shutdown callback: ${toErrorMessage(error)}`);
+      throw new Error(`Failed to handle admin shutdown request: ${toErrorMessage(error)}`);
     }
   }
 
