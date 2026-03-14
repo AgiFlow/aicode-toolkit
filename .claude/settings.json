@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run packages/scaffold-mcp/src/cli.ts hook --type claude-code.preToolUse"
+            "command": "bun run \"$CLAUDE_PROJECT_DIR\"/packages/scaffold-mcp/src/cli.ts hook --type claude-code.preToolUse"
           }
         ]
       },
@@ -13,7 +13,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run packages/architect-mcp/src/cli.ts hook --type claude-code.preToolUse"
+            "command": "bun run \"$CLAUDE_PROJECT_DIR\"/packages/architect-mcp/src/cli.ts hook --type claude-code.preToolUse"
           }
         ]
       }
@@ -23,7 +23,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run packages/scaffold-mcp/src/cli.ts hook --type claude-code.postToolUse"
+            "command": "bun run \"$CLAUDE_PROJECT_DIR\"/packages/scaffold-mcp/src/cli.ts hook --type claude-code.postToolUse"
           }
         ]
       },
@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run packages/architect-mcp/src/cli.ts hook --type claude-code.postToolUse"
+            "command": "bun run \"$CLAUDE_PROJECT_DIR\"/packages/architect-mcp/src/cli.ts hook --type claude-code.postToolUse"
           }
         ]
       }
@@ -41,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run packages/scaffold-mcp/src/cli.ts hook --type claude-code.stop"
+            "command": "bun run \"$CLAUDE_PROJECT_DIR\"/packages/scaffold-mcp/src/cli.ts hook --type claude-code.stop"
           }
         ]
       }
@@ -51,7 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run packages/scaffold-mcp/src/cli.ts hook --type claude-code.userPromptSubmit"
+            "command": "bun run \"$CLAUDE_PROJECT_DIR\"/packages/scaffold-mcp/src/cli.ts hook --type claude-code.userPromptSubmit"
           }
         ]
       }
@@ -61,7 +61,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run packages/scaffold-mcp/src/cli.ts hook --type claude-code.taskCompleted"
+            "command": "bun run \"$CLAUDE_PROJECT_DIR\"/packages/scaffold-mcp/src/cli.ts hook --type claude-code.taskCompleted"
           }
         ]
       }
