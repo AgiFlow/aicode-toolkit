@@ -43,8 +43,11 @@ export {
   ConfigFetcherService,
   DefinitionsCacheService,
   McpClientManagerService,
+  RuntimeStateService,
+  StopServerService,
   SkillService,
 } from './services';
+export type { StopServerRequest, StopServerResult } from './services';
 
 // Utils
-export { findConfigFile } from './utils';
+export { findConfigFile, generateServerId } from './utils';

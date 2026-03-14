@@ -15,3 +15,4 @@ export { readResourceCommand } from './read-resource';
 export { listPromptsCommand } from './list-prompts';
 export { getPromptCommand } from './get-prompt';
 export { prefetchCommand } from './prefetch';
+export { stopCommand } from './stop';

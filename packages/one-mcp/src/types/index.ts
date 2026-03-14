@@ -86,6 +86,106 @@ export interface HttpTransportHandler extends TransportHandler {
 }
 
 /**
+ * Runtime state persisted for HTTP one-mcp instances.
+ * @property serverId - Unique one-mcp server identifier
+ * @property host - Host bound by the HTTP transport
+ * @property port - Port bound by the HTTP transport
+ * @property transport - Transport mode for the runtime record
+ * @property shutdownToken - Secret token required for admin shutdown requests
+ * @property startedAt - ISO timestamp when the runtime started
+ * @property pid - Process ID of the running one-mcp process
+ * @property configPath - Optional path to the config file used to start the server
+ */
+export interface RuntimeStateRecord {
+  serverId: string;
+  host: string;
+  port: number;
+  transport: 'http';
+  shutdownToken: string;
+  startedAt: string;
+  pid: number;
+  configPath?: string;
+}
+
+/**
+ * Optional admin settings for HTTP transport lifecycle actions.
+ * @property serverId - Server identifier surfaced via health responses
+ * @property shutdownToken - Secret token accepted by the admin shutdown endpoint
+ * @property onShutdownRequested - Callback invoked after a valid shutdown request is received
+ */
+export interface HttpTransportAdminOptions {
+  serverId?: string;
+  shutdownToken?: string;
+  onShutdownRequested?: () => Promise<void>;
+}
+
+/**
+ * Health payload exposed by HTTP transport.
+ * @property status - Health status string for liveness checks
+ * @property transport - Transport mode for the serving endpoint
+ * @property serverId - Optional server identifier for target verification
+ */
+export interface HttpTransportHealthResponse {
+  status: 'ok';
+  transport: 'http';
+  serverId?: string;
+}
+
+/**
+ * Admin shutdown response payload.
+ * @property ok - Whether shutdown request handling succeeded
+ * @property message - Human-readable outcome message
+ * @property serverId - Optional server identifier associated with this response
+ */
+export interface HttpTransportShutdownResponse {
+  ok: boolean;
+  message: string;
+  serverId?: string;
+}
+
+/**
+ * Runtime record lookup filters.
+ * @property host - Optional host filter for runtime discovery
+ * @property port - Optional port filter for runtime discovery
+ */
+export interface RuntimeLookupOptions {
+  host?: string;
+  port?: number;
+}
+
+/**
+ * Runtime service contract.
+ */
+export interface RuntimeStateManager {
+  /**
+   * Persist a runtime state record.
+   * @param record - Runtime metadata to persist
+   * @returns Promise that resolves when write completes
+   */
+  write(record: RuntimeStateRecord): Promise<void>;
+
+  /**
+   * Read a runtime state record by server ID.
+   * @param serverId - Target one-mcp server identifier
+   * @returns Matching runtime record, or null when no record exists
+   */
+  read(serverId: string): Promise<RuntimeStateRecord | null>;
+
+  /**
+   * List all persisted runtime records.
+   * @returns Array of runtime records
+   */
+  list(): Promise<RuntimeStateRecord[]>;
+
+  /**
+   * Remove a runtime state record by server ID.
+   * @param serverId - Target one-mcp server identifier
+   * @returns Promise that resolves when delete completes
+   */
+  remove(serverId: string): Promise<void>;
+}
+
+/**
  * Remote MCP server configuration types
  */
 export type McpServerTransportType = 'stdio' | 'http' | 'sse';

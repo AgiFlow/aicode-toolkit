@@ -29,6 +29,7 @@ import {
   listPromptsCommand,
   getPromptCommand,
   prefetchCommand,
+  stopCommand,
 } from './commands';
 import packageJson from '../package.json' assert { type: 'json' };
 
@@ -55,6 +56,7 @@ async function main() {
     program.addCommand(listPromptsCommand);
     program.addCommand(getPromptCommand);
     program.addCommand(prefetchCommand);
+    program.addCommand(stopCommand);
 
     // Parse arguments
     await program.parseAsync(process.argv);

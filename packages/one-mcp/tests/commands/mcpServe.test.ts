@@ -3,7 +3,10 @@ import { mcpServeCommand } from '../../src/commands';
 
 interface MockRegistry {
   mockCreateServer: ReturnType<typeof vi.fn>;
-  mockFindConfigFile: ReturnType<typeof vi.fn>;
+  mockFetchConfiguration: ReturnType<typeof vi.fn>;
+  mockGenerateServerId: ReturnType<typeof vi.fn>;
+  mockRuntimeStateWrite: ReturnType<typeof vi.fn>;
+  mockRuntimeStateRemove: ReturnType<typeof vi.fn>;
   mockStdioConstructor: ReturnType<typeof vi.fn>;
   mockHttpConstructor: ReturnType<typeof vi.fn>;
   mockSseConstructor: ReturnType<typeof vi.fn>;
@@ -29,6 +32,15 @@ interface StdioHttpHandlerArgs {
 interface MockTransportHandler {
   start: () => Promise<void>;
   stop: () => Promise<void>;
+}
+
+interface MockConfigFetcherService {
+  fetchConfiguration: ReturnType<typeof vi.fn>;
+}
+
+interface MockRuntimeStateService {
+  write: ReturnType<typeof vi.fn>;
+  remove: ReturnType<typeof vi.fn>;
 }
 
 function isStdioHttpHandlerArgs(value: unknown): value is StdioHttpHandlerArgs {
@@ -62,28 +74,28 @@ const MOCKS = vi.hoisted((): MockRegistry => {
   const mockSseStop = vi.fn().mockResolvedValue(undefined);
   const mockStdioHttpStop = vi.fn().mockResolvedValue(undefined);
 
-  const mockStdioConstructor = vi.fn().mockImplementation(function(): MockTransportHandler {
+  const mockStdioConstructor = vi.fn().mockImplementation(function (): MockTransportHandler {
     return {
       start: mockStdioStart,
       stop: mockStdioStop,
     };
   });
 
-  const mockHttpConstructor = vi.fn().mockImplementation(function(): MockTransportHandler {
+  const mockHttpConstructor = vi.fn().mockImplementation(function (): MockTransportHandler {
     return {
       start: mockHttpStart,
       stop: mockHttpStop,
     };
   });
 
-  const mockSseConstructor = vi.fn().mockImplementation(function(): MockTransportHandler {
+  const mockSseConstructor = vi.fn().mockImplementation(function (): MockTransportHandler {
     return {
       start: mockSseStart,
       stop: mockSseStop,
     };
   });
 
-  const mockStdioHttpConstructor = vi.fn().mockImplementation(function(): MockTransportHandler {
+  const mockStdioHttpConstructor = vi.fn().mockImplementation(function (): MockTransportHandler {
     return {
       start: mockStdioHttpStart,
       stop: mockStdioHttpStop,
@@ -92,7 +104,10 @@ const MOCKS = vi.hoisted((): MockRegistry => {
 
   return {
     mockCreateServer: vi.fn(),
-    mockFindConfigFile: vi.fn((): string => '/mock/mcp-config.yaml'),
+    mockFetchConfiguration: vi.fn().mockResolvedValue({}),
+    mockGenerateServerId: vi.fn((): string => 'generated-server-id'),
+    mockRuntimeStateWrite: vi.fn().mockResolvedValue(undefined),
+    mockRuntimeStateRemove: vi.fn().mockResolvedValue(undefined),
     mockStdioConstructor,
     mockHttpConstructor,
     mockSseConstructor,
@@ -110,7 +125,18 @@ const MOCKS = vi.hoisted((): MockRegistry => {
 
 vi.mock('../../src', (): Record<string, unknown> => ({
   createServer: MOCKS.mockCreateServer,
-  findConfigFile: MOCKS.mockFindConfigFile,
+  ConfigFetcherService: vi.fn().mockImplementation(function (): MockConfigFetcherService {
+    return {
+      fetchConfiguration: MOCKS.mockFetchConfiguration,
+    };
+  }),
+  generateServerId: MOCKS.mockGenerateServerId,
+  RuntimeStateService: vi.fn().mockImplementation(function (): MockRuntimeStateService {
+    return {
+      write: MOCKS.mockRuntimeStateWrite,
+      remove: MOCKS.mockRuntimeStateRemove,
+    };
+  }),
   TRANSPORT_MODE: {
     STDIO: 'stdio',
     HTTP: 'http',
@@ -136,6 +162,18 @@ describe('mcp-serve command', (): void => {
   beforeEach((): void => {
     vi.clearAllMocks();
     MOCKS.mockCreateServer.mockResolvedValue({ server: true });
+    MOCKS.mockFetchConfiguration.mockResolvedValue({});
+    MOCKS.mockGenerateServerId.mockReturnValue('generated-server-id');
+    MOCKS.mockRuntimeStateWrite.mockResolvedValue(undefined);
+    MOCKS.mockRuntimeStateRemove.mockResolvedValue(undefined);
+    MOCKS.mockStdioStart.mockResolvedValue(undefined);
+    MOCKS.mockHttpStart.mockResolvedValue(undefined);
+    MOCKS.mockSseStart.mockResolvedValue(undefined);
+    MOCKS.mockStdioHttpStart.mockResolvedValue(undefined);
+    MOCKS.mockStdioStop.mockResolvedValue(undefined);
+    MOCKS.mockHttpStop.mockResolvedValue(undefined);
+    MOCKS.mockSseStop.mockResolvedValue(undefined);
+    MOCKS.mockStdioHttpStop.mockResolvedValue(undefined);
   });
 
   afterEach((): void => {
@@ -171,7 +209,7 @@ describe('mcp-serve command', (): void => {
     ).rejects.toThrow('process.exit called');
 
     expect(errorSpy).toHaveBeenCalledWith(
-      "Unknown proxy mode: 'invalid'. Valid options: meta, flat, search",
+      "Failed to start MCP server with transport 'stdio': Unknown proxy mode: 'invalid'. Valid options: meta, flat, search",
     );
     expect(exitSpy).toHaveBeenCalledWith(1);
     expect(MOCKS.mockCreateServer).not.toHaveBeenCalled();
@@ -186,7 +224,7 @@ describe('mcp-serve command', (): void => {
     ).rejects.toThrow('process.exit called');
 
     expect(errorSpy).toHaveBeenCalledWith(
-      "Unknown transport type: 'invalid'. Valid options: stdio, http, sse, stdio-http",
+      "Failed to start MCP server with transport 'stdio': Unknown transport type: 'invalid'. Valid options: stdio, http, sse, stdio-http",
     );
     expect(exitSpy).toHaveBeenCalledWith(1);
     expect(MOCKS.mockCreateServer).not.toHaveBeenCalled();

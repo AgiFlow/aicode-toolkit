@@ -48,6 +48,7 @@ export interface ServerOptions {
   definitionsCachePath?: string;
   clearDefinitionsCache?: boolean;
   proxyMode?: 'meta' | 'flat' | 'search';
+  onServerIdResolved?: (serverId: string) => Promise<void> | void;
 }
 
 export function summarizeServerTools(serverDefinition: CachedServerDefinition): string {
