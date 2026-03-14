@@ -22,15 +22,20 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { once } from 'node:events';
 import type { Server as HttpServer } from 'node:http';
-import type { Server as McpServer } from '@modelcontextprotocol/sdk/server/index.js';
+import { promisify } from 'node:util';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
+import type { Server as McpServer } from '@modelcontextprotocol/sdk/server/index.js';
 import express, { type Request, type Response } from 'express';
 import type {
+  HttpTransportAdminOptions,
   HttpTransportHandler as IHttpTransportHandler,
+  HttpTransportHealthResponse,
+  HttpTransportShutdownResponse,
   TransportConfig,
-} from '../types/index.js';
+} from '../types';
 
 /**
  * Session data for HTTP connections
@@ -74,6 +79,38 @@ class HttpFullSessionManager {
   }
 }
 
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+const ADMIN_RATE_LIMIT_WINDOW_MS = 60_000;
+const ADMIN_RATE_LIMIT_MAX_REQUESTS = 5;
+
+/**
+ * Simple in-memory rate limiter for the admin shutdown endpoint.
+ * Tracks request timestamps per IP within a sliding window.
+ */
+class AdminRateLimiter {
+  private requests = new Map<string, number[]>();
+
+  isAllowed(ip: string): boolean {
+    const now = Date.now();
+    const windowStart = now - ADMIN_RATE_LIMIT_WINDOW_MS;
+    const timestamps = (this.requests.get(ip) ?? []).filter(
+      (t): boolean => t > windowStart,
+    );
+
+    if (timestamps.length >= ADMIN_RATE_LIMIT_MAX_REQUESTS) {
+      this.requests.set(ip, timestamps);
+      return false;
+    }
+
+    timestamps.push(now);
+    this.requests.set(ip, timestamps);
+    return true;
+  }
+}
+
 /**
  * HTTP transport handler using Streamable HTTP (protocol version 2025-03-26)
  * Provides stateful session management with resumability support
@@ -84,8 +121,14 @@ export class HttpTransportHandler implements IHttpTransportHandler {
   private server: HttpServer | null = null;
   private sessionManager: HttpFullSessionManager;
   private config: Required<TransportConfig>;
+  private adminOptions?: HttpTransportAdminOptions;
+  private adminRateLimiter = new AdminRateLimiter();
 
-  constructor(serverFactory: McpServer | (() => McpServer), config: TransportConfig) {
+  constructor(
+    serverFactory: McpServer | (() => McpServer),
+    config: TransportConfig,
+    adminOptions?: HttpTransportAdminOptions,
+  ) {
     // Support both a factory function and a direct server instance for backwards compatibility
     this.serverFactory = typeof serverFactory === 'function' ? serverFactory : () => serverFactory;
     this.app = express();
@@ -95,6 +138,7 @@ export class HttpTransportHandler implements IHttpTransportHandler {
       port: config.port ?? 3000,
       host: config.host ?? 'localhost',
     };
+    this.adminOptions = adminOptions;
 
     this.setupMiddleware();
     this.setupRoutes();
@@ -107,23 +151,126 @@ export class HttpTransportHandler implements IHttpTransportHandler {
   private setupRoutes(): void {
     // Handle POST requests for client-to-server communication
     this.app.post('/mcp', async (req: Request, res: Response) => {
-      await this.handlePostRequest(req, res);
+      try {
+        await this.handlePostRequest(req, res);
+      } catch (error) {
+        console.error(`Failed to handle MCP POST request: ${toErrorMessage(error)}`);
+        res.status(500).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32603,
+            message: 'Failed to handle MCP POST request.',
+          },
+          id: null,
+        });
+      }
     });
 
     // Handle GET requests for server-to-client notifications via SSE
     this.app.get('/mcp', async (req: Request, res: Response) => {
-      await this.handleGetRequest(req, res);
+      try {
+        await this.handleGetRequest(req, res);
+      } catch (error) {
+        console.error(`Failed to handle MCP GET request: ${toErrorMessage(error)}`);
+        res.status(500).send('Failed to handle MCP GET request.');
+      }
     });
 
     // Handle DELETE requests for session termination
     this.app.delete('/mcp', async (req: Request, res: Response) => {
-      await this.handleDeleteRequest(req, res);
+      try {
+        await this.handleDeleteRequest(req, res);
+      } catch (error) {
+        console.error(`Failed to handle MCP DELETE request: ${toErrorMessage(error)}`);
+        res.status(500).send('Failed to handle MCP DELETE request.');
+      }
     });
 
     // Health check endpoint
     this.app.get('/health', (_req: Request, res: Response) => {
-      res.json({ status: 'ok', transport: 'http' });
+      const payload: HttpTransportHealthResponse = {
+        status: 'ok',
+        transport: 'http',
+        serverId: this.adminOptions?.serverId,
+      };
+      res.json(payload);
     });
+
+    // Authenticated shutdown endpoint (rate-limited)
+    this.app.post('/admin/shutdown', async (req: Request, res: Response) => {
+      try {
+        const clientIp = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+        if (!this.adminRateLimiter.isAllowed(clientIp)) {
+          const payload: HttpTransportShutdownResponse = {
+            ok: false,
+            message: 'Too many shutdown requests. Try again later.',
+            serverId: this.adminOptions?.serverId,
+          };
+          res.status(429).json(payload);
+          return;
+        }
+
+        await this.handleAdminShutdownRequest(req, res);
+      } catch (error) {
+        console.error(`Failed to process shutdown request: ${toErrorMessage(error)}`);
+        const payload: HttpTransportShutdownResponse = {
+          ok: false,
+          message: 'Failed to process shutdown request.',
+          serverId: this.adminOptions?.serverId,
+        };
+        res.status(500).json(payload);
+      }
+    });
+  }
+
+  private isAuthorizedShutdownRequest(req: Request): boolean {
+    const expectedToken = this.adminOptions?.shutdownToken;
+    if (!expectedToken) {
+      return false;
+    }
+
+    const authHeader = req.headers.authorization;
+    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      return authHeader.slice('Bearer '.length) === expectedToken;
+    }
+
+    const tokenHeader = req.headers['x-one-mcp-shutdown-token'];
+    return typeof tokenHeader === 'string' && tokenHeader === expectedToken;
+  }
+
+  private async handleAdminShutdownRequest(req: Request, res: Response): Promise<void> {
+    try {
+      if (!this.adminOptions?.onShutdownRequested) {
+        const payload: HttpTransportShutdownResponse = {
+          ok: false,
+          message: 'Shutdown endpoint is not enabled for this server instance.',
+          serverId: this.adminOptions?.serverId,
+        };
+        res.status(404).json(payload);
+        return;
+      }
+
+      if (!this.isAuthorizedShutdownRequest(req)) {
+        const payload: HttpTransportShutdownResponse = {
+          ok: false,
+          message: 'Unauthorized shutdown request: invalid or missing shutdown token.',
+          serverId: this.adminOptions?.serverId,
+        };
+        res.status(401).json(payload);
+        return;
+      }
+
+      const payload: HttpTransportShutdownResponse = {
+        ok: true,
+        message: 'Shutdown request accepted. Stopping server gracefully.',
+        serverId: this.adminOptions?.serverId,
+      };
+      res.json(payload);
+
+      await this.adminOptions.onShutdownRequested();
+    } catch (error) {
+      throw new Error(`Failed to handle admin shutdown request: ${toErrorMessage(error)}`);
+    }
   }
 
   private async handlePostRequest(req: Request, res: Response): Promise<void> {
@@ -142,8 +289,8 @@ export class HttpTransportHandler implements IHttpTransportHandler {
       transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         enableJsonResponse: true, // Return JSON instead of SSE for simple request/response
-        onsessioninitialized: (sessionId) => {
-          this.sessionManager.setSession(sessionId, transport, mcpServer);
+        onsessioninitialized: (initializedSessionId) => {
+          this.sessionManager.setSession(initializedSessionId, transport, mcpServer);
         },
       });
 
@@ -154,23 +301,36 @@ export class HttpTransportHandler implements IHttpTransportHandler {
         }
       };
 
-      // Connect the new MCP server instance to the transport
-      await mcpServer.connect(transport);
+      try {
+        // Connect the new MCP server instance to the transport
+        await mcpServer.connect(transport);
+      } catch (error) {
+        throw new Error(
+          `Failed to connect MCP server transport for initialization request: ${toErrorMessage(error)}`,
+        );
+      }
     } else {
       // Invalid request
       res.status(400).json({
         jsonrpc: '2.0',
         error: {
           code: -32000,
-          message: 'Bad Request: No valid session ID provided',
+          message:
+            sessionId === undefined
+              ? 'Bad Request: missing session ID and request body is not an initialize request.'
+              : `Bad Request: unknown session ID '${sessionId}'.`,
         },
         id: null,
       });
       return;
     }
 
-    // Handle the request
-    await transport.handleRequest(req, res, req.body);
+    try {
+      // Handle the request
+      await transport.handleRequest(req, res, req.body);
+    } catch (error) {
+      throw new Error(`Failed handling MCP transport request: ${toErrorMessage(error)}`);
+    }
   }
 
   private async handleGetRequest(req: Request, res: Response): Promise<void> {
@@ -183,7 +343,11 @@ export class HttpTransportHandler implements IHttpTransportHandler {
 
     // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
     const session = this.sessionManager.getSession(sessionId)!;
-    await session.transport.handleRequest(req, res);
+    try {
+      await session.transport.handleRequest(req, res);
+    } catch (error) {
+      throw new Error(`Failed handling MCP GET request for session '${sessionId}': ${toErrorMessage(error)}`);
+    }
   }
 
   private async handleDeleteRequest(req: Request, res: Response): Promise<void> {
@@ -196,50 +360,59 @@ export class HttpTransportHandler implements IHttpTransportHandler {
 
     // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
     const session = this.sessionManager.getSession(sessionId)!;
-    await session.transport.handleRequest(req, res);
+    try {
+      await session.transport.handleRequest(req, res);
+    } catch (error) {
+      throw new Error(
+        `Failed handling MCP DELETE request for session '${sessionId}': ${toErrorMessage(error)}`,
+      );
+    }
 
     // Clean up session
     this.sessionManager.deleteSession(sessionId);
   }
 
   async start(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        this.server = this.app.listen(this.config.port, this.config.host, () => {
-          console.error(
-            `@agiflowai/one-mcp MCP server started on http://${this.config.host}:${this.config.port}/mcp`,
-          );
-          console.error(`Health check: http://${this.config.host}:${this.config.port}/health`);
-          resolve();
-        });
+    try {
+      const server = this.app.listen(this.config.port, this.config.host);
+      this.server = server;
 
-        this.server.on('error', (error: Error) => {
-          reject(error);
-        });
-      } catch (error) {
-        reject(error);
-      }
-    });
+      const listeningPromise = (async (): Promise<void> => {
+        await once(server, 'listening');
+      })();
+
+      const errorPromise = (async (): Promise<void> => {
+        const [error] = await once(server, 'error');
+        throw error instanceof Error ? error : new Error(String(error));
+      })();
+
+      await Promise.race([listeningPromise, errorPromise]);
+
+      console.error(
+        `@agiflowai/one-mcp MCP server started on http://${this.config.host}:${this.config.port}/mcp`,
+      );
+      console.error(`Health check: http://${this.config.host}:${this.config.port}/health`);
+    } catch (error) {
+      this.server = null;
+      throw new Error(`Failed to start HTTP transport: ${toErrorMessage(error)}`);
+    }
   }
 
   async stop(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.server) {
-        // Clear all sessions
-        this.sessionManager.clear();
+    if (!this.server) {
+      return;
+    }
 
-        this.server.close((err?: Error) => {
-          if (err) {
-            reject(err);
-          } else {
-            this.server = null;
-            resolve();
-          }
-        });
-      } else {
-        resolve();
-      }
-    });
+    this.sessionManager.clear();
+
+    const closeServer = promisify(this.server.close.bind(this.server));
+
+    try {
+      await closeServer();
+      this.server = null;
+    } catch (error) {
+      throw new Error(`Failed to stop HTTP transport: ${toErrorMessage(error)}`);
+    }
   }
 
   getPort(): number {

@@ -390,6 +390,12 @@ npx @agiflowai/one-mcp mcp-serve --config ./mcp-config.yaml --clear-definitions-
 # Start with HTTP transport
 npx @agiflowai/one-mcp mcp-serve --config ./mcp-config.yaml --type http --port 3000
 
+# Start stdio-http bridge (reuses existing HTTP server on host/port when available)
+npx @agiflowai/one-mcp mcp-serve --config ./mcp-config.yaml --type stdio-http --host 127.0.0.1 --port 3000
+
+# Start stdio-http bridge with explicit search proxy mode
+npx @agiflowai/one-mcp mcp-serve --config ./mcp-config.yaml --type stdio-http --proxy-mode search --host 127.0.0.1 --port 3000
+
 # Initialize config file
 npx @agiflowai/one-mcp init --output mcp-config.yaml
 
@@ -497,9 +503,9 @@ The definitions cache stores tool schemas, prompt metadata, and prompt-based ski
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-c, --config` | Path to config file (YAML or JSON) | Required |
-| `-t, --type` | Transport: `stdio`, `http`, `sse` | `stdio` |
-| `-p, --port` | Port for HTTP/SSE | `3000` |
-| `--host` | Host for HTTP/SSE | `localhost` |
+| `-t, --type` | Transport: `stdio`, `http`, `sse`, `stdio-http` | `stdio` |
+| `-p, --port` | Port for HTTP/SSE/stdio-http internal HTTP | `3000` |
+| `--host` | Host for HTTP/SSE/stdio-http internal HTTP | `localhost` |
 | `--no-cache` | Force reload config, bypass cache | `false` |
 | `--definitions-cache` | Read tool/prompt/skill definitions from a specific JSON or YAML cache file | Auto-derived from config path |
 | `--clear-definitions-cache` | Delete the effective definitions cache file before startup | `false` |

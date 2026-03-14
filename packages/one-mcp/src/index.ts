@@ -25,19 +25,29 @@ export type { ServerOptions } from './server';
 
 // Types
 export type * from './types';
+export { TRANSPORT_MODE } from './types';
 
 // Transports
-export { StdioTransportHandler } from './transports/stdio';
-export { SseTransportHandler } from './transports/sse';
-export { HttpTransportHandler } from './transports/http';
+export {
+  HttpTransportHandler,
+  SseTransportHandler,
+  StdioHttpTransportHandler,
+  StdioTransportHandler,
+} from './transports';
 
 // Tools - Exported for library usage (e.g., Clawdbot plugin)
-export { DescribeToolsTool } from './tools/DescribeToolsTool';
-export { SearchListToolsTool } from './tools/SearchListToolsTool';
-export { UseToolTool } from './tools/UseToolTool';
+export { DescribeToolsTool, SearchListToolsTool, UseToolTool } from './tools';
 
 // Services - Exported for library usage (e.g., Clawdbot plugin)
-export { ConfigFetcherService } from './services/ConfigFetcherService';
-export { DefinitionsCacheService } from './services/DefinitionsCacheService';
-export { McpClientManagerService } from './services/McpClientManagerService';
-export { SkillService } from './services/SkillService';
+export {
+  ConfigFetcherService,
+  DefinitionsCacheService,
+  McpClientManagerService,
+  RuntimeStateService,
+  StopServerService,
+  SkillService,
+} from './services';
+export type { StopServerRequest, StopServerResult } from './services';
+
+// Utils
+export { findConfigFile, generateServerId } from './utils';
