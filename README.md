@@ -4,11 +4,17 @@
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg?style=flat-square)](https://opensource.org/licenses/AGPL-3.0)
 [![Discord](https://dcbadge.limes.pink/api/server/https://discord.gg/NsB6q9Vas9?style=flat-square)](https://discord.gg/NsB6q9Vas9)
 
+![AI Code Toolkit Banner](./docs/workflow.jpg)
+
 This repo provides:
 - project and feature scaffolding via templates
 - file-level design guidance before edits
 - rule-based review after edits
 - design-system discovery for frontend work
+
+## Why This Exists
+
+As projects scale, conventions in docs like `CLAUDE.md`, `AGENTS.md`, and style guides become hard to keep concise and consistently applied by AI agents. This toolkit moves those conventions into reusable template configs (`scaffold.yaml`, `architect.yaml`, `RULES.yaml`) so agents can discover only the relevant guidance when needed.
 
 ## Quick Start
 
