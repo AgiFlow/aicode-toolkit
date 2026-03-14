@@ -1,3 +1,19 @@
+## 1.0.25 (2026-03-14)
+
+### 🩹 Fixes
+
+- **release:** resolve 5 Dependabot security alerts ([#99](https://github.com/AgiFlow/aicode-toolkit/issues/99), [#100](https://github.com/AgiFlow/aicode-toolkit/issues/100), [#101](https://github.com/AgiFlow/aicode-toolkit/issues/101), [#98](https://github.com/AgiFlow/aicode-toolkit/issues/98), [#102](https://github.com/AgiFlow/aicode-toolkit/issues/102))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.0.22
+- Updated @agiflowai/aicode-utils to 1.0.19
+
+### ❤️ Thank You
+
+- Claude Opus 4.6 (1M context)
+- vuongngo
+
 ## 1.0.24 (2026-03-06)
 
 ### 🧱 Updated Dependencies
