@@ -328,14 +328,13 @@ async function removeRuntimeRecordDuringStop(
   }
 }
 
-async function createStdioHttpInternalTransport(
+function createStdioHttpInternalTransport(
   serverOptions: ServerOptions,
   config: TransportConfig,
   adminOptions?: HttpTransportAdminOptions,
-): Promise<HttpTransportHandler> {
+): HttpTransportHandler {
   try {
-    const server = await createServer(serverOptions);
-    return new HttpTransportHandler(server, config, adminOptions);
+    return new HttpTransportHandler(() => createServer(serverOptions), config, adminOptions);
   } catch (error) {
     throw new Error(
       `Failed to create internal HTTP transport for stdio-http proxy: ${toErrorMessage(error)}`,
@@ -408,9 +407,8 @@ async function createAndStartHttpRuntime(
   };
 
   try {
-    const server = await createServer(serverOptions);
     const adminOptions = createHttpAdminOptions(runtimeRecord.serverId, shutdownToken, stopHandler);
-    handler = new HttpTransportHandler(server, config, adminOptions);
+    handler = new HttpTransportHandler(() => createServer(serverOptions), config, adminOptions);
   } catch (error) {
     throw new Error(`Failed to create HTTP runtime server: ${toErrorMessage(error)}`);
   }
@@ -529,7 +527,7 @@ async function startStdioHttpTransport(
         }
 
         try {
-          httpHandler = await createStdioHttpInternalTransport(serverOptions, config, adminOptions);
+          httpHandler = createStdioHttpInternalTransport(serverOptions, config, adminOptions);
           await httpHandler.start();
           ownsInternalHttpTransport = true;
         } catch (error) {
