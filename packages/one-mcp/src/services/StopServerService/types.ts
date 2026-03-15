@@ -1,22 +1,29 @@
 /**
- * StopServerService types and constants.
+ * StopServerService types and type guards.
  */
 
 import type {
   HttpTransportHealthResponse,
   HttpTransportShutdownResponse,
-  RuntimeStateRecord,
 } from '../../types';
+import {
+  HEALTH_STATUS_OK,
+  HEALTH_TRANSPORT_HTTP,
+  KEY_MESSAGE,
+  KEY_OK,
+  KEY_SERVER_ID,
+  KEY_STATUS,
+  KEY_TRANSPORT,
+} from './constants';
 
-export const DEFAULT_STOP_TIMEOUT_MS = 5000;
-export const HEALTH_REQUEST_TIMEOUT_FLOOR_MS = 250;
-export const SHUTDOWN_POLL_INTERVAL_MS = 200;
-export const HEALTH_CHECK_PATH = '/health';
-export const ADMIN_SHUTDOWN_PATH = '/admin/shutdown';
-export const HTTP_METHOD_GET = 'GET';
-export const HTTP_METHOD_POST = 'POST';
-export const AUTHORIZATION_HEADER_NAME = 'Authorization';
-export const BEARER_TOKEN_PREFIX = 'Bearer ';
+/**
+ * Safely cast a non-null object to a string-keyed record for property access.
+ * @param value - Object value already verified as non-null
+ * @returns The same value typed as a record
+ */
+function toRecord(value: object): Record<string, unknown> {
+  return value as Record<string, unknown>;
+}
 
 /**
  * Stop request options.
@@ -68,14 +75,18 @@ export interface HealthCheckResult {
  * @returns True when payload matches health response shape
  */
 export function isHealthResponse(value: unknown): value is HttpTransportHealthResponse {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const record = toRecord(value);
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    'status' in value &&
-    value.status === 'ok' &&
-    'transport' in value &&
-    value.transport === 'http' &&
-    (!('serverId' in value) || value.serverId === undefined || typeof value.serverId === 'string')
+    KEY_STATUS in record &&
+    record[KEY_STATUS] === HEALTH_STATUS_OK &&
+    KEY_TRANSPORT in record &&
+    record[KEY_TRANSPORT] === HEALTH_TRANSPORT_HTTP &&
+    (!(KEY_SERVER_ID in record) ||
+      record[KEY_SERVER_ID] === undefined ||
+      typeof record[KEY_SERVER_ID] === 'string')
   );
 }
 
@@ -85,23 +96,17 @@ export function isHealthResponse(value: unknown): value is HttpTransportHealthRe
  * @returns True when payload matches shutdown response shape
  */
 export function isShutdownResponse(value: unknown): value is HttpTransportShutdownResponse {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const record = toRecord(value);
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    'ok' in value &&
-    typeof value.ok === 'boolean' &&
-    'message' in value &&
-    typeof value.message === 'string' &&
-    (!('serverId' in value) || value.serverId === undefined || typeof value.serverId === 'string')
+    KEY_OK in record &&
+    typeof record[KEY_OK] === 'boolean' &&
+    KEY_MESSAGE in record &&
+    typeof record[KEY_MESSAGE] === 'string' &&
+    (!(KEY_SERVER_ID in record) ||
+      record[KEY_SERVER_ID] === undefined ||
+      typeof record[KEY_SERVER_ID] === 'string')
   );
-}
-
-/**
- * Format runtime endpoint URL.
- * @param runtime - Runtime record to format
- * @param path - Request path to append
- * @returns Full runtime URL
- */
-export function buildRuntimeUrl(runtime: RuntimeStateRecord, path: string): string {
-  return `http://${runtime.host}:${runtime.port}${path}`;
 }
