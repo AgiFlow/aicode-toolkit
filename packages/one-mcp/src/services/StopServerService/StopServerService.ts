@@ -13,21 +13,41 @@ import type {
 import { RuntimeStateService } from '../RuntimeStateService';
 import {
   ADMIN_SHUTDOWN_PATH,
+  ALLOWED_HOSTS,
   AUTHORIZATION_HEADER_NAME,
   BEARER_TOKEN_PREFIX,
-  buildRuntimeUrl,
   DEFAULT_STOP_TIMEOUT_MS,
   HEALTH_CHECK_PATH,
   HEALTH_REQUEST_TIMEOUT_FLOOR_MS,
   HTTP_METHOD_GET,
   HTTP_METHOD_POST,
+  HTTP_PROTOCOL,
+  SHUTDOWN_POLL_INTERVAL_MS,
+  URL_PORT_SEPARATOR,
+} from './constants';
+import {
   isHealthResponse,
   isShutdownResponse,
   type HealthCheckResult,
-  SHUTDOWN_POLL_INTERVAL_MS,
   type StopServerRequest,
   type StopServerResult,
 } from './types';
+
+/**
+ * Format runtime endpoint URL after validating the host is a loopback address.
+ * Rejects non-loopback hosts to prevent SSRF via tampered runtime state files.
+ * @param runtime - Runtime record to format
+ * @param path - Request path to append
+ * @returns Full runtime URL
+ */
+function buildRuntimeUrl(runtime: RuntimeStateRecord, path: string): string {
+  if (!ALLOWED_HOSTS.has(runtime.host)) {
+    throw new Error(
+      `Refusing to connect to non-loopback host '${runtime.host}'. Only ${Array.from(ALLOWED_HOSTS).join(', ')} are allowed.`,
+    );
+  }
+  return `${HTTP_PROTOCOL}${runtime.host}${URL_PORT_SEPARATOR}${runtime.port}${path}`;
+}
 
 function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);

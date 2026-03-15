@@ -253,7 +253,6 @@ describe('mcp-serve command', (): void => {
 
     await mcpServeCommand.parseAsync(['node', 'cli', '--type', 'stdio-http', '--port', '3123']);
 
-    expect(MOCKS.mockCreateServer).toHaveBeenCalledTimes(1);
     expect(MOCKS.mockHttpConstructor).toHaveBeenCalledTimes(1);
     expect(MOCKS.mockHttpStart).toHaveBeenCalledTimes(1);
     expect(MOCKS.mockStdioHttpStart).toHaveBeenCalledTimes(2);
@@ -267,7 +266,6 @@ describe('mcp-serve command', (): void => {
 
     await mcpServeCommand.parseAsync(['node', 'cli', '--type', 'stdio-http', '--port', '3123']);
 
-    expect(MOCKS.mockCreateServer).toHaveBeenCalledTimes(1);
     expect(MOCKS.mockHttpStart).toHaveBeenCalledTimes(1);
     expect(MOCKS.mockStdioHttpStart).toHaveBeenCalledTimes(2);
   });

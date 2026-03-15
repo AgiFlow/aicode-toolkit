@@ -59,10 +59,14 @@ class HttpFullSessionManager {
     this.sessions.set(sessionId, { transport, server });
   }
 
-  deleteSession(sessionId: string): void {
+  async deleteSession(sessionId: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (session) {
-      session.server.close();
+      try {
+        await session.server.close();
+      } catch (error) {
+        throw new Error(`Failed to close MCP server for session '${sessionId}': ${toErrorMessage(error)}`);
+      }
     }
     this.sessions.delete(sessionId);
   }
@@ -71,9 +75,15 @@ class HttpFullSessionManager {
     return this.sessions.has(sessionId);
   }
 
-  clear(): void {
-    for (const session of this.sessions.values()) {
-      session.server.close();
+  async clear(): Promise<void> {
+    try {
+      await Promise.all(
+        Array.from(this.sessions.values()).map(async (session) => {
+          await session.server.close();
+        }),
+      );
+    } catch (error) {
+      throw new Error(`Failed to clear sessions: ${toErrorMessage(error)}`);
     }
     this.sessions.clear();
   }
@@ -116,7 +126,7 @@ class AdminRateLimiter {
  * Provides stateful session management with resumability support
  */
 export class HttpTransportHandler implements IHttpTransportHandler {
-  private serverFactory: () => McpServer;
+  private serverFactory: () => McpServer | Promise<McpServer>;
   private app: express.Application;
   private server: HttpServer | null = null;
   private sessionManager: HttpFullSessionManager;
@@ -125,12 +135,11 @@ export class HttpTransportHandler implements IHttpTransportHandler {
   private adminRateLimiter = new AdminRateLimiter();
 
   constructor(
-    serverFactory: McpServer | (() => McpServer),
+    serverFactory: (() => McpServer | Promise<McpServer>),
     config: TransportConfig,
     adminOptions?: HttpTransportAdminOptions,
   ) {
-    // Support both a factory function and a direct server instance for backwards compatibility
-    this.serverFactory = typeof serverFactory === 'function' ? serverFactory : () => serverFactory;
+    this.serverFactory = serverFactory;
     this.app = express();
     this.sessionManager = new HttpFullSessionManager();
     this.config = {
@@ -284,7 +293,7 @@ export class HttpTransportHandler implements IHttpTransportHandler {
       transport = session.transport;
     } else if (!sessionId && isInitializeRequest(req.body)) {
       // New initialization request - create new server instance
-      const mcpServer = this.serverFactory();
+      const mcpServer = await this.serverFactory();
 
       transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
@@ -294,10 +303,15 @@ export class HttpTransportHandler implements IHttpTransportHandler {
         },
       });
 
-      // Clean up transport when closed
-      transport.onclose = () => {
+      // Clean up transport when closed (onclose callback is not awaited by the SDK,
+      // so errors must be logged rather than thrown to avoid unhandled rejections)
+      transport.onclose = async () => {
         if (transport.sessionId) {
-          this.sessionManager.deleteSession(transport.sessionId);
+          try {
+            await this.sessionManager.deleteSession(transport.sessionId);
+          } catch (error) {
+            console.error(`Failed to clean up session '${transport.sessionId}': ${toErrorMessage(error)}`);
+          }
         }
       };
 
@@ -369,7 +383,7 @@ export class HttpTransportHandler implements IHttpTransportHandler {
     }
 
     // Clean up session
-    this.sessionManager.deleteSession(sessionId);
+    await this.sessionManager.deleteSession(sessionId);
   }
 
   async start(): Promise<void> {
@@ -403,7 +417,11 @@ export class HttpTransportHandler implements IHttpTransportHandler {
       return;
     }
 
-    this.sessionManager.clear();
+    try {
+      await this.sessionManager.clear();
+    } catch (error) {
+      throw new Error(`Failed to clear sessions during HTTP transport stop: ${toErrorMessage(error)}`);
+    }
 
     const closeServer = promisify(this.server.close.bind(this.server));
 
