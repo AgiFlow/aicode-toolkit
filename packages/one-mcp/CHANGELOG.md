@@ -1,3 +1,18 @@
+## 0.3.15 (2026-03-15)
+
+### 🩹 Fixes
+
+- **one-mcp:** add SSRF protection to StopServerService runtime requests ([#24](https://github.com/AgiFlow/aicode-toolkit/issues/24), [#25](https://github.com/AgiFlow/aicode-toolkit/issues/25))
+- **one-mcp:** use per-session server factory so HTTP transport supports multiple clients ([e52cd36](https://github.com/AgiFlow/aicode-toolkit/commit/e52cd36))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.0.20
+
+### ❤️ Thank You
+
+- vuongngo
+
 ## 0.3.14 (2026-03-14)
 
 ### 🧱 Updated Dependencies
