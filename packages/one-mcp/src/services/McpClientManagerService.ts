@@ -141,25 +141,11 @@ export class McpClientManagerService {
   private serverConfigs: Map<string, McpServerConfig> = new Map();
   private connectionPromises: Map<string, Promise<McpClient>> = new Map();
 
-  constructor() {
-    // Cleanup resources on exit
-    process.on('exit', () => {
-      this.cleanupOnExit();
-    });
-    process.on('SIGINT', () => {
-      this.cleanupOnExit();
-      process.exit(0);
-    });
-    process.on('SIGTERM', () => {
-      this.cleanupOnExit();
-      process.exit(0);
-    });
-  }
-
   /**
-   * Cleanup all resources on exit (child processes)
+   * Synchronously kill all stdio MCP server child processes.
+   * Must be called by the owner (e.g. transport/command layer) during shutdown.
    */
-  private cleanupOnExit(): void {
+  cleanupChildProcesses(): void {
     // Kill all stdio MCP server child processes
     for (const [serverName, client] of this.clients) {
       try {
