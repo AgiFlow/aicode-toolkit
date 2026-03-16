@@ -5,6 +5,7 @@
  * - Factory pattern for server creation
  * - Tool registration pattern
  * - Dependency injection for services
+ * - Shared services pattern for multi-session HTTP transport
  *
  * CODING STANDARDS:
  * - Register all tools, resources, and prompts here
@@ -49,6 +50,28 @@ export interface ServerOptions {
   clearDefinitionsCache?: boolean;
   proxyMode?: 'meta' | 'flat' | 'search';
   onServerIdResolved?: (serverId: string) => Promise<void> | void;
+}
+
+/**
+ * Shared services and tools for multi-session HTTP transport.
+ * Created once via initializeSharedServices(), then passed to createSessionServer()
+ * for each new client session. This avoids duplicating downstream connections,
+ * file watchers, and caches across concurrent sessions.
+ */
+export interface SharedServices {
+  clientManager: McpClientManagerService;
+  definitionsCacheService: DefinitionsCacheService;
+  skillService?: SkillService;
+  describeTools: DescribeToolsTool;
+  useTool: UseToolTool;
+  searchListTools: SearchListToolsTool;
+  serverId: string;
+  proxyMode: 'meta' | 'flat' | 'search';
+  /**
+   * Disposes all shared resources: disconnects downstream servers,
+   * stops file watchers. Must be called by the owner on shutdown.
+   */
+  dispose: () => Promise<void>;
 }
 
 export function summarizeServerTools(serverDefinition: CachedServerDefinition): string {
@@ -230,28 +253,28 @@ export function buildProxyInstructions(
   ].join('\n\n');
 }
 
-export async function createServer(options?: ServerOptions): Promise<Server> {
-  // Initialize services
+/**
+ * Initialize shared services and tools once for use across multiple sessions.
+ * Use with createSessionServer() for HTTP transport where multiple agents
+ * connect concurrently. This avoids duplicating downstream connections,
+ * file watchers, caches, and tool instances per session.
+ */
+export async function initializeSharedServices(options?: ServerOptions): Promise<SharedServices> {
   const clientManager = new McpClientManagerService();
 
-  // Track config values from config file (will be set if config is loaded)
   let configSkills: { paths: string[] } | undefined;
   let configId: string | undefined;
   let configHash: string | undefined;
   let effectiveDefinitionsCachePath: string | undefined;
   let shouldStartFromCache = false;
 
-  // Load and connect to MCP servers if config is provided
   if (options?.configFilePath) {
-    // Fetch configuration with proper error handling
     let config;
     try {
       const configFetcher = new ConfigFetcherService({
         configFilePath: options.configFilePath,
-        useCache: !options.noCache, // Disable cache reading when --no-cache is provided
+        useCache: !options.noCache,
       });
-
-      // Force refresh if noCache option is enabled
       config = await configFetcher.fetchConfiguration(options.noCache || false);
     } catch (error) {
       throw new Error(
@@ -259,7 +282,6 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
       );
     }
 
-    // Get config values from config file
     configSkills = config.skills;
     configId = config.id;
     configHash = DefinitionsCacheService.generateConfigHash(config);
@@ -285,12 +307,11 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
           shouldStartFromCache = true;
         }
       } catch {
-        // Ignore cache read failures here; bootstrap will fall back to eager connect below.
+        // Ignore cache read failures; bootstrap will fall back to eager connect below.
       }
     }
 
     if (!shouldStartFromCache) {
-      // Connect to all configured MCP servers and track failures
       const failedConnections: Array<{ serverName: string; error: Error }> = [];
       const connectionPromises = Object.entries(config.mcpServers).map(
         async ([serverName, serverConfig]) => {
@@ -307,14 +328,12 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
 
       await Promise.all(connectionPromises);
 
-      // Log warning for partial failures
       if (failedConnections.length > 0 && failedConnections.length < Object.keys(config.mcpServers).length) {
         console.error(
           `Warning: Some MCP server connections failed: ${failedConnections.map((f) => f.serverName).join(', ')}`
         );
       }
 
-      // If all connections failed, throw an error
       if (failedConnections.length > 0 && failedConnections.length === Object.keys(config.mcpServers).length) {
         throw new Error(
           `All MCP server connections failed: ${failedConnections.map((f) => `${f.serverName}: ${f.error.message}`).join(', ')}`
@@ -325,22 +344,16 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
     }
   }
 
-  // Resolve server ID with priority: CLI option > config file > auto-generate
   const serverId = options?.serverId || configId || generateServerId();
   console.error(`[one-mcp] Server ID: ${serverId}`);
 
-  // Initialize skill service only if skills are explicitly configured
-  // Skills are disabled by default since Claude Code already handles skills natively
   const skillsConfig = options?.skills || configSkills;
   const skillPaths = skillsConfig?.paths ?? [];
 
-  // Use a reference object to safely capture describeTools in the callback closure
-  // This avoids the temporal dead zone issue with forward references
   const toolsRef: { describeTools: DescribeToolsTool | null } = { describeTools: null };
 
   const skillService = skillPaths.length > 0
     ? new SkillService(process.cwd(), skillPaths, {
-        // When skill files change, also invalidate the auto-detected skills cache
         onCacheInvalidated: () => {
           toolsRef.describeTools?.clearAutoDetectedSkillsCache();
         },
@@ -373,14 +386,15 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
     definitionsCacheService = new DefinitionsCacheService(clientManager, skillService);
   }
 
-  // Initialize tools with dependencies and server ID
+  const proxyMode = options?.proxyMode || 'meta';
+
   const describeTools = new DescribeToolsTool(
     clientManager,
     skillService,
     serverId,
     definitionsCacheService,
   );
-  const useToolWithCache = new UseToolTool(
+  const useTool = new UseToolTool(
     clientManager,
     skillService,
     serverId,
@@ -388,12 +402,76 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
   );
   const searchListTools = new SearchListToolsTool(clientManager, definitionsCacheService);
 
-  // Assign to reference for cache invalidation callback
   toolsRef.describeTools = describeTools;
+
+  // Start watching skill directories for changes (non-critical)
+  if (skillService) {
+    skillService.startWatching().catch((error) => {
+      console.error(`[skill-watcher] File watcher failed (non-critical): ${error instanceof Error ? error.message : 'Unknown error'}`);
+    });
+  }
+
+  // Write definitions cache once (fire-and-forget)
+  if (!shouldStartFromCache && effectiveDefinitionsCachePath && options?.configFilePath) {
+    void definitionsCacheService
+      .collectForCache({
+        configPath: options.configFilePath,
+        configHash,
+        oneMcpVersion: packageJson.version,
+        serverId,
+      })
+      .then((definitionsCache) =>
+        DefinitionsCacheService.writeToFile(effectiveDefinitionsCachePath!, definitionsCache),
+      )
+      .then(() => {
+        console.error(`[definitions-cache] Wrote ${effectiveDefinitionsCachePath}`);
+      })
+      .catch((error) => {
+        console.error(
+          `[definitions-cache] Failed to persist ${effectiveDefinitionsCachePath}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+      });
+  }
+
+  const dispose = async (): Promise<void> => {
+    await clientManager.disconnectAll();
+    if (skillService) {
+      skillService.stopWatching();
+    }
+  };
+
+  return {
+    clientManager,
+    definitionsCacheService,
+    skillService,
+    describeTools,
+    useTool,
+    searchListTools,
+    serverId,
+    proxyMode,
+    dispose,
+  };
+}
+
+/**
+ * Create a lightweight per-session MCP Server instance that delegates
+ * to shared services and tools. Use with initializeSharedServices()
+ * for multi-session HTTP transport.
+ */
+export async function createSessionServer(shared: SharedServices): Promise<Server> {
+  const {
+    clientManager,
+    definitionsCacheService,
+    skillService,
+    describeTools,
+    useTool: useToolWithCache,
+    searchListTools,
+    serverId,
+    proxyMode,
+  } = shared;
 
   const serverDefinitions = await definitionsCacheService.getServerDefinitions();
   const includeSkillsTool = await hasAnySkills(definitionsCacheService, skillService);
-  const proxyMode = options?.proxyMode || 'meta';
 
   const server = new Server(
     {
@@ -409,14 +487,6 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
       instructions: buildProxyInstructions(serverDefinitions, proxyMode, includeSkillsTool),
     }
   );
-
-  // Start watching skill directories for changes (non-critical - cache still works without watcher)
-  if (skillService) {
-    skillService.startWatching().catch((error) => {
-      // Watcher failure is non-critical: skills still work, just won't auto-refresh on file changes
-      console.error(`[skill-watcher] File watcher failed (non-critical): ${error instanceof Error ? error.message : 'Unknown error'}`);
-    });
-  }
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: proxyMode === 'flat'
@@ -490,10 +560,10 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
   });
 
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
-    const serverDefinitions = await definitionsCacheService.getServerDefinitions();
+    const currentServerDefinitions = await definitionsCacheService.getServerDefinitions();
     const resourceToServers = new Map<string, string[]>();
 
-    for (const serverDefinition of serverDefinitions) {
+    for (const serverDefinition of currentServerDefinitions) {
       for (const resource of serverDefinition.resources) {
         if (!resourceToServers.has(resource.uri)) {
           resourceToServers.set(resource.uri, []);
@@ -503,7 +573,7 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
     }
 
     const resources = [];
-    for (const serverDefinition of serverDefinitions) {
+    for (const serverDefinition of currentServerDefinitions) {
       for (const resource of serverDefinition.resources) {
         const hasClash = (resourceToServers.get(resource.uri) || []).length > 1;
         resources.push({
@@ -542,15 +612,13 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
     return await client.readResource(actualUri);
   });
 
-  // Prompt handlers - aggregate prompts from all connected MCP servers
   server.setRequestHandler(ListPromptsRequestSchema, async () => {
-    const serverDefinitions = await definitionsCacheService.getServerDefinitions();
+    const currentServerDefinitions = await definitionsCacheService.getServerDefinitions();
 
-    // Collect all prompts from all servers to detect name clashes
     const promptToServers = new Map<string, string[]>();
     const serverPromptsMap = new Map<string, Array<{ name: string; description?: string; arguments?: Array<{ name: string; description?: string; required?: boolean }> }>>();
 
-    for (const serverDefinition of serverDefinitions) {
+    for (const serverDefinition of currentServerDefinitions) {
       serverPromptsMap.set(serverDefinition.serverName, serverDefinition.prompts);
       for (const prompt of serverDefinition.prompts) {
         if (!promptToServers.has(prompt.name)) {
@@ -560,10 +628,9 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
       }
     }
 
-    // Build aggregated prompt list with server prefix when there are clashes
     const aggregatedPrompts: Array<{ name: string; description?: string; arguments?: Array<{ name: string; description?: string; required?: boolean }> }> = [];
 
-    for (const serverDefinition of serverDefinitions) {
+    for (const serverDefinition of currentServerDefinitions) {
       const prompts = serverPromptsMap.get(serverDefinition.serverName) || [];
       for (const prompt of prompts) {
         const servers = promptToServers.get(prompt.name) || [];
@@ -582,20 +649,17 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
 
   server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-    const serverDefinitions = await definitionsCacheService.getServerDefinitions();
+    const currentServerDefinitions = await definitionsCacheService.getServerDefinitions();
 
-    // Parse the prompt name to determine target server
     const { serverName, actualToolName: actualPromptName } = parseToolName(name);
 
     if (serverName) {
-      // Prefixed format: {serverName}__{promptName} - call specific server
       const client = await clientManager.ensureConnected(serverName);
       return await client.getPrompt(actualPromptName, args);
     }
 
-    // Plain prompt name - find which server(s) have this prompt
     const serversWithPrompt: string[] = [];
-    for (const serverDefinition of serverDefinitions) {
+    for (const serverDefinition of currentServerDefinitions) {
       if (serverDefinition.prompts.some((prompt) => prompt.name === name)) {
         serversWithPrompt.push(serverDefinition.serverName);
       }
@@ -612,7 +676,6 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
       );
     }
 
-    // Unique prompt - call the single server that has it
     const client = clientManager.getClient(serversWithPrompt[0]);
     if (!client) {
       return await (await clientManager.ensureConnected(serversWithPrompt[0])).getPrompt(name, args);
@@ -620,26 +683,14 @@ export async function createServer(options?: ServerOptions): Promise<Server> {
     return await client.getPrompt(name, args);
   });
 
-  if (!shouldStartFromCache && effectiveDefinitionsCachePath && options?.configFilePath) {
-    void definitionsCacheService
-      .collectForCache({
-        configPath: options.configFilePath,
-        configHash,
-        oneMcpVersion: packageJson.version,
-        serverId,
-      })
-      .then((definitionsCache) =>
-        DefinitionsCacheService.writeToFile(effectiveDefinitionsCachePath!, definitionsCache),
-      )
-      .then(() => {
-        console.error(`[definitions-cache] Wrote ${effectiveDefinitionsCachePath}`);
-      })
-      .catch((error) => {
-        console.error(
-          `[definitions-cache] Failed to persist ${effectiveDefinitionsCachePath}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        );
-      });
-  }
-
   return server;
+}
+
+/**
+ * Create a single MCP server instance (backward-compatible wrapper).
+ * For multi-session HTTP transport, use initializeSharedServices() + createSessionServer() instead.
+ */
+export async function createServer(options?: ServerOptions): Promise<Server> {
+  const shared = await initializeSharedServices(options);
+  return createSessionServer(shared);
 }

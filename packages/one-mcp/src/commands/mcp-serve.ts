@@ -29,6 +29,7 @@ import {
   type HttpTransportAdminOptions,
   HttpTransportHandler,
   RuntimeStateService,
+  type SharedServices,
   SseTransportHandler,
   StdioHttpTransportHandler,
   StdioTransportHandler,
@@ -38,7 +39,9 @@ import {
   type TransportConfig,
   type TransportHandler,
   createServer,
+  createSessionServer,
   generateServerId,
+  initializeSharedServices,
 } from '..';
 
 const CONFIG_FILE_NAMES = ['mcp-config.yaml', 'mcp-config.yml', 'mcp-config.json'] as const;
@@ -329,12 +332,12 @@ async function removeRuntimeRecordDuringStop(
 }
 
 function createStdioHttpInternalTransport(
-  serverOptions: ServerOptions,
+  sharedServices: SharedServices,
   config: TransportConfig,
   adminOptions?: HttpTransportAdminOptions,
 ): HttpTransportHandler {
   try {
-    return new HttpTransportHandler(() => createServer(serverOptions), config, adminOptions);
+    return new HttpTransportHandler(() => createSessionServer(sharedServices), config, adminOptions);
   } catch (error) {
     throw new Error(
       `Failed to create internal HTTP transport for stdio-http proxy: ${toErrorMessage(error)}`,
@@ -377,6 +380,8 @@ async function createAndStartHttpRuntime(
   config: TransportConfig,
   resolvedConfigPath: string | undefined,
 ): Promise<void> {
+  const sharedServices = await initializeSharedServices(serverOptions);
+
   const runtimeStateService = new RuntimeStateService();
   const shutdownToken = randomUUID();
   const runtimeRecord = createRuntimeRecord(
@@ -398,6 +403,7 @@ async function createAndStartHttpRuntime(
 
     try {
       await stopOwnedHttpTransport(handler, runtimeStateService, runtimeRecord.serverId);
+      await sharedServices.dispose();
       process.exit(0);
     } catch (error) {
       throw new Error(
@@ -408,17 +414,20 @@ async function createAndStartHttpRuntime(
 
   try {
     const adminOptions = createHttpAdminOptions(runtimeRecord.serverId, shutdownToken, stopHandler);
-    handler = new HttpTransportHandler(() => createServer(serverOptions), config, adminOptions);
+    handler = new HttpTransportHandler(() => createSessionServer(sharedServices), config, adminOptions);
   } catch (error) {
+    await sharedServices.dispose();
     throw new Error(`Failed to create HTTP runtime server: ${toErrorMessage(error)}`);
   }
 
   try {
     await startServer(handler, async (): Promise<void> => {
+      await sharedServices.dispose();
       await removeRuntimeRecordDuringStop(runtimeStateService, runtimeRecord.serverId);
     });
     await writeRuntimeRecord(runtimeStateService, runtimeRecord);
   } catch (error) {
+    await sharedServices.dispose();
     await cleanupFailedRuntimeStartup(handler, runtimeStateService, runtimeRecord.serverId);
     throw new Error(`Failed to start HTTP runtime '${runtimeRecord.serverId}': ${toErrorMessage(error)}`);
   }
@@ -480,6 +489,12 @@ async function startStdioHttpTransport(
   config: TransportConfig,
   resolvedConfigPath: string | undefined,
 ): Promise<void> {
+  // Shared services are only needed if we bootstrap an internal HTTP server.
+  // Initialized lazily inside handler.start() to avoid unnecessary work when
+  // connecting to an external endpoint. Using { ref } wrapper so TypeScript
+  // can track mutations across closures.
+  const shared: { services: SharedServices | null } = { services: null };
+
   try {
     const endpoint = new URL(`http://${config.host}:${config.port}${MCP_ENDPOINT_PATH}`);
     const stdioHttpHandler = new StdioHttpTransportHandler({ endpoint });
@@ -505,6 +520,10 @@ async function startStdioHttpTransport(
           removeRuntimeRecord(runtimeStateService, serverId),
         ]);
 
+        if (shared.services) {
+          await shared.services.dispose();
+        }
+
         ownsInternalHttpTransport = false;
         process.exit(0);
       } catch (error) {
@@ -526,8 +545,13 @@ async function startStdioHttpTransport(
           initialProxyConnectError = error;
         }
 
+        // External endpoint not available — bootstrap internal HTTP server
+        if (!shared.services) {
+          shared.services = await initializeSharedServices(serverOptions);
+        }
+
         try {
-          httpHandler = createStdioHttpInternalTransport(serverOptions, config, adminOptions);
+          httpHandler = createStdioHttpInternalTransport(shared.services, config, adminOptions);
           await httpHandler.start();
           ownsInternalHttpTransport = true;
         } catch (error) {
@@ -581,6 +605,10 @@ async function startStdioHttpTransport(
             removeRuntimeRecord(runtimeStateService, serverId),
           ]);
           ownsInternalHttpTransport = false;
+
+          if (shared.services) {
+            await shared.services.dispose();
+          }
         } catch (error) {
           ownsInternalHttpTransport = false;
           throw new Error(
@@ -592,6 +620,9 @@ async function startStdioHttpTransport(
 
     await startServer(handler);
   } catch (error) {
+    if (shared.services) {
+      await shared.services.dispose();
+    }
     throw new Error(`Failed to start stdio-http transport: ${toErrorMessage(error)}`);
   }
 }

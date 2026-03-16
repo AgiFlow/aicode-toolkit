@@ -3,6 +3,8 @@ import { mcpServeCommand } from '../../src/commands';
 
 interface MockRegistry {
   mockCreateServer: ReturnType<typeof vi.fn>;
+  mockCreateSessionServer: ReturnType<typeof vi.fn>;
+  mockInitializeSharedServices: ReturnType<typeof vi.fn>;
   mockFetchConfiguration: ReturnType<typeof vi.fn>;
   mockGenerateServerId: ReturnType<typeof vi.fn>;
   mockRuntimeStateWrite: ReturnType<typeof vi.fn>;
@@ -104,6 +106,17 @@ const MOCKS = vi.hoisted((): MockRegistry => {
 
   return {
     mockCreateServer: vi.fn(),
+    mockCreateSessionServer: vi.fn(),
+    mockInitializeSharedServices: vi.fn().mockResolvedValue({
+      clientManager: {},
+      definitionsCacheService: {},
+      describeTools: {},
+      useTool: {},
+      searchListTools: {},
+      serverId: 'generated-server-id',
+      proxyMode: 'meta',
+      dispose: vi.fn().mockResolvedValue(undefined),
+    }),
     mockFetchConfiguration: vi.fn().mockResolvedValue({}),
     mockGenerateServerId: vi.fn((): string => 'generated-server-id'),
     mockRuntimeStateWrite: vi.fn().mockResolvedValue(undefined),
@@ -125,6 +138,8 @@ const MOCKS = vi.hoisted((): MockRegistry => {
 
 vi.mock('../../src', (): Record<string, unknown> => ({
   createServer: MOCKS.mockCreateServer,
+  createSessionServer: MOCKS.mockCreateSessionServer,
+  initializeSharedServices: MOCKS.mockInitializeSharedServices,
   ConfigFetcherService: vi.fn().mockImplementation(function (): MockConfigFetcherService {
     return {
       fetchConfiguration: MOCKS.mockFetchConfiguration,

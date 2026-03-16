@@ -20,8 +20,8 @@
  */
 
 // Server
-export { createServer } from './server';
-export type { ServerOptions } from './server';
+export { createServer, createSessionServer, initializeSharedServices } from './server';
+export type { ServerOptions, SharedServices } from './server';
 
 // Types
 export type * from './types';
