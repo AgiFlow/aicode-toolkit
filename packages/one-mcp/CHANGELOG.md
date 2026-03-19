@@ -1,3 +1,13 @@
+## 0.3.16 (2026-03-19)
+
+### 🩹 Fixes
+
+- **one-mcp:** share services across HTTP sessions for concurrent agent support ([96c8b66](https://github.com/AgiFlow/aicode-toolkit/commit/96c8b66))
+
+### ❤️ Thank You
+
+- vuongngo
+
 ## 0.3.15 (2026-03-15)
 
 ### 🩹 Fixes
