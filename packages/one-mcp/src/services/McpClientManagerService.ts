@@ -37,6 +37,15 @@ import type {
 const DEFAULT_CONNECTION_TIMEOUT_MS = 30000;
 
 /**
+ * Checks if an error is a session-related error from an HTTP backend
+ * (e.g., downstream server restarted and no longer recognizes the session ID).
+ */
+function isSessionError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('unknown session') || message.includes('Session not found');
+}
+
+/**
  * MCP Client wrapper for managing individual server connections
  * This is an internal class used by McpClientManagerService
  */
@@ -50,6 +59,7 @@ class McpClient implements McpClientConnection {
   private client: Client;
   private childProcess?: ChildProcess;
   private connected: boolean = false;
+  private reconnectFn?: () => Promise<{ client: Client; childProcess?: ChildProcess }>;
 
   constructor(
     serverName: string,
@@ -79,49 +89,101 @@ class McpClient implements McpClientConnection {
     this.connected = connected;
   }
 
+  /**
+   * Sets a reconnection function that creates a fresh Client and transport.
+   * Called automatically by withSessionRetry when a session error is detected
+   * (e.g., downstream HTTP server restarted and the old session ID is invalid).
+   */
+  setReconnectFn(fn: () => Promise<{ client: Client; childProcess?: ChildProcess }>): void {
+    this.reconnectFn = fn;
+  }
+
+  /**
+   * Wraps an operation with automatic retry on session errors.
+   * If the operation fails with a session error (e.g., downstream server restarted),
+   * reconnects and retries once.
+   */
+  private async withSessionRetry<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!this.reconnectFn || !isSessionError(error)) {
+        throw error;
+      }
+      console.error(
+        `Session error for ${this.serverName}, reconnecting: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      try {
+        await this.client.close();
+      } catch (closeError) {
+        // Safe to ignore: the stale client's transport is already broken,
+        // so close() may fail with the same session error or a network error.
+        console.error(`Failed to close stale client for ${this.serverName}:`, closeError);
+      }
+      const result = await this.reconnectFn();
+      this.client = result.client;
+      if (result.childProcess) {
+        this.childProcess = result.childProcess;
+      }
+      return await operation();
+    }
+  }
+
   async listTools(): Promise<any[]> {
     if (!this.connected) {
       throw new Error(`Client for ${this.serverName} is not connected`);
     }
-    const response = await this.client.listTools();
-    return response.tools;
+    return this.withSessionRetry(async () => {
+      const response = await this.client.listTools();
+      return response.tools;
+    });
   }
 
   async listResources(): Promise<any[]> {
     if (!this.connected) {
       throw new Error(`Client for ${this.serverName} is not connected`);
     }
-    const response = await this.client.listResources();
-    return response.resources;
+    return this.withSessionRetry(async () => {
+      const response = await this.client.listResources();
+      return response.resources;
+    });
   }
 
   async listPrompts(): Promise<any[]> {
     if (!this.connected) {
       throw new Error(`Client for ${this.serverName} is not connected`);
     }
-    const response = await this.client.listPrompts();
-    return response.prompts;
+    return this.withSessionRetry(async () => {
+      const response = await this.client.listPrompts();
+      return response.prompts;
+    });
   }
 
   async callTool(name: string, args: any): Promise<any> {
     if (!this.connected) {
       throw new Error(`Client for ${this.serverName} is not connected`);
     }
-    return await this.client.callTool({ name, arguments: args });
+    return this.withSessionRetry(async () => {
+      return await this.client.callTool({ name, arguments: args });
+    });
   }
 
   async readResource(uri: string): Promise<any> {
     if (!this.connected) {
       throw new Error(`Client for ${this.serverName} is not connected`);
     }
-    return await this.client.readResource({ uri });
+    return this.withSessionRetry(async () => {
+      return await this.client.readResource({ uri });
+    });
   }
 
   async getPrompt(name: string, args?: any): Promise<any> {
     if (!this.connected) {
       throw new Error(`Client for ${this.serverName} is not connected`);
     }
-    return await this.client.getPrompt({ name, arguments: args });
+    return this.withSessionRetry(async () => {
+      return await this.client.getPrompt({ name, arguments: args });
+    });
   }
 
   async close(): Promise<void> {
@@ -249,6 +311,26 @@ export class McpClientManagerService {
       ]);
 
       mcpClient.setConnected(true);
+
+      // Set up reconnection for HTTP/SSE transports (session-based backends).
+      // When a downstream server restarts, its old session IDs become invalid.
+      // This callback creates a fresh Client+transport so withSessionRetry can recover.
+      if (config.transport === 'http' || config.transport === 'sse') {
+        mcpClient.setReconnectFn(async () => {
+          try {
+            const newClient = new Client(
+              { name: '@agiflowai/one-mcp-client', version: '0.1.0' },
+              { capabilities: {} },
+            );
+            const newMcpClient = new McpClient(serverName, config.transport, newClient, {});
+            await this.performConnection(newMcpClient, config);
+            return { client: newClient };
+          } catch (error) {
+            console.error(`Failed to reconnect to ${serverName}:`, error);
+            throw error;
+          }
+        });
+      }
 
       // Get server instruction from MCP server if config instruction is not provided
       if (!mcpClient.serverInstruction) {
