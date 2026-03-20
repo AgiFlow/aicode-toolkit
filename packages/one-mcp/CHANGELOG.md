@@ -1,3 +1,13 @@
+## 0.3.17 (2026-03-20)
+
+### 🩹 Fixes
+
+- **one-mcp:** auto-reconnect to downstream HTTP servers on stale session ([22718dc](https://github.com/AgiFlow/aicode-toolkit/commit/22718dc))
+
+### ❤️ Thank You
+
+- Vuong Ngo
+
 ## 0.3.16 (2026-03-19)
 
 ### 🩹 Fixes
