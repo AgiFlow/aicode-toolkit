@@ -38,6 +38,7 @@ describe('UseToolTool', () => {
       getKnownServerNames: vi.fn().mockReturnValue(['server-a']),
       ensureConnected: vi.fn().mockResolvedValue(connectedClient),
       getAllClients: vi.fn().mockReturnValue([]),
+      getServerRequestTimeout: vi.fn().mockReturnValue(undefined),
     } as unknown as McpClientManagerService;
     mockSkillService = {
       getSkill: vi.fn(),
@@ -82,7 +83,7 @@ describe('UseToolTool', () => {
     });
 
     expect(mockClientManager.ensureConnected).toHaveBeenCalledWith('server-a');
-    expect(connectedClient.callTool).toHaveBeenCalledWith('cached_tool', { foo: 'bar' });
+    expect(connectedClient.callTool).toHaveBeenCalledWith('cached_tool', { foo: 'bar' }, undefined);
     expect(connectedClient.listTools).not.toHaveBeenCalled();
     expect(result.isError).toBeUndefined();
   });

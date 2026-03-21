@@ -20,16 +20,16 @@
 
 import type { ChildProcess } from 'node:child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type {
-  McpServerConfig,
-  McpStdioConfig,
-  McpHttpConfig,
-  McpSseConfig,
   McpClientConnection,
+  McpHttpConfig,
+  McpServerConfig,
   McpServerTransportType,
+  McpSseConfig,
+  McpStdioConfig,
   PromptConfig,
 } from '../types';
 
@@ -159,12 +159,13 @@ class McpClient implements McpClientConnection {
     });
   }
 
-  async callTool(name: string, args: any): Promise<any> {
+  async callTool(name: string, args: any, options?: { timeout?: number }): Promise<any> {
     if (!this.connected) {
       throw new Error(`Client for ${this.serverName} is not connected`);
     }
     return this.withSessionRetry(async () => {
-      return await this.client.callTool({ name, arguments: args });
+      const requestOptions = options?.timeout ? { timeout: options.timeout } : undefined;
+      return await this.client.callTool({ name, arguments: args }, undefined, requestOptions);
     });
   }
 
@@ -220,9 +221,7 @@ export class McpClientManagerService {
           // Force kill after timeout if process doesn't exit
           setTimeout(() => {
             if (!childProcess.killed) {
-              console.error(
-                `Force killing stdio MCP server: ${serverName} (PID: ${childProcess.pid})`,
-              );
+              console.error(`Force killing stdio MCP server: ${serverName} (PID: ${childProcess.pid})`);
               childProcess.kill('SIGKILL');
             }
           }, 1000);
@@ -252,6 +251,10 @@ export class McpClientManagerService {
     return Array.from(this.serverConfigs.keys());
   }
 
+  getServerRequestTimeout(serverName: string): number | undefined {
+    return this.serverConfigs.get(serverName)?.requestTimeout;
+  }
+
   async ensureConnected(serverName: string): Promise<McpClientConnection> {
     const existingClient = this.clients.get(serverName);
     if (existingClient) {
@@ -278,10 +281,7 @@ export class McpClientManagerService {
     }
   }
 
-  private async createConnection(
-    serverName: string,
-    config: McpServerConfig,
-  ): Promise<McpClient> {
+  private async createConnection(serverName: string, config: McpServerConfig): Promise<McpClient> {
     const timeoutMs = config.timeout ?? DEFAULT_CONNECTION_TIMEOUT_MS;
 
     const client = new Client(
@@ -318,10 +318,7 @@ export class McpClientManagerService {
       if (config.transport === 'http' || config.transport === 'sse') {
         mcpClient.setReconnectFn(async () => {
           try {
-            const newClient = new Client(
-              { name: '@agiflowai/one-mcp-client', version: '0.1.0' },
-              { capabilities: {} },
-            );
+            const newClient = new Client({ name: '@agiflowai/one-mcp-client', version: '0.1.0' }, { capabilities: {} });
             const newMcpClient = new McpClient(serverName, config.transport, newClient, {});
             await this.performConnection(newMcpClient, config);
             return { client: newClient };

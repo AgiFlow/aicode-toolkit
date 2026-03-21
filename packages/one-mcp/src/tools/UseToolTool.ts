@@ -24,12 +24,12 @@
  */
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type { Tool, ToolDefinition, Skill, PromptSkillConfig } from '../types';
+import { DEFAULT_SERVER_ID, SKILL_PREFIX } from '../constants';
+import { DefinitionsCacheService } from '../services/DefinitionsCacheService';
 import type { McpClientManagerService } from '../services/McpClientManagerService';
 import type { SkillService } from '../services/SkillService';
-import { DefinitionsCacheService } from '../services/DefinitionsCacheService';
+import type { PromptSkillConfig, Skill, Tool, ToolDefinition } from '../types';
 import { parseToolName } from '../utils';
-import { DEFAULT_SERVER_ID, SKILL_PREFIX } from '../constants';
 
 /**
  * Result of finding a prompt-based skill configuration
@@ -88,8 +88,7 @@ export class UseToolTool implements Tool<UseToolToolInput> {
   ) {
     this.clientManager = clientManager;
     this.skillService = skillService;
-    this.definitionsCacheService =
-      definitionsCacheService || new DefinitionsCacheService(clientManager, skillService);
+    this.definitionsCacheService = definitionsCacheService || new DefinitionsCacheService(clientManager, skillService);
     this.serverId = serverId || DEFAULT_SERVER_ID;
   }
 
@@ -168,8 +167,7 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverI
    * @returns CallToolResult with guidance message
    */
   private executePromptSkill(promptSkill: PromptSkillMatch): CallToolResult {
-    const location =
-      promptSkill.skill.folder || `prompt:${promptSkill.serverName}/${promptSkill.promptName}`;
+    const location = promptSkill.skill.folder || `prompt:${promptSkill.serverName}/${promptSkill.promptName}`;
     return {
       content: [
         {
@@ -252,7 +250,12 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverI
             };
           }
 
-          const result = await client.callTool(actualToolName, toolArgs);
+          const reqTimeout = this.clientManager.getServerRequestTimeout(serverName);
+          const result = await client.callTool(
+            actualToolName,
+            toolArgs,
+            reqTimeout ? { timeout: reqTimeout } : undefined,
+          );
           return result;
         } catch (error) {
           return {
@@ -316,7 +319,12 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverI
       try {
         const targetServerName = matchingServers[0];
         const client = await this.clientManager.ensureConnected(targetServerName);
-        const result = await client.callTool(actualToolName, toolArgs);
+        const targetReqTimeout = this.clientManager.getServerRequestTimeout(targetServerName);
+        const result = await client.callTool(
+          actualToolName,
+          toolArgs,
+          targetReqTimeout ? { timeout: targetReqTimeout } : undefined,
+        );
         return result;
       } catch (error) {
         return {
