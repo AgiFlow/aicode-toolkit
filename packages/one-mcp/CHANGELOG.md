@@ -1,3 +1,13 @@
+## 0.3.18 (2026-03-21)
+
+### 🚀 Features
+
+- **one-mcp:** add per-request timeout support for tool calls ([f4563b7](https://github.com/AgiFlow/aicode-toolkit/commit/f4563b7))
+
+### ❤️ Thank You
+
+- vuongngo
+
 ## 0.3.17 (2026-03-20)
 
 ### 🩹 Fixes
