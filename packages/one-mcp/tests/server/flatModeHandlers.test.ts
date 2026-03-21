@@ -47,6 +47,7 @@ vi.mock('../../src/services/McpClientManagerService', () => ({
     getKnownServerNames = vi.fn(() => ['alpha', 'beta']);
     getAllClients = vi.fn(() => []);
     getClient = vi.fn(() => undefined);
+    getServerRequestTimeout = vi.fn(() => undefined);
   },
 }));
 
@@ -285,7 +286,7 @@ describe('createServer flat mode handlers', () => {
     });
 
     expect(mocks.mockEnsureConnected).toHaveBeenCalledWith('beta');
-    expect(mocks.mockConnectedClient?.callTool).toHaveBeenCalledWith('status', { verbose: true });
+    expect(mocks.mockConnectedClient?.callTool).toHaveBeenCalledWith('status', { verbose: true }, undefined);
   });
 
   it('returns an error when a clashing flat tool is called without a prefix', async () => {
