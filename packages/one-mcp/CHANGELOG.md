@@ -1,3 +1,7 @@
+## 0.3.19 (2026-03-21)
+
+This was a version bump only for @agiflowai/one-mcp to align it with other projects, there were no code changes.
+
 ## 0.3.18 (2026-03-21)
 
 ### 🚀 Features
