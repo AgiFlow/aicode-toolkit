@@ -43,7 +43,7 @@
     "sharp": "^0.34.1",
     "storybook": "^8.6.17",
     "tailwindcss": "^4.1.11",
-    "vite": "^7.1.12",
+    "vite": "^7.3.2",
     "vite-plugin-singlefile": "^2.3.0"
   },
   "devDependencies": {
