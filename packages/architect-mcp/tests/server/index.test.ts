@@ -38,19 +38,13 @@ describe('architect-mcp server capability metadata', () => {
         expect.objectContaining({
           name: 'get-file-design-pattern',
           _meta: {
-            'agiflowai/capabilities': expect.arrayContaining([
-              'architecture',
-              'design-patterns',
-            ]),
+            'agiflowai/capabilities': expect.arrayContaining(['architecture', 'design-patterns']),
           },
         }),
         expect.objectContaining({
           name: 'review-code-change',
           _meta: {
-            'agiflowai/capabilities': expect.arrayContaining([
-              'code-review',
-              'quality-checks',
-            ]),
+            'agiflowai/capabilities': expect.arrayContaining(['code-review', 'quality-checks']),
           },
         }),
         expect.objectContaining({

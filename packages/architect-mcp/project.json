@@ -1,7 +1,7 @@
 {
   "name": "@agiflowai/architect-mcp",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "packages/architect-mcp",
+  "sourceRoot": "packages/architect-mcp/src",
   "projectType": "application",
   "targets": {
     "build": {
@@ -13,28 +13,28 @@
     },
     "test": {
       "executor": "@nx/vitest:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/scaffold-mcp"],
+      "outputs": ["{workspaceRoot}/coverage/packages/architect-mcp"],
       "options": {
-        "reportsDirectory": "../../coverage/packages/scaffold-mcp"
+        "reportsDirectory": "../../coverage/packages/architect-mcp"
       }
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
         "command": "tsc --noEmit",
-        "cwd": "packages/scaffold-mcp"
+        "cwd": "packages/architect-mcp"
       }
     },
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check packages/scaffold-mcp"
+        "command": "biome check packages/architect-mcp"
       }
     },
     "lint:fix": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check --write packages/scaffold-mcp"
+        "command": "biome check --write packages/architect-mcp"
       }
     }
   },

@@ -2,32 +2,23 @@
  * StopServerService
  *
  * Resolves a running HTTP one-mcp runtime and requests cooperative shutdown
- * through the authenticated admin endpoint.
+ * by signaling the recorded local process.
  */
 
-import type {
-  HttpTransportShutdownResponse,
-  RuntimeStateManager,
-  RuntimeStateRecord,
-} from '../../types';
+import type { RuntimeStateManager, RuntimeStateRecord } from '../../types';
 import { RuntimeStateService } from '../RuntimeStateService';
 import {
-  ADMIN_SHUTDOWN_PATH,
   ALLOWED_HOSTS,
-  AUTHORIZATION_HEADER_NAME,
-  BEARER_TOKEN_PREFIX,
   DEFAULT_STOP_TIMEOUT_MS,
   HEALTH_CHECK_PATH,
   HEALTH_REQUEST_TIMEOUT_FLOOR_MS,
   HTTP_METHOD_GET,
-  HTTP_METHOD_POST,
   HTTP_PROTOCOL,
   SHUTDOWN_POLL_INTERVAL_MS,
   URL_PORT_SEPARATOR,
 } from './constants';
 import {
   isHealthResponse,
-  isShutdownResponse,
   type HealthCheckResult,
   type StopServerRequest,
   type StopServerResult,
@@ -92,12 +83,7 @@ export class StopServerService {
       );
     }
 
-    const shutdownToken = request.token ?? runtime.shutdownToken;
-    if (!shutdownToken) {
-      throw new Error(`No shutdown token available for runtime '${runtime.serverId}'.`);
-    }
-
-    const shutdownResponse = await this.requestShutdown(runtime, shutdownToken, timeoutMs);
+    this.requestLocalShutdown(runtime);
     await this.waitForShutdown(runtime, timeoutMs);
     await this.runtimeStateService.remove(runtime.serverId);
 
@@ -106,7 +92,7 @@ export class StopServerService {
       serverId: runtime.serverId,
       host: runtime.host,
       port: runtime.port,
-      message: shutdownResponse.message,
+      message: `Sent SIGTERM to local process ${runtime.pid} and the runtime stopped gracefully.`,
     };
   }
 
@@ -187,39 +173,26 @@ export class StopServerService {
     }
   }
 
-  /**
-   * Send authenticated shutdown request to the admin endpoint.
-   * @param runtime - Runtime to stop
-   * @param shutdownToken - Bearer token for the admin endpoint
-   * @param timeoutMs - Request timeout in milliseconds
-   * @returns Parsed shutdown response payload
-   */
-  private async requestShutdown(
-    runtime: RuntimeStateRecord,
-    shutdownToken: string,
-    timeoutMs: number,
-  ): Promise<HttpTransportShutdownResponse> {
-    const response = await this.fetchWithTimeout(
-      buildRuntimeUrl(runtime, ADMIN_SHUTDOWN_PATH),
-      {
-        method: HTTP_METHOD_POST,
-        headers: {
-          [AUTHORIZATION_HEADER_NAME]: `${BEARER_TOKEN_PREFIX}${shutdownToken}`,
-        },
-      },
-      timeoutMs,
-    );
+  private requestLocalShutdown(runtime: RuntimeStateRecord): void {
+    try {
+      process.kill(runtime.pid, 'SIGTERM');
+    } catch (error) {
+      if (isNodeError(error) && error.code === 'ESRCH') {
+        throw new Error(
+          `Runtime '${runtime.serverId}' is not running anymore (pid ${runtime.pid} does not exist).`,
+        );
+      }
 
-    const payload = (await response.json()) as unknown;
-    if (!isShutdownResponse(payload)) {
-      throw new Error('Received invalid shutdown response payload.');
+      if (isNodeError(error) && error.code === 'EPERM') {
+        throw new Error(
+          `Permission denied when signaling runtime '${runtime.serverId}' (pid ${runtime.pid}).`,
+        );
+      }
+
+      throw new Error(
+        `Failed to signal runtime '${runtime.serverId}' (pid ${runtime.pid}): ${toErrorMessage(error)}`,
+      );
     }
-
-    if (!response.ok || !payload.ok) {
-      throw new Error(payload.message);
-    }
-
-    return payload;
   }
 
   /**
@@ -276,4 +249,8 @@ export class StopServerService {
       clearTimeout(timeoutId);
     }
   }
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return typeof error === 'object' && error !== null && 'code' in error;
 }

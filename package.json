@@ -47,7 +47,11 @@
       "minimatch": "10.2.5",
       "rollup": "4.60.1",
       "express-rate-limit": "8.3.2",
-      "liquidjs": "10.25.5"
+      "liquidjs": "10.25.5",
+      "follow-redirects": "1.16.0",
+      "path-to-regexp": "8.4.0",
+      "yaml@1": "1.10.3",
+      "yaml@>=2": "2.8.3"
     }
   }
 }
