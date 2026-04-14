@@ -137,8 +137,8 @@ export abstract class BaseAdapter<TContext = any> {
     return new Promise((resolve, reject) => {
       const chunks: Buffer[] = [];
 
-      process.stdin.on('data', (chunk) => {
-        chunks.push(chunk);
+      process.stdin.on('data', (chunk: string | Buffer) => {
+        chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
       });
 
       process.stdin.on('end', () => {

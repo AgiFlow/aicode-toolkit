@@ -11,7 +11,7 @@ import type { ArchitectConfig, ParsedInclude, TemplateValidationResult } from '.
 // Zod schema for variables_schema structure
 const VariablesSchemaSchema = z.object({
   type: z.literal('object'),
-  properties: z.record(z.any()),
+  properties: z.record(z.string(), z.any()),
   required: z.array(z.string()),
   additionalProperties: z.boolean(),
 });
@@ -64,7 +64,7 @@ export class ScaffoldConfigLoader implements IScaffoldConfigLoader {
       return validatedConfig as unknown as ArchitectConfig;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const errorMessages = error.errors
+        const errorMessages = error.issues
           .map((err) => `${err.path.join('.')}: ${err.message}`)
           .join('; ');
         throw new Error(`scaffold.yaml validation failed: ${errorMessages}`);

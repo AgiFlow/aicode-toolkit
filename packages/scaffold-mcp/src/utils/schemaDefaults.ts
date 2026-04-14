@@ -46,7 +46,7 @@ export function parseVariablesWithDefaults(
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errors = error.errors.map((err) => {
+      const errors = error.issues.map((err) => {
         const path = err.path.length > 0 ? err.path.join('.') : 'root';
         return `${path}: ${err.message}`;
       });

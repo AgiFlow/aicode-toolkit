@@ -1,4 +1,31 @@
-import chalk from 'chalk';
+import * as chalkImport from 'chalk';
+
+function resolveChalk(
+  value: unknown,
+  depth: number = 0,
+): typeof import('chalk').default {
+  if (
+    value &&
+    (typeof value === 'object' || typeof value === 'function') &&
+    'red' in value &&
+    typeof (value as { red?: unknown }).red === 'function'
+  ) {
+    return value as typeof import('chalk').default;
+  }
+
+  if (
+    depth < 3 &&
+    value &&
+    (typeof value === 'object' || typeof value === 'function') &&
+    'default' in value
+  ) {
+    return resolveChalk((value as { default: unknown }).default, depth + 1);
+  }
+
+  throw new Error('Unable to resolve chalk instance');
+}
+
+const chalk = resolveChalk(chalkImport);
 
 /**
  * Themed console utilities for consistent CLI output
