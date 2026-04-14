@@ -97,7 +97,7 @@ export class ScaffoldService implements IScaffoldService {
 
       // Get architect config
       const architectConfig = await this.scaffoldConfigLoader.parseArchitectConfig(templatePath);
-      if (!architectConfig || !architectConfig.boilerplate) {
+      if (!architectConfig?.boilerplate) {
         return {
           success: false,
           message: `Invalid architect configuration: missing 'boilerplate' section in scaffold.yaml`,
@@ -186,7 +186,7 @@ export class ScaffoldService implements IScaffoldService {
 
       // Get architect config
       const architectConfig = await this.scaffoldConfigLoader.parseArchitectConfig(templatePath);
-      if (!architectConfig || !architectConfig.features) {
+      if (!architectConfig?.features) {
         return {
           success: false,
           message: `Invalid architect configuration: missing 'features' section in scaffold.yaml`,

@@ -1,9 +1,6 @@
 import * as chalkImport from 'chalk';
 
-function resolveChalk(
-  value: unknown,
-  depth: number = 0,
-): typeof import('chalk').default {
+function resolveChalk(value: unknown, depth: number = 0): typeof import('chalk').default {
   if (
     value &&
     (typeof value === 'object' || typeof value === 'function') &&

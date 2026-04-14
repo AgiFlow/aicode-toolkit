@@ -364,7 +364,7 @@ export class ExecutionLogService {
       }
 
       // No previous execution - file should be reviewed
-      if (!lastExecution || !lastExecution.fileChecksum) {
+      if (!lastExecution?.fileChecksum) {
         return true;
       }
 

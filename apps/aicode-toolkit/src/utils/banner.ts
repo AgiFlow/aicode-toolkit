@@ -1,9 +1,8 @@
 import * as chalkImport from 'chalk';
+import gradient from 'gradient-string';
+import { BANNER_GRADIENT } from '../constants';
 
-function resolveChalk(
-  value: unknown,
-  depth: number = 0,
-): typeof import('chalk').default {
+function resolveChalk(value: unknown, depth: number = 0): typeof import('chalk').default {
   if (
     value &&
     (typeof value === 'object' || typeof value === 'function') &&
@@ -26,8 +25,6 @@ function resolveChalk(
 }
 
 const chalk = resolveChalk(chalkImport);
-import gradient from 'gradient-string';
-import { BANNER_GRADIENT } from '../constants';
 
 /**
  * ASCII art for AICode Toolkit - simple and highly readable design
