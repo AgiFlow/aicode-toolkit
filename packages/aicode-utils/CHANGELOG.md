@@ -1,3 +1,13 @@
+## 1.1.0 (2026-04-14)
+
+### 🩹 Fixes
+
+- address lint issues ([0d734bf](https://github.com/AgiFlow/aicode-toolkit/commit/0d734bf))
+
+### ❤️ Thank You
+
+- vuongngo
+
 ## 1.0.20 (2026-03-15)
 
 This was a version bump only for @agiflowai/aicode-utils to align it with other projects, there were no code changes.

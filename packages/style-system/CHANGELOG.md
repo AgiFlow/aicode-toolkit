@@ -1,3 +1,17 @@
+## 0.1.0 (2026-04-14)
+
+### 🩹 Fixes
+
+- align cli metadata and sync success output ([b5c77dc](https://github.com/AgiFlow/aicode-toolkit/commit/b5c77dc))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.1.0
+
+### ❤️ Thank You
+
+- vuongngo
+
 ## 0.0.13 (2026-03-15)
 
 ### 🧱 Updated Dependencies

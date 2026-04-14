@@ -1,3 +1,21 @@
+## 1.1.0 (2026-04-14)
+
+### 🩹 Fixes
+
+- address lint issues ([0d734bf](https://github.com/AgiFlow/aicode-toolkit/commit/0d734bf))
+- **scaffold-mcp:** restrict write-to-file to workspace ([acb991b](https://github.com/AgiFlow/aicode-toolkit/commit/acb991b))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.1.0
+- Updated @agiflowai/architect-mcp to 1.1.0
+- Updated @agiflowai/hooks-adapter to 0.1.0
+- Updated @agiflowai/aicode-utils to 1.1.0
+
+### ❤️ Thank You
+
+- vuongngo
+
 ## 1.0.27 (2026-03-15)
 
 ### 🧱 Updated Dependencies

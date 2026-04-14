@@ -1,3 +1,18 @@
+## 0.1.0 (2026-04-14)
+
+### 🩹 Fixes
+
+- address lint issues ([0d734bf](https://github.com/AgiFlow/aicode-toolkit/commit/0d734bf))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.1.0
+- Updated @agiflowai/aicode-utils to 1.1.0
+
+### ❤️ Thank You
+
+- vuongngo
+
 ## 0.0.21 (2026-03-15)
 
 ### 🧱 Updated Dependencies

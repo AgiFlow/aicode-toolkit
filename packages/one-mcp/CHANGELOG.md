@@ -1,3 +1,9 @@
+## 0.4.0 (2026-04-14)
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/aicode-utils to 1.1.0
+
 ## 0.3.19 (2026-03-21)
 
 This was a version bump only for @agiflowai/one-mcp to align it with other projects, there were no code changes.
