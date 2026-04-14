@@ -9,7 +9,7 @@ import { GetCSSClassesTool } from '../tools/GetCSSClassesTool';
 interface GetCSSClassesOptions {
   category: string;
   appPath?: string;
-  themePath: string;
+  themePath?: string;
 }
 
 export const getCSSClassesCommand = new Command('get-css-classes')
@@ -25,8 +25,7 @@ export const getCSSClassesCommand = new Command('get-css-classes')
   )
   .option(
     '-t, --theme-path <path>',
-    'Default theme CSS file path relative to workspace root (used if appPath not provided or themePath not in project.json)',
-    'packages/frontend/web-theme/src/agimon-theme.css',
+    'Theme CSS file path relative to workspace root (required unless appPath resolves style-system.themePath from project.json)',
   )
   .action(async (options: GetCSSClassesOptions): Promise<void> => {
     try {

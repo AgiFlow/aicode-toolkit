@@ -24,6 +24,7 @@ import { getUiComponentCommand } from './commands/get-ui-component';
 import { listAppComponentsCommand } from './commands/list-app-components';
 import { listThemesCommand } from './commands/list-themes';
 import { listSharedComponentsCommand } from './commands/list-shared-components';
+import { STYLE_SYSTEM_CLI_NAME, STYLE_SYSTEM_VERSION } from './metadata';
 import { mcpServeCommand } from './commands/mcp-serve';
 
 /**
@@ -33,9 +34,9 @@ async function main() {
   const program = new Command();
 
   program
-    .name('style-system-mcp')
+    .name(STYLE_SYSTEM_CLI_NAME)
     .description('MCP server for design system tools')
-    .version('0.1.0');
+    .version(STYLE_SYSTEM_VERSION);
 
   // Add all commands
   program.addCommand(getCSSClassesCommand);

@@ -18,6 +18,7 @@
 import { log } from '@agiflowai/aicode-utils';
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { STYLE_SYSTEM_SERVER_NAME } from '../metadata';
 
 /**
  * Stdio transport handler for MCP server
@@ -34,7 +35,7 @@ export class StdioTransportHandler {
   async start(): Promise<void> {
     this.transport = new StdioServerTransport();
     await this.server.connect(this.transport);
-    log.info('style-system-mcp MCP server started on stdio');
+    log.info(`${STYLE_SYSTEM_SERVER_NAME} MCP server started on stdio`);
   }
 
   async stop(): Promise<void> {

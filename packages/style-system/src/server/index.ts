@@ -22,6 +22,7 @@ import {
   ListSharedComponentsTool,
   ListThemesTool,
 } from '../tools';
+import { STYLE_SYSTEM_SERVER_NAME, STYLE_SYSTEM_VERSION } from '../metadata';
 import type { ToolDefinition } from '../types';
 
 const TOOL_CAPABILITIES_META_KEY = 'agiflowai/capabilities';
@@ -36,11 +37,11 @@ function withCapabilities(definition: ToolDefinition, capabilities: string[]): T
   };
 }
 
-export function createServer(themePath = 'packages/frontend/web-theme/src/agimon-theme.css'): Server {
+export function createServer(themePath?: string): Server {
   const server = new Server(
     {
-      name: 'style-system-mcp',
-      version: '0.1.0',
+      name: STYLE_SYSTEM_SERVER_NAME,
+      version: STYLE_SYSTEM_VERSION,
     },
     {
       capabilities: {

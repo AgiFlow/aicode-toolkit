@@ -1,5 +1,5 @@
 /**
- * style-system-mcp - Public API
+ * style-system - Public API
  *
  * DESIGN PATTERNS:
  * - Barrel export pattern for clean public API

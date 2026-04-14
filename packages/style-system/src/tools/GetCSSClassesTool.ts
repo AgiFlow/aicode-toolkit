@@ -68,13 +68,13 @@ export class GetCSSClassesTool implements Tool<GetCSSClassesInput> {
 
   private serviceFactory: CSSClassesServiceFactory;
   private service: BaseCSSClassesService | null = null;
-  private defaultThemePath: string;
+  private defaultThemePath?: string;
 
   /**
    * Creates a new GetCSSClassesTool instance
    * @param defaultThemePath - Default path to theme CSS file (relative to workspace root)
    */
-  constructor(defaultThemePath: string = 'packages/frontend/web-theme/src/agimon-theme.css') {
+  constructor(defaultThemePath?: string) {
     this.serviceFactory = new CSSClassesServiceFactory();
     this.defaultThemePath = defaultThemePath;
   }
@@ -184,7 +184,12 @@ export class GetCSSClassesTool implements Tool<GetCSSClassesInput> {
       }
     }
 
-    // Use default theme path (relative to workspace root)
-    return path.resolve(workspaceRoot, this.defaultThemePath);
+    if (this.defaultThemePath) {
+      return path.resolve(workspaceRoot, this.defaultThemePath);
+    }
+
+    throw new Error(
+      'No theme CSS path configured. Pass --theme-path, or provide style-system.themePath in the target app project.json.',
+    );
   }
 }
