@@ -50,6 +50,7 @@ interface HttpSession {
  */
 class HttpFullSessionManager {
   private sessions: Map<string, HttpSession> = new Map();
+  private closingSessions: Set<string> = new Set();
 
   getSession(sessionId: string): HttpSession | undefined {
     return this.sessions.get(sessionId);
@@ -60,15 +61,25 @@ class HttpFullSessionManager {
   }
 
   async deleteSession(sessionId: string): Promise<void> {
-    const session = this.sessions.get(sessionId);
-    if (session) {
-      try {
-        await session.server.close();
-      } catch (error) {
-        throw new Error(`Failed to close MCP server for session '${sessionId}': ${toErrorMessage(error)}`);
-      }
+    if (this.closingSessions.has(sessionId)) {
+      return;
     }
+
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return;
+    }
+
+    this.closingSessions.add(sessionId);
     this.sessions.delete(sessionId);
+
+    try {
+      await session.server.close();
+    } catch (error) {
+      throw new Error(`Failed to close MCP server for session '${sessionId}': ${toErrorMessage(error)}`);
+    } finally {
+      this.closingSessions.delete(sessionId);
+    }
   }
 
   hasSession(sessionId: string): boolean {
@@ -76,16 +87,23 @@ class HttpFullSessionManager {
   }
 
   async clear(): Promise<void> {
+    const sessions = Array.from(this.sessions.entries());
+    this.sessions.clear();
+
     try {
       await Promise.all(
-        Array.from(this.sessions.values()).map(async (session) => {
+        sessions.map(async ([sessionId, session]) => {
+          this.closingSessions.add(sessionId);
           await session.server.close();
         }),
       );
     } catch (error) {
       throw new Error(`Failed to clear sessions: ${toErrorMessage(error)}`);
+    } finally {
+      for (const [sessionId] of sessions) {
+        this.closingSessions.delete(sessionId);
+      }
     }
-    this.sessions.clear();
   }
 }
 

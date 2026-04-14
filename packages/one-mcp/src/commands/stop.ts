@@ -1,8 +1,8 @@
 /**
  * Stop Command
  *
- * Stops a running HTTP one-mcp server using the authenticated admin endpoint
- * and the persisted runtime registry.
+ * Stops a running HTTP one-mcp server using the persisted runtime registry
+ * and a local process signal.
  */
 
 import { Command } from 'commander';
@@ -16,7 +16,6 @@ interface StopCommandOptions {
   host?: string;
   port?: number;
   config?: string;
-  token?: string;
   force: boolean;
   json: boolean;
   timeout: number;
@@ -45,7 +44,6 @@ export const stopCommand = new Command('stop')
     (value: string): number => Number.parseInt(value, 10),
   )
   .option('-c, --config <path>', 'Reserved for future config-based targeting support')
-  .option('--token <token>', 'Override the persisted shutdown token')
   .option('--force', 'Skip server ID verification against the /health response', false)
   .option('-j, --json', 'Output as JSON', false)
   .option(
@@ -65,7 +63,6 @@ export const stopCommand = new Command('stop')
         serverId: options.id,
         host: options.host,
         port: options.port,
-        token: options.token,
         force: options.force,
         timeoutMs: options.timeout,
       });

@@ -20,7 +20,12 @@
  * - Not exiting with appropriate exit codes on errors
  */
 
-import { CLAUDE_CODE, GEMINI_CLI, SUPPORTED_LLM_TOOLS, isValidLlmTool } from '@agiflowai/coding-agent-bridge';
+import {
+  CLAUDE_CODE,
+  GEMINI_CLI,
+  SUPPORTED_LLM_TOOLS,
+  isValidLlmTool,
+} from '@agiflowai/coding-agent-bridge';
 import {
   ClaudeCodeAdapter,
   GeminiCliAdapter,
@@ -175,7 +180,9 @@ export const hookCommand = new Command('hook')
       const toolkitConfig = await TemplatesManagerService.readToolkitConfig();
       const hookConfig = toolkitConfig?.['architect-mcp']?.hook;
       const methodConfig =
-        hookConfig?.[agent as keyof ArchitectHookConfig]?.[hookMethod as keyof ArchitectHookAgentConfig];
+        hookConfig?.[agent as keyof ArchitectHookConfig]?.[
+          hookMethod as keyof ArchitectHookAgentConfig
+        ];
 
       // Parse JSON config options
       const toolConfig = parseJsonConfigOption(options.toolConfig, '--tool-config');
@@ -194,9 +201,7 @@ export const hookCommand = new Command('hook')
       const resolvedToolConfig = toolConfig ?? methodConfig?.['tool-config'] ?? fallbackToolConfig;
 
       if (!isHookMethod(hookMethod)) {
-        print.error(
-          `Unsupported hook method: ${hookMethod}. Supported: preToolUse, postToolUse`,
-        );
+        print.error(`Unsupported hook method: ${hookMethod}. Supported: preToolUse, postToolUse`);
         process.exit(1);
       }
 

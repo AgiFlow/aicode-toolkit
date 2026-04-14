@@ -30,7 +30,11 @@ import {
   type TransportConfig,
   type TransportHandler,
 } from '../transports';
-import { type LlmToolId, isValidLlmTool, SUPPORTED_LLM_TOOLS } from '@agiflowai/coding-agent-bridge';
+import {
+  type LlmToolId,
+  isValidLlmTool,
+  SUPPORTED_LLM_TOOLS,
+} from '@agiflowai/coding-agent-bridge';
 
 /**
  * Options passed by Commander for the mcp-serve command
@@ -85,7 +89,10 @@ function parseLlmToolOption(value: string | undefined, flagName: string): LlmToo
 /**
  * Parse a JSON config string option. Throws on parse failure or non-object value.
  */
-function parseJsonConfig(value: string | undefined, flagName: string): Record<string, unknown> | undefined {
+function parseJsonConfig(
+  value: string | undefined,
+  flagName: string,
+): Record<string, unknown> | undefined {
   if (!value) return undefined;
   try {
     const parsed: unknown = JSON.parse(value);
@@ -94,7 +101,9 @@ function parseJsonConfig(value: string | undefined, flagName: string): Record<st
     }
     return parsed;
   } catch (error) {
-    throw new Error(`Invalid JSON for ${flagName}: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Invalid JSON for ${flagName}: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -136,8 +145,12 @@ async function startServer(handler: TransportHandler): Promise<void> {
     }
   };
 
-  process.on('SIGINT', async (): Promise<void> => { await shutdown('SIGINT'); });
-  process.on('SIGTERM', async (): Promise<void> => { await shutdown('SIGTERM'); });
+  process.on('SIGINT', async (): Promise<void> => {
+    await shutdown('SIGINT');
+  });
+  process.on('SIGTERM', async (): Promise<void> => {
+    await shutdown('SIGTERM');
+  });
 }
 
 /**
@@ -146,10 +159,8 @@ async function startServer(handler: TransportHandler): Promise<void> {
 export const mcpServeCommand = new Command('mcp-serve')
   .description('Start MCP server with specified transport')
   .option('-t, --type <type>', 'Transport type: stdio, http, or sse')
-  .option(
-    '-p, --port <port>',
-    'Port to listen on (http/sse only)',
-    (val: string): number => parseInt(val, 10),
+  .option('-p, --port <port>', 'Port to listen on (http/sse only)', (val: string): number =>
+    parseInt(val, 10),
   )
   .option('--host <host>', 'Host to bind to (http/sse only)')
   .option(
