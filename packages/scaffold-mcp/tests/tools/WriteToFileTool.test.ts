@@ -6,9 +6,12 @@ vi.mock('../../src/services/FileSystemService');
 
 describe('WriteToFileTool', () => {
   let tool: WriteToFileTool;
+  let cwdSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    cwdSpy?.mockRestore();
+    cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue('/workspace');
     tool = new WriteToFileTool();
   });
 
@@ -37,7 +40,7 @@ describe('WriteToFileTool', () => {
   describe('execute', () => {
     it('should write file successfully with absolute path', async () => {
       const args = {
-        file_path: '/test/output/file.txt',
+        file_path: '/workspace/test/output/file.txt',
         content: 'Hello, World!',
       };
 
@@ -51,9 +54,9 @@ describe('WriteToFileTool', () => {
       expect(result.isError).toBeFalsy();
       expect(result.content[0].type).toBe('text');
       expect(result.content[0].text).toContain('Successfully wrote content to file');
-      expect(result.content[0].text).toContain('/test/output/file.txt');
-      expect(ensureDirSpy).toHaveBeenCalledWith('/test/output');
-      expect(writeFileSpy).toHaveBeenCalledWith('/test/output/file.txt', 'Hello, World!');
+      expect(result.content[0].text).toContain('/workspace/test/output/file.txt');
+      expect(ensureDirSpy).toHaveBeenCalledWith('/workspace/test/output');
+      expect(writeFileSpy).toHaveBeenCalledWith('/workspace/test/output/file.txt', 'Hello, World!');
     });
 
     it('should write file successfully with relative path', async () => {
@@ -77,7 +80,7 @@ describe('WriteToFileTool', () => {
 
     it('should handle empty content', async () => {
       const args = {
-        file_path: '/test/empty.txt',
+        file_path: '/workspace/test/empty.txt',
         content: '',
       };
 
@@ -89,7 +92,7 @@ describe('WriteToFileTool', () => {
       const result = await tool.execute(args);
 
       expect(result.isError).toBeFalsy();
-      expect(writeFileSpy).toHaveBeenCalledWith('/test/empty.txt', '');
+      expect(writeFileSpy).toHaveBeenCalledWith('/workspace/test/empty.txt', '');
     });
 
     it('should return error when file_path is missing', async () => {
@@ -105,7 +108,7 @@ describe('WriteToFileTool', () => {
 
     it('should return error when content is missing', async () => {
       const args = {
-        file_path: '/test/file.txt',
+        file_path: '/workspace/test/file.txt',
       };
 
       const result = await tool.execute(args);
@@ -116,7 +119,7 @@ describe('WriteToFileTool', () => {
 
     it('should handle file system errors gracefully', async () => {
       const args = {
-        file_path: '/test/file.txt',
+        file_path: '/workspace/test/file.txt',
         content: 'Test',
       };
 
@@ -131,7 +134,7 @@ describe('WriteToFileTool', () => {
 
     it('should create parent directories before writing', async () => {
       const args = {
-        file_path: '/deep/nested/path/file.txt',
+        file_path: '/workspace/deep/nested/path/file.txt',
         content: 'content',
       };
 
@@ -142,8 +145,42 @@ describe('WriteToFileTool', () => {
 
       await tool.execute(args);
 
-      expect(ensureDirSpy).toHaveBeenCalledWith('/deep/nested/path');
+      expect(ensureDirSpy).toHaveBeenCalledWith('/workspace/deep/nested/path');
       expect(writeFileSpy).toHaveBeenCalled();
+    });
+
+    it('should reject absolute paths outside the workspace', async () => {
+      const args = {
+        file_path: '/tmp/aicode-toolkit-poc.txt',
+        content: 'blocked',
+      };
+
+      const ensureDirSpy = vi.spyOn(tool.fileSystemService, 'ensureDir');
+      const writeFileSpy = vi.spyOn(tool.fileSystemService, 'writeFile');
+
+      const result = await tool.execute(args);
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('outside the workspace directory');
+      expect(ensureDirSpy).not.toHaveBeenCalled();
+      expect(writeFileSpy).not.toHaveBeenCalled();
+    });
+
+    it('should reject relative traversal outside the workspace', async () => {
+      const args = {
+        file_path: '../outside.txt',
+        content: 'blocked',
+      };
+
+      const ensureDirSpy = vi.spyOn(tool.fileSystemService, 'ensureDir');
+      const writeFileSpy = vi.spyOn(tool.fileSystemService, 'writeFile');
+
+      const result = await tool.execute(args);
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('outside the workspace directory');
+      expect(ensureDirSpy).not.toHaveBeenCalled();
+      expect(writeFileSpy).not.toHaveBeenCalled();
     });
   });
 });
