@@ -390,7 +390,7 @@ Don't forget to complete the implementation for all scaffolded files!
  */
 function extractScaffoldId(toolResult: ToolResult | null): string | null {
   try {
-    if (!toolResult || !toolResult.content) return null;
+    if (!toolResult?.content) return null;
 
     // Look for SCAFFOLD_ID in content array
     for (const item of toolResult.content) {

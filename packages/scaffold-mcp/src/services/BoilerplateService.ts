@@ -372,7 +372,7 @@ export class BoilerplateService {
       return { isValid: true, errors: [] };
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const zodErrors = error.errors.map((err) => {
+        const zodErrors = error.issues.map((err) => {
           const path = err.path.length > 0 ? err.path.join('.') : 'root';
           return `${path}: ${err.message}`;
         });
