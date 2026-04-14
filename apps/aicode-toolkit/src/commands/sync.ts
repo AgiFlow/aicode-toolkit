@@ -261,7 +261,7 @@ const METHOD_TO_EVENT: Record<string, string> = {
   taskCompleted: 'TaskCompleted',
 };
 
-async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string): Promise<void> {
+async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string): Promise<boolean> {
   try {
     const mcpConfigYaml = await readMcpConfigYaml(workspaceRoot);
     const mcpServers = mcpConfigYaml.mcpServers ?? {};
@@ -310,7 +310,7 @@ async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string)
       print.warning(
         'No scaffold-mcp/architect-mcp hook.claude-code config found — skipping .claude/settings.json',
       );
-      return;
+      return false;
     }
 
     const settings: ClaudeSettingsJson = { hooks: hooksOutput };
@@ -321,20 +321,21 @@ async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string)
       JSON.stringify(settings, null, 2),
       'utf-8',
     );
+    return true;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`Failed to write ${CLAUDE_SETTINGS_DIR}/${CLAUDE_SETTINGS_FILE}: ${message}`);
   }
 }
 
-async function writeMcpConfig(config: ToolkitConfig, workspaceRoot: string): Promise<void> {
+async function writeMcpConfig(config: ToolkitConfig, workspaceRoot: string): Promise<boolean> {
   try {
     const mcpConfig = buildMcpConfigYaml(config);
     if (!mcpConfig) {
       print.warning(
         'No mcp-config.servers or mcp-config.skills config found — skipping mcp-config.yaml',
       );
-      return;
+      return false;
     }
 
     await writeFile(
@@ -342,6 +343,7 @@ async function writeMcpConfig(config: ToolkitConfig, workspaceRoot: string): Pro
       yaml.dump(mcpConfig, { indent: 2 }),
       'utf-8',
     );
+    return true;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`Failed to write ${MCP_CONFIG_FILE}: ${message}`);
@@ -377,8 +379,9 @@ export const syncCommand = new Command('sync')
 
       if (shouldWriteHooks) {
         if (hasHookConfig(config)) {
-          await writeClaudeSettings(config, workspaceRoot);
-          print.success('Written .claude/settings.json');
+          if (await writeClaudeSettings(config, workspaceRoot)) {
+            print.success('Written .claude/settings.json');
+          }
         } else {
           print.warning('No hook.claude-code config found in toolkit settings — skipping');
         }
@@ -387,8 +390,9 @@ export const syncCommand = new Command('sync')
       if (shouldWriteMcp) {
         const mcpConfig = buildMcpConfigYaml(config);
         if (mcpConfig) {
-          await writeMcpConfig(config, workspaceRoot);
-          print.success('Written mcp-config.yaml');
+          if (await writeMcpConfig(config, workspaceRoot)) {
+            print.success('Written mcp-config.yaml');
+          }
         } else {
           print.warning(
             'No mcp-config.servers or mcp-config.skills config found — skipping mcp-config.yaml',

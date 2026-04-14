@@ -20,6 +20,7 @@
  */
 
 import { Command } from 'commander';
+import { STYLE_SYSTEM_CLI_NAME } from '../metadata';
 import { createServer } from '../server';
 import { type BaseBundlerService, getBundlerServiceFromConfig } from '../services';
 import { StdioTransportHandler } from '../transports/stdio';
@@ -62,8 +63,7 @@ export const mcpServeCommand = new Command('mcp-serve')
   .option('-t, --type <type>', 'Transport type: stdio', 'stdio')
   .option(
     '--theme-path <path>',
-    'Default theme CSS file path relative to workspace root',
-    'packages/frontend/web-theme/src/agimon-theme.css',
+    'Theme CSS file path relative to workspace root for get-css-classes when app config does not define style-system.themePath',
   )
   .option('--dev', 'Start Vite dev server for component hot reload and caching')
   .option('--app-path <path>', 'App path for dev server (e.g., apps/agiflow-app)')
@@ -78,7 +78,7 @@ export const mcpServeCommand = new Command('mcp-serve')
       if (options.dev) {
         if (!options.appPath) {
           console.error('Error: --app-path is required when using --dev flag');
-          console.error('Example: style-system-mcp mcp-serve --dev --app-path apps/agiflow-app');
+          console.error(`Example: ${STYLE_SYSTEM_CLI_NAME} mcp-serve --dev --app-path apps/agiflow-app`);
           process.exit(1);
         }
 
