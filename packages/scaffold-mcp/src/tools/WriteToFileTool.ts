@@ -12,6 +12,22 @@ export class WriteToFileTool {
     this.fileSystemService = new FileSystemService();
   }
 
+  private resolveWorkspaceFilePath(filePath: string): string {
+    const workspaceRoot = path.resolve(process.cwd());
+    const resolvedPath = path.resolve(workspaceRoot, filePath);
+    const relativeToWorkspace = path.relative(workspaceRoot, resolvedPath);
+    const isWithinWorkspace =
+      !relativeToWorkspace.startsWith(`..${path.sep}`) &&
+      relativeToWorkspace !== '..' &&
+      !path.isAbsolute(relativeToWorkspace);
+
+    if (!isWithinWorkspace) {
+      throw new Error(`Path "${filePath}" is outside the workspace directory`);
+    }
+
+    return resolvedPath;
+  }
+
   /**
    * Get the tool definition for MCP
    */
@@ -27,15 +43,14 @@ This tool will:
 - Overwrite existing files with new content
 
 Parameters:
-- file_path: Absolute or relative path to the target file
+- file_path: Absolute or relative path to a file inside the current workspace
 - content: The content to write to the file`,
       inputSchema: {
         type: 'object',
         properties: {
           file_path: {
             type: 'string',
-            description:
-              'Path to the file to write (absolute or relative to current working directory)',
+            description: 'Path to the file to write within the current workspace directory',
           },
           content: {
             type: 'string',
@@ -63,10 +78,7 @@ Parameters:
         throw new Error('Missing required parameter: content');
       }
 
-      // Resolve the file path (handle both absolute and relative paths)
-      const resolvedPath = path.isAbsolute(file_path)
-        ? file_path
-        : path.resolve(process.cwd(), file_path);
+      const resolvedPath = this.resolveWorkspaceFilePath(file_path);
 
       // Ensure the directory exists
       const dirPath = path.dirname(resolvedPath);
