@@ -53,7 +53,7 @@
     "execa": "9.6.1",
     "express": "5.2.1",
     "js-yaml": "4.1.1",
-    "liquidjs": "10.25.5",
+    "liquidjs": "10.25.7",
     "minimatch": "10.2.5",
     "pino": "10.3.1",
     "pino-pretty": "13.1.3",
