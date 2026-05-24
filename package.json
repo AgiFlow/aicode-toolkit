@@ -32,26 +32,5 @@
     "@commitlint/prompt-cli": "20.5.0",
     "husky": "9.1.7",
     "syncpack": "14.3.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "qs": "6.15.1",
-      "hono": "4.12.12",
-      "@hono/node-server": "1.19.14",
-      "axios": "1.15.0",
-      "ajv": "8.18.0",
-      "tar": "7.5.13",
-      "fast-xml-parser": "5.5.12",
-      "markdown-it": "14.1.1",
-      "@isaacs/brace-expansion": "5.0.1",
-      "minimatch": "10.2.5",
-      "rollup": "4.60.1",
-      "express-rate-limit": "8.3.2",
-      "liquidjs": "10.25.5",
-      "follow-redirects": "1.16.0",
-      "path-to-regexp": "8.4.0",
-      "yaml@1": "1.10.3",
-      "yaml@>=2": "2.8.3"
-    }
   }
 }

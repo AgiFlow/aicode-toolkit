@@ -37,7 +37,7 @@
     "glob": "13.0.6",
     "js-yaml": "4.1.1",
     "playwright": "1.59.1",
-    "postcss": "8.5.9",
+    "postcss": "8.5.10",
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "sharp": "0.34.5",
