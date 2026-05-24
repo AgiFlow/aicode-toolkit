@@ -320,7 +320,7 @@ export class CodingAgentService {
    * @param selectedMcpServers - Array of selected MCP servers
    */
   private async createMcpConfigYaml(selectedMcpServers?: string[]): Promise<void> {
-    const { execSync } = await import('node:child_process');
+    const { execFileSync } = await import('node:child_process');
     const path = await import('node:path');
 
     // Build the MCP server configurations for included servers (excluding one-mcp)
@@ -357,13 +357,26 @@ export class CodingAgentService {
 
     const configPath = path.join(this.workspaceRoot, 'mcp-config.yaml');
 
-    // Build the command with optional --mcp-servers argument
     const mcpServersJson = JSON.stringify(servers);
-    const command = `npx -y @agiflowai/one-mcp init -o "${configPath}" -f --mcp-servers '${mcpServersJson}'`;
 
-    execSync(command, {
-      cwd: this.workspaceRoot,
-      stdio: 'inherit',
-    });
+    execFileSync(
+      'npx',
+      [
+        '--yes',
+        '--package',
+        '@agiflowai/one-mcp',
+        'one-mcp',
+        'init',
+        '-o',
+        configPath,
+        '-f',
+        '--mcp-servers',
+        mcpServersJson,
+      ],
+      {
+        cwd: this.workspaceRoot,
+        stdio: 'inherit',
+      },
+    );
   }
 }

@@ -22,6 +22,7 @@ import {
   NONE,
 } from '@agiflowai/coding-agent-bridge';
 import * as fsHelpers from '@agiflowai/aicode-utils';
+import { execFileSync } from 'node:child_process';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CodingAgentService } from '../../src/services/CodingAgentService';
 
@@ -79,6 +80,10 @@ vi.mock('@agiflowai/coding-agent-bridge', () => {
   };
 });
 
+vi.mock('node:child_process', () => ({
+  execFileSync: vi.fn(),
+}));
+
 describe('CodingAgentService', () => {
   const workspaceRoot = '/test/workspace';
   let service: CodingAgentService;
@@ -125,6 +130,40 @@ describe('CodingAgentService', () => {
       vi.mocked(fsHelpers.writeFile).mockResolvedValue(undefined);
 
       await expect(service.setupMCP(CLAUDE_CODE)).resolves.not.toThrow();
+    });
+
+    it('should create one-mcp config using explicit npx package execution', async () => {
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
+      vi.mocked(fsHelpers.writeFile).mockResolvedValue(undefined);
+
+      await expect(
+        service.setupMCP(CLAUDE_CODE, ['one-mcp', 'architect-mcp']),
+      ).resolves.not.toThrow();
+
+      expect(execFileSync).toHaveBeenCalledWith(
+        'npx',
+        [
+          '--yes',
+          '--package',
+          '@agiflowai/one-mcp',
+          'one-mcp',
+          'init',
+          '-o',
+          '/test/workspace/mcp-config.yaml',
+          '-f',
+          '--mcp-servers',
+          JSON.stringify({
+            'architect-mcp': {
+              command: 'npx',
+              args: ['-y', '@agiflowai/architect-mcp', 'mcp-serve', '--admin-enable'],
+            },
+          }),
+        ],
+        {
+          cwd: workspaceRoot,
+          stdio: 'inherit',
+        },
+      );
     });
 
     it('should setup MCP for Codex', async () => {
