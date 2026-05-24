@@ -10,7 +10,7 @@ import {
 import { confirm, input, select } from '@inquirer/prompts';
 import { Command } from 'commander';
 import { Liquid } from 'liquidjs';
-import ora from 'ora';
+import * as oraImport from 'ora';
 import { createActor, fromPromise } from 'xstate';
 import settingsLiquidTemplate from '../templates/settings.yaml.liquid?raw';
 import { MCP_SERVER_INFO, MCPServer } from '../constants';
@@ -24,7 +24,28 @@ import {
   TemplateSelectionService,
 } from '../services';
 import { type InitMachineInput, initMachine } from '../states/init-machine';
-import { displayBanner } from '../utils';
+import { displayBanner, displaySuccessMessage } from '../utils';
+
+type OraCreator = typeof import('ora').default;
+
+export function resolveOra(value: unknown, depth: number = 0): OraCreator {
+  if (typeof value === 'function') {
+    return value as OraCreator;
+  }
+
+  if (
+    depth < 3 &&
+    value &&
+    (typeof value === 'object' || typeof value === 'function') &&
+    'default' in value
+  ) {
+    return resolveOra((value as { default: unknown }).default, depth + 1);
+  }
+
+  throw new Error('Unable to resolve ora instance');
+}
+
+const ora = resolveOra(oraImport);
 
 const DEFAULT_TEMPLATE_REPO = {
   owner: 'AgiFlow',
@@ -874,11 +895,8 @@ export const initCommand = new Command('init')
       }
 
       // Display congratulations message with gradient
-      const gradient = await import('gradient-string');
       print.newline();
-      console.log(
-        gradient.default.pastel.multiline('🎉 Congratulations! Your project is ready to go!'),
-      );
+      displaySuccessMessage('🎉 Congratulations! Your project is ready to go!');
       print.newline();
     } catch (error) {
       print.error(`\nError: ${(error as Error).message}`);

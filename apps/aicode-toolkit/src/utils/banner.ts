@@ -1,6 +1,8 @@
 import * as chalkImport from 'chalk';
-import gradient from 'gradient-string';
+import * as gradientImport from 'gradient-string';
 import { BANNER_GRADIENT } from '../constants';
+
+type GradientCreator = typeof import('gradient-string').default;
 
 function resolveChalk(value: unknown, depth: number = 0): typeof import('chalk').default {
   if (
@@ -25,6 +27,25 @@ function resolveChalk(value: unknown, depth: number = 0): typeof import('chalk')
 }
 
 const chalk = resolveChalk(chalkImport);
+
+export function resolveGradient(value: unknown, depth: number = 0): GradientCreator {
+  if (typeof value === 'function') {
+    return value as GradientCreator;
+  }
+
+  if (
+    depth < 3 &&
+    value &&
+    (typeof value === 'object' || typeof value === 'function') &&
+    'default' in value
+  ) {
+    return resolveGradient((value as { default: unknown }).default, depth + 1);
+  }
+
+  throw new Error('Unable to resolve gradient-string instance');
+}
+
+const gradient = resolveGradient(gradientImport);
 
 /**
  * ASCII art for AICode Toolkit - simple and highly readable design
@@ -70,4 +91,8 @@ export function displayCompactBanner(): void {
   console.log(chalk.bold('▸ ') + titleGradient('AICode Toolkit') + chalk.dim(' v0.6.0'));
   console.log(chalk.dim('  AI-Powered Code Toolkit'));
   console.log();
+}
+
+export function displaySuccessMessage(message: string): void {
+  console.log(gradient.pastel.multiline(message));
 }

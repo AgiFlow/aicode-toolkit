@@ -3,4 +3,4 @@
  */
 
 // Banner utilities
-export { displayBanner, displayCompactBanner } from './banner';
+export { displayBanner, displayCompactBanner, displaySuccessMessage } from './banner';
