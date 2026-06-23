@@ -1,6 +1,26 @@
 import { icons, messages, print, sections, TemplatesManagerService } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 import { BoilerplateService } from '../services/BoilerplateService';
+import { GenerateBoilerplateTool } from '../tools';
+import {
+  assertToolSuccess,
+  collectOption,
+  detectMonolithMode,
+  loadTextOption,
+  parseJsonOption,
+  resolveTemplatesPath,
+} from './utils';
+
+interface GenerateBoilerplateOptions {
+  template?: string;
+  description?: string;
+  descriptionFile?: string;
+  instruction?: string;
+  instructionFile?: string;
+  targetFolder?: string;
+  variables?: string;
+  include?: string[];
+}
 
 /**
  * Boilerplate CLI command
@@ -77,6 +97,7 @@ boilerplateCommand
     '-t, --target-folder <path>',
     'Override target folder (defaults to boilerplate targetFolder for monorepo, workspace root for monolith)',
   )
+  .option('--marker <tag>', 'Custom scaffold marker tag to inject into generated code files')
   .option('--verbose', 'Enable verbose logging')
   .action(async (boilerplateName, options) => {
     try {
@@ -163,6 +184,7 @@ boilerplateCommand
         variables,
         monolith: options.monolith,
         targetFolderOverride: options.targetFolder,
+        marker: options.marker,
       });
 
       if (result.success) {
@@ -198,6 +220,78 @@ boilerplateCommand
       if (options.verbose) {
         console.error('Stack trace:', (error as Error).stack);
       }
+      process.exit(1);
+    }
+  });
+
+// Generate command
+boilerplateCommand
+  .command('generate <boilerplateName>')
+  .description("Create a new boilerplate configuration in a template's scaffold.yaml")
+  .option('-t, --template <name>', 'Template name (optional in monolith mode)')
+  .option('--description <text>', 'Boilerplate description')
+  .option('--description-file <path>', 'Read boilerplate description from a file')
+  .option('--instruction <text>', 'Detailed boilerplate instructions')
+  .option('--instruction-file <path>', 'Read detailed boilerplate instructions from a file')
+  .option('--target-folder <path>', 'Target folder for generated projects')
+  .option(
+    '--variables <json>',
+    'JSON array of variable definitions: [{"name":"appName","description":"App name","type":"string","required":true}]',
+  )
+  .option('-i, --include <path>', 'Template include path (repeatable)', collectOption, [])
+  .action(async (boilerplateName: string, options: GenerateBoilerplateOptions) => {
+    try {
+      const templatesPath = await resolveTemplatesPath();
+      const isMonolith = await detectMonolithMode();
+      const description = await loadTextOption({
+        value: options.description,
+        filePath: options.descriptionFile,
+        valueFlag: '--description',
+        fileFlag: '--description-file',
+        required: true,
+      });
+      const instruction = await loadTextOption({
+        value: options.instruction,
+        filePath: options.instructionFile,
+        valueFlag: '--instruction',
+        fileFlag: '--instruction-file',
+      });
+      const variables = parseJsonOption<
+        Array<{
+          name: string;
+          description: string;
+          type: string;
+          required: boolean;
+          default?: unknown;
+        }>
+      >(options.variables, '--variables');
+
+      if (!Array.isArray(variables)) {
+        throw new Error('--variables must be a JSON array');
+      }
+
+      const targetFolder = options.targetFolder ?? (isMonolith ? '.' : undefined);
+      if (!targetFolder) {
+        throw new Error('--target-folder is required outside monolith mode');
+      }
+
+      const tool = new GenerateBoilerplateTool(templatesPath, isMonolith);
+      const result = await tool.execute({
+        templateName: options.template,
+        boilerplateName,
+        description: description ?? '',
+        instruction,
+        targetFolder,
+        variables,
+        includes: options.include ?? [],
+      });
+
+      print.info(assertToolSuccess(result));
+    } catch (error) {
+      print.error(
+        'Error generating boilerplate:',
+        error instanceof Error ? error.message : String(error),
+      );
       process.exit(1);
     }
   });

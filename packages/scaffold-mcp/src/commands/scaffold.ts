@@ -1,5 +1,6 @@
 import path from 'node:path';
 import {
+  generateStableId,
   icons,
   messages,
   ProjectConfigResolver,
@@ -12,6 +13,27 @@ import {
   ScaffoldingMethodsService,
   type ListScaffoldingMethodsResult,
 } from '../services/ScaffoldingMethodsService';
+import { GenerateFeatureScaffoldTool } from '../tools';
+import { writePendingScaffoldLog } from '../utils/scaffoldPendingLog';
+import {
+  assertToolSuccess,
+  collectOption,
+  detectMonolithMode,
+  loadTextOption,
+  parseJsonOption,
+  resolveTemplatesPath,
+} from './utils';
+
+interface GenerateFeatureOptions {
+  template?: string;
+  description?: string;
+  descriptionFile?: string;
+  instruction?: string;
+  instructionFile?: string;
+  variables?: string;
+  include?: string[];
+  pattern?: string[];
+}
 
 /**
  * Scaffold CLI command
@@ -28,15 +50,6 @@ scaffoldCommand
   .option('-c, --cursor <cursor>', 'Pagination cursor for next page')
   .action(async (projectPath, options) => {
     try {
-      // Require either projectPath or template option
-      if (!projectPath && !options.template) {
-        messages.error('Either projectPath or --template option must be provided');
-        messages.hint('Examples:');
-        print.debug('  scaffold-mcp scaffold list ./my-project');
-        print.debug('  scaffold-mcp scaffold list --template nextjs-15');
-        process.exit(1);
-      }
-
       const templatesDir = await TemplatesManagerService.findTemplatesPath();
       if (!templatesDir) {
         messages.error(
@@ -53,9 +66,10 @@ scaffoldCommand
       let result: ListScaffoldingMethodsResult;
       let displayName: string;
 
-      if (projectPath) {
+      if (projectPath || !options.template) {
         // Use project path
-        const absolutePath = path.resolve(projectPath);
+        const inputProjectPath = projectPath ?? process.cwd();
+        const absolutePath = path.resolve(inputProjectPath);
 
         // Verify project configuration exists (supports both monolith and monorepo)
         const hasConfig = await ProjectConfigResolver.hasConfiguration(absolutePath);
@@ -73,7 +87,7 @@ scaffoldCommand
           absolutePath,
           options.cursor,
         );
-        displayName = projectPath;
+        displayName = projectPath ?? absolutePath;
       } else {
         // Use template name
         result = await scaffoldingMethodsService.listScaffoldingMethodsByTemplate(
@@ -129,6 +143,7 @@ scaffoldCommand
   .description('Add a feature to an existing project')
   .option('-p, --project <path>', 'Project path', process.cwd())
   .option('-v, --vars <json>', 'JSON string containing variables for the feature')
+  .option('--marker <tag>', 'Custom scaffold marker tag to inject into generated code files')
   .option('--verbose', 'Enable verbose logging')
   .action(async (featureName, options) => {
     try {
@@ -238,9 +253,20 @@ scaffoldCommand
         projectPath,
         scaffold_feature_name: featureName,
         variables,
+        marker: options.marker,
       });
 
       if (result.success) {
+        const scaffoldId = generateStableId(6);
+        if (result.createdFiles && result.createdFiles.length > 0) {
+          await writePendingScaffoldLog({
+            scaffoldId,
+            projectPath,
+            featureName,
+            generatedFiles: result.createdFiles,
+          });
+        }
+
         messages.success('✅ Feature added successfully!');
 
         if (result.createdFiles && result.createdFiles.length > 0) {
@@ -257,6 +283,8 @@ scaffoldCommand
           });
         }
 
+        print.debug(`\nSCAFFOLD_ID:${scaffoldId}`);
+
         print.header('\n📋 Next steps:');
         print.debug('   - Review the generated files');
         print.debug('   - Update imports if necessary');
@@ -267,6 +295,78 @@ scaffoldCommand
       }
     } catch (error) {
       messages.error(`❌ Error adding feature: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+// Generate command
+scaffoldCommand
+  .command('generate <featureName>')
+  .description("Create a new feature scaffold configuration in a template's scaffold.yaml")
+  .option('-t, --template <name>', 'Template name (optional in monolith mode)')
+  .option('--description <text>', 'Feature description')
+  .option('--description-file <path>', 'Read feature description from a file')
+  .option('--instruction <text>', 'Detailed feature instructions')
+  .option('--instruction-file <path>', 'Read detailed feature instructions from a file')
+  .option(
+    '--variables <json>',
+    'JSON array of variable definitions: [{"name":"featureName","description":"Feature name","type":"string","required":true}]',
+  )
+  .option('-i, --include <path>', 'Template include path (repeatable)', collectOption, [])
+  .option(
+    '--pattern <glob>',
+    'File pattern this scaffold applies to (repeatable)',
+    collectOption,
+    [],
+  )
+  .action(async (featureName: string, options: GenerateFeatureOptions) => {
+    try {
+      const templatesPath = await resolveTemplatesPath();
+      const isMonolith = await detectMonolithMode();
+      const description = await loadTextOption({
+        value: options.description,
+        filePath: options.descriptionFile,
+        valueFlag: '--description',
+        fileFlag: '--description-file',
+        required: true,
+      });
+      const instruction = await loadTextOption({
+        value: options.instruction,
+        filePath: options.instructionFile,
+        valueFlag: '--instruction',
+        fileFlag: '--instruction-file',
+      });
+      const variables = parseJsonOption<
+        Array<{
+          name: string;
+          description: string;
+          type: string;
+          required: boolean;
+          default?: unknown;
+        }>
+      >(options.variables, '--variables');
+
+      if (!Array.isArray(variables)) {
+        throw new Error('--variables must be a JSON array');
+      }
+
+      const tool = new GenerateFeatureScaffoldTool(templatesPath, isMonolith);
+      const result = await tool.execute({
+        templateName: options.template,
+        featureName,
+        description: description ?? '',
+        instruction,
+        variables,
+        includes: options.include ?? [],
+        patterns: options.pattern ?? [],
+      });
+
+      print.info(assertToolSuccess(result));
+    } catch (error) {
+      print.error(
+        'Error generating feature scaffold:',
+        error instanceof Error ? error.message : String(error),
+      );
       process.exit(1);
     }
   });
