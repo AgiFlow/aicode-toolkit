@@ -1,3 +1,20 @@
+## 1.2.0 (2026-06-23)
+
+### 🩹 Fixes
+
+- resolve dependabot security alerts ([01abe06](https://github.com/AgiFlow/aicode-toolkit/commit/01abe06))
+- resolve dependabot security alerts ([1886df7](https://github.com/AgiFlow/aicode-toolkit/commit/1886df7))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.2.0
+- Updated @agiflowai/hooks-adapter to 0.1.1
+- Updated @agiflowai/aicode-utils to 1.2.0
+
+### ❤️ Thank You
+
+- vuongngo
+
 ## 1.1.0 (2026-04-14)
 
 ### 🧱 Updated Dependencies
