@@ -121,6 +121,25 @@ npx @agiflowai/scaffold-mcp scaffold list ./apps/my-app
 npx @agiflowai/scaffold-mcp scaffold add scaffold-nextjs-page \
   --project ./apps/my-app \
   --vars '{"pageTitle":"About","nextjsPagePath":"/about"}'
+
+# Create template authoring entries (CLI equivalents for admin MCP tools)
+npx @agiflowai/scaffold-mcp boilerplate generate scaffold-vite-app \
+  --template vite-react \
+  --description "React Vite starter" \
+  --target-folder apps \
+  --variables '[{"name":"appName","description":"Application name","type":"string","required":true}]'
+
+npx @agiflowai/scaffold-mcp scaffold generate scaffold-service \
+  --template typescript-lib \
+  --description "Generate a service class and unit test" \
+  --variables '[{"name":"serviceName","description":"Service name","type":"string","required":true}]'
+
+npx @agiflowai/scaffold-mcp template file create src/index.ts \
+  --template typescript-lib \
+  --content 'export const {{ name | camelCase }} = "{{ name }}";'
+
+npx @agiflowai/scaffold-mcp file write .env.local \
+  --content 'NEXT_PUBLIC_API_URL=https://api.example.com'
 ```
 
 ---

@@ -2,9 +2,11 @@
 import { Command } from 'commander';
 import packageJson from '../package.json' assert { type: 'json' };
 import { boilerplateCommand } from './commands/boilerplate';
+import { fileCommand } from './commands/file';
 import { mcpServeCommand } from './commands/mcp-serve';
 import { scaffoldCommand } from './commands/scaffold';
 import { hookCommand } from './commands/hook';
+import { templateCommand } from './commands/template';
 
 /**
  * Main entry point
@@ -21,6 +23,8 @@ async function main() {
   program.addCommand(mcpServeCommand);
   program.addCommand(boilerplateCommand);
   program.addCommand(scaffoldCommand);
+  program.addCommand(templateCommand);
+  program.addCommand(fileCommand);
   program.addCommand(hookCommand);
 
   // Parse arguments
