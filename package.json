@@ -17,11 +17,11 @@
   },
   "private": true,
   "dependencies": {
-    "@nx/js": "22.6.5",
-    "@nx/vitest": "22.6.5",
-    "@nx/workspace": "22.6.5",
-    "nx": "22.6.5",
-    "pnpm": "10.33.0",
+    "@nx/js": "23.0.0",
+    "@nx/vitest": "23.0.0",
+    "@nx/workspace": "23.0.0",
+    "nx": "23.0.0",
+    "pnpm": "11.8.0",
     "typescript": "5.9.3",
     "vitest": "4.1.4"
   },
