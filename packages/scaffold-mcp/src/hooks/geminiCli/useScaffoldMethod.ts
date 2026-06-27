@@ -31,7 +31,12 @@ import {
 } from '@agiflowai/hooks-adapter';
 import { ListScaffoldingMethodsTool } from '../../tools/ListScaffoldingMethodsTool';
 import { TemplatesManagerService, ProjectFinderService } from '@agiflowai/aicode-utils';
-import { formatScaffoldMethodsHookMessage, resolveNewFileWriteTarget } from '../shared';
+import {
+  formatScaffoldMethodsHookMessage,
+  resolveNewFileWriteTarget,
+  matchesExcludeGlob,
+  getGlobalExcludeGlobs,
+} from '../shared';
 
 /**
  * Scaffold method definition from list-scaffolding-methods tool
@@ -50,6 +55,8 @@ interface ScaffoldMethod {
  */
 interface ScaffoldMethodsResponse {
   methods?: ScaffoldMethod[];
+  /** Template-level exclude globs from scaffold.yaml (see {@link matchesExcludeGlob}). */
+  excludeGlobs?: string[];
   nextCursor?: string;
 }
 
@@ -87,6 +94,17 @@ export class UseScaffoldMethodHook {
         return {
           decision: DECISION_SKIP,
           message: 'Not a new file write operation',
+        };
+      }
+
+      // Writes matching the workspace-wide excludeGlobs (scaffold-mcp.hook.excludeGlobs
+      // in .toolkit/settings.yaml) bypass scaffold enforcement so agents don't route
+      // around this hook (and the downstream review hooks) via Bash heredocs.
+      const globalExcludeGlobs = await getGlobalExcludeGlobs(context.cwd);
+      if (matchesExcludeGlob(absoluteFilePath, globalExcludeGlobs)) {
+        return {
+          decision: DECISION_ALLOW,
+          message: 'File matches configured excludeGlobs - writing directly.',
         };
       }
 
@@ -165,6 +183,15 @@ export class UseScaffoldMethodHook {
       }
 
       const data: ScaffoldMethodsResponse = JSON.parse(resultText);
+
+      // Per-template relaxation: writes matching the template's scaffold.yaml `exclude`
+      // globs bypass enforcement even when scaffold methods exist.
+      if (matchesExcludeGlob(absoluteFilePath, data.excludeGlobs)) {
+        return {
+          decision: DECISION_ALLOW,
+          message: 'File matches template exclude globs - writing directly.',
+        };
+      }
 
       if (!data.methods || data.methods.length === 0) {
         // No methods available - still deny to guide AI

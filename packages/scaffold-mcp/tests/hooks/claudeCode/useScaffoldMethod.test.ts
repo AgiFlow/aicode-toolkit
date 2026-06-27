@@ -87,6 +87,9 @@ vi.mock('@agiflowai/aicode-utils', (): object => ({
   TemplatesManagerService: {
     findTemplatesPath: vi.fn().mockResolvedValue('/test/templates'),
     getWorkspaceRoot: vi.fn().mockResolvedValue('/test'),
+    readToolkitConfig: vi.fn().mockResolvedValue({
+      'scaffold-mcp': { hook: { excludeGlobs: ['**/*.md', '**/*.mdx', '**/src/content/**'] } },
+    }),
   },
   // Vitest v4 requires a regular function (not arrow) for constructor mocks
   // biome-ignore lint/complexity/useArrowFunction: regular function required for `new` call in Vitest v4
@@ -132,10 +135,14 @@ function makePreToolUseContext(
   };
 }
 
-function makeMethodsResult(methods: MockMethodEntry[], nextCursor?: string): MockToolResult {
+function makeMethodsResult(
+  methods: MockMethodEntry[],
+  nextCursor?: string,
+  excludeGlobs?: string[],
+): MockToolResult {
   return {
     isError: false,
-    content: [{ type: 'text', text: JSON.stringify({ methods, nextCursor }) }],
+    content: [{ type: 'text', text: JSON.stringify({ methods, nextCursor, excludeGlobs }) }],
   };
 }
 
@@ -223,6 +230,78 @@ describe('UseScaffoldMethodHook.preToolUse', (): void => {
     expect(result.decision).toBe(DECISION_DENY);
     expect(result.message).toContain('- **scaffold-route**: Generate a new route');
     expect(result.message).toContain('- **scaffold-component**: Generate a new React component');
+  });
+
+  it('should allow new-file writes matching configured global excludeGlobs even when methods exist', async (): Promise<void> => {
+    mockExecute.mockResolvedValue(
+      makeMethodsResult([{ name: 'scaffold-route', description: 'Generate a new route' }]),
+    );
+
+    const result = await hook.preToolUse(
+      makePreToolUseContext({
+        tool_input: { file_path: '/test/apps/my-app/src/content/blog/x.mdx' },
+      }),
+    );
+
+    expect(result.decision).toBe(DECISION_ALLOW);
+    expect(result.message).toContain('excludeGlobs');
+    // Global excludeGlobs short-circuit before scaffold methods are ever consulted.
+    expect(mockExecute).not.toHaveBeenCalled();
+  });
+
+  it('should allow new-file writes matching a template-level exclude glob from scaffold.yaml', async (): Promise<void> => {
+    // Path is not covered by the global excludeGlobs, but the template's scaffold.yaml
+    // exclude list (surfaced on the methods result) covers it — so it is allowed.
+    mockExecute.mockResolvedValue(
+      makeMethodsResult(
+        [{ name: 'scaffold-route', description: 'Generate a new route' }],
+        undefined,
+        ['**/*.gen.ts'],
+      ),
+    );
+
+    const result = await hook.preToolUse(
+      makePreToolUseContext({
+        tool_input: { file_path: '/test/apps/my-app/src/schema.gen.ts' },
+      }),
+    );
+
+    expect(result.decision).toBe(DECISION_ALLOW);
+    expect(result.message).toContain('template');
+    // Template excludes come from the methods result, so the tool IS consulted.
+    expect(mockExecute).toHaveBeenCalled();
+  });
+
+  it('should still deny new-file writes to scaffoldable source paths when methods exist', async (): Promise<void> => {
+    mockExecute.mockResolvedValue(
+      makeMethodsResult([{ name: 'scaffold-route', description: 'Generate a new route' }]),
+    );
+
+    const result = await hook.preToolUse(
+      makePreToolUseContext({
+        tool_input: { file_path: '/test/apps/my-app/src/api/x.ts' },
+      }),
+    );
+
+    expect(result.decision).toBe(DECISION_DENY);
+    expect(result.message).toContain('- **scaffold-route**: Generate a new route');
+  });
+
+  it('should deny content writes when no excludeGlobs are configured', async (): Promise<void> => {
+    // Without configured excludeGlobs the broad enforcement stays intact.
+    vi.mocked(TemplatesManagerService.readToolkitConfig).mockResolvedValueOnce(null);
+    mockExecute.mockResolvedValue(
+      makeMethodsResult([{ name: 'scaffold-route', description: 'Generate a new route' }]),
+    );
+
+    const result = await hook.preToolUse(
+      makePreToolUseContext({
+        tool_input: { file_path: '/test/apps/my-app/src/content/blog/x.mdx' },
+      }),
+    );
+
+    expect(result.decision).toBe(DECISION_DENY);
+    expect(result.message).toContain('- **scaffold-route**: Generate a new route');
   });
 
   it('should not include instruction text or required variables in the message', async (): Promise<void> => {

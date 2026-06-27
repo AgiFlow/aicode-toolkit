@@ -36,7 +36,12 @@ import { TemplatesManagerService, ProjectFinderService } from '@agiflowai/aicode
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import os from 'node:os';
-import { formatScaffoldMethodsHookMessage, resolveNewFileWriteTarget } from '../shared';
+import {
+  formatScaffoldMethodsHookMessage,
+  resolveNewFileWriteTarget,
+  matchesExcludeGlob,
+  getGlobalExcludeGlobs,
+} from '../shared';
 
 /**
  * Scaffold method definition from list-scaffolding-methods tool
@@ -51,6 +56,8 @@ interface ScaffoldMethod {
  */
 interface ScaffoldMethodsResponse {
   methods?: ScaffoldMethod[];
+  /** Template-level exclude globs from scaffold.yaml (see {@link matchesExcludeGlob}). */
+  excludeGlobs?: string[];
   nextCursor?: string;
 }
 
@@ -67,6 +74,7 @@ interface ExecutionLogServiceWithLoadLog extends ExecutionLogService {
 function isScaffoldMethodsResponse(value: unknown): value is ScaffoldMethodsResponse {
   if (typeof value !== 'object' || value === null) return false;
   if ('methods' in value && !Array.isArray(value.methods)) return false;
+  if ('excludeGlobs' in value && !Array.isArray(value.excludeGlobs)) return false;
   if ('nextCursor' in value && typeof value.nextCursor !== 'string') return false;
   return true;
 }
@@ -118,6 +126,17 @@ export class UseScaffoldMethodHook {
         return {
           decision: DECISION_SKIP,
           message: 'Not a new file write operation',
+        };
+      }
+
+      // Writes matching the workspace-wide excludeGlobs (scaffold-mcp.hook.excludeGlobs
+      // in .toolkit/settings.yaml) bypass scaffold enforcement so agents don't route
+      // around this hook (and the downstream review hooks) via Bash heredocs.
+      const globalExcludeGlobs = await getGlobalExcludeGlobs(context.cwd);
+      if (matchesExcludeGlob(absoluteFilePath, globalExcludeGlobs)) {
+        return {
+          decision: DECISION_ALLOW,
+          message: 'File matches configured excludeGlobs - writing directly.',
         };
       }
 
@@ -190,6 +209,15 @@ export class UseScaffoldMethodHook {
         };
       }
       const data = parsed;
+
+      // Per-template relaxation: writes matching the template's scaffold.yaml `exclude`
+      // globs bypass enforcement even when scaffold methods exist.
+      if (matchesExcludeGlob(absoluteFilePath, data.excludeGlobs)) {
+        return {
+          decision: DECISION_ALLOW,
+          message: 'File matches template exclude globs - writing directly.',
+        };
+      }
 
       if (!data.methods || data.methods.length === 0) {
         // No methods available - allow with guidance

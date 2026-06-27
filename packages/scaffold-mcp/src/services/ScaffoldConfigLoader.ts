@@ -31,6 +31,10 @@ const ScaffoldConfigEntrySchema = z.object({
 // Zod schema for the entire scaffold.yaml structure
 const ScaffoldYamlSchema = z
   .object({
+    // Glob patterns whose new-file writes bypass scaffold enforcement for projects
+    // using this template (allowed through directly instead of denied). Declared
+    // explicitly so the catchall below does not treat it as a scaffold entry.
+    exclude: z.array(z.string()).optional(),
     boilerplate: z
       .union([ScaffoldConfigEntrySchema, z.array(ScaffoldConfigEntrySchema)])
       .optional(),

@@ -8,6 +8,7 @@ Comprehensive guide for creating templates and understanding the scaffolding sys
 - [Template Structure](#template-structure)
 - [Configuration Files](#configuration-files)
   - [scaffold.yaml](#scaffoldyaml)
+    - [Excluding Files from Scaffold Enforcement](#excluding-files-from-scaffold-enforcement)
   - [Variables Schema](#variables-schema)
   - [Include Patterns](#include-patterns)
 - [Liquid Template Syntax](#liquid-template-syntax)
@@ -253,6 +254,32 @@ boilerplate:
     includes:
       # ...
 ```
+
+#### Excluding Files from Scaffold Enforcement
+
+When the [scaffold hooks](./hooks.md) are enabled, agents are blocked from writing **new** files directly once a template defines any scaffolding methods — they are nudged to use a scaffolding method instead. Some files are never scaffolded (docs, content collections, generated files), so the optional top-level `exclude` key lists glob patterns whose new-file writes are allowed through directly:
+
+```yaml
+# scaffold.yaml
+exclude:
+  - '**/*.md'
+  - '**/*.mdx'
+  - '**/src/content/**'
+
+boilerplate:
+  - name: nextjs-15-app
+    # ...
+
+features:
+  - name: scaffold-nextjs-page
+    # ...
+```
+
+- **Scope:** applies to every project scaffolded from this template.
+- **Matching:** globs are matched against the **absolute** file path (prefix with `**`), with dotfile traversal enabled.
+- **Precedence:** a new-file write is allowed through when it matches *either* this template-level `exclude` **or** the workspace-wide `scaffold-mcp.hook.excludeGlobs` in `.toolkit/settings.yaml`. Otherwise, if the template defines any scaffolding methods, the write is denied with guidance.
+
+Use a template's `exclude` for relaxations specific to that template's structure (e.g. `**/__generated__/**`, `**/*.stories.tsx`); use the workspace-wide setting for patterns that should be relaxed everywhere. See [Hooks Integration](./hooks.md#relaxing-enforcement) for the global setting.
 
 ### Variables Schema
 

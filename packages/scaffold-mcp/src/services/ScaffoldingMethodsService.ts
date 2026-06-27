@@ -26,6 +26,11 @@ export interface ListScaffoldingMethodsResult {
   sourceTemplate: string;
   templatePath: string;
   methods: ScaffoldMethod[];
+  /**
+   * Template-level glob patterns (from scaffold.yaml `exclude`) whose new-file
+   * writes bypass scaffold enforcement. Template-wide, so repeated on every page.
+   */
+  excludeGlobs?: string[];
   nextCursor?: string; // Cursor token for pagination (next item index)
   _meta?: {
     total: number; // Total number of methods
@@ -78,7 +83,7 @@ export class ScaffoldingMethodsService {
    */
   private async collectAllMethodsByTemplate(
     templateName: string,
-  ): Promise<{ templatePath: string; methods: ScaffoldMethod[] }> {
+  ): Promise<{ templatePath: string; methods: ScaffoldMethod[]; excludeGlobs: string[] }> {
     const templatePath = await this.findTemplatePath(templateName);
 
     if (!templatePath) {
@@ -94,6 +99,10 @@ export class ScaffoldingMethodsService {
 
     const scaffoldContent = await this.fileSystem.readFile(scaffoldYamlPath, 'utf8');
     const architectConfig = yaml.load(scaffoldContent) as ArchitectConfig;
+
+    // Template-level enforcement relaxation: new-file writes matching these globs
+    // are allowed through directly by the scaffold hook.
+    const excludeGlobs = Array.isArray(architectConfig.exclude) ? architectConfig.exclude : [];
 
     const methods: ScaffoldMethod[] = [];
 
@@ -117,14 +126,15 @@ export class ScaffoldingMethodsService {
       });
     }
 
-    return { templatePath, methods };
+    return { templatePath, methods, excludeGlobs };
   }
 
   async listScaffoldingMethodsByTemplate(
     templateName: string,
     cursor?: string,
   ): Promise<ListScaffoldingMethodsResult> {
-    const { templatePath, methods } = await this.collectAllMethodsByTemplate(templateName);
+    const { templatePath, methods, excludeGlobs } =
+      await this.collectAllMethodsByTemplate(templateName);
 
     // Apply pagination with metadata
     const paginatedResult = PaginationHelper.paginate(methods, cursor);
@@ -133,6 +143,7 @@ export class ScaffoldingMethodsService {
       sourceTemplate: templateName,
       templatePath,
       methods: paginatedResult.items,
+      excludeGlobs,
       nextCursor: paginatedResult.nextCursor,
       _meta: paginatedResult._meta,
     };

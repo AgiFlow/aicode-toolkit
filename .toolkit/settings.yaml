@@ -18,6 +18,15 @@ scaffold-mcp:
     promptAsSkill: true
 
   hook:
+    # New-file writes matching these globs bypass scaffold enforcement: they are
+    # written directly instead of being denied with scaffold-method guidance.
+    # Applies to all agents. Matched against absolute paths, so prefix with `**`.
+    # Template-specific relaxations belong in that template's scaffold.yaml `exclude`.
+    excludeGlobs:
+      - '**/*.md'
+      - '**/*.mdx'
+      - '**/src/content/**'
+
     claude-code:
       preToolUse:
         # hook reads llm-tool/tool-config from this file at runtime
