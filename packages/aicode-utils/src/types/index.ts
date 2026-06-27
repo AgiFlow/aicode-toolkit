@@ -97,6 +97,14 @@ export interface HookAgentConfig {
  * Hook configuration keyed by agent name.
  */
 export interface HookConfig {
+  /**
+   * Glob patterns whose new-file writes bypass scaffold enforcement (allowed
+   * through directly instead of being denied with scaffold-method guidance).
+   * Matched against absolute paths, so use `**` prefixes (e.g. `**​/*.md`).
+   * Applies to every agent; relaxation that is specific to a template belongs
+   * in that template's `scaffold.yaml` `exclude` list instead.
+   */
+  excludeGlobs?: string[];
   /** Hook config for Claude Code agent. */
   'claude-code'?: HookAgentConfig;
   /** Hook config for Gemini CLI agent. */

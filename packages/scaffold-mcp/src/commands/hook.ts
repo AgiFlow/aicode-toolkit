@@ -164,8 +164,11 @@ export const hookCommand = new Command('hook')
       // Read per-agent per-method config; CLI flags take precedence
       const toolkitConfig = await TemplatesManagerService.readToolkitConfig();
       const hookConfig = toolkitConfig?.['scaffold-mcp']?.hook;
+      // Exclude non-agent keys (e.g. excludeGlobs) so the value narrows to HookAgentConfig.
       const methodConfig =
-        hookConfig?.[agent as keyof HookConfig]?.[hookMethod as keyof HookAgentConfig];
+        hookConfig?.[agent as Exclude<keyof HookConfig, 'excludeGlobs'>]?.[
+          hookMethod as keyof HookAgentConfig
+        ];
 
       const marker = options.marker ?? '@scaffold-generated';
       const configuredFallback = resolveFallbackConfig(methodConfig as never);

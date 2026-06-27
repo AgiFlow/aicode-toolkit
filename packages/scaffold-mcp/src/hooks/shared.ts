@@ -1,6 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { minimatch } from 'minimatch';
+import { TemplatesManagerService } from '@agiflowai/aicode-utils';
 
 interface ScaffoldMethodSummary {
   name: string;
@@ -15,24 +16,48 @@ export const MAX_REQUIRED_VARS_IN_HOOK = 3;
 export const REQUIRED_VARS_METHOD_LIMIT = 2;
 
 /**
- * Globs for new-file write targets that are never scaffoldable source files.
+ * Returns true when an absolute write target matches any of the given exclude globs.
+ *
  * Scaffold methods carry no target glob, so the hook cannot tell whether a method
- * applies to a given path. Without this allow-list it denies every new-file write
- * once any method exists, which pushes agents to bypass the hook via Bash heredocs
- * (skipping downstream review hooks). Content files matching these globs are written
- * directly instead.
- */
-export const NON_SCAFFOLDABLE_GLOBS = ['**/src/content/**', '**/*.md', '**/*.mdx'];
-
-/**
- * Returns true when an absolute write target is clearly non-scaffoldable content
- * (markdown/MDX docs, or anything under a src/content directory).
+ * applies to a given path: once any method exists it denies every new-file write,
+ * which pushes agents to bypass the hook via Bash heredocs (skipping downstream
+ * review hooks). Exclude globs are the configured escape hatch — matching writes are
+ * allowed through directly. Globs come from two sources: workspace-wide
+ * (`scaffold-mcp.hook.excludeGlobs` in .toolkit/settings.yaml, see
+ * {@link getGlobalExcludeGlobs}) and per-template (`exclude` in scaffold.yaml).
  *
  * `dot: true` lets the globs traverse dot-directories (e.g. worktree paths) so a
- * content file nested under one is not misclassified as scaffoldable.
+ * file nested under one is not misclassified.
+ *
+ * @param absPath - Absolute path of the new-file write target.
+ * @param globs - Glob patterns to match against; empty/undefined matches nothing.
+ * @returns True when `absPath` matches at least one glob.
  */
-export function isNonScaffoldableTarget(absPath: string): boolean {
-  return NON_SCAFFOLDABLE_GLOBS.some((glob) => minimatch(absPath, glob, { dot: true }));
+export function matchesExcludeGlob(absPath: string, globs?: string[]): boolean {
+  if (!globs || globs.length === 0) {
+    return false;
+  }
+  return globs.some((glob) => minimatch(absPath, glob, { dot: true }));
+}
+
+/**
+ * Loads the workspace-wide scaffold-enforcement exclude globs from the toolkit
+ * config (`scaffold-mcp.hook.excludeGlobs` in .toolkit/settings.yaml).
+ *
+ * Fails open (returns an empty array) when the config is missing or unreadable so a
+ * broken config never blocks writes.
+ *
+ * @param cwd - Directory to resolve the workspace config from (walks up to the root).
+ * @returns The configured exclude globs, or an empty array when none are set.
+ */
+export async function getGlobalExcludeGlobs(cwd: string): Promise<string[]> {
+  try {
+    const config = await TemplatesManagerService.readToolkitConfig(cwd);
+    const globs = config?.['scaffold-mcp']?.hook?.excludeGlobs;
+    return Array.isArray(globs) ? globs : [];
+  } catch {
+    return [];
+  }
 }
 
 export async function resolveNewFileWriteTarget(

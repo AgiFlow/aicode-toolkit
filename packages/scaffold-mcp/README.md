@@ -303,6 +303,18 @@ Hooks let scaffold-mcp proactively suggest templates when your AI agent creates 
 
 When Claude tries to write a new file, the hook shows available scaffolding methods that match, so Claude can use templates instead of writing from scratch.
 
+**Relaxing enforcement:** to let some files (docs, content, generated code) be written directly, add exclude globs — workspace-wide via `scaffold-mcp.hook.excludeGlobs` in `.toolkit/settings.yaml`, or per-template via a top-level `exclude` in `scaffold.yaml`:
+
+```yaml
+# .toolkit/settings.yaml
+scaffold-mcp:
+  hook:
+    excludeGlobs:
+      - '**/*.md'
+      - '**/*.mdx'
+      - '**/src/content/**'
+```
+
 See [Hooks Documentation](./docs/hooks.md) for details.
 
 ---

@@ -138,6 +138,44 @@ Add to `~/.gemini/settings.json`:
 
 ---
 
+## Relaxing Enforcement
+
+Once a template defines scaffolding methods, the PreToolUse hook denies **new-file writes** that don't go through a scaffolding method. Some files are never scaffolded (Markdown docs, content collections, generated files), and denying them tends to push agents to bypass the hook entirely (e.g. Bash heredocs), which also skips downstream review hooks. Two configurable allow-lists relax this — a write is let through when its path matches **either** one.
+
+### Workspace-wide (`.toolkit/settings.yaml`)
+
+Applies to every agent and every project in the workspace:
+
+```yaml
+scaffold-mcp:
+  hook:
+    excludeGlobs:
+      - '**/*.md'
+      - '**/*.mdx'
+      - '**/src/content/**'
+```
+
+### Per-template (`scaffold.yaml`)
+
+Applies only to projects scaffolded from that template:
+
+```yaml
+# templates/<name>/scaffold.yaml
+exclude:
+  - '**/*.stories.tsx'
+  - '**/__generated__/**'
+```
+
+See [Template Conventions](./template-conventions.md#excluding-files-from-scaffold-enforcement).
+
+### Behavior
+
+- A new-file `Write` is **allowed through directly** when its absolute path matches a glob in **either** list (use `**` prefixes; dotfile traversal is enabled).
+- The two lists are additive — neither requires the other.
+- With no `excludeGlobs` / `exclude` configured, the broad enforcement stays in effect.
+
+---
+
 ## Session Tracking
 
 Hooks track executions per session:

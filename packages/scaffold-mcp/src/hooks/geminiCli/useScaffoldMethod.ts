@@ -17,11 +17,26 @@
  * - Mutating context object
  */
 
-import type { GeminiCliHookInput, HookResponse, ScaffoldExecution, LogEntry } from '@agiflowai/hooks-adapter';
-import { ExecutionLogService, DECISION_SKIP, DECISION_DENY, DECISION_ALLOW } from '@agiflowai/hooks-adapter';
+import type {
+  GeminiCliHookInput,
+  HookResponse,
+  ScaffoldExecution,
+  LogEntry,
+} from '@agiflowai/hooks-adapter';
+import {
+  ExecutionLogService,
+  DECISION_SKIP,
+  DECISION_DENY,
+  DECISION_ALLOW,
+} from '@agiflowai/hooks-adapter';
 import { ListScaffoldingMethodsTool } from '../../tools/ListScaffoldingMethodsTool';
 import { TemplatesManagerService, ProjectFinderService } from '@agiflowai/aicode-utils';
-import { formatScaffoldMethodsHookMessage, resolveNewFileWriteTarget, isNonScaffoldableTarget } from '../shared';
+import {
+  formatScaffoldMethodsHookMessage,
+  resolveNewFileWriteTarget,
+  matchesExcludeGlob,
+  getGlobalExcludeGlobs,
+} from '../shared';
 
 /**
  * Scaffold method definition from list-scaffolding-methods tool
@@ -40,6 +55,8 @@ interface ScaffoldMethod {
  */
 interface ScaffoldMethodsResponse {
   methods?: ScaffoldMethod[];
+  /** Template-level exclude globs from scaffold.yaml (see {@link matchesExcludeGlob}). */
+  excludeGlobs?: string[];
   nextCursor?: string;
 }
 
@@ -68,7 +85,11 @@ export class UseScaffoldMethodHook {
   async preToolUse(context: GeminiCliHookInput): Promise<HookResponse> {
     try {
       const filePath = context.tool_input?.file_path;
-      const absoluteFilePath = await resolveNewFileWriteTarget(context.cwd, context.tool_name, filePath);
+      const absoluteFilePath = await resolveNewFileWriteTarget(
+        context.cwd,
+        context.tool_name,
+        filePath,
+      );
       if (!absoluteFilePath || !filePath) {
         return {
           decision: DECISION_SKIP,
@@ -76,13 +97,14 @@ export class UseScaffoldMethodHook {
         };
       }
 
-      // Content files (markdown/MDX, src/content/**) are never scaffoldable. Allow the
-      // write directly so agents don't bypass this hook (and downstream review hooks)
-      // by falling back to Bash heredocs.
-      if (isNonScaffoldableTarget(absoluteFilePath)) {
+      // Writes matching the workspace-wide excludeGlobs (scaffold-mcp.hook.excludeGlobs
+      // in .toolkit/settings.yaml) bypass scaffold enforcement so agents don't route
+      // around this hook (and the downstream review hooks) via Bash heredocs.
+      const globalExcludeGlobs = await getGlobalExcludeGlobs(context.cwd);
+      if (matchesExcludeGlob(absoluteFilePath, globalExcludeGlobs)) {
         return {
           decision: DECISION_ALLOW,
-          message: 'Content file (non-scaffoldable) - writing directly.',
+          message: 'File matches configured excludeGlobs - writing directly.',
         };
       }
 
@@ -162,6 +184,15 @@ export class UseScaffoldMethodHook {
 
       const data: ScaffoldMethodsResponse = JSON.parse(resultText);
 
+      // Per-template relaxation: writes matching the template's scaffold.yaml `exclude`
+      // globs bypass enforcement even when scaffold methods exist.
+      if (matchesExcludeGlob(absoluteFilePath, data.excludeGlobs)) {
+        return {
+          decision: DECISION_ALLOW,
+          message: 'File matches template exclude globs - writing directly.',
+        };
+      }
+
       if (!data.methods || data.methods.length === 0) {
         // No methods available - still deny to guide AI
         await executionLog.logExecution({
@@ -219,7 +250,9 @@ export class UseScaffoldMethodHook {
 
       // Extract actual tool name (handle both direct calls and MCP proxy calls)
       const actualToolName =
-        context.tool_name === 'mcp__one-mcp__use_tool' ? context.tool_input?.toolName : context.tool_name;
+        context.tool_name === 'mcp__one-mcp__use_tool'
+          ? context.tool_input?.toolName
+          : context.tool_name;
 
       // Check if this is a use-scaffold-method tool execution
       if (actualToolName === 'use-scaffold-method') {
@@ -404,7 +437,10 @@ async function getEditedScaffoldFiles(
     const editedFiles: string[] = [];
 
     for (const entry of entries) {
-      if (entry.operation === 'scaffold-file-edit' && entry.filePath.startsWith(`scaffold-edit-${scaffoldId}-`)) {
+      if (
+        entry.operation === 'scaffold-file-edit' &&
+        entry.filePath.startsWith(`scaffold-edit-${scaffoldId}-`)
+      ) {
         // Extract the file path from the edit key
         const filePath = entry.filePath.replace(`scaffold-edit-${scaffoldId}-`, '');
         editedFiles.push(filePath);
