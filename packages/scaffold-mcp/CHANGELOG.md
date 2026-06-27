@@ -1,3 +1,26 @@
+## 1.3.0 (2026-06-27)
+
+### 🚀 Features
+
+- **scaffold-mcp:** add Codex CLI scaffold hook ([60ef1f2](https://github.com/AgiFlow/aicode-toolkit/commit/60ef1f2))
+- **scaffold-mcp:** make scaffold-hook exclusions configurable ([8c188b1](https://github.com/AgiFlow/aicode-toolkit/commit/8c188b1))
+
+### 🩹 Fixes
+
+- **scaffold-mcp:** allow writes to non-scaffoldable content paths in hooks ([ad3394e](https://github.com/AgiFlow/aicode-toolkit/commit/ad3394e))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.3.0
+- Updated @agiflowai/architect-mcp to 1.3.0
+- Updated @agiflowai/hooks-adapter to 0.1.2
+- Updated @agiflowai/aicode-utils to 1.3.0
+
+### ❤️ Thank You
+
+- Claude Opus 4.8 (1M context)
+- vuongngo
+
 ## 1.2.0 (2026-06-23)
 
 ### 🚀 Features

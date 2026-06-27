@@ -1,3 +1,19 @@
+## 0.1.2 (2026-06-27)
+
+### 🚀 Features
+
+- **scaffold-mcp:** add Codex CLI scaffold hook ([60ef1f2](https://github.com/AgiFlow/aicode-toolkit/commit/60ef1f2))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 1.3.0
+- Updated @agiflowai/aicode-utils to 1.3.0
+
+### ❤️ Thank You
+
+- Claude Opus 4.8 (1M context)
+- vuongngo
+
 ## 0.1.1 (2026-06-23)
 
 ### 🧱 Updated Dependencies
