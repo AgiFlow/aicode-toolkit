@@ -26,6 +26,8 @@ scaffold-mcp:
       - '**/*.md'
       - '**/*.mdx'
       - '**/src/content/**'
+      - '**/*.test.ts'
+      - '**/*.spec.ts'
 
     claude-code:
       preToolUse:

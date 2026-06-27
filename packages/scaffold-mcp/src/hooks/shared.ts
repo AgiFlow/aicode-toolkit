@@ -85,6 +85,101 @@ export async function resolveNewFileWriteTarget(
   }
 }
 
+/**
+ * File-path targets extracted from a Codex `apply_patch` command body.
+ */
+export interface ApplyPatchTargets {
+  /** Paths created by `*** Add File:` blocks (new files). */
+  added: string[];
+  /** Paths modified by `*** Update File:` blocks (existing files). */
+  updated: string[];
+  /** Paths removed by `*** Delete File:` blocks. */
+  deleted: string[];
+}
+
+/**
+ * Parses a Codex `apply_patch` command body into the file paths it adds, updates,
+ * and deletes. Paths are returned verbatim (as written in the patch, i.e. relative
+ * to cwd). Pure and synchronous — performs no filesystem access.
+ *
+ * @param command - The `apply_patch` patch body (the tool_input.command string).
+ * @returns The added/updated/deleted path lists.
+ */
+export function parseApplyPatchTargets(command: string): ApplyPatchTargets {
+  const added: string[] = [];
+  const updated: string[] = [];
+  const deleted: string[] = [];
+
+  for (const line of command.split('\n')) {
+    const add = line.match(/^\*\*\* Add File: (.+)$/);
+    if (add) {
+      added.push(add[1].trim());
+      continue;
+    }
+    const update = line.match(/^\*\*\* Update File: (.+)$/);
+    if (update) {
+      updated.push(update[1].trim());
+      continue;
+    }
+    const del = line.match(/^\*\*\* Delete File: (.+)$/);
+    if (del) {
+      deleted.push(del[1].trim());
+    }
+  }
+
+  return { added, updated, deleted };
+}
+
+/**
+ * Resolves the absolute, cwd-scoped paths of NEW files a Codex `apply_patch` tool
+ * call creates (its `*** Add File:` targets). Returns an empty array for any other
+ * tool or a missing command.
+ *
+ * Unlike {@link resolveNewFileWriteTarget} (the Claude/Gemini `Write` resolver), this
+ * performs no on-disk existence check: an `Add File` block is new-file creation by
+ * definition, and the patch fails downstream if the path already exists.
+ *
+ * @param cwd - Working directory the patch paths are relative to.
+ * @param toolName - The Codex tool name (only `apply_patch` is handled).
+ * @param command - The `apply_patch` patch body (tool_input.command).
+ * @returns Absolute paths of new files created under cwd.
+ */
+export function resolveApplyPatchNewFileTargets(
+  cwd: string,
+  toolName: string,
+  command?: string,
+): string[] {
+  if (!command || toolName !== 'apply_patch') {
+    return [];
+  }
+
+  const targets: string[] = [];
+  for (const filePath of parseApplyPatchTargets(command).added) {
+    const absoluteFilePath = path.isAbsolute(filePath) ? filePath : path.join(cwd, filePath);
+    if (absoluteFilePath.startsWith(cwd + path.sep) || absoluteFilePath === cwd) {
+      targets.push(absoluteFilePath);
+    }
+  }
+  return targets;
+}
+
+/**
+ * Returns the file paths a Codex `apply_patch` call writes (adds or updates), as
+ * written in the patch. Used to correlate post-write edits with a scaffold's
+ * generated files. Returns an empty array for any other tool or a missing command.
+ *
+ * @param toolName - The Codex tool name (only `apply_patch` is handled).
+ * @param command - The `apply_patch` patch body (tool_input.command).
+ * @returns The added and updated paths (verbatim).
+ */
+export function resolveApplyPatchEditedPaths(toolName: string, command?: string): string[] {
+  if (!command || toolName !== 'apply_patch') {
+    return [];
+  }
+  const { added, updated } = parseApplyPatchTargets(command);
+  return [...added, ...updated];
+}
+
 export function formatScaffoldMethodsHookMessage(
   methods: ScaffoldMethodSummary[],
   options?: {

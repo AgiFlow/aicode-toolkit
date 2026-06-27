@@ -109,6 +109,8 @@ export interface HookConfig {
   'claude-code'?: HookAgentConfig;
   /** Hook config for Gemini CLI agent. */
   'gemini-cli'?: HookAgentConfig;
+  /** Hook config for OpenAI Codex CLI agent. */
+  codex?: HookAgentConfig;
 }
 
 /**

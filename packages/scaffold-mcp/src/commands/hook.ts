@@ -23,6 +23,7 @@
 import {
   CLAUDE_CODE,
   GEMINI_CLI,
+  CODEX,
   SUPPORTED_LLM_TOOLS,
   isValidLlmTool,
 } from '@agiflowai/coding-agent-bridge';
@@ -30,9 +31,11 @@ import type { HookAgentConfig, HookConfig } from '@agiflowai/aicode-utils';
 import {
   ClaudeCodeAdapter,
   GeminiCliAdapter,
+  CodexAdapter,
   parseHookType,
   type ClaudeCodeHookInput,
   type GeminiCliHookInput,
+  type CodexHookInput,
   type HookResponse,
 } from '@agiflowai/hooks-adapter';
 import { TemplatesManagerService, print } from '@agiflowai/aicode-utils';
@@ -68,6 +71,9 @@ type ClaudeCodeHookCallback = (context: ClaudeCodeHookInput) => Promise<HookResp
 /** Type for Gemini CLI hook callback function */
 type GeminiCliHookCallback = (context: GeminiCliHookInput) => Promise<HookResponse>;
 
+/** Type for Codex CLI hook callback function */
+type CodexHookCallback = (context: CodexHookInput) => Promise<HookResponse>;
+
 /** Interface for class-based hook with lifecycle methods */
 interface HookClass<T> {
   preToolUse?: (context: T) => Promise<HookResponse>;
@@ -86,6 +92,11 @@ interface ClaudeCodeHookModule {
 /** Interface for Gemini CLI hook module exports */
 interface GeminiCliHookModule {
   UseScaffoldMethodHook?: new () => HookClass<GeminiCliHookInput>;
+}
+
+/** Interface for Codex CLI hook module exports */
+interface CodexHookModule {
+  UseScaffoldMethodHook?: new () => HookClass<CodexHookInput>;
 }
 
 /** Type guard for valid scaffold hook method keys */
@@ -258,8 +269,31 @@ export const hookCommand = new Command('hook')
 
         const adapter = new GeminiCliAdapter();
         await adapter.executeMultiple(geminiCallbacks, resolvedAdapterConfig);
+      } else if (agent === CODEX) {
+        // Import hook module via barrel export (dynamic for conditional loading based on agent type)
+        const hookModule: CodexHookModule = await import('../hooks/codex');
+
+        const codexCallbacks: CodexHookCallback[] = [];
+
+        if (hookModule.UseScaffoldMethodHook) {
+          const hookInstance = new hookModule.UseScaffoldMethodHook();
+          const hookFn = hookInstance[hookMethod];
+          if (hookFn) {
+            codexCallbacks.push(hookFn.bind(hookInstance));
+          }
+        }
+
+        if (codexCallbacks.length === 0) {
+          // No hooks registered for this method — exit gracefully (no-op)
+          process.exit(0);
+        }
+
+        const adapter = new CodexAdapter();
+        await adapter.executeMultiple(codexCallbacks, resolvedAdapterConfig);
       } else {
-        throw new Error(`Unsupported agent: ${agent}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}`);
+        throw new Error(
+          `Unsupported agent: ${agent}. Supported: ${CLAUDE_CODE}, ${GEMINI_CLI}, ${CODEX}`,
+        );
       }
     } catch (error) {
       print.error(`Hook error: ${error instanceof Error ? error.message : String(error)}`);

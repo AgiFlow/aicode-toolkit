@@ -18,6 +18,7 @@
 export { BaseAdapter } from './BaseAdapter';
 export { ClaudeCodeAdapter } from './ClaudeCodeAdapter';
 export { GeminiCliAdapter } from './GeminiCliAdapter';
+export { CodexAdapter } from './CodexAdapter';
 
 // Export adapter-specific types
 export type { ClaudeCodePreToolUseInput } from './ClaudeCodeAdapter';
@@ -27,3 +28,4 @@ export type { ClaudeCodeUserPromptSubmitInput } from './ClaudeCodeAdapter';
 export type { ClaudeCodeTaskCompletedInput } from './ClaudeCodeAdapter';
 export type { ClaudeCodeHookInput } from './ClaudeCodeAdapter';
 export type { GeminiCliHookInput } from './GeminiCliAdapter';
+export type { CodexHookInput } from './CodexAdapter';
