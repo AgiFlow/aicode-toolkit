@@ -125,6 +125,42 @@ Add to `~/.gemini/settings.json`:
 
 ---
 
+## Codex CLI Setup
+
+Codex CLI ships a hook system modeled on Claude Code's — the same `PreToolUse`/`PostToolUse`
+events and the same `permissionDecision` response — so scaffold-mcp reuses that wire format.
+Configure hooks in `~/.codex/config.toml` (or a project-level `.codex/config.toml`):
+
+```toml
+[[hooks.PreToolUse]]
+# Codex creates files via the apply_patch tool — scope the hook to it.
+matcher = "^apply_patch$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "npx @agiflowai/scaffold-mcp hook --type codex.preToolUse"
+
+[[hooks.PostToolUse]]
+matcher = "^apply_patch$"
+
+[[hooks.PostToolUse.hooks]]
+type = "command"
+command = "npx @agiflowai/scaffold-mcp hook --type codex.postToolUse"
+```
+
+### What Happens
+
+Codex creates new files through the `apply_patch` tool, whose patch body contains
+`*** Add File: <path>` blocks. The PreToolUse hook parses those blocks to find the new
+files, then — like the Claude Code hook — suggests matching scaffolding methods, unless
+the path is covered by an [exclude glob](#relaxing-enforcement). The
+`permissionDecision: deny` Codex returns surfaces the guidance; Codex can still proceed
+if no scaffold method fits.
+
+Existing-file edits (`*** Update File:`) and shell writes (`Bash`) are not intercepted.
+
+---
+
 ## Hook Decisions
 
 | Decision | Claude Code | Gemini CLI | Behavior |
@@ -134,7 +170,7 @@ Add to `~/.gemini/settings.json`:
 | Skip | `skip` | - | Silently allow (no output) |
 | Warn | - | `WARN` | Show warning but allow |
 
-**Note:** The PreToolUse hook uses `deny` to show scaffolding options. This displays the message to Claude but doesn't actually block the Write operation—Claude can still proceed if no scaffold methods are relevant.
+**Note:** The PreToolUse hook uses `deny` to show scaffolding options. This displays the message to Claude but doesn't actually block the Write operation—Claude can still proceed if no scaffold methods are relevant. Codex CLI uses the same decision contract as Claude Code (`hookSpecificOutput.permissionDecision: allow | deny | ask`).
 
 ---
 
@@ -195,6 +231,10 @@ npx @agiflowai/scaffold-mcp hook --type claude-code.postToolUse
 # Gemini CLI hooks (WIP)
 npx @agiflowai/scaffold-mcp hook --type gemini-cli.beforeToolUse
 npx @agiflowai/scaffold-mcp hook --type gemini-cli.afterToolUse
+
+# Codex CLI hooks
+npx @agiflowai/scaffold-mcp hook --type codex.preToolUse
+npx @agiflowai/scaffold-mcp hook --type codex.postToolUse
 ```
 
 Hook commands read tool context from stdin and write responses to stdout (JSON format).
