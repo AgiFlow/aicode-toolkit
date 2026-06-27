@@ -26,6 +26,11 @@ export interface ListScaffoldingMethodsResult {
   sourceTemplate: string;
   templatePath: string;
   methods: ScaffoldMethod[];
+  /**
+   * Template-level glob patterns (from scaffold.yaml `exclude`) whose new-file
+   * writes bypass scaffold enforcement. Template-wide, so repeated on every page.
+   */
+  excludeGlobs?: string[];
   nextCursor?: string; // Cursor token for pagination (next item index)
   _meta?: {
     total: number; // Total number of methods
@@ -78,7 +83,7 @@ export class ScaffoldingMethodsService {
    */
   private async collectAllMethodsByTemplate(
     templateName: string,
-  ): Promise<{ templatePath: string; methods: ScaffoldMethod[] }> {
+  ): Promise<{ templatePath: string; methods: ScaffoldMethod[]; excludeGlobs: string[] }> {
     const templatePath = await this.findTemplatePath(templateName);
 
     if (!templatePath) {

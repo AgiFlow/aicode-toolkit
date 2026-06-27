@@ -64,9 +64,7 @@ const { mockExecute, mockHasExecuted, mockLogExecution, mockLoadLog } = vi.hoist
 
 vi.mock(
   '@agiflowai/hooks-adapter',
-  async (
-    importOriginal: () => Promise<typeof import('@agiflowai/hooks-adapter')>,
-  ): Promise<object> => {
+  async (importOriginal: () => Promise<typeof import('@agiflowai/hooks-adapter')>): Promise<object> => {
     const actual = await importOriginal<typeof import('@agiflowai/hooks-adapter')>();
     return {
       ...actual,
@@ -116,9 +114,7 @@ vi.mock('node:fs/promises', (): object => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makePreToolUseContext(
-  overrides: Partial<ClaudeCodePreToolUseInput> = {},
-): ClaudeCodePreToolUseInput {
+function makePreToolUseContext(overrides: Partial<ClaudeCodePreToolUseInput> = {}): ClaudeCodePreToolUseInput {
   return {
     hook_event_name: 'PreToolUse',
     tool_name: 'Write',
@@ -183,9 +179,7 @@ describe('UseScaffoldMethodHook.preToolUse', (): void => {
   });
 
   it('should skip files outside the cwd', async (): Promise<void> => {
-    const result = await hook.preToolUse(
-      makePreToolUseContext({ tool_input: { file_path: '/other/path/file.ts' } }),
-    );
+    const result = await hook.preToolUse(makePreToolUseContext({ tool_input: { file_path: '/other/path/file.ts' } }));
     expect(result.decision).toBe(DECISION_SKIP);
   });
 
@@ -225,10 +219,36 @@ describe('UseScaffoldMethodHook.preToolUse', (): void => {
     expect(result.message).toContain('- **scaffold-component**: Generate a new React component');
   });
 
-  it('should not include instruction text or required variables in the message', async (): Promise<void> => {
-    mockExecute.mockResolvedValue(
-      makeMethodsResult([{ name: 'scaffold-route', description: 'Short description' }]),
+  it('should allow new-file writes to non-scaffoldable content paths even when methods exist', async (): Promise<void> => {
+    mockExecute.mockResolvedValue(makeMethodsResult([{ name: 'scaffold-route', description: 'Generate a new route' }]));
+
+    const result = await hook.preToolUse(
+      makePreToolUseContext({
+        tool_input: { file_path: '/test/apps/my-app/src/content/blog/x.mdx' },
+      }),
     );
+
+    expect(result.decision).toBe(DECISION_ALLOW);
+    expect(result.message).toContain('non-scaffoldable');
+    // Content files short-circuit before scaffold methods are ever consulted.
+    expect(mockExecute).not.toHaveBeenCalled();
+  });
+
+  it('should still deny new-file writes to scaffoldable source paths when methods exist', async (): Promise<void> => {
+    mockExecute.mockResolvedValue(makeMethodsResult([{ name: 'scaffold-route', description: 'Generate a new route' }]));
+
+    const result = await hook.preToolUse(
+      makePreToolUseContext({
+        tool_input: { file_path: '/test/apps/my-app/src/api/x.ts' },
+      }),
+    );
+
+    expect(result.decision).toBe(DECISION_DENY);
+    expect(result.message).toContain('- **scaffold-route**: Generate a new route');
+  });
+
+  it('should not include instruction text or required variables in the message', async (): Promise<void> => {
+    mockExecute.mockResolvedValue(makeMethodsResult([{ name: 'scaffold-route', description: 'Short description' }]));
 
     const result = await hook.preToolUse(makePreToolUseContext());
 

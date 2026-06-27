@@ -25,18 +25,13 @@ import type {
   LogEntry,
   PendingScaffoldLogEntry,
 } from '@agiflowai/hooks-adapter';
-import {
-  ExecutionLogService,
-  DECISION_SKIP,
-  DECISION_DENY,
-  DECISION_ALLOW,
-} from '@agiflowai/hooks-adapter';
+import { ExecutionLogService, DECISION_SKIP, DECISION_DENY, DECISION_ALLOW } from '@agiflowai/hooks-adapter';
 import { ListScaffoldingMethodsTool } from '../../tools';
 import { TemplatesManagerService, ProjectFinderService } from '@agiflowai/aicode-utils';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import os from 'node:os';
-import { formatScaffoldMethodsHookMessage, resolveNewFileWriteTarget } from '../shared';
+import { formatScaffoldMethodsHookMessage, resolveNewFileWriteTarget, isNonScaffoldableTarget } from '../shared';
 
 /**
  * Scaffold method definition from list-scaffolding-methods tool
@@ -109,15 +104,21 @@ export class UseScaffoldMethodHook {
       }
 
       const filePath = context.tool_input?.file_path;
-      const absoluteFilePath = await resolveNewFileWriteTarget(
-        context.cwd,
-        context.tool_name,
-        filePath,
-      );
+      const absoluteFilePath = await resolveNewFileWriteTarget(context.cwd, context.tool_name, filePath);
       if (!absoluteFilePath || !filePath) {
         return {
           decision: DECISION_SKIP,
           message: 'Not a new file write operation',
+        };
+      }
+
+      // Content files (markdown/MDX, src/content/**) are never scaffoldable. Allow the
+      // write directly so agents don't bypass this hook (and downstream review hooks)
+      // by falling back to Bash heredocs.
+      if (isNonScaffoldableTarget(absoluteFilePath)) {
+        return {
+          decision: DECISION_ALLOW,
+          message: 'Content file (non-scaffoldable) - writing directly.',
         };
       }
 
@@ -250,9 +251,7 @@ export class UseScaffoldMethodHook {
       const filePath = context.tool_input?.file_path;
 
       const actualToolName =
-        context.tool_name === 'mcp__one-mcp__use_tool'
-          ? context.tool_input?.toolName
-          : context.tool_name;
+        context.tool_name === 'mcp__one-mcp__use_tool' ? context.tool_input?.toolName : context.tool_name;
 
       // Check if this is a use-scaffold-method tool execution
       if (actualToolName === 'use-scaffold-method') {
@@ -272,9 +271,7 @@ export class UseScaffoldMethodHook {
       // Only process file edit/write operations
       if (
         !filePath ||
-        (context.tool_name !== 'Edit' &&
-          context.tool_name !== 'Write' &&
-          context.tool_name !== 'Update')
+        (context.tool_name !== 'Edit' && context.tool_name !== 'Write' && context.tool_name !== 'Update')
       ) {
         return {
           decision: DECISION_SKIP,
@@ -456,10 +453,7 @@ async function getEditedScaffoldFiles(
     const editedFiles: string[] = [];
 
     for (const entry of entries) {
-      if (
-        entry.operation === 'scaffold-file-edit' &&
-        entry.filePath.startsWith(`scaffold-edit-${scaffoldId}-`)
-      ) {
+      if (entry.operation === 'scaffold-file-edit' && entry.filePath.startsWith(`scaffold-edit-${scaffoldId}-`)) {
         // Extract the file path from the edit key
         const filePath = entry.filePath.replace(`scaffold-edit-${scaffoldId}-`, '');
         editedFiles.push(filePath);
@@ -519,9 +513,7 @@ async function processPendingScaffoldLogs(sessionId: string, scaffoldId: string)
         await fs.unlink(tempLogFile);
       } catch (unlinkError: unknown) {
         // ENOENT means file was already deleted — safe to ignore; log unexpected errors
-        if (
-          !(unlinkError instanceof Error && 'code' in unlinkError && unlinkError.code === 'ENOENT')
-        ) {
+        if (!(unlinkError instanceof Error && 'code' in unlinkError && unlinkError.code === 'ENOENT')) {
           console.error('processPendingScaffoldLogs: failed to delete temp log file:', unlinkError);
         }
       }

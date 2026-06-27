@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DECISION_DENY, DECISION_SKIP } from '@agiflowai/hooks-adapter';
+import { DECISION_ALLOW, DECISION_DENY, DECISION_SKIP } from '@agiflowai/hooks-adapter';
 import fs from 'node:fs/promises';
 
 const mockExecute = vi.fn();
@@ -131,5 +131,47 @@ describe('Gemini UseScaffoldMethodHook.preToolUse', () => {
     const result = await hook.preToolUse(makeContext());
     expect(result.decision).toBe(DECISION_DENY);
     expect(result.message).toContain('No scaffolding methods are available');
+  });
+
+  it('allows new-file writes to non-scaffoldable content paths even when methods exist', async () => {
+    mockExecute.mockResolvedValue({
+      isError: false,
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            methods: [{ name: 'scaffold-route', description: 'Generate a new route' }],
+          }),
+        },
+      ],
+    });
+
+    const result = await hook.preToolUse(
+      makeContext({ tool_input: { file_path: '/test/apps/my-app/src/content/blog/x.mdx' } }),
+    );
+
+    expect(result.decision).toBe(DECISION_ALLOW);
+    expect(result.message).toContain('non-scaffoldable');
+    // Content files short-circuit before scaffold methods are ever consulted.
+    expect(mockExecute).not.toHaveBeenCalled();
+  });
+
+  it('still denies new-file writes to scaffoldable source paths when methods exist', async () => {
+    mockExecute.mockResolvedValue({
+      isError: false,
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            methods: [{ name: 'scaffold-route', description: 'Generate a new route' }],
+          }),
+        },
+      ],
+    });
+
+    const result = await hook.preToolUse(makeContext({ tool_input: { file_path: '/test/apps/my-app/src/api/x.ts' } }));
+
+    expect(result.decision).toBe(DECISION_DENY);
+    expect(result.message).toContain('- **scaffold-route**: Generate a new route');
   });
 });

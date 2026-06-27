@@ -17,21 +17,11 @@
  * - Mutating context object
  */
 
-import type {
-  GeminiCliHookInput,
-  HookResponse,
-  ScaffoldExecution,
-  LogEntry,
-} from '@agiflowai/hooks-adapter';
-import {
-  ExecutionLogService,
-  DECISION_SKIP,
-  DECISION_DENY,
-  DECISION_ALLOW,
-} from '@agiflowai/hooks-adapter';
+import type { GeminiCliHookInput, HookResponse, ScaffoldExecution, LogEntry } from '@agiflowai/hooks-adapter';
+import { ExecutionLogService, DECISION_SKIP, DECISION_DENY, DECISION_ALLOW } from '@agiflowai/hooks-adapter';
 import { ListScaffoldingMethodsTool } from '../../tools/ListScaffoldingMethodsTool';
 import { TemplatesManagerService, ProjectFinderService } from '@agiflowai/aicode-utils';
-import { formatScaffoldMethodsHookMessage, resolveNewFileWriteTarget } from '../shared';
+import { formatScaffoldMethodsHookMessage, resolveNewFileWriteTarget, isNonScaffoldableTarget } from '../shared';
 
 /**
  * Scaffold method definition from list-scaffolding-methods tool
@@ -78,15 +68,21 @@ export class UseScaffoldMethodHook {
   async preToolUse(context: GeminiCliHookInput): Promise<HookResponse> {
     try {
       const filePath = context.tool_input?.file_path;
-      const absoluteFilePath = await resolveNewFileWriteTarget(
-        context.cwd,
-        context.tool_name,
-        filePath,
-      );
+      const absoluteFilePath = await resolveNewFileWriteTarget(context.cwd, context.tool_name, filePath);
       if (!absoluteFilePath || !filePath) {
         return {
           decision: DECISION_SKIP,
           message: 'Not a new file write operation',
+        };
+      }
+
+      // Content files (markdown/MDX, src/content/**) are never scaffoldable. Allow the
+      // write directly so agents don't bypass this hook (and downstream review hooks)
+      // by falling back to Bash heredocs.
+      if (isNonScaffoldableTarget(absoluteFilePath)) {
+        return {
+          decision: DECISION_ALLOW,
+          message: 'Content file (non-scaffoldable) - writing directly.',
         };
       }
 
@@ -223,9 +219,7 @@ export class UseScaffoldMethodHook {
 
       // Extract actual tool name (handle both direct calls and MCP proxy calls)
       const actualToolName =
-        context.tool_name === 'mcp__one-mcp__use_tool'
-          ? context.tool_input?.toolName
-          : context.tool_name;
+        context.tool_name === 'mcp__one-mcp__use_tool' ? context.tool_input?.toolName : context.tool_name;
 
       // Check if this is a use-scaffold-method tool execution
       if (actualToolName === 'use-scaffold-method') {
@@ -410,10 +404,7 @@ async function getEditedScaffoldFiles(
     const editedFiles: string[] = [];
 
     for (const entry of entries) {
-      if (
-        entry.operation === 'scaffold-file-edit' &&
-        entry.filePath.startsWith(`scaffold-edit-${scaffoldId}-`)
-      ) {
+      if (entry.operation === 'scaffold-file-edit' && entry.filePath.startsWith(`scaffold-edit-${scaffoldId}-`)) {
         // Extract the file path from the edit key
         const filePath = entry.filePath.replace(`scaffold-edit-${scaffoldId}-`, '');
         editedFiles.push(filePath);

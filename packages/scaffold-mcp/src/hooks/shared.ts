@@ -1,5 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { minimatch } from 'minimatch';
 
 interface ScaffoldMethodSummary {
   name: string;
@@ -12,6 +13,27 @@ interface ScaffoldMethodSummary {
 export const MAX_SCAFFOLD_METHODS_IN_HOOK = 5;
 export const MAX_REQUIRED_VARS_IN_HOOK = 3;
 export const REQUIRED_VARS_METHOD_LIMIT = 2;
+
+/**
+ * Globs for new-file write targets that are never scaffoldable source files.
+ * Scaffold methods carry no target glob, so the hook cannot tell whether a method
+ * applies to a given path. Without this allow-list it denies every new-file write
+ * once any method exists, which pushes agents to bypass the hook via Bash heredocs
+ * (skipping downstream review hooks). Content files matching these globs are written
+ * directly instead.
+ */
+export const NON_SCAFFOLDABLE_GLOBS = ['**/src/content/**', '**/*.md', '**/*.mdx'];
+
+/**
+ * Returns true when an absolute write target is clearly non-scaffoldable content
+ * (markdown/MDX docs, or anything under a src/content directory).
+ *
+ * `dot: true` lets the globs traverse dot-directories (e.g. worktree paths) so a
+ * content file nested under one is not misclassified as scaffoldable.
+ */
+export function isNonScaffoldableTarget(absPath: string): boolean {
+  return NON_SCAFFOLDABLE_GLOBS.some((glob) => minimatch(absPath, glob, { dot: true }));
+}
 
 export async function resolveNewFileWriteTarget(
   cwd: string,
