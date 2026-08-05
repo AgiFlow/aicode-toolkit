@@ -1,5 +1,7 @@
 # AI Code Toolkit
 
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2FAgiFlow%2Faicode-toolkit.svg)](https://mcptoplist.com/server/glama%2FAgiFlow%2Faicode-toolkit)
+
 [![npm version](https://img.shields.io/npm/v/@agiflowai/scaffold-mcp.svg?style=flat-square)](https://www.npmjs.com/package/@agiflowai/scaffold-mcp)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg?style=flat-square)](https://opensource.org/licenses/AGPL-3.0)
 [![Discord](https://dcbadge.limes.pink/api/server/https://discord.gg/NsB6q9Vas9?style=flat-square)](https://discord.gg/NsB6q9Vas9)
