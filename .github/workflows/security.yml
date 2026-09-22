@@ -47,19 +47,15 @@ jobs:
       - name: Run pnpm audit
         id: audit
         run: |
-          echo "Running pnpm audit..."
-          pnpm audit --audit-level moderate --json > audit-results.json || true
+          # Capture the full report for the artifact upload below. `|| true` is
+          # correct HERE and only here: this line exists to write the file, not
+          # to gate. The gate is the last line, whose exit code is not swallowed.
+          pnpm audit --json > audit-results.json || true
+          jq '.metadata.vulnerabilities' audit-results.json
 
-          # Check if there are any vulnerabilities
-          VULN_COUNT=$(cat audit-results.json | jq '.metadata.vulnerabilities | to_entries | map(select(.value > 0)) | length')
-
-          if [ "$VULN_COUNT" -gt 0 ]; then
-            echo "::warning::Found $VULN_COUNT vulnerability types in dependencies"
-            cat audit-results.json | jq '.metadata.vulnerabilities'
-          else
-            echo "No vulnerabilities found"
-          fi
-        continue-on-error: true
+          # Fails the job on high or critical. Moderate and low are reported in
+          # the JSON above but do not block.
+          pnpm audit --audit-level high
 
       - name: Upload audit results
         if: always()
@@ -139,7 +135,10 @@ jobs:
           fetch-depth: 0 # Full history for better secret detection
 
       - name: TruffleHog Secret Scan
-        uses: trufflesecurity/trufflehog@main
+        # Pinned to a release tag. `@main` is a mutable branch ref: it runs
+        # whatever is on that branch at that moment, inside the security
+        # workflow, and Dependabot's github-actions ecosystem cannot track it.
+        uses: trufflesecurity/trufflehog@v3.97.5
         with:
           extra_args: --only-verified --json
           path: ./
