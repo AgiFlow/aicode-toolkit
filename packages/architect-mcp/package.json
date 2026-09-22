@@ -34,7 +34,7 @@
     "commander": "14.0.3",
     "execa": "9.6.1",
     "express": "5.2.1",
-    "js-yaml": "4.2.0",
+    "js-yaml": "4.3.2",
     "minimatch": "10.2.5",
     "uuid": "13.0.1",
     "zod": "4.3.6"
@@ -44,7 +44,7 @@
     "@types/node": "25.6.0",
     "tsdown": "0.21.8",
     "typescript": "5.9.3",
-    "vitest": "4.1.4"
+    "vitest": "4.1.11"
   },
   "type": "module",
   "exports": {
