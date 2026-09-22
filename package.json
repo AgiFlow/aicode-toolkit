@@ -25,7 +25,7 @@
     "vitest": "4.1.11"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.11",
+    "@biomejs/biome": "2.5.14",
     "@commitlint/cli": "20.5.0",
     "@commitlint/config-nx-scopes": "20.5.0",
     "@commitlint/prompt-cli": "20.5.0",
