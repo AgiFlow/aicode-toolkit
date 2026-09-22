@@ -48,6 +48,7 @@ secrets.json
 .DS_Store
 Thumbs.db
 
+.pi/
 .nx/cache
 .nx/workspace-data
 .cursor/rules/nx-rules.mdc

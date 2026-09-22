@@ -1,0 +1,85 @@
+version: 2
+
+updates:
+  # One entry at the repo root is correct. The single committed pnpm-lock.yaml
+  # covers every member of pnpm-workspace.yaml ('packages/*', 'apps/*').
+  # Per-package directory entries would each resolve in isolation without a
+  # local lockfile and produce duplicate, mutually-conflicting PRs.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+
+    # Manifests pin exact versions, so only rewrite one when the new version
+    # falls outside the existing range.
+    versioning-strategy: "increase-if-necessary"
+
+    labels:
+      - "dependencies"
+
+    # Deliberately no `include: "scope"`. commitlint.config.js extends
+    # @commitlint/config-nx-scopes with a closed scope-enum at severity 2,
+    # which rejects Dependabot's default `chore(deps):` subject.
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+
+    groups:
+      # Batch security fixes into one PR per run. Without a group carrying
+      # `applies-to: security-updates`, Dependabot opens one PR per advisory.
+      security-patches:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+      # Routine updates, split so review risk differs. Note this repo lists
+      # nx/vitest/typescript under "dependencies", not "devDependencies", so
+      # build tooling lands in the production group.
+      prod-dependencies:
+        applies-to: version-updates
+        dependency-type: "production"
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+          - "minor"
+
+      dev-dependencies:
+        applies-to: version-updates
+        dependency-type: "development"
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+          - "minor"
+
+    ignore:
+      # Nx majors are a coordinated `nx migrate`, never a bot PR.
+      - dependency-name: "nx"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@nx/*"
+        update-types: ["version-update:semver-major"]
+      # TypeScript majors break the Nx and vitest plugin peer ranges.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
+  # All workflows pin actions by floating major tag (actions/checkout@v4,
+  # pnpm/action-setup@v4, github/codeql-action@v3, ...), plus trufflehog
+  # pinned to a release tag.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

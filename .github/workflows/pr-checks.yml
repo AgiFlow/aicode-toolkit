@@ -62,8 +62,6 @@ jobs:
 
       - name: Test
         run: pnpm test
-
-      - name: Security Audit
-        run: |
-          echo "Running security audit..."
-          pnpm audit --audit-level high || echo "::warning::Security vulnerabilities found. Check the security workflow for details."
+      # Security auditing lives in security.yml, which runs on the same
+      # pull_request trigger and gates on high severity. Two half-configured
+      # audits is worse than one real one.

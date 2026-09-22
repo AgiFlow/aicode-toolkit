@@ -37,10 +37,10 @@
   "devDependencies": {
     "@types/node": "25.6.0",
     "@types/uuid": "10.0.0",
-    "@vitest/coverage-v8": "4.1.4",
+    "@vitest/coverage-v8": "4.1.11",
     "tsdown": "0.21.8",
     "typescript": "5.9.3",
-    "vitest": "4.1.4"
+    "vitest": "4.1.11"
   },
   "type": "module",
   "exports": {
