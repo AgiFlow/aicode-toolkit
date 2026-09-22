@@ -16,7 +16,7 @@ importers:
         version: 23.1.3(@babel/traverse@7.29.8(supports-color@7.2.0))(nx@23.1.3)(supports-color@7.2.0)
       '@nx/vitest':
         specifier: 23.1.3
-        version: 23.1.3(@babel/traverse@7.29.8(supports-color@7.2.0))(nx@23.1.3)(supports-color@7.2.0)(typescript@5.9.3)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))(vitest@4.1.11)
+        version: 23.1.3(@babel/traverse@7.29.8(supports-color@7.2.0))(nx@23.1.3)(supports-color@7.2.0)(typescript@5.9.3)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))(vitest@4.1.11)
       '@nx/workspace':
         specifier: 23.1.3
         version: 23.1.3
@@ -28,7 +28,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
+        version: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))
     devDependencies:
       '@biomejs/biome':
         specifier: 2.4.11
@@ -46,8 +46,8 @@ importers:
         specifier: 9.1.7
         version: 9.1.7
       syncpack:
-        specifier: 14.3.0
-        version: 14.3.0
+        specifier: 15.3.3
+        version: 15.3.3
 
   apps/aicode-toolkit:
     dependencies:
@@ -163,7 +163,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
+        version: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))
 
   packages/architect-mcp:
     dependencies:
@@ -221,7 +221,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
+        version: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))
 
   packages/coding-agent-bridge:
     dependencies:
@@ -252,7 +252,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
+        version: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))
 
   packages/hooks-adapter:
     dependencies:
@@ -280,7 +280,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
+        version: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))
 
   packages/one-mcp:
     dependencies:
@@ -326,10 +326,10 @@ importers:
         version: 5.9.3
       unplugin-raw:
         specifier: 0.7.0
-        version: 0.7.0(esbuild@0.28.1)(rolldown@1.0.3)(rollup@4.63.4)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
+        version: 0.7.0(esbuild@0.28.1)(rolldown@1.0.3)(rollup@4.63.4)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
+        version: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))
 
   packages/scaffold-mcp:
     dependencies:
@@ -402,7 +402,7 @@ importers:
         version: 5.9.3
       unplugin-raw:
         specifier: 0.7.0
-        version: 0.7.0(esbuild@0.28.1)(rolldown@1.0.3)(rollup@4.63.4)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
+        version: 0.7.0(esbuild@0.28.1)(rolldown@1.0.3)(rollup@4.63.4)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))
 
   packages/style-system:
     dependencies:
@@ -4474,48 +4474,48 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  syncpack-darwin-arm64@14.3.0:
-    resolution: {integrity: sha512-gpbkBzO7yqa3BONc4EU3jY07yiPSZdoAxcpnz8REV9Bc6FkmKfOejCpYIh8RaogGPS4gOLJ/RUJEECqAaHTcjA==}
+  syncpack-darwin-arm64@15.3.3:
+    resolution: {integrity: sha512-sFnHOUT7ZYShxAXfzK8zIxNvY5ciW6c71fHYOJIgZ8Ry25IMWkaGfyLc894wxIPaYTbgEmeeZN6BV7G5Gu27mA==}
     cpu: [arm64]
     os: [darwin]
 
-  syncpack-darwin-x64@14.3.0:
-    resolution: {integrity: sha512-wTpl6Qj5qGIHrYhpCrlNnosmhQqvUoidqqmxtdM3f+j+b+OkTtpkUl2tdE28h3aeEEUPf9ClQnHuwRJMYNlrJw==}
+  syncpack-darwin-x64@15.3.3:
+    resolution: {integrity: sha512-gtWysFMwG3W8ieF8+aLMy1qVkehdy40hc02LGEjckmejZxtjDbTKE9vDhBAaXcLbqIsvQ1ImEymHU5N2I4llWQ==}
     cpu: [x64]
     os: [darwin]
 
-  syncpack-linux-arm64-musl@14.3.0:
-    resolution: {integrity: sha512-AezJ5dv0s+l/p1l4/wBatYhM6SZEKLcyNKggSOX5uISzqbSKwj/Aak13pBXWarzS+N6LnOl4PMcwRMJPOUfN/g==}
+  syncpack-linux-arm64-musl@15.3.3:
+    resolution: {integrity: sha512-mvj6TGhdwO5bHo1cM638esCx9+7ur0BA+RTdg+YiOD/CZJMP8iMj6ruF8htFNPEOKpAEOmfkOVKNs4yCbvkgyQ==}
     cpu: [arm64]
     os: [linux]
 
-  syncpack-linux-arm64@14.3.0:
-    resolution: {integrity: sha512-Vcf9zWkJGRqb5mGPKi9E+s/mB/Tw08LmKGRaiyKJjK8bhd1Ds65O8A2lOidy3jg0NOOojqREmDsli74Xd0z6KA==}
+  syncpack-linux-arm64@15.3.3:
+    resolution: {integrity: sha512-6hlHPrG+V457fpKEURqshNLaFQENkC416IZ4ngFY+2uBjFsmlA7ax4p4EJlFsxuHiQbx/4Yo27pVXmNJEs/bZQ==}
     cpu: [arm64]
     os: [linux]
 
-  syncpack-linux-x64-musl@14.3.0:
-    resolution: {integrity: sha512-tIRF0lvBJcoIwcO05/Q6j30CAg0jzn+A5eQL+06Ncq8CE5i8fBWrVwN1U/QQ4fzT+tondNWH/2BR5zlaB1VUpQ==}
+  syncpack-linux-x64-musl@15.3.3:
+    resolution: {integrity: sha512-7KHIb9b9VCSyQq2GwoshVU9Pt/2qCqhOPusuwkXadI+p1qW7fK5FukjZbG0Y4VRa6mszrD2W28OxWAswwrn1lQ==}
     cpu: [x64]
     os: [linux]
 
-  syncpack-linux-x64@14.3.0:
-    resolution: {integrity: sha512-n/4iBJnoOCe5An+WYlaqfSxOKQ7Id3TZTpxOpI60Cucq3yqwq0JHQUielj6JBtVaxvo2rAsTwbCLyp2aB0SD2g==}
+  syncpack-linux-x64@15.3.3:
+    resolution: {integrity: sha512-DcnZPKFGEFoktzIrufGGwk2ARTEhlvII6yQsETCaO/Z1xagOjJquxiDvagKnb4GQsQQCuih2ouzQZFCiKImrXA==}
     cpu: [x64]
     os: [linux]
 
-  syncpack-windows-arm64@14.3.0:
-    resolution: {integrity: sha512-ZTX0rSUTJZjIde3qPKLEqU7IEt4KxFsmq6gKLfESx5rB1rxk/B1Ljv6nTYph5QVItEzHQHUXDWnqa9yCb15myw==}
+  syncpack-windows-arm64@15.3.3:
+    resolution: {integrity: sha512-6pPWh3+uTO7g1FF8ugC+UqektaNXphdmDXqG3rWepFdCS+DrWj/7Gfbtlx/zISTdx//T7zoZZ2fvW4fzN/6ztQ==}
     cpu: [arm64]
     os: [win32]
 
-  syncpack-windows-x64@14.3.0:
-    resolution: {integrity: sha512-zvbphZw40wFZYeEW2oJYqA9Uw6IOwNIpgFmVNdWdGmShPF/Zu1cavHEcGwtQmvVzwuTEyiu67uxQ3hDC2q6vtg==}
+  syncpack-windows-x64@15.3.3:
+    resolution: {integrity: sha512-9CrrEzXE/MdWJuxyB7JvR1b6kiTNQPZh1dDJbWiRgtpNyCbEiddM1/viOsyaufftWDrQFV6RCGQzqCvWEas45g==}
     cpu: [x64]
     os: [win32]
 
-  syncpack@14.3.0:
-    resolution: {integrity: sha512-8/WtPPxxGFqE21JPFz6Bpw0m9BT3lzMYDcewJFj++EBPmCaDWowTnx0R4V7ofH/1z3HAIaAps6g2GHL76l1Y2g==}
+  syncpack@15.3.3:
+    resolution: {integrity: sha512-MC99meBhgc/E5xbB5mFUS99wj4bquTbKLKHLXYh3qPbmPZl2HD8KA4ls29a9Xv67oZ03isCaJaqSl+JIfXIfpA==}
     engines: {node: '>=14.17.0'}
     hasBin: true
 
@@ -6462,7 +6462,7 @@ snapshots:
   '@nx/nx-win32-x64-msvc@23.1.3':
     optional: true
 
-  '@nx/vitest@23.1.3(@babel/traverse@7.29.8(supports-color@7.2.0))(nx@23.1.3)(supports-color@7.2.0)(typescript@5.9.3)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))(vitest@4.1.11)':
+  '@nx/vitest@23.1.3(@babel/traverse@7.29.8(supports-color@7.2.0))(nx@23.1.3)(supports-color@7.2.0)(typescript@5.9.3)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))(vitest@4.1.11)':
     dependencies:
       '@nx/devkit': 23.1.3(nx@23.1.3)
       '@nx/js': 23.1.3(@babel/traverse@7.29.8(supports-color@7.2.0))(nx@23.1.3)(supports-color@7.2.0)
@@ -6470,8 +6470,8 @@ snapshots:
       semver: 7.8.5
       tslib: 2.8.1
     optionalDependencies:
-      vite: 8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0)
-      vitest: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
+      vite: 8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0)
+      vitest: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))
     transitivePeerDependencies:
       - '@babel/traverse'
       - '@swc-node/register'
@@ -6951,7 +6951,7 @@ snapshots:
       obug: 2.2.1
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
+      vitest: 4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))
 
   '@vitest/expect@4.1.11':
     dependencies:
@@ -6969,6 +6969,14 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0)
+
+  '@vitest/mocker@4.1.11(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))':
+    dependencies:
+      '@vitest/spy': 4.1.11
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0)
 
   '@vitest/pretty-format@4.1.11':
     dependencies:
@@ -8871,40 +8879,40 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  syncpack-darwin-arm64@14.3.0:
+  syncpack-darwin-arm64@15.3.3:
     optional: true
 
-  syncpack-darwin-x64@14.3.0:
+  syncpack-darwin-x64@15.3.3:
     optional: true
 
-  syncpack-linux-arm64-musl@14.3.0:
+  syncpack-linux-arm64-musl@15.3.3:
     optional: true
 
-  syncpack-linux-arm64@14.3.0:
+  syncpack-linux-arm64@15.3.3:
     optional: true
 
-  syncpack-linux-x64-musl@14.3.0:
+  syncpack-linux-x64-musl@15.3.3:
     optional: true
 
-  syncpack-linux-x64@14.3.0:
+  syncpack-linux-x64@15.3.3:
     optional: true
 
-  syncpack-windows-arm64@14.3.0:
+  syncpack-windows-arm64@15.3.3:
     optional: true
 
-  syncpack-windows-x64@14.3.0:
+  syncpack-windows-x64@15.3.3:
     optional: true
 
-  syncpack@14.3.0:
+  syncpack@15.3.3:
     optionalDependencies:
-      syncpack-darwin-arm64: 14.3.0
-      syncpack-darwin-x64: 14.3.0
-      syncpack-linux-arm64: 14.3.0
-      syncpack-linux-arm64-musl: 14.3.0
-      syncpack-linux-x64: 14.3.0
-      syncpack-linux-x64-musl: 14.3.0
-      syncpack-windows-arm64: 14.3.0
-      syncpack-windows-x64: 14.3.0
+      syncpack-darwin-arm64: 15.3.3
+      syncpack-darwin-x64: 15.3.3
+      syncpack-linux-arm64: 15.3.3
+      syncpack-linux-arm64-musl: 15.3.3
+      syncpack-linux-x64: 15.3.3
+      syncpack-linux-x64-musl: 15.3.3
+      syncpack-windows-arm64: 15.3.3
+      syncpack-windows-x64: 15.3.3
 
   tailwindcss@4.2.2: {}
 
@@ -9042,9 +9050,9 @@ snapshots:
       - vite
       - webpack
 
-  unplugin-raw@0.7.0(esbuild@0.28.1)(rolldown@1.0.3)(rollup@4.63.4)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0)):
+  unplugin-raw@0.7.0(esbuild@0.28.1)(rolldown@1.0.3)(rollup@4.63.4)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0)):
     dependencies:
-      unplugin: 3.4.0(esbuild@0.28.1)(rolldown@1.0.3)(rollup@4.63.4)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
+      unplugin: 3.4.0(esbuild@0.28.1)(rolldown@1.0.3)(rollup@4.63.4)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))
       unplugin-utils: 0.3.2
     optionalDependencies:
       esbuild: 0.28.1
@@ -9075,7 +9083,7 @@ snapshots:
       rollup: 4.63.4
       vite: 8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0)
 
-  unplugin@3.4.0(esbuild@0.28.1)(rolldown@1.0.3)(rollup@4.63.4)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0)):
+  unplugin@3.4.0(esbuild@0.28.1)(rolldown@1.0.3)(rollup@4.63.4)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0)):
     dependencies:
       '@jridgewell/remapping': 2.3.5
       picomatch: 4.0.7
@@ -9084,7 +9092,7 @@ snapshots:
       esbuild: 0.28.1
       rolldown: 1.0.3
       rollup: 4.63.4
-      vite: 8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0)
+      vite: 8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0)
 
   unrun@0.2.39:
     dependencies:
@@ -9145,7 +9153,6 @@ snapshots:
       jiti: 2.7.0
       tsx: 4.23.15
       yaml: 2.9.0
-    optional: true
 
   vitest@4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0)):
     dependencies:
@@ -9168,6 +9175,34 @@ snapshots:
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.1
       vite: 8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 25.6.0
+      '@vitest/coverage-v8': 4.1.11(vitest@4.1.11)
+    transitivePeerDependencies:
+      - msw
+
+  vitest@4.1.11(@types/node@25.6.0)(@vitest/coverage-v8@4.1.11)(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0)):
+    dependencies:
+      '@vitest/expect': 4.1.11
+      '@vitest/mocker': 4.1.11(vite@8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))
+      '@vitest/pretty-format': 4.1.11
+      '@vitest/runner': 4.1.11
+      '@vitest/snapshot': 4.1.11
+      '@vitest/spy': 4.1.11
+      '@vitest/utils': 4.1.11
+      es-module-lexer: 2.3.2
+      expect-type: 1.4.0
+      magic-string: 0.30.21
+      obug: 2.2.1
+      pathe: 2.0.3
+      picomatch: 4.0.7
+      std-env: 4.2.0
+      tinybench: 2.9.0
+      tinyexec: 1.3.1
+      tinyglobby: 0.2.17
+      tinyrainbow: 3.1.1
+      vite: 8.0.16(@types/node@25.6.0)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.6.0
