@@ -13,6 +13,16 @@ on:
         required: true
         default: false
         type: boolean
+      bump:
+        description: Semver bump to apply. "conventional" derives each project's bump from its conventional commits.
+        required: true
+        default: conventional
+        type: choice
+        options:
+          - conventional
+          - patch
+          - minor
+          - major
 
 permissions:
   contents: read
@@ -189,6 +199,8 @@ jobs:
       pull-requests: write
     env:
       RELEASE_PROJECTS: ${{ needs.prepare.outputs.release_projects }}
+      # An empty specifier lets nx release resolve the bump from conventional commits.
+      RELEASE_SPECIFIER: ${{ inputs.bump != 'conventional' && inputs.bump || '' }}
     steps:
       - name: Check out the workflow revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -224,7 +236,7 @@ jobs:
           git config user.email "aicode-toolkit-release-bot@users.noreply.github.com"
 
       - name: Preview the next versions
-        run: pnpm nx release --projects "${RELEASE_PROJECTS}" --dry-run --skip-publish
+        run: pnpm nx release ${RELEASE_SPECIFIER:+"${RELEASE_SPECIFIER}"} --projects "${RELEASE_PROJECTS}" --dry-run --skip-publish
 
       - name: Cut the release branch
         if: ${{ !inputs.dry_run }}
@@ -234,9 +246,10 @@ jobs:
           set -euo pipefail
           RELEASE_BRANCH="release/cut-${GITHUB_RUN_ID}"
           git switch -c "${RELEASE_BRANCH}"
-          pnpm nx release --projects "${RELEASE_PROJECTS}" --skip-publish
-          # Conventional commits can find nothing worth a bump (only chore, docs or ci
-          # commits), in which case nx release writes no commit and there is nothing to cut.
+          pnpm nx release ${RELEASE_SPECIFIER:+"${RELEASE_SPECIFIER}"} --projects "${RELEASE_PROJECTS}" --skip-publish
+          # Without an explicit bump, conventional commits can find nothing worth a bump
+          # (only chore, docs or ci commits), in which case nx release writes no commit
+          # and there is nothing to cut.
           if [[ -z "$(git log --format=%H "origin/${GITHUB_REF_NAME}..HEAD")" ]]; then
             echo "No conventional commit warrants a version bump, there is nothing to cut."
             exit 0
