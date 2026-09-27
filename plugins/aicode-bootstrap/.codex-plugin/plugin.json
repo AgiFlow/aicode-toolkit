@@ -1,0 +1,20 @@
+{
+  "name": "aicode-bootstrap",
+  "version": "0.5.0",
+  "description": "Discover project boilerplates and create new applications with scaffold-mcp.",
+  "author": {
+    "name": "AgiFlow",
+    "email": "vuong@agiflow.io"
+  },
+  "repository": "https://github.com/AgiFlow/aicode-toolkit",
+  "license": "AGPL-3.0",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "aicode-bootstrap",
+    "shortDescription": "Discover project boilerplates and create new applications with scaffold-mcp.",
+    "developerName": "AgiFlow",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"]
+  }
+}

@@ -1,43 +1,43 @@
 {
   "name": "aicode-toolkit",
-  "owner": {
-    "name": "AgiFlow",
-    "email": "vuong@agiflow.io"
-  },
-  "metadata": {
-    "description": "Purpose-based AI development tools for six coding clients.",
-    "version": "0.5.0"
+  "version": "0.5.0",
+  "owner": { "name": "AgiFlow", "email": "vuong@agiflow.io" },
+  "packages": {
+    "scaffold": "@agiflowai/scaffold-mcp@2.0.0",
+    "architect": "@agiflowai/architect-mcp@2.0.0",
+    "design": "@agiflowai/style-system@0.2.0"
   },
   "plugins": [
     {
       "name": "aicode-bootstrap",
-      "source": "./plugins/aicode-bootstrap",
       "description": "Discover project boilerplates and create new applications with scaffold-mcp.",
-      "version": "0.5.0"
+      "servers": ["scaffold"],
+      "skills": ["initialize-workspace", "create-project"]
     },
     {
       "name": "aicode-develop",
-      "source": "./plugins/aicode-develop",
       "description": "Scaffold features with design-pattern guidance and post-edit review.",
-      "version": "0.5.0"
+      "servers": ["scaffold", "architect"],
+      "skills": ["develop-feature"]
     },
     {
       "name": "aicode-review",
-      "source": "./plugins/aicode-review",
       "description": "Review project changes against applicable architecture and coding rules.",
-      "version": "0.5.0"
+      "servers": ["architect"],
+      "skills": ["review-changes"]
     },
     {
       "name": "aicode-admin",
-      "source": "./plugins/aicode-admin",
       "description": "Author templates, generators, design patterns and coding rules.",
-      "version": "0.5.0"
+      "servers": ["scaffold", "architect"],
+      "skills": ["author-templates", "manage-patterns-and-rules"],
+      "admin": true
     },
     {
       "name": "aicode-design",
-      "source": "./plugins/aicode-design",
       "description": "Explore themes, supported CSS classes and UI component previews.",
-      "version": "0.5.0"
+      "servers": ["design"],
+      "skills": ["discover-design-system", "preview-component"]
     }
   ]
 }

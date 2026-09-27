@@ -1,0 +1,68 @@
+{
+  "name": "aicode-toolkit",
+  "interface": {
+    "displayName": "AI Code Toolkit"
+  },
+  "plugins": [
+    {
+      "name": "aicode-bootstrap",
+      "source": {
+        "source": "local",
+        "path": "./plugins/aicode-bootstrap"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "aicode-develop",
+      "source": {
+        "source": "local",
+        "path": "./plugins/aicode-develop"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "aicode-review",
+      "source": {
+        "source": "local",
+        "path": "./plugins/aicode-review"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "aicode-admin",
+      "source": {
+        "source": "local",
+        "path": "./plugins/aicode-admin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "aicode-design",
+      "source": {
+        "source": "local",
+        "path": "./plugins/aicode-design"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "aicode-develop",
+  "version": "0.5.0",
+  "description": "Scaffold features with design-pattern guidance and post-edit review.",
+  "author": {
+    "name": "AgiFlow",
+    "email": "vuong@agiflow.io"
+  },
+  "repository": "https://github.com/AgiFlow/aicode-toolkit",
+  "license": "AGPL-3.0",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "aicode-develop",
+    "shortDescription": "Scaffold features with design-pattern guidance and post-edit review.",
+    "developerName": "AgiFlow",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"]
+  }
+}

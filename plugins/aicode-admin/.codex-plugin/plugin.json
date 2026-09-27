@@ -1,0 +1,20 @@
+{
+  "name": "aicode-admin",
+  "version": "0.5.0",
+  "description": "Author templates, generators, design patterns and coding rules.",
+  "author": {
+    "name": "AgiFlow",
+    "email": "vuong@agiflow.io"
+  },
+  "repository": "https://github.com/AgiFlow/aicode-toolkit",
+  "license": "AGPL-3.0",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "aicode-admin",
+    "shortDescription": "Author templates, generators, design patterns and coding rules.",
+    "developerName": "AgiFlow",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"]
+  }
+}
