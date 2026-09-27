@@ -1,6 +1,6 @@
 {
   "name": "@agiflowai/hooks-adapter",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Hook adapters for normalizing AI agent hook formats (Claude Code, Gemini, etc.)",
   "keywords": [
     "library",

@@ -1,6 +1,6 @@
 {
   "name": "@agiflowai/style-system",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "MCP server for exploring themes, Tailwind CSS classes, and UI components from Storybook with standalone component rendering capabilities",
   "keywords": [
     "design-system",
