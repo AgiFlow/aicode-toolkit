@@ -1,3 +1,18 @@
+# 2.0.0 (2026-09-27)
+
+### 🩹 Fixes
+
+- resolve type-aware oxlint findings across the workspace ([f31b02f](https://github.com/AgiFlow/aicode-toolkit/commit/f31b02f))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 2.0.0
+- Updated @agiflowai/aicode-utils to 2.0.0
+
+### ❤️ Thank You
+
+- vuongngo
+
 ## 1.3.0 (2026-06-27)
 
 ### 🧱 Updated Dependencies

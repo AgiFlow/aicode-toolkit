@@ -1,3 +1,19 @@
+## 0.2.0 (2026-09-27)
+
+### 🩹 Fixes
+
+- resolve type-aware oxlint findings across the workspace ([f31b02f](https://github.com/AgiFlow/aicode-toolkit/commit/f31b02f))
+- **hooks-adapter:** format Gemini adapter tests ([79c2eb1](https://github.com/AgiFlow/aicode-toolkit/commit/79c2eb1))
+
+### 🧱 Updated Dependencies
+
+- Updated @agiflowai/coding-agent-bridge to 2.0.0
+- Updated @agiflowai/aicode-utils to 2.0.0
+
+### ❤️ Thank You
+
+- vuongngo
+
 ## 0.1.2 (2026-06-27)
 
 ### 🚀 Features

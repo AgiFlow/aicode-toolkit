@@ -1,6 +1,6 @@
 {
   "name": "@agiflowai/coding-agent-bridge",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "description": "Bridge library for connecting coding agents with various development tools and services",
   "keywords": [
     "library",
