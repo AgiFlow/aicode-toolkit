@@ -383,4 +383,122 @@ describe('scaffold-mcp CLI parity commands', () => {
       content: 'file text',
     });
   });
+  it('prints full structured discovery metadata as a single JSON document', async () => {
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    const { boilerplateCommand } = await import('../../src/commands/boilerplate');
+    const result = {
+      boilerplates: [{ name: 'demo', instruction: 'read me' }],
+      nextCursor: 'page-2',
+    };
+    mocks.boilerplateList.mockResolvedValue(result);
+    try {
+      await boilerplateCommand.parseAsync(['node', 'cli', 'list', '--json']);
+      expect(stdout).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(String(stdout.mock.calls[0][0]))).toEqual({ success: true, data: result });
+    } finally {
+      stdout.mockRestore();
+    }
+  });
+
+  it('accepts falsy required values and rejects non-object --vars in JSON mode', async () => {
+    const { boilerplateCommand } = await import('../../src/commands/boilerplate');
+    mocks.getBoilerplate.mockResolvedValue({
+      name: 'demo',
+      target_folder: 'apps',
+      variables_schema: { required: ['enabled', 'count'] },
+    });
+    mocks.useBoilerplate.mockResolvedValue({ success: true, message: 'created', createdFiles: [] });
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    try {
+      await boilerplateCommand.parseAsync([
+        'node',
+        'cli',
+        'create',
+        'demo',
+        '--vars',
+        '{"enabled":false,"count":0}',
+        '--json',
+      ]);
+      expect(mocks.useBoilerplate).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { enabled: false, count: 0 } }),
+      );
+      expect(JSON.parse(String(stdout.mock.calls[0][0])).data.message).toBe('created');
+    } finally {
+      stdout.mockRestore();
+    }
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const exit = vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('process.exit called');
+    });
+    try {
+      await expectProcessExit(
+        boilerplateCommand.parseAsync(['node', 'cli', 'create', 'demo', '--vars', '[]', '--json']),
+      );
+      expect(JSON.parse(String(stderr.mock.calls[0][0])).error.message).toContain('JSON object');
+      expect(mocks.useBoilerplate).toHaveBeenCalledTimes(1);
+    } finally {
+      stderr.mockRestore();
+      exit.mockRestore();
+    }
+  });
+
+  it('returns scaffold ID, rendered instructions and existing files as JSON', async () => {
+    const { scaffoldCommand } = await import('../../src/commands/scaffold');
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    mocks.listScaffoldingMethods.mockResolvedValue({
+      methods: [{ name: 'demo', variables_schema: { required: [] } }],
+    });
+    mocks.useScaffoldMethod.mockResolvedValue({
+      success: true,
+      message: 'Implement generated service',
+      createdFiles: ['new.ts'],
+      existingFiles: ['old.ts'],
+    });
+    try {
+      await scaffoldCommand.parseAsync(['node', 'cli', 'add', 'demo', '--json']);
+      expect(JSON.parse(String(stdout.mock.calls[0][0])).data).toEqual(
+        expect.objectContaining({
+          scaffoldId: 'abc123',
+          message: 'Implement generated service',
+          existingFiles: ['old.ts'],
+        }),
+      );
+      expect(mocks.writePendingScaffoldLog).toHaveBeenCalledWith(
+        expect.objectContaining({ scaffoldId: 'abc123' }),
+      );
+    } finally {
+      stdout.mockRestore();
+    }
+  });
+  it('preserves every tool content block in JSON mode', async () => {
+    const { fileCommand } = await import('../../src/commands/file');
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    mocks.writeFileExecute.mockResolvedValue({
+      content: [
+        { type: 'text', text: 'file written' },
+        { type: 'text', text: 'next step' },
+      ],
+      structuredContent: { filePath: 'out.txt' },
+    });
+    try {
+      await fileCommand.parseAsync([
+        'node',
+        'cli',
+        'write',
+        'out.txt',
+        '--content',
+        'hello',
+        '--json',
+      ]);
+      expect(JSON.parse(String(stdout.mock.calls[0][0])).data).toEqual({
+        content: [
+          { type: 'text', text: 'file written' },
+          { type: 'text', text: 'next step' },
+        ],
+        structuredContent: { filePath: 'out.txt' },
+      });
+    } finally {
+      stdout.mockRestore();
+    }
+  });
 });

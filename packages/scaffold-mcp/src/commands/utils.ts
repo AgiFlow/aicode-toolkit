@@ -1,6 +1,42 @@
 import { ProjectConfigResolver, TemplatesManagerService, readFile } from '@agiflowai/aicode-utils';
 import type { CallToolResult } from '@modelcontextprotocol/server';
 
+export function parseObjectOption(
+  value: string | undefined,
+  flagName: string,
+): Record<string, unknown> {
+  if (value === undefined) return {};
+  const parsed = parseJsonOption<unknown>(value, flagName);
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`${flagName} must be a JSON object`);
+  }
+  return parsed as Record<string, unknown>;
+}
+
+export function writeJson(data: unknown): void {
+  process.stdout.write(`${JSON.stringify({ success: true, data })}\n`);
+}
+
+export function failJson(error: unknown): never {
+  const message = error instanceof Error ? error.message : String(error);
+  process.stderr.write(
+    `${JSON.stringify({ success: false, error: { code: 'COMMAND_FAILED', message } })}\n`,
+  );
+  process.exit(1);
+}
+
+export function toolResultData(result: CallToolResult): CallToolResult {
+  if (result.isError) {
+    throw new Error(
+      result.content
+        .filter((item) => item.type === 'text')
+        .map((item) => item.text)
+        .join('\n') || 'Tool execution failed',
+    );
+  }
+  return result;
+}
+
 export function parseJsonOption<T>(value: string | undefined, flagName: string): T {
   if (!value) {
     throw new Error(`${flagName} is required`);
@@ -67,14 +103,13 @@ export function collectOption(value: string, previous: string[] = []): string[] 
 }
 
 export function firstTextContent(result: CallToolResult): string {
-  const firstContent = result.content[0];
-  return firstContent?.type === 'text' ? firstContent.text : '';
+  return result.content
+    .filter((item) => item.type === 'text')
+    .map((item) => item.text)
+    .join('\n');
 }
 
 export function assertToolSuccess(result: CallToolResult): string {
-  const text = firstTextContent(result);
-  if (result.isError) {
-    throw new Error(text || 'Tool execution failed');
-  }
-  return text;
+  toolResultData(result);
+  return firstTextContent(result);
 }

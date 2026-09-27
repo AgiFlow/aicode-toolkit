@@ -6,6 +6,9 @@ import {
   detectMonolithMode,
   loadTextOption,
   resolveTemplatesPath,
+  writeJson,
+  failJson,
+  toolResultData,
 } from './utils';
 
 interface TemplateFileCreateOptions {
@@ -15,6 +18,7 @@ interface TemplateFileCreateOptions {
   sourceFile?: string;
   header?: string;
   headerFile?: string;
+  json?: boolean;
 }
 
 export const templateCommand = new Command('template').description(
@@ -32,6 +36,7 @@ fileCommand
   .option('--source-file <path>', 'Copy content from an existing source file')
   .option('--header <text>', 'Header comment to prepend to the template file')
   .option('--header-file <path>', 'Read header comment from a file')
+  .option('--json', 'Print one structured JSON result')
   .action(async (filePath: string, options: TemplateFileCreateOptions): Promise<void> => {
     try {
       const contentInputs = [
@@ -68,8 +73,10 @@ fileCommand
         header,
       });
 
-      print.info(assertToolSuccess(result));
+      if (options.json) writeJson(toolResultData(result));
+      else print.info(assertToolSuccess(result));
     } catch (error) {
+      if (options.json) failJson(error);
       print.error(
         'Error creating template file:',
         error instanceof Error ? error.message : String(error),

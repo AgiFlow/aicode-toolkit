@@ -2,7 +2,25 @@
 
 > MCP server for scaffolding applications with templates and feature generators
 
-Use this server to generate projects and feature boilerplate from template-defined scaffolds.
+Use the local CLI to generate projects and feature boilerplate from template-defined scaffolds without loading MCP tools into your agent's context. MCP serving remains available.
+
+## Local CLI: progressive discovery
+
+After installing templates (below), discover only what you need:
+
+```bash
+npx @agiflowai/scaffold-mcp --help
+npx @agiflowai/scaffold-mcp boilerplate --help
+npx @agiflowai/scaffold-mcp boilerplate list --json
+npx @agiflowai/scaffold-mcp boilerplate info typescript-lib --json
+npx @agiflowai/scaffold-mcp boilerplate create --help
+npx @agiflowai/scaffold-mcp scaffold --help
+npx @agiflowai/scaffold-mcp scaffold list ./apps/my-app --json
+npx @agiflowai/scaffold-mcp scaffold info scaffold-service --project ./apps/my-app --json
+npx @agiflowai/scaffold-mcp scaffold add --help
+```
+
+Use `--help` at each level for arguments, prerequisites, and examples. Use `--json` on local commands for one structured success document on stdout; failures emit JSON on stderr and exit nonzero. `boilerplate generate`, `scaffold generate`, and `template file create` **author reusable templates**, while `boilerplate create` and `scaffold add` generate project files.
 
 ---
 

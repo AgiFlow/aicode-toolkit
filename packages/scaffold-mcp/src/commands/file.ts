@@ -1,11 +1,12 @@
 import { print } from '@agiflowai/aicode-utils';
 import { Command } from 'commander';
 import { WriteToFileTool } from '../tools';
-import { assertToolSuccess, loadTextOption } from './utils';
+import { assertToolSuccess, loadTextOption, writeJson, failJson, toolResultData } from './utils';
 
 interface FileWriteOptions {
   content?: string;
   contentFile?: string;
+  json?: boolean;
 }
 
 export const fileCommand = new Command('file').description('Workspace file utilities');
@@ -15,6 +16,7 @@ fileCommand
   .description('Write content to a file inside the current workspace')
   .option('--content <text>', 'Content to write')
   .option('--content-file <path>', 'Read content to write from a file')
+  .option('--json', 'Print one structured JSON result')
   .action(async (filePath: string, options: FileWriteOptions): Promise<void> => {
     try {
       const content = await loadTextOption({
@@ -31,8 +33,10 @@ fileCommand
         content,
       });
 
-      print.info(assertToolSuccess(result));
+      if (options.json) writeJson(toolResultData(result));
+      else print.info(assertToolSuccess(result));
     } catch (error) {
+      if (options.json) failJson(error);
       print.error('Error writing file:', error instanceof Error ? error.message : String(error));
       process.exit(1);
     }

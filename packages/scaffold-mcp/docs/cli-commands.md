@@ -2,6 +2,23 @@
 
 scaffold-mcp provides CLI commands for scaffolding projects and features outside of MCP context.
 
+## Local-agent discovery
+
+Run `scaffold-mcp --help`, then `<group> --help`, then `<group> <command> --help`. Use `boilerplate list → info → create` to start a project, or `scaffold list → info → add` to extend one. `scaffold list` and `scaffold info` default to the current project directory; `--template` discovers without a project. `generate` commands and `template file create` author templates, not generated applications.
+
+All eight MCP-equivalent CLI operations, plus `boilerplate info` and `scaffold info`, accept `--json`. Success writes one `{ "success": true, "data": ... }` JSON document to stdout. Failures write `{ "success": false, "error": { "code": "COMMAND_FAILED", "message": "..." } }` to stderr and exit 1. JSON discovery returns the full schema and pagination metadata; use `--cursor` to fetch more pages. `scaffold add --json` includes `scaffoldId`, created/existing files, warnings and rendered instructions in `message`. In human mode the same ID is printed as `SCAFFOLD_ID:<id>`.
+
+| MCP tool                    | Local CLI                     |
+| --------------------------- | ----------------------------- |
+| `list-boilerplates`         | `boilerplate list`            |
+| `use-boilerplate`           | `boilerplate create <name>`   |
+| `list-scaffolding-methods`  | `scaffold list [projectPath]` |
+| `use-scaffold-method`       | `scaffold add <name>`         |
+| `write-to-file`             | `file write <path>`           |
+| `generate-boilerplate`      | `boilerplate generate <name>` |
+| `generate-boilerplate-file` | `template file create <path>` |
+| `generate-feature-scaffold` | `scaffold generate <name>`    |
+
 ---
 
 ## Boilerplate Commands
@@ -43,12 +60,12 @@ npx @agiflowai/scaffold-mcp boilerplate create nextjs-15-drizzle \
 
 **Options:**
 
-| Option                   | Description                                               | Default                   |
-| ------------------------ | --------------------------------------------------------- | ------------------------- |
-| `--vars <json>`          | Variables matching the boilerplate schema                 | Required                  |
-| `--target-folder <path>` | Override target folder                                    | Boilerplate target folder |
-| `--monolith`             | Create as monolith project at workspace root              | `false`                   |
-| `--marker <tag>`         | Custom scaffold marker injected into generated code files | `@scaffold-generated`     |
+| Option                   | Description                                               | Default                                |
+| ------------------------ | --------------------------------------------------------- | -------------------------------------- |
+| `--vars <json>`          | JSON object matching the template schema                  | `{}`; required keys depend on template |
+| `--target-folder <path>` | Override target folder                                    | Boilerplate target folder              |
+| `--monolith`             | Create as monolith project at workspace root              | `false`                                |
+| `--marker <tag>`         | Custom scaffold marker injected into generated code files | `@scaffold-generated`                  |
 
 **What happens:**
 
@@ -92,9 +109,9 @@ npx @agiflowai/scaffold-mcp scaffold info scaffold-nextjs-page --project ./apps/
 
 **Options:**
 
-| Option             | Description                    |
-| ------------------ | ------------------------------ |
-| `--project <path>` | Path to the project (required) |
+| Option             | Description                                                           |
+| ------------------ | --------------------------------------------------------------------- |
+| `--project <path>` | Project path (defaults to cwd; alternatively use `--template <name>`) |
 
 ### `scaffold add <feature-name>`
 
@@ -115,8 +132,8 @@ npx @agiflowai/scaffold-mcp scaffold add scaffold-nextjs-page \
 
 | Option             | Description                                               |
 | ------------------ | --------------------------------------------------------- |
-| `--project <path>` | Path to the project (required)                            |
-| `--vars <json>`    | Variables matching the method's schema (required)         |
+| `--project <path>` | Project path (defaults to cwd)                            |
+| `--vars <json>`    | JSON object; required keys depend on the selected method  |
 | `--marker <tag>`   | Custom scaffold marker injected into generated code files |
 
 **What happens:**
