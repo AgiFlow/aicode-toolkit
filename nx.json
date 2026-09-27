@@ -31,15 +31,20 @@
       "apps/*"
     ],
     "projectsRelationship": "independent",
+    "git": {
+      "tag": false
+    },
+    "releaseTag": {
+      "pattern": "{projectName}@{version}"
+    },
     "version": {
       "conventionalCommits": true,
-      "generatorOptions": {
-        "updateDependents": "auto"
-      }
+      "updateDependents": "auto"
     },
     "changelog": {
+      "automaticFromRef": true,
       "projectChangelogs": {
-        "createRelease": "github",
+        "createRelease": false,
         "renderOptions": {
           "authors": true
         }

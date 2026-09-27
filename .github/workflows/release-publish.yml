@@ -1,0 +1,278 @@
+name: Release publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aicode-toolkit-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, 'chore(release): publish') ||
+      contains(github.event.head_commit.message, format('from {0}/release/cut-', github.repository_owner)))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      candidate_commit: ${{ steps.candidate.outputs.candidate_commit }}
+    steps:
+      - name: Check out the merged release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Freeze the published commit
+        id: candidate
+        run: |
+          set -euo pipefail
+          CANDIDATE_COMMIT="$(git rev-parse HEAD)"
+          readonly CANDIDATE_COMMIT
+          test "${CANDIDATE_COMMIT}" = "${GITHUB_SHA}"
+          readonly BUNDLE="${RUNNER_TEMP}/candidate.bundle"
+          readonly METADATA="${RUNNER_TEMP}/candidate.env"
+          git bundle create "${BUNDLE}" HEAD
+          {
+            printf 'candidate_commit=%s\n' "${CANDIDATE_COMMIT}"
+            printf 'release_projects=\n'
+          } > "${METADATA}"
+          echo "candidate_commit=${CANDIDATE_COMMIT}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload the frozen published commit
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-publish-candidate
+          path: |
+            ${{ runner.temp }}/candidate.bundle
+            ${{ runner.temp }}/candidate.env
+          if-no-files-found: error
+          retention-days: 1
+
+  validate:
+    needs: prepare
+    if: needs.prepare.result == 'success'
+    name: Validate (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [build, lint, typecheck, test]
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the workflow revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Restore the frozen published commit
+        uses: ./.github/actions/restore-release-candidate
+        with:
+          artifact-name: release-publish-candidate
+          candidate-commit: ${{ needs.prepare.outputs.candidate_commit }}
+          release-projects: ""
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11.16.0
+
+      - name: Set up Node.js and npm registry
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install frozen registry and workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm nx run-many -t build --parallel=3
+
+      - name: Run ${{ matrix.target }}
+        if: matrix.target != 'build'
+        run: pnpm nx run-many -t ${{ matrix.target }} --parallel=3
+
+  publish:
+    needs:
+      - prepare
+      - validate
+    if: needs.prepare.result == 'success' && needs.validate.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: npm-release
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the workflow revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Restore the frozen published commit
+        uses: ./.github/actions/restore-release-candidate
+        with:
+          artifact-name: release-publish-candidate
+          candidate-commit: ${{ needs.prepare.outputs.candidate_commit }}
+          release-projects: ""
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11.16.0
+
+      - name: Set up Node.js and npm registry
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install frozen registry and workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages for publication
+        run: pnpm nx run-many -t build --parallel=3
+
+      - name: Configure release git identity
+        run: |
+          git config user.name "aicode-toolkit-release-bot"
+          git config user.email "aicode-toolkit-release-bot@users.noreply.github.com"
+
+      - name: Select the versions that are missing from the registry
+        run: |
+          set -euo pipefail
+          readonly MISSING_FILE="${RUNNER_TEMP}/aicode-toolkit-release-missing.txt"
+
+          : > "${MISSING_FILE}"
+          while IFS=$'\t' read -r name version; do
+            if npm view "${name}@${version}" version --prefer-online > /dev/null 2>&1; then
+              echo "${name}@${version} is already on the registry."
+            else
+              echo "${name}" >> "${MISSING_FILE}"
+              echo "${name}@${version} is missing from the registry and will be published."
+            fi
+          done < <(node scripts/list-packages.mjs)
+
+          PUBLISH_PROJECTS="$(tr '\n' ',' < "${MISSING_FILE}" | sed 's/,$//')"
+          if [[ -z "${PUBLISH_PROJECTS}" ]]; then
+            echo "Every release version is already on the registry, nothing to publish."
+          fi
+          echo "PUBLISH_PROJECTS=${PUBLISH_PROJECTS}" >> "${GITHUB_ENV}"
+
+      - name: Publish the missing versions
+        if: env.PUBLISH_PROJECTS != ''
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "${NODE_AUTH_TOKEN}"
+          pnpm nx release publish --projects "${PUBLISH_PROJECTS}"
+
+      - name: Reconcile every release version with the registry
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "${NODE_AUTH_TOKEN}"
+          # npm serves a version it has just accepted from a read path that lags
+          # behind the write path, so the budget has to outlast that lag: a short
+          # one fails the job over a registry that is merely catching up, and
+          # takes the tagging and the GitHub releases down with it.
+          readonly RECONCILE_ATTEMPTS=8
+          readonly RECONCILE_DELAY_SECONDS=60
+          readonly PENDING_FILE="${RUNNER_TEMP}/aicode-toolkit-release-pending.tsv"
+          readonly ROUND_FILE="${RUNNER_TEMP}/aicode-toolkit-release-pending-round.tsv"
+
+          node scripts/list-packages.mjs > "${PENDING_FILE}"
+
+          # nx release publish reports success for a project it silently skipped, so every release
+          # version is verified here. The first and last rounds only observe, to let the registry
+          # catch up; the rounds between them publish whatever is still unresolved. A rejected
+          # republish is not fatal: a version npm has staged but not yet served reads as absent,
+          # and only the observation decides the verdict.
+          for ((attempt = 1; attempt <= RECONCILE_ATTEMPTS; attempt += 1)); do
+            : > "${ROUND_FILE}"
+            while IFS=$'\t' read -r name version; do
+              if npm view "${name}@${version}" version --prefer-online > /dev/null 2>&1; then
+                continue
+              fi
+
+              printf '%s\t%s\n' "${name}" "${version}" >> "${ROUND_FILE}"
+              echo "${name}@${version} is absent from the registry (attempt ${attempt}/${RECONCILE_ATTEMPTS})"
+              if ((attempt > 1 && attempt < RECONCILE_ATTEMPTS)); then
+                echo "Publishing ${name}@${version} on its own."
+                pnpm nx release publish --projects "${name}" || echo "Republish of ${name}@${version} was rejected, the next round re-reads the registry."
+              fi
+            done < "${PENDING_FILE}"
+            mv "${ROUND_FILE}" "${PENDING_FILE}"
+
+            if [[ ! -s "${PENDING_FILE}" ]]; then
+              echo "Every release version is on the registry."
+              exit 0
+            fi
+            if ((attempt < RECONCILE_ATTEMPTS)); then
+              sleep "${RECONCILE_DELAY_SECONDS}"
+            fi
+          done
+
+          echo "::error::$(wc -l < "${PENDING_FILE}" | tr -d ' ') package(s) missing from the registry after ${RECONCILE_ATTEMPTS} attempts"
+          while IFS=$'\t' read -r name version; do
+            echo "  ${name}@${version} never reached the registry"
+          done < "${PENDING_FILE}"
+          exit 1
+
+      - name: Tag the published versions and create their GitHub releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          readonly TAGS_FILE="${RUNNER_TEMP}/aicode-toolkit-release-tags.tsv"
+
+          : > "${TAGS_FILE}"
+          while IFS= read -r manifest; do
+            name="$(node -p "require('./${manifest}').name")"
+            version="$(node -p "require('./${manifest}').version")"
+            TAG="${name}@${version}"
+            if git rev-parse -q --verify "refs/tags/${TAG}" > /dev/null; then
+              continue
+            fi
+            git tag "${TAG}"
+            printf '%s\t%s\t%s\n' "${TAG}" "${manifest}" "${version}" >> "${TAGS_FILE}"
+          done < <(node scripts/list-packages.mjs --paths)
+
+          if [[ ! -s "${TAGS_FILE}" ]]; then
+            echo "Every release version is already tagged."
+            exit 0
+          fi
+
+          PUSH_REFS=()
+          while IFS=$'\t' read -r TAG _ _; do
+            PUSH_REFS+=("refs/tags/${TAG}")
+          done < "${TAGS_FILE}"
+          # shellcheck disable=SC2016 # GH_TOKEN expands inside Git's credential-helper shell.
+          git -c credential.helper='!f() { echo "username=x-access-token"; echo "password=${GH_TOKEN}"; }; f' push --atomic origin "${PUSH_REFS[@]}"
+
+          while IFS=$'\t' read -r TAG manifest version; do
+            if gh release view "${TAG}" > /dev/null 2>&1; then
+              continue
+            fi
+            NOTES_FILE="${RUNNER_TEMP}/aicode-toolkit-release-notes.md"
+            node scripts/changelog-section.mjs "${manifest}" "${version}" > "${NOTES_FILE}"
+            gh release create "${TAG}" --title "${TAG}" --notes-file "${NOTES_FILE}" --verify-tag
+          done < "${TAGS_FILE}"

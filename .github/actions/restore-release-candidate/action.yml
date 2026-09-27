@@ -1,0 +1,43 @@
+name: Restore release candidate
+description: Restore and verify the immutable candidate prepared by a release workflow.
+inputs:
+  artifact-name:
+    description: Candidate artifact uploaded by the preparation job.
+    required: true
+  candidate-commit:
+    description: Expected candidate commit.
+    required: true
+  release-projects:
+    description: Expected comma-separated release project list.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Download the release candidate
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ runner.temp }}/release-candidate
+
+    - name: Verify and check out the release candidate
+      shell: bash
+      env:
+        EXPECTED_COMMIT: ${{ inputs.candidate-commit }}
+        EXPECTED_PROJECTS: ${{ inputs.release-projects }}
+      run: |
+        set -euo pipefail
+        readonly CANDIDATE_DIR="${RUNNER_TEMP}/release-candidate"
+        readonly BUNDLE="${CANDIDATE_DIR}/candidate.bundle"
+        readonly METADATA="${CANDIDATE_DIR}/candidate.env"
+
+        test -s "${BUNDLE}"
+        test -s "${METADATA}"
+        git bundle verify "${BUNDLE}"
+        grep -Fx "candidate_commit=${EXPECTED_COMMIT}" "${METADATA}"
+        grep -Fx "release_projects=${EXPECTED_PROJECTS}" "${METADATA}"
+
+        git fetch "${BUNDLE}" 'HEAD:refs/remotes/release-candidate'
+        test "$(git rev-parse refs/remotes/release-candidate)" = "${EXPECTED_COMMIT}"
+        git reset --hard "${EXPECTED_COMMIT}"
+        test "$(git rev-parse HEAD)" = "${EXPECTED_COMMIT}"
+        test -z "$(git status --porcelain)"
