@@ -292,9 +292,8 @@ mcpServers:
     afterEach(async () => {
       vi.unstubAllGlobals();
       // Clean up cache between tests
-      const { RemoteConfigCacheService } = await import(
-        '../../src/services/RemoteConfigCacheService'
-      );
+      const { RemoteConfigCacheService } =
+        await import('../../src/services/RemoteConfigCacheService');
       const cacheService = new RemoteConfigCacheService();
       await cacheService.clearAll();
     });
@@ -491,10 +490,8 @@ mcpServers:
         mcpServers: {},
         remoteConfigs: [
           {
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             url: '${TEST_API_URL}/mcp-config.json',
             headers: {
-              // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
               Authorization: 'Bearer ${TEST_API_KEY}',
             },
           },
@@ -721,9 +718,8 @@ mcpServers:
 
     afterEach(async () => {
       vi.unstubAllGlobals();
-      const { RemoteConfigCacheService } = await import(
-        '../../src/services/RemoteConfigCacheService'
-      );
+      const { RemoteConfigCacheService } =
+        await import('../../src/services/RemoteConfigCacheService');
       const cacheService = new RemoteConfigCacheService();
       await cacheService.clearAll();
     });
@@ -816,9 +812,8 @@ mcpServers:
       expect(global.fetch).toHaveBeenCalledTimes(2);
 
       // Verify cache was still written
-      const { RemoteConfigCacheService } = await import(
-        '../../src/services/RemoteConfigCacheService'
-      );
+      const { RemoteConfigCacheService } =
+        await import('../../src/services/RemoteConfigCacheService');
       const cacheService = new RemoteConfigCacheService();
       const cachedConfig = await cacheService.get('https://example.com/config.json');
       expect(cachedConfig).not.toBeNull();

@@ -11,8 +11,12 @@ if (!manifestPath || !version) {
 }
 
 const changelogPath = path.join(path.dirname(manifestPath), 'CHANGELOG.md');
-const lines = fs.existsSync(changelogPath) ? fs.readFileSync(changelogPath, 'utf8').split('\n') : [];
-const start = lines.findIndex((line) => line.startsWith(`## ${version} `) || line === `## ${version}`);
+const lines = fs.existsSync(changelogPath)
+  ? fs.readFileSync(changelogPath, 'utf8').split('\n')
+  : [];
+const start = lines.findIndex(
+  (line) => line.startsWith(`## ${version} `) || line === `## ${version}`,
+);
 if (start === -1) {
   console.log(`No changelog entry was recorded for ${version}.`);
   process.exit(0);

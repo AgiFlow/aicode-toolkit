@@ -1,29 +1,33 @@
 Use this MCP server to {% if isMonolith %}create your monolith project and add features (pages, components, services, etc.){% else %}create new projects and add features (pages, components, services, etc.){% endif %}.
 
 ## Workflow:
+
 {% if not isMonolith %}
+
 1. **Creating New Project**: Use `list-boilerplates` → `use-boilerplate`
 2. **Adding Features**: Use `list-scaffolding-methods` → `use-scaffold-method`
-{% else %}
-1. **Creating Project**: Use `use-boilerplate` (boilerplateName auto-detected from `.toolkit/settings.yaml`)
-2. **Adding Features**: Use `list-scaffolding-methods` → `use-scaffold-method`
-{% endif %}
+   {% else %}
+3. **Creating Project**: Use `use-boilerplate` (boilerplateName auto-detected from `.toolkit/settings.yaml`)
+4. **Adding Features**: Use `list-scaffolding-methods` → `use-scaffold-method`
+   {% endif %}
 
 ## AI Usage Guidelines:
+
 {% if not isMonolith %}
+
 - Always call `list-boilerplates` first when creating new projects to see available options
-{% endif %}
+  {% endif %}
 - Always call `list-scaffolding-methods` first when adding features to understand what's available
 - Follow the exact variable schema provided - validation will fail if required fields are missing
-{% if not isMonolith %}
+  {% if not isMonolith %}
 - Use kebab-case for project names (e.g., "my-new-app")
-{% else %}
+  {% else %}
 - In monolith mode, parameters like `boilerplateName` and `templateName` are auto-detected from `.toolkit/settings.yaml`
 - You only need to provide `variables` when calling `use-boilerplate` or `use-scaffold-method`
-{% endif %}
+  {% endif %}
 - The tools automatically handle file placement, imports, and code generation
 - Check the returned JSON schemas to understand required vs optional variables
-{% if adminEnabled %}
+  {% if adminEnabled %}
 
 ## Admin Mode (Template Generation):
 
@@ -49,6 +53,7 @@ When creating custom boilerplate templates for frameworks not yet supported:
 4. **Test the Template**: Use `list-boilerplates`/`list-scaffolding-methods` and `use-boilerplate`/`use-scaffold-method` to verify your template works
 
 Example workflow for boilerplate:
+
 ```
 1. generate-boilerplate { templateName: "react-vite", boilerplateName: "scaffold-vite-app", ... }
 2. generate-boilerplate-file { templateName: "react-vite", filePath: "package.json", content: "..." }
@@ -58,10 +63,12 @@ Example workflow for boilerplate:
 ```
 
 Example workflow for feature:
+
 ```
 1. generate-feature-scaffold { templateName: "nextjs-15", featureName: "scaffold-nextjs-component", generator: "componentGenerator.ts", ... }
 2. generate-boilerplate-file { templateName: "nextjs-15", filePath: "src/components/Component.tsx", content: "..." }
 3. list-scaffolding-methods (verify it appears)
 4. use-scaffold-method { scaffoldName: "scaffold-nextjs-component", variables: {...} }
 ```
+
 {% endif %}

@@ -22,13 +22,13 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check packages/aicode-utils"
+        "command": "oxlint packages/aicode-utils && oxfmt --check packages/aicode-utils"
       }
     },
     "lint:fix": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check --write packages/aicode-utils"
+        "command": "oxlint --fix packages/aicode-utils && oxfmt packages/aicode-utils"
       }
     }
   },

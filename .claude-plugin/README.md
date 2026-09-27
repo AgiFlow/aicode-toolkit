@@ -5,11 +5,13 @@ AICode Toolkit provides 4 focused plugins for Claude Code, organized by project 
 ## Quick Start
 
 ### 1. Add the Marketplace
+
 ```bash
 /plugin marketplace add https://github.com/AgiFlow/aicode-toolkit
 ```
 
 ### 2. Install Plugins
+
 ```bash
 # For starting new projects
 /plugin install aicode-bootstrap@aicode-toolkit
@@ -27,14 +29,17 @@ AICode Toolkit provides 4 focused plugins for Claude Code, organized by project 
 ## Available Plugins
 
 ### aicode-bootstrap
+
 **Purpose:** Create new projects from boilerplate templates
 **When to use:** Week 1 - Starting new projects
 
 **What you get:**
+
 - `list-boilerplates` - Browse available project templates
 - `use-boilerplate` - Create new projects from templates
 
 **Example:**
+
 ```
 Create a new Next.js application with Drizzle ORM
 ```
@@ -42,10 +47,12 @@ Create a new Next.js application with Drizzle ORM
 ---
 
 ### aicode-develop
+
 **Purpose:** Build features with design pattern guidance
 **When to use:** Weeks 2-∞ - Daily feature development
 
 **What you get:**
+
 - `list-scaffolding-methods` - See available features to add
 - `use-scaffold-method` - Generate pages, components, services
 - `get-file-design-pattern` - Understand patterns for specific files
@@ -56,17 +63,20 @@ Create a new Next.js application with Drizzle ORM
   - `migration-assistant` - Guide framework/library upgrades
 
 **Example:**
+
 ```
 Add a new product page to my Next.js app
 ```
 
 **Using agents:**
+
 ```
 Task: architecture-reviewer
 Prompt: Should I use WebSockets or Server-Sent Events for real-time notifications?
 ```
 
 **Using slash commands:**
+
 ```
 /edit-with-pattern
 ```
@@ -74,13 +84,16 @@ Prompt: Should I use WebSockets or Server-Sent Events for real-time notification
 ---
 
 ### aicode-review
+
 **Purpose:** Enforce code quality and review standards
 **When to use:** Week 4+ - Code reviews and quality assurance
 
 **What you get:**
+
 - `review-code-change` - Review code against rules and patterns
 
 **Example:**
+
 ```
 Review this component for code quality issues
 ```
@@ -88,10 +101,12 @@ Review this component for code quality issues
 ---
 
 ### aicode-admin
+
 **Purpose:** Create custom templates, patterns, and rules
 **When to use:** As needed - Platform engineering, template creation
 
 **What you get:**
+
 - `generate-boilerplate` - Create new project templates
 - `generate-feature-scaffold` - Create feature generators
 - `generate-boilerplate-file` - Create template files
@@ -99,6 +114,7 @@ Review this component for code quality issues
 - `add_rule` - Create coding rules
 
 **Example:**
+
 ```
 Create a new boilerplate for our microservice template
 ```
@@ -108,6 +124,7 @@ Create a new boilerplate for our microservice template
 After installing `aicode-develop`, you can use specialized agents for complex tasks:
 
 ### Architecture Reviewer
+
 Analyzes architectural decisions and provides trade-off analysis.
 
 ```
@@ -116,6 +133,7 @@ Prompt: I need to add real-time notifications to my Next.js app. Should I use We
 ```
 
 ### Test Coverage
+
 Generates comprehensive test suites and identifies untested code.
 
 ```
@@ -124,6 +142,7 @@ Prompt: Generate tests for src/components/ProductCard.tsx
 ```
 
 ### Migration Assistant
+
 Guides framework/library upgrades with phased migration plans.
 
 ```
@@ -140,6 +159,7 @@ After installing `aicode-develop`, use the `/edit-with-pattern` command to enfor
 ```
 
 This ensures you:
+
 1. Check design patterns before editing
 2. Make your changes
 3. Review code for violations
@@ -148,16 +168,19 @@ This ensures you:
 ## Managing Plugins
 
 ### List Installed Plugins
+
 ```bash
 /plugin
 ```
 
 ### Update Marketplace
+
 ```bash
 /plugin marketplace update aicode-toolkit
 ```
 
 ### Uninstall Plugin
+
 ```bash
 /plugin uninstall aicode-develop@aicode-toolkit
 ```
@@ -176,9 +199,7 @@ This ensures you:
 2. Reference in `.claude-plugin/marketplace.json`:
    ```json
    {
-     "commands": [
-       "./configs/claude-code/commands/my-command.md"
-     ]
+     "commands": ["./configs/claude-code/commands/my-command.md"]
    }
    ```
 
@@ -198,13 +219,12 @@ This ensures you:
 3. Reference in `.claude-plugin/marketplace.json`:
    ```json
    {
-     "agents": [
-       "./configs/claude-code/agents/my-agent.md"
-     ]
+     "agents": ["./configs/claude-code/agents/my-agent.md"]
    }
    ```
 
 **Agent format requirements:**
+
 - Frontmatter with `name`, `description` (with 3 examples), and `color`
 - Examples with `Context:`, `user:`, `assistant:`, and `<commentary>`
 - Colors: blue, green, purple, orange, red, yellow

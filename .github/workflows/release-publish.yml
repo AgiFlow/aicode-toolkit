@@ -99,6 +99,10 @@ jobs:
       - name: Install frozen registry and workspace dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check formatting
+        if: matrix.target == 'build'
+        run: pnpm format:check
+
       - name: Build packages
         run: pnpm nx run-many -t build --parallel=3
 

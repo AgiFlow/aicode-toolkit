@@ -51,44 +51,52 @@ const MOCK_CONTENT: MockResourceContent = {
 const MOCK_READ_RESULT: MockReadResult = { contents: [MOCK_CONTENT] };
 
 vi.mock('../../src/services', (): Record<string, unknown> => ({
-  ConfigFetcherService: vi.fn<() => Record<string, unknown>>().mockImplementation(function(): Record<string, unknown> {
-    return {
-      fetchConfiguration: vi.fn<() => Promise<Record<string, unknown>>>().mockResolvedValue({
-        mcpServers: {
-          'test-server': { transport: 'http', config: { url: 'http://localhost:3000' } },
-        },
-      }),
-    };
-  }),
-  McpClientManagerService: vi.fn<() => Record<string, unknown>>().mockImplementation(function(): Record<string, unknown> {
-    return {
-      connectToServer: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
-      getAllClients: vi.fn<() => MockClient[]>().mockReturnValue([
-        {
-          serverName: 'test-server',
-          listResources: vi.fn<() => Promise<ResourceReference[]>>().mockResolvedValue([
-            { uri: MOCK_URI },
-          ]),
-          readResource: vi.fn<() => Promise<MockReadResult>>().mockResolvedValue(MOCK_READ_RESULT),
-        } satisfies MockClient,
-      ]),
-      getClient: vi.fn<(name: string) => MockClient | undefined>().mockImplementation(
-        (name: string): MockClient | undefined => {
-          if (name === 'test-server') {
-            return {
-              serverName: 'test-server',
-              listResources: vi.fn<() => Promise<ResourceReference[]>>().mockResolvedValue([
-                { uri: MOCK_URI },
-              ]),
-              readResource: vi.fn<() => Promise<MockReadResult>>().mockResolvedValue(MOCK_READ_RESULT),
-            };
-          }
-          return undefined;
-        },
-      ),
-      disconnectAll: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
-    };
-  }),
+  ConfigFetcherService: vi
+    .fn<() => Record<string, unknown>>()
+    .mockImplementation(function (): Record<string, unknown> {
+      return {
+        fetchConfiguration: vi.fn<() => Promise<Record<string, unknown>>>().mockResolvedValue({
+          mcpServers: {
+            'test-server': { transport: 'http', config: { url: 'http://localhost:3000' } },
+          },
+        }),
+      };
+    }),
+  McpClientManagerService: vi
+    .fn<() => Record<string, unknown>>()
+    .mockImplementation(function (): Record<string, unknown> {
+      return {
+        connectToServer: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+        getAllClients: vi.fn<() => MockClient[]>().mockReturnValue([
+          {
+            serverName: 'test-server',
+            listResources: vi
+              .fn<() => Promise<ResourceReference[]>>()
+              .mockResolvedValue([{ uri: MOCK_URI }]),
+            readResource: vi
+              .fn<() => Promise<MockReadResult>>()
+              .mockResolvedValue(MOCK_READ_RESULT),
+          } satisfies MockClient,
+        ]),
+        getClient: vi
+          .fn<(name: string) => MockClient | undefined>()
+          .mockImplementation((name: string): MockClient | undefined => {
+            if (name === 'test-server') {
+              return {
+                serverName: 'test-server',
+                listResources: vi
+                  .fn<() => Promise<ResourceReference[]>>()
+                  .mockResolvedValue([{ uri: MOCK_URI }]),
+                readResource: vi
+                  .fn<() => Promise<MockReadResult>>()
+                  .mockResolvedValue(MOCK_READ_RESULT),
+              };
+            }
+            return undefined;
+          }),
+        disconnectAll: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+      };
+    }),
 }));
 
 vi.mock('../../src/utils', (): Record<string, unknown> => ({
@@ -160,7 +168,12 @@ describe('ReadResourceCommand', (): void => {
   it('should read directly from specified server when --server is set', async (): Promise<void> => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation((): void => {});
     await readResourceCommand.parseAsync([
-      'node', 'cli', '--json', '--server', 'test-server', MOCK_URI,
+      'node',
+      'cli',
+      '--json',
+      '--server',
+      'test-server',
+      MOCK_URI,
     ]);
     const raw = consoleSpy.mock.calls[0]?.[0];
     expect(isString(raw)).toBe(true);
@@ -171,9 +184,7 @@ describe('ReadResourceCommand', (): void => {
     const exitSpy = vi.spyOn(process, 'exit').mockImplementation((): never => {
       throw new Error('process.exit called');
     });
-    await expect(
-      readResourceCommand.parseAsync(['node', 'cli', MOCK_URI]),
-    ).rejects.toThrow();
+    await expect(readResourceCommand.parseAsync(['node', 'cli', MOCK_URI])).rejects.toThrow();
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 

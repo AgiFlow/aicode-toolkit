@@ -28,13 +28,13 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check packages/architect-mcp"
+        "command": "oxlint packages/architect-mcp && oxfmt --check packages/architect-mcp"
       }
     },
     "lint:fix": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check --write packages/architect-mcp"
+        "command": "oxlint --fix packages/architect-mcp && oxfmt packages/architect-mcp"
       }
     }
   },

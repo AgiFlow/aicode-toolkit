@@ -120,7 +120,7 @@ features:
         pageDescription:
           type: string
           description: Page description for metadata
-          default: ''
+          default: ""
         withLayout:
           type: boolean
           description: Generate layout.tsx for shared UI
@@ -219,7 +219,7 @@ features:
           description: Descriptive name for the route handler (PascalCase, e.g., 'UsersList', 'AuthLogin', 'StripeWebhook')
         methods:
           type: string
-          description: 'HTTP methods to support (comma-separated: GET,POST,PUT,DELETE,PATCH,OPTIONS)'
+          description: "HTTP methods to support (comma-separated: GET,POST,PUT,DELETE,PATCH,OPTIONS)"
         withAuth:
           type: boolean
           description: Include authentication/authorization middleware
@@ -256,7 +256,7 @@ features:
       properties:
         authProviders:
           type: string
-          description: 'Authentication providers to enable (comma-separated: email,google,github,discord,etc.)'
+          description: "Authentication providers to enable (comma-separated: email,google,github,discord,etc.)"
         withProtectedRoute:
           type: boolean
           description: Generate example protected dashboard route with auth guards

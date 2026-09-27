@@ -322,7 +322,7 @@ features:
     design_pattern: Vitest Unit Test Pattern
     includes:
       - tests/**/*.test.ts
-      - '**/*.spec.ts'
+      - "**/*.spec.ts"
     description: |-
       ## Pattern Overview
       Design pattern for writing comprehensive unit tests using Vitest with proper test organization, mocking, and coverage of success and error cases.

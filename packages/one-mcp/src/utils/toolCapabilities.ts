@@ -11,8 +11,6 @@ export function getToolCapabilities(tool: Pick<McpToolInfo, '_meta'>): string[] 
   return rawCapabilities.filter((value): value is string => typeof value === 'string');
 }
 
-export function getUniqueSortedCapabilities(
-  tools: Array<Pick<McpToolInfo, '_meta'>>,
-): string[] {
+export function getUniqueSortedCapabilities(tools: Array<Pick<McpToolInfo, '_meta'>>): string[] {
   return Array.from(new Set(tools.flatMap((tool) => getToolCapabilities(tool)))).sort();
 }

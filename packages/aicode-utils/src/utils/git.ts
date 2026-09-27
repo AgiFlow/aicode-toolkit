@@ -347,11 +347,9 @@ export async function fetchGitHubDirectoryContents(
     throw new Error('Expected directory but got file');
   }
 
-  return data.filter(isGitHubContentItem).map(
-    (item: GitHubContentItem): GitHubDirectoryEntry => ({
-      name: item.name,
-      type: item.type,
-      path: item.path,
-    }),
-  );
+  return data.filter(isGitHubContentItem).map((item: GitHubContentItem): GitHubDirectoryEntry => ({
+    name: item.name,
+    type: item.type,
+    path: item.path,
+  }));
 }

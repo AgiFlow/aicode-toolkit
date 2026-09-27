@@ -4,9 +4,10 @@ This document explains how the coding rules system works in architect-mcp, focus
 
 ## Purpose
 
-While **architect.yaml** defines *what files should do* (design patterns and architecture), **RULES.yaml** defines *how code should be written* (coding standards and quality enforcement).
+While **architect.yaml** defines _what files should do_ (design patterns and architecture), **RULES.yaml** defines _how code should be written_ (coding standards and quality enforcement).
 
 **Key distinction**:
+
 - **Patterns** (architect.yaml): Architectural guidance - "What is this file's role?"
 - **Rules** (RULES.yaml): Code quality standards - "Is this code well-written?"
 
@@ -15,7 +16,7 @@ While **architect.yaml** defines *what files should do* (design patterns and arc
 ### Basic Rule Definition
 
 ```yaml
-version: "1.0"
+version: '1.0'
 template: typescript-mcp-package
 rules:
   - pattern: src/services/**/*.ts
@@ -97,13 +98,14 @@ rules:
   - pattern: src/services/**/*.ts
     description: Service implementation standards
     inherits:
-      - export-standards    # Get all export rules
-      - error-handling      # Get all error handling rules
+      - export-standards # Get all export rules
+      - error-handling # Get all error handling rules
     must_do:
-      - rule: Use dependency injection  # Add service-specific rule
+      - rule: Use dependency injection # Add service-specific rule
 ```
 
 **Benefits of inheritance**:
+
 - **DRY**: Don't repeat global rules in every template
 - **Composition**: Build specific rules from general ones
 - **Maintainability**: Update global rules once, apply everywhere
@@ -144,12 +146,14 @@ When reviewing a file, architect-mcp follows this process:
 **File**: `packages/my-app/src/services/UserService.ts`
 
 **Step 1: Find Rules**
+
 ```
 Pattern match: src/services/**/*.ts
 Found rule: Service implementation standards
 ```
 
 **Step 2: Resolve Inheritance**
+
 ```
 Base: export-standards (5 rules)
   ├─ Use named exports
@@ -171,6 +175,7 @@ Total: 10 applicable rules
 **Step 3: Review (Two Modes)**
 
 **Mode A: Agent Review (LLM disabled)**
+
 ```
 architect-mcp returns:
   - All 10 rules with code examples
@@ -183,6 +188,7 @@ AI agent:
 ```
 
 **Mode B: LLM Review (LLM enabled)**
+
 ```
 architect-mcp:
   - Builds prompt with 10 rules + code
@@ -228,6 +234,7 @@ Returns:
 **Purpose**: Universal coding standards that apply to ALL projects
 
 **Examples**:
+
 - Export patterns (named exports, no defaults)
 - Error handling standards
 - TypeScript best practices
@@ -235,6 +242,7 @@ Returns:
 - Performance guidelines
 
 **When to use**:
+
 - Organization-wide standards
 - Language-specific best practices
 - Cross-cutting concerns
@@ -246,12 +254,14 @@ Returns:
 **Purpose**: Template-specific coding standards
 
 **Examples**:
+
 - MCP tool patterns (for typescript-mcp-package)
 - Service layer patterns
 - API endpoint standards
 - Framework-specific patterns
 
 **When to use**:
+
 - Framework-specific standards
 - Template architecture patterns
 - Project type conventions
@@ -278,7 +288,7 @@ rules:
   - pattern: src/services/**/*.ts
 
   # Match specific file types
-  - pattern: "**/*.test.ts"
+  - pattern: '**/*.test.ts'
 
   # Match MCP tools
   - pattern: src/tools/**/*Tool.ts
@@ -288,6 +298,7 @@ rules:
 ```
 
 **Special patterns** (for inheritance):
+
 - Patterns without glob syntax (`export-standards`) are reference IDs
 - Other rules can inherit from them using `inherits` field
 
@@ -311,6 +322,7 @@ must_do:
 ```
 
 **Benefits**:
+
 - **Clarity**: Show exactly what's expected
 - **Actionable**: Developers see how to fix
 - **LLM-friendly**: AI can compare code against examples
@@ -323,6 +335,7 @@ must_do:
 **When**: `--review-tool` not set or not `claude-code`
 
 **Process**:
+
 ```
 architect-mcp → Returns all rules with examples
              ↓
@@ -333,12 +346,14 @@ AI Agent     → Reads rules
 ```
 
 **Pros**:
+
 - No LLM API costs
 - Fast (no external calls)
 - Works offline
 - Privacy (code stays local)
 
 **Cons**:
+
 - Agent does all the work
 - May miss subtle issues
 - Depends on agent's capability
@@ -348,6 +363,7 @@ AI Agent     → Reads rules
 **When**: `--review-tool claude-code`
 
 **Process**:
+
 ```
 architect-mcp → Builds prompt with rules + code
              → Calls Claude Code CLI
@@ -359,12 +375,14 @@ Returns      → Specific violations found
 ```
 
 **Pros**:
+
 - Precise violation detection
 - Context-aware analysis
 - Detailed feedback
 - Catches subtle issues
 
 **Cons**:
+
 - Requires LLM access
 - API costs
 - Slower (external call)
@@ -398,6 +416,7 @@ Returns      → Specific violations found
 ### Organizing Rules
 
 **Global RULES.yaml**:
+
 ```yaml
 rules:
   # Define reusable patterns
@@ -412,6 +431,7 @@ rules:
 ```
 
 **Template RULES.yaml**:
+
 ```yaml
 rules:
   # Inherit global + add specific
@@ -434,15 +454,16 @@ rules:
 
 Rules and patterns work together but serve different purposes:
 
-| Aspect | Design Patterns (architect.yaml) | Coding Rules (RULES.yaml) |
-|--------|----------------------------------|---------------------------|
-| **Question** | "What should this file do?" | "How should this code be written?" |
-| **Scope** | Architecture, structure, responsibilities | Code quality, standards, style |
-| **Examples** | Service Layer Pattern, Repository Pattern | Named exports, error handling |
-| **When** | During development (guidance) | During review (validation) |
-| **Output** | Design guidance, examples | Pass/fail with violations |
+| Aspect       | Design Patterns (architect.yaml)          | Coding Rules (RULES.yaml)          |
+| ------------ | ----------------------------------------- | ---------------------------------- |
+| **Question** | "What should this file do?"               | "How should this code be written?" |
+| **Scope**    | Architecture, structure, responsibilities | Code quality, standards, style     |
+| **Examples** | Service Layer Pattern, Repository Pattern | Named exports, error handling      |
+| **When**     | During development (guidance)             | During review (validation)         |
+| **Output**   | Design guidance, examples                 | Pass/fail with violations          |
 
 **Workflow**:
+
 1. Developer opens file → Gets design patterns (architect.yaml)
 2. Developer writes code → Follows patterns
 3. Developer reviews code → Checked against rules (RULES.yaml)
@@ -451,11 +472,13 @@ Rules and patterns work together but serve different purposes:
 ## Future Enhancements
 
 ### Short Term
+
 - Rule templates for common patterns
 - Auto-generate rules from code examples
 - Visual rule editor
 
 ### Long Term
+
 - **Rule Analytics**: "95% compliance with error-handling rules"
 - **Auto-fix Suggestions**: Propose code changes to fix violations
 - **Rule Evolution**: Track how rules change over time

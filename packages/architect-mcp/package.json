@@ -1,23 +1,35 @@
 {
   "name": "@agiflowai/architect-mcp",
-  "description": "MCP server for software architecture design and planning",
   "version": "1.3.0",
-  "license": "AGPL-3.0",
+  "description": "MCP server for software architecture design and planning",
   "keywords": [
     "mcp",
     "model-context-protocol",
     "typescript"
   ],
+  "license": "AGPL-3.0",
   "bin": {
     "architect-mcp": "./dist/cli.mjs"
   },
-  "main": "./dist/index.cjs",
-  "types": "./dist/index.d.cts",
-  "module": "./dist/index.mjs",
   "files": [
     "dist",
     "README.md"
   ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.cts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./cli": {
+      "import": "./dist/cli.mjs",
+      "require": "./dist/cli.cjs"
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "dev": "node --loader ts-node/esm src/cli.ts mcp-serve",
     "build": "tsdown",
@@ -47,17 +59,5 @@
     "tsdown": "0.23.0",
     "typescript": "5.9.3",
     "vitest": "4.1.11"
-  },
-  "type": "module",
-  "exports": {
-    ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
-    },
-    "./cli": {
-      "import": "./dist/cli.mjs",
-      "require": "./dist/cli.cjs"
-    },
-    "./package.json": "./package.json"
   }
 }

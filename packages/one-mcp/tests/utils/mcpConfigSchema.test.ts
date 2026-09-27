@@ -261,7 +261,6 @@ describe('mcpConfigSchema', () => {
       const claudeConfig = {
         mcpServers: {
           'env-server': {
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             command: '${NODE_BIN}',
             args: ['server.js'],
           },
@@ -280,7 +279,6 @@ describe('mcpConfigSchema', () => {
         mcpServers: {
           'env-server': {
             command: 'node',
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             args: ['${SERVER_PATH}'],
           },
         },
@@ -300,7 +298,6 @@ describe('mcpConfigSchema', () => {
             command: 'node',
             args: ['server.js'],
             env: {
-              // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
               API_TOKEN: '${API_KEY}',
             },
           },
@@ -318,7 +315,6 @@ describe('mcpConfigSchema', () => {
       const claudeConfig = {
         mcpServers: {
           'http-server': {
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             url: '${MCP_HOST}/api',
           },
         },
@@ -337,7 +333,6 @@ describe('mcpConfigSchema', () => {
           'http-server': {
             url: 'https://example.com/mcp',
             headers: {
-              // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
               Authorization: '${AUTH_TOKEN}',
             },
           },
@@ -357,7 +352,6 @@ describe('mcpConfigSchema', () => {
       const claudeConfig = {
         mcpServers: {
           'env-server': {
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             command: '${UNDEFINED_VAR}',
             args: ['server.js'],
           },
@@ -366,7 +360,6 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
       expect(result.mcpServers['env-server'].config.command).toBe('${UNDEFINED_VAR}');
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining('Environment variable UNDEFINED_VAR is not defined'),
@@ -383,7 +376,6 @@ describe('mcpConfigSchema', () => {
         mcpServers: {
           'env-server': {
             command: 'node',
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             args: ['${HOME}/${PROJECT}/server.js'],
           },
         },
@@ -442,7 +434,6 @@ describe('mcpConfigSchema', () => {
         mcpServers: {
           filesystem: {
             command: 'npx',
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             args: ['-y', '@modelcontextprotocol/server-filesystem', '${HOME}/Documents'],
             instruction: 'Access files in Documents folder',
           },
@@ -450,7 +441,6 @@ describe('mcpConfigSchema', () => {
             url: 'https://api.example.com/mcp',
             type: 'sse' as const,
             headers: {
-              // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
               Authorization: 'Bearer ${API_KEY}',
             },
           },
@@ -583,7 +573,6 @@ describe('mcpConfigSchema', () => {
       process.env.TEST_URL = 'https://secure.example.com';
 
       const source = {
-        // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
         url: '${TEST_URL}/mcp-config.json',
         validation: {
           url: '^https://secure\\..*',
@@ -670,7 +659,6 @@ describe('mcpConfigSchema', () => {
       const source = {
         url: 'https://example.com/mcp-config.json',
         headers: {
-          // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
           Authorization: 'Bearer ${TEST_TOKEN}',
         },
         validation: {
@@ -1009,7 +997,6 @@ describe('mcpConfigSchema', () => {
         process.env.TEST_HOST = '127.0.0.1';
 
         const source = {
-          // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
           url: 'https://${TEST_HOST}/config.json',
         };
 
@@ -1024,7 +1011,6 @@ describe('mcpConfigSchema', () => {
         process.env.TEST_HOST = 'api.example.com';
 
         const source = {
-          // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
           url: 'https://${TEST_HOST}/config.json',
         };
 

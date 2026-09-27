@@ -160,7 +160,9 @@ function validateUrlSecurity(url: string, security?: RemoteConfigSource['securit
   }
 
   if (protocol !== 'http' && protocol !== 'https') {
-    throw new Error(`Invalid URL protocol '${protocol}://'. Only http:// and https:// are allowed.`);
+    throw new Error(
+      `Invalid URL protocol '${protocol}://'. Only http:// and https:// are allowed.`,
+    );
   }
 
   // Check for private IPs and localhost (unless explicitly allowed)
@@ -292,7 +294,10 @@ const ClaudeCodeHttpServerSchema = z.object({
 });
 
 // Union of all Claude Code server types
-const ClaudeCodeServerConfigSchema = z.union([ClaudeCodeStdioServerSchema, ClaudeCodeHttpServerSchema]);
+const ClaudeCodeServerConfigSchema = z.union([
+  ClaudeCodeStdioServerSchema,
+  ClaudeCodeHttpServerSchema,
+]);
 
 // Remote config validation schema
 const RemoteConfigValidationSchema = z
@@ -455,7 +460,9 @@ export function transformClaudeCodeConfig(claudeConfig: ClaudeCodeMcpConfig): In
       // Interpolate environment variables in command, args, and env
       const interpolatedCommand = interpolateEnvVars(stdioConfig.command);
       const interpolatedArgs = stdioConfig.args?.map((arg) => interpolateEnvVars(arg));
-      const interpolatedEnv = stdioConfig.env ? interpolateEnvVarsInObject(stdioConfig.env) : undefined;
+      const interpolatedEnv = stdioConfig.env
+        ? interpolateEnvVarsInObject(stdioConfig.env)
+        : undefined;
 
       // Instruction priority: top-level instruction (user override) > config.instruction (server default)
       const finalInstruction = stdioConfig.instruction || stdioConfig.config?.instruction;
@@ -487,7 +494,9 @@ export function transformClaudeCodeConfig(claudeConfig: ClaudeCodeMcpConfig): In
 
       // Interpolate environment variables in URL and headers
       const interpolatedUrl = interpolateEnvVars(httpConfig.url);
-      const interpolatedHeaders = httpConfig.headers ? interpolateEnvVarsInObject(httpConfig.headers) : undefined;
+      const interpolatedHeaders = httpConfig.headers
+        ? interpolateEnvVarsInObject(httpConfig.headers)
+        : undefined;
 
       // Instruction priority: top-level instruction (user override) > config.instruction (server default)
       const finalInstruction = httpConfig.instruction || httpConfig.config?.instruction;

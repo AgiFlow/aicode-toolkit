@@ -19,7 +19,7 @@ const mockClient = {
 };
 
 vi.mock('../../src/services', () => ({
-  ConfigFetcherService: vi.fn().mockImplementation(function() {
+  ConfigFetcherService: vi.fn().mockImplementation(function () {
     return {
       fetchConfiguration: vi.fn().mockResolvedValue({
         mcpServers: {
@@ -28,7 +28,7 @@ vi.mock('../../src/services', () => ({
       }),
     };
   }),
-  McpClientManagerService: vi.fn().mockImplementation(function() {
+  McpClientManagerService: vi.fn().mockImplementation(function () {
     return {
       connectToServer: vi.fn().mockResolvedValue(undefined),
       getAllClients: vi.fn().mockReturnValue([mockClient]),
@@ -85,7 +85,9 @@ describe('GetPromptCommand', () => {
       throw new Error('process.exit called');
     });
 
-    await expect(getPromptCommand.parseAsync(['node', 'cli', 'scaffold-feature'])).rejects.toThrow();
+    await expect(
+      getPromptCommand.parseAsync(['node', 'cli', 'scaffold-feature']),
+    ).rejects.toThrow();
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 });

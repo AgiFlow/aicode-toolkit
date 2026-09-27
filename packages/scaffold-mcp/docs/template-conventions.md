@@ -58,6 +58,7 @@ templates/
 - **No extension**: Files without `.liquid` are copied as-is (useful for binary files, images, etc.)
 
 **Example:**
+
 ```
 Template:        src/app/{{ componentName }}/Component.tsx.liquid
 Output:          src/app/Button/Component.tsx
@@ -133,7 +134,7 @@ boilerplate:
       packageName:
         type: string
         description: NPM package name
-        example: "@myorg/my-app"
+        example: '@myorg/my-app'
       description:
         type: string
         description: Project description
@@ -277,7 +278,7 @@ features:
 
 - **Scope:** applies to every project scaffolded from this template.
 - **Matching:** globs are matched against the **absolute** file path (prefix with `**`), with dotfile traversal enabled.
-- **Precedence:** a new-file write is allowed through when it matches *either* this template-level `exclude` **or** the workspace-wide `scaffold-mcp.hook.excludeGlobs` in `.toolkit/settings.yaml`. Otherwise, if the template defines any scaffolding methods, the write is denied with guidance.
+- **Precedence:** a new-file write is allowed through when it matches _either_ this template-level `exclude` **or** the workspace-wide `scaffold-mcp.hook.excludeGlobs` in `.toolkit/settings.yaml`. Otherwise, if the template defines any scaffolding methods, the write is denied with guidance.
 
 Use a template's `exclude` for relaxations specific to that template's structure (e.g. `**/__generated__/**`, `**/*.stories.tsx`); use the workspace-wide setting for patterns that should be relaxed everywhere. See [Hooks Integration](./hooks.md#relaxing-enforcement) for the global setting.
 
@@ -298,7 +299,7 @@ variables_schema:
       example: my-app
       minLength: 1
       maxLength: 50
-      pattern: "^[a-z][a-z0-9-]*$"  # Regex validation
+      pattern: '^[a-z][a-z0-9-]*$' # Regex validation
 
     # Number
     port:
@@ -321,20 +322,20 @@ variables_schema:
       description: Features to include
       items:
         type: string
-      example: ["auth", "database"]
+      example: ['auth', 'database']
       default: []
 
     # Enum
     framework:
       type: string
       description: Framework to use
-      enum: ["react", "vue", "angular"]
+      enum: ['react', 'vue', 'angular']
       default: react
 
   required:
     - name
 
-  additionalProperties: false  # Reject unknown properties
+  additionalProperties: false # Reject unknown properties
 ```
 
 #### Built-in Variables
@@ -342,15 +343,18 @@ variables_schema:
 These variables are automatically provided by the scaffold system:
 
 **For Boilerplates:**
+
 - `projectName`: Project directory name (from user input)
 - `packageName`: NPM package name (from user input)
 
 **For Features:**
+
 - `projectName`: Name of the target project
 - `appPath`: Absolute path to the project directory
 - `appName`: Same as `projectName`
 
 **Usage:**
+
 ```yaml
 # You can reference built-in variables in templates
 includes:
@@ -383,6 +387,7 @@ includes:
 ```
 
 **Example:**
+
 ```
 Variables:    { componentName: "Button" }
 Template:     src/components/{{ componentName }}/{{ componentName }}.tsx
@@ -406,6 +411,7 @@ includes:
 ```
 
 **Condition syntax:**
+
 - `?key=value`: Include if variable `key` equals `value`
 - `?key=true`: Include if variable `key` is truthy
 - `?key=false`: Include if variable `key` is falsy
@@ -428,6 +434,7 @@ includes:
 ```
 
 **Example:**
+
 ```
 Variables:    { pagePath: "dashboard/settings" }
 Template:     template.tsx->src/app/{{ pagePath }}/page.tsx
@@ -466,6 +473,7 @@ scaffold-mcp uses **LiquidJS** for template processing. All `.liquid` files are 
 ```
 
 **Example template (package.json.liquid):**
+
 ```json
 {
   "name": "{{ packageName }}",
@@ -475,6 +483,7 @@ scaffold-mcp uses **LiquidJS** for template processing. All `.liquid` files are 
 ```
 
 **Variables:**
+
 ```json
 {
   "packageName": "@myorg/my-app",
@@ -484,6 +493,7 @@ scaffold-mcp uses **LiquidJS** for template processing. All `.liquid` files are 
 ```
 
 **Output:**
+
 ```json
 {
   "name": "@myorg/my-app",
@@ -498,18 +508,18 @@ LiquidJS supports filters to transform variables. scaffold-mcp includes custom f
 
 #### Built-in Custom Filters
 
-| Filter | Description | Example Input | Example Output |
-|--------|-------------|---------------|----------------|
-| `camelCase` | Convert to camelCase | `my-component` | `myComponent` |
-| `pascalCase` | Convert to PascalCase | `my-component` | `MyComponent` |
-| `titleCase` | Convert to TitleCase (alias for pascalCase) | `my component` | `MyComponent` |
-| `kebabCase` | Convert to kebab-case | `MyComponent` | `my-component` |
-| `snakeCase` | Convert to snake_case | `MyComponent` | `my_component` |
-| `upperCase` | Convert to UPPER_CASE | `myVariable` | `MY_VARIABLE` |
-| `lower` | Convert to lowercase | `MyComponent` | `mycomponent` |
-| `upper` | Convert to uppercase | `mycomponent` | `MYCOMPONENT` |
-| `pluralize` | Pluralize word | `user` | `users` |
-| `singularize` | Singularize word | `users` | `user` |
+| Filter        | Description                                 | Example Input  | Example Output |
+| ------------- | ------------------------------------------- | -------------- | -------------- |
+| `camelCase`   | Convert to camelCase                        | `my-component` | `myComponent`  |
+| `pascalCase`  | Convert to PascalCase                       | `my-component` | `MyComponent`  |
+| `titleCase`   | Convert to TitleCase (alias for pascalCase) | `my component` | `MyComponent`  |
+| `kebabCase`   | Convert to kebab-case                       | `MyComponent`  | `my-component` |
+| `snakeCase`   | Convert to snake_case                       | `MyComponent`  | `my_component` |
+| `upperCase`   | Convert to UPPER_CASE                       | `myVariable`   | `MY_VARIABLE`  |
+| `lower`       | Convert to lowercase                        | `MyComponent`  | `mycomponent`  |
+| `upper`       | Convert to uppercase                        | `mycomponent`  | `MYCOMPONENT`  |
+| `pluralize`   | Pluralize word                              | `user`         | `users`        |
+| `singularize` | Singularize word                            | `users`        | `user`         |
 
 #### Filter Usage
 
@@ -521,6 +531,7 @@ LiquidJS supports filters to transform variables. scaffold-mcp includes custom f
 ```
 
 **Example:**
+
 ```typescript
 // Template: Component.tsx.liquid
 export const {{ componentName | pascalCase }} = () => {
@@ -542,6 +553,7 @@ export const MyButton = () => {
 ```
 
 **Example:**
+
 ```
 Input:  { projectName: "MyAwesomeApp" }
 Output: MY-AWESOME-APP
@@ -611,6 +623,7 @@ export const config = {
 ```
 
 **Loop variables:**
+
 - `forloop.index`: 1-based index
 - `forloop.index0`: 0-based index
 - `forloop.first`: True if first iteration
@@ -618,6 +631,7 @@ export const config = {
 - `forloop.length`: Total iterations
 
 **Example:**
+
 ```typescript
 // Template
 export const FEATURES = {
@@ -697,6 +711,7 @@ Use `-` to strip whitespace:
 3. **Use variables in filenames** for dynamic naming
 
 **Examples:**
+
 ```
 ✅ Good:
   package.json.liquid                                # Will become: package.json
@@ -732,14 +747,14 @@ Output:
 
 ### Naming Recommendations
 
-| Type | Convention | Example |
-|------|------------|---------|
-| Template directory | kebab-case | `nextjs-15`, `react-vite` |
-| Boilerplate name | kebab-case with prefix | `scaffold-nextjs-app` |
-| Feature name | kebab-case with prefix | `scaffold-nextjs-page` |
-| Component variables | PascalCase | `Button`, `UserProfile` |
-| File variables | varies by language | `user-service.ts`, `userService.ts` |
-| Generator files | camelCase.ts | `nextjsPageGenerator.ts` |
+| Type                | Convention             | Example                             |
+| ------------------- | ---------------------- | ----------------------------------- |
+| Template directory  | kebab-case             | `nextjs-15`, `react-vite`           |
+| Boilerplate name    | kebab-case with prefix | `scaffold-nextjs-app`               |
+| Feature name        | kebab-case with prefix | `scaffold-nextjs-page`              |
+| Component variables | PascalCase             | `Button`, `UserProfile`             |
+| File variables      | varies by language     | `user-service.ts`, `userService.ts` |
+| Generator files     | camelCase.ts           | `nextjsPageGenerator.ts`            |
 
 ---
 
@@ -805,12 +820,12 @@ export const {{ componentName }} = () => {
 properties:
   componentName:
     type: string
-    pattern: "^[A-Z][a-zA-Z0-9]*$"  # Must be PascalCase
+    pattern: '^[A-Z][a-zA-Z0-9]*$' # Must be PascalCase
     description: Component name in PascalCase
 
   packageName:
     type: string
-    pattern: "^@[a-z0-9-]+/[a-z0-9-]+$"  # Must be @scope/name
+    pattern: '^@[a-z0-9-]+/[a-z0-9-]+$' # Must be @scope/name
     description: Scoped package name
 
 # ❌ Bad: No validation
@@ -925,8 +940,8 @@ variables:
 
 # Test Case 3: Edge cases
 variables:
-  componentName: My-Component-Name  # Test filters
-  description: ""  # Test empty strings
+  componentName: My-Component-Name # Test filters
+  description: '' # Test empty strings
 ```
 
 ### 10. Use Comments in Templates
@@ -966,6 +981,7 @@ export const {{ componentName }}: React.FC<{{ componentName }}Props> = ({
 ### Example 1: React Component Template
 
 **scaffold.yaml:**
+
 ```yaml
 features:
   - name: scaffold-react-component
@@ -976,7 +992,7 @@ features:
       properties:
         componentName:
           type: string
-          pattern: "^[A-Z][a-zA-Z0-9]*$"
+          pattern: '^[A-Z][a-zA-Z0-9]*$'
           description: Component name in PascalCase
           example: UserProfile
         withTests:
@@ -999,6 +1015,7 @@ features:
 ```
 
 **Template: src/components/{{ componentName }}/{{ componentName }}.tsx.liquid**
+
 ```typescript
 import React from 'react';
 {% if withStyles %}
@@ -1027,6 +1044,7 @@ export const {{ componentName }}: React.FC<{{ componentName }}Props> = ({
 ```
 
 **Template: src/components/{{ componentName }}/index.ts.liquid**
+
 ```typescript
 export { {{ componentName }} } from './{{ componentName }}';
 export type { {{ componentName }}Props } from './{{ componentName }}';
@@ -1035,6 +1053,7 @@ export type { {{ componentName }}Props } from './{{ componentName }}';
 ### Example 2: API Route Template
 
 **scaffold.yaml:**
+
 ```yaml
 features:
   - name: scaffold-api-route
@@ -1060,8 +1079,8 @@ features:
           description: HTTP methods to support
           items:
             type: string
-            enum: ["GET", "POST", "PUT", "DELETE"]
-          default: ["GET", "POST"]
+            enum: ['GET', 'POST', 'PUT', 'DELETE']
+          default: ['GET', 'POST']
       required:
         - routeName
 
@@ -1072,6 +1091,7 @@ features:
 ```
 
 **Template: src/routes/{{ routeName | kebabCase }}/route.ts.liquid**
+
 ```typescript
 import { Request, Response, Router } from 'express';
 {% if withAuth %}
@@ -1102,6 +1122,7 @@ export default router;
 ### Example 3: Configuration File Template
 
 **Template: config/app.config.ts.liquid**
+
 ```typescript
 export const appConfig = {
   name: '{{ appName }}',
@@ -1142,6 +1163,7 @@ export type AppConfig = typeof appConfig;
 ### Example 4: Package.json Template
 
 **Template: package.json.liquid**
+
 ```json
 {
   "name": "{{ packageName }}",

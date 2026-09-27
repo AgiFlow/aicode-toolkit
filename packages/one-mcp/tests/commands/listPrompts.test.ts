@@ -3,7 +3,7 @@ import { listPromptsCommand } from '../../src/commands';
 import { findConfigFile } from '../../src/utils';
 
 vi.mock('../../src/services', () => ({
-  ConfigFetcherService: vi.fn().mockImplementation(function() {
+  ConfigFetcherService: vi.fn().mockImplementation(function () {
     return {
       fetchConfiguration: vi.fn().mockResolvedValue({
         mcpServers: {
@@ -12,7 +12,7 @@ vi.mock('../../src/services', () => ({
       }),
     };
   }),
-  McpClientManagerService: vi.fn().mockImplementation(function() {
+  McpClientManagerService: vi.fn().mockImplementation(function () {
     const client = {
       serverName: 'alpha',
       listPrompts: vi.fn().mockResolvedValue([

@@ -411,7 +411,6 @@ describe('RuleFinder mergeRulesConfigs logic', () => {
 
     // Merge all rules in priority order: project -> template -> global
     return {
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       ...baseConfig!,
       rules: [
         ...(projectRules?.rules || []),

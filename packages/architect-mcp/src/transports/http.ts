@@ -111,7 +111,6 @@ export class HttpTransportHandler implements IHttpTransportHandler {
 
     if (sessionId && this.sessionManager.hasSession(sessionId)) {
       // Reuse existing transport
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       const session = this.sessionManager.getSession(sessionId)!;
       transport = session.transport;
     } else if (!sessionId && isInitializeRequest(req.body)) {
@@ -160,7 +159,6 @@ export class HttpTransportHandler implements IHttpTransportHandler {
       return;
     }
 
-    // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
     const session = this.sessionManager.getSession(sessionId)!;
     await session.transport.handleRequest(req, res);
   }
@@ -173,7 +171,6 @@ export class HttpTransportHandler implements IHttpTransportHandler {
       return;
     }
 
-    // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
     const session = this.sessionManager.getSession(sessionId)!;
     await session.transport.handleRequest(req, res);
 

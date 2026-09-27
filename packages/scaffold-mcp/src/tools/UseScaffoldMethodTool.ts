@@ -96,7 +96,6 @@ IMPORTANT:
 
       // In monolith mode, automatically use current working directory
       // In monorepo mode, projectPath is required by schema
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       const resolvedProjectPath = this.isMonolith ? process.cwd() : projectPath!;
 
       const result = await this.scaffoldingMethodsService.useScaffoldMethod({

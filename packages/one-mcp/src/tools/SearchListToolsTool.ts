@@ -40,19 +40,19 @@ export class SearchListToolsTool implements Tool<SearchListToolsToolInput> {
 
   async getDefinition(): Promise<ToolDefinition> {
     const serverDefinitions = await this.definitionsCacheService.getServerDefinitions();
-    const capabilitySummary = serverDefinitions.length > 0
-      ? serverDefinitions
-          .map(
-            (server) => {
+    const capabilitySummary =
+      serverDefinitions.length > 0
+        ? serverDefinitions
+            .map((server) => {
               const capabilities = getUniqueSortedCapabilities(server.tools);
-              const summary = capabilities.length > 0
-                ? capabilities.join(', ')
-                : server.serverInstruction || 'No capability summary available';
+              const summary =
+                capabilities.length > 0
+                  ? capabilities.join(', ')
+                  : server.serverInstruction || 'No capability summary available';
               return `${server.serverName}: ${summary}`;
-            },
-          )
-          .join('\n')
-      : 'No proxied servers available.';
+            })
+            .join('\n')
+        : 'No proxied servers available.';
 
     return {
       name: SearchListToolsTool.TOOL_NAME,
@@ -108,18 +108,26 @@ export class SearchListToolsTool implements Tool<SearchListToolsToolInput> {
         }
 
         const serverCapabilities = getUniqueSortedCapabilities(serverDefinition.tools);
-        if (serverCapabilities.some((capability) => capability.toLowerCase().includes(capabilityFilter))) {
+        if (
+          serverCapabilities.some((capability) =>
+            capability.toLowerCase().includes(capabilityFilter),
+          )
+        ) {
           return true;
         }
 
         return serverDefinition.tools.some((tool) => {
-          const toolName = this.formatToolName(tool.name, serverDefinition.serverName, toolToServers);
+          const toolName = this.formatToolName(
+            tool.name,
+            serverDefinition.serverName,
+            toolToServers,
+          );
           const toolCapabilities = getToolCapabilities(tool);
           return (
             toolName.toLowerCase().includes(capabilityFilter) ||
             (tool.description || '').toLowerCase().includes(capabilityFilter) ||
             toolCapabilities.some((capability) =>
-              capability.toLowerCase().includes(capabilityFilter)
+              capability.toLowerCase().includes(capabilityFilter),
             )
           );
         });

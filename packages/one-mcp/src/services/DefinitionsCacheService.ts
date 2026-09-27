@@ -201,7 +201,11 @@ export class DefinitionsCacheService {
     if (options.configHash && cache.configHash && cache.configHash !== options.configHash) {
       return false;
     }
-    if (options.oneMcpVersion && cache.oneMcpVersion && cache.oneMcpVersion !== options.oneMcpVersion) {
+    if (
+      options.oneMcpVersion &&
+      cache.oneMcpVersion &&
+      cache.oneMcpVersion !== options.oneMcpVersion
+    ) {
       return false;
     }
     return true;

@@ -103,7 +103,11 @@ function isAddressInUseError(error: unknown): boolean {
     return true;
   }
 
-  if ('message' in error && typeof error.message === 'string' && error.message.includes('EADDRINUSE')) {
+  if (
+    'message' in error &&
+    typeof error.message === 'string' &&
+    error.message.includes('EADDRINUSE')
+  ) {
     return true;
   }
 
@@ -189,7 +193,10 @@ function validateProxyMode(mode: McpServeOptions['proxyMode']): void {
   }
 }
 
-function createTransportConfig(options: McpServeOptions, mode: TransportConfig['mode']): TransportConfig {
+function createTransportConfig(
+  options: McpServeOptions,
+  mode: TransportConfig['mode'],
+): TransportConfig {
   return {
     mode,
     port: options.port || Number(process.env.MCP_PORT) || DEFAULT_PORT,
@@ -212,7 +219,12 @@ function createServerOptions(
   };
 }
 
-function formatStartError(type: ValidTransportType, host: string, port: number, error: unknown): string {
+function formatStartError(
+  type: ValidTransportType,
+  host: string,
+  port: number,
+  error: unknown,
+): string {
   const startErrorMessage = toErrorMessage(error);
   if (type === TRANSPORT_TYPE_STDIO) {
     return `Failed to start MCP server with transport '${type}': ${startErrorMessage}`;
@@ -269,7 +281,9 @@ async function writeRuntimeRecord(
   try {
     await runtimeStateService.write(record);
   } catch (error) {
-    throw new Error(`Failed to persist runtime state for '${record.serverId}': ${toErrorMessage(error)}`);
+    throw new Error(
+      `Failed to persist runtime state for '${record.serverId}': ${toErrorMessage(error)}`,
+    );
   }
 }
 
@@ -282,7 +296,9 @@ async function stopOwnedHttpTransport(
     try {
       await handler.stop();
     } catch (error) {
-      throw new Error(`Failed to stop owned HTTP transport '${serverId}': ${toErrorMessage(error)}`);
+      throw new Error(
+        `Failed to stop owned HTTP transport '${serverId}': ${toErrorMessage(error)}`,
+      );
     }
   } finally {
     await removeRuntimeRecord(runtimeStateService, serverId);
@@ -337,7 +353,11 @@ function createStdioHttpInternalTransport(
   adminOptions?: HttpTransportAdminOptions,
 ): HttpTransportHandler {
   try {
-    return new HttpTransportHandler(() => createSessionServer(sharedServices), config, adminOptions);
+    return new HttpTransportHandler(
+      () => createSessionServer(sharedServices),
+      config,
+      adminOptions,
+    );
   } catch (error) {
     throw new Error(
       `Failed to create internal HTTP transport for stdio-http proxy: ${toErrorMessage(error)}`,
@@ -350,7 +370,10 @@ function createStdioHttpInternalTransport(
  * @param handler - The transport handler to start
  * @param onStopped - Optional cleanup callback run after signal-based shutdown
  */
-async function startServer(handler: TransportHandler, onStopped?: () => Promise<void>): Promise<void> {
+async function startServer(
+  handler: TransportHandler,
+  onStopped?: () => Promise<void>,
+): Promise<void> {
   try {
     await handler.start();
   } catch (error) {
@@ -366,7 +389,9 @@ async function startServer(handler: TransportHandler, onStopped?: () => Promise<
       }
       process.exit(0);
     } catch (error) {
-      console.error(`Failed to gracefully stop transport during ${signal}: ${toErrorMessage(error)}`);
+      console.error(
+        `Failed to gracefully stop transport during ${signal}: ${toErrorMessage(error)}`,
+      );
       process.exit(1);
     }
   };
@@ -414,7 +439,11 @@ async function createAndStartHttpRuntime(
 
   try {
     const adminOptions = createHttpAdminOptions(runtimeRecord.serverId, shutdownToken, stopHandler);
-    handler = new HttpTransportHandler(() => createSessionServer(sharedServices), config, adminOptions);
+    handler = new HttpTransportHandler(
+      () => createSessionServer(sharedServices),
+      config,
+      adminOptions,
+    );
   } catch (error) {
     await sharedServices.dispose();
     throw new Error(`Failed to create HTTP runtime server: ${toErrorMessage(error)}`);
@@ -429,10 +458,14 @@ async function createAndStartHttpRuntime(
   } catch (error) {
     await sharedServices.dispose();
     await cleanupFailedRuntimeStartup(handler, runtimeStateService, runtimeRecord.serverId);
-    throw new Error(`Failed to start HTTP runtime '${runtimeRecord.serverId}': ${toErrorMessage(error)}`);
+    throw new Error(
+      `Failed to start HTTP runtime '${runtimeRecord.serverId}': ${toErrorMessage(error)}`,
+    );
   }
 
-  console.error(`Runtime state: http://${runtimeRecord.host}:${runtimeRecord.port} (${runtimeRecord.serverId})`);
+  console.error(
+    `Runtime state: http://${runtimeRecord.host}:${runtimeRecord.port} (${runtimeRecord.serverId})`,
+  );
 }
 
 async function stopInternalHttpTransport(
@@ -589,7 +622,12 @@ async function startStdioHttpTransport(
 
         if (ownsInternalHttpTransport) {
           try {
-            const runtimeRecord = createRuntimeRecord(serverId, config, shutdownToken, resolvedConfigPath);
+            const runtimeRecord = createRuntimeRecord(
+              serverId,
+              config,
+              shutdownToken,
+              resolvedConfigPath,
+            );
             await writeRuntimeRecord(runtimeStateService, runtimeRecord);
           } catch (error) {
             throw new Error(

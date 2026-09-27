@@ -16,10 +16,7 @@ export {
 } from './ScaffoldApplicationPrompt';
 export type { ScaffoldApplicationPromptOptions } from './ScaffoldApplicationPrompt';
 
-export {
-  ScaffoldFeaturePrompt,
-  scaffoldFeaturePromptOptionsSchema,
-} from './ScaffoldFeaturePrompt';
+export { ScaffoldFeaturePrompt, scaffoldFeaturePromptOptionsSchema } from './ScaffoldFeaturePrompt';
 export type { ScaffoldFeaturePromptOptions } from './ScaffoldFeaturePrompt';
 
 export {

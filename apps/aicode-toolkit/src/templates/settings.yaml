@@ -29,7 +29,6 @@
 # ---------------------------------------------------------------------------
 
 scaffold-mcp:
-
   # -------------------------------------------------------------------------
   # mcp-serve — defaults for `scaffold-mcp mcp-serve`
   # -------------------------------------------------------------------------
@@ -79,7 +78,6 @@ scaffold-mcp:
   # CLI flags --fallback-tool and --fallback-tool-config still take precedence.
   # -------------------------------------------------------------------------
   hook:
-
     claude-code:
       preToolUse:
         # LLM tool to use for this hook. Supported: claude-code | gemini-cli | codex
@@ -141,7 +139,6 @@ scaffold-mcp:
 # ---------------------------------------------------------------------------
 
 architect-mcp:
-
   # -------------------------------------------------------------------------
   # mcp-serve — defaults for `architect-mcp mcp-serve`
   # -------------------------------------------------------------------------
@@ -204,7 +201,6 @@ architect-mcp:
   # CLI flags --llm-tool, --fallback-tool, and --tool-config still take precedence.
   # -------------------------------------------------------------------------
   hook:
-
     claude-code:
       preToolUse:
         # Static pattern matching is usually enough here. Leave llm-tool unset unless

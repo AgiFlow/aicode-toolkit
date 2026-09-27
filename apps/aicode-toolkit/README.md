@@ -23,17 +23,20 @@ npx @agiflowai/aicode-toolkit init --name my-project --project-type monolith
 Initialize AI Code Toolkit in your workspace.
 
 **For existing projects:**
+
 ```bash
 npx @agiflowai/aicode-toolkit init
 ```
 
 This will:
+
 1. Create `templates/`
 2. Download built-in templates
 3. Detect installed coding agents
 4. Optionally configure MCP servers
 
 **For new projects:**
+
 ```bash
 # Interactive mode
 npx @agiflowai/aicode-toolkit init
@@ -43,18 +46,20 @@ npx @agiflowai/aicode-toolkit init --name my-app --project-type monolith
 ```
 
 This will:
+
 1. Create the project directory
 2. Initialize Git
 3. Download templates
 4. Create `.toolkit/settings.yaml`
 
 **Options:**
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--name <name>` | Project name (for new projects) | - |
-| `--project-type <type>` | `monolith` or `monorepo` | - |
-| `--path <path>` | Custom templates path | `./templates` |
-| `--no-download` | Skip template download | `false` |
+
+| Option                  | Description                     | Default       |
+| ----------------------- | ------------------------------- | ------------- |
+| `--name <name>`         | Project name (for new projects) | -             |
+| `--project-type <type>` | `monolith` or `monorepo`        | -             |
+| `--path <path>`         | Custom templates path           | `./templates` |
+| `--no-download`         | Skip template download          | `false`       |
 
 ### `sync`
 
@@ -72,10 +77,11 @@ npx @agiflowai/aicode-toolkit sync --mcp
 ```
 
 **Options:**
-| Option | Description |
-|--------|-------------|
+
+| Option    | Description                        |
+| --------- | ---------------------------------- |
 | `--hooks` | Write `.claude/settings.json` only |
-| `--mcp` | Write `mcp-config.yaml` only |
+| `--mcp`   | Write `mcp-config.yaml` only       |
 
 #### Hooks → `.claude/settings.json`
 
@@ -88,7 +94,7 @@ scaffold-mcp:
   hook:
     claude-code:
       preToolUse:
-        args:           # extra CLI args appended to the generated hook command
+        args: # extra CLI args appended to the generated hook command
           llm-tool: gemini-cli
       postToolUse: {}
       stop: {}
@@ -124,14 +130,14 @@ mcp-config:
         - mcp-serve
         - --admin-enable
         - --prompt-as-skill
-      instruction: "Use this server for generating boilerplate code and scaffolding."
+      instruction: 'Use this server for generating boilerplate code and scaffolding.'
     architect-mcp:
       command: bun
       args:
         - run
         - packages/architect-mcp/src/cli.ts
         - mcp-serve
-      instruction: "Use this server for design pattern guidance and code review."
+      instruction: 'Use this server for design pattern guidance and code review.'
   skills:
     paths:
       - docs/skills
@@ -158,13 +164,15 @@ npx @agiflowai/aicode-toolkit add \
 ```
 
 **Options:**
-| Option | Description |
-|--------|-------------|
+
+| Option          | Description              |
+| --------------- | ------------------------ |
 | `--name <name>` | Template name (required) |
-| `--url <url>` | GitHub URL (required) |
-| `--type <type>` | Template type folder |
+| `--url <url>`   | GitHub URL (required)    |
+| `--type <type>` | Template type folder     |
 
 **Supported URL formats:**
+
 - Full repository: `https://github.com/user/repo`
 - Subdirectory: `https://github.com/user/repo/tree/branch/path/to/template`
 - With .git: `https://github.com/user/repo.git`
@@ -175,13 +183,14 @@ npx @agiflowai/aicode-toolkit add \
 
 When you run `init`, these built-in templates are downloaded:
 
-| Template | Description |
-|----------|-------------|
-| `nextjs-15-drizzle` | Next.js 15 + App Router + TypeScript + Tailwind CSS 4 + Drizzle ORM |
-| `typescript-lib` | TypeScript library with ESM/CJS builds |
-| `typescript-mcp-package` | MCP server package template |
+| Template                 | Description                                                         |
+| ------------------------ | ------------------------------------------------------------------- |
+| `nextjs-15-drizzle`      | Next.js 15 + App Router + TypeScript + Tailwind CSS 4 + Drizzle ORM |
+| `typescript-lib`         | TypeScript library with ESM/CJS builds                              |
+| `typescript-mcp-package` | MCP server package template                                         |
 
 Each template includes:
+
 - `scaffold.yaml` - Boilerplate and feature definitions
 - `architect.yaml` - Design patterns (optional)
 - `RULES.yaml` - Coding standards (optional)
@@ -227,13 +236,13 @@ my-workspace/
 
 The CLI checks for these agent configs:
 
-| Agent | Config Location | Status |
-|-------|-----------------|--------|
-| Claude Code | `.mcp.json` | Supported |
-| Cursor | `.cursor/mcp.json` | Supported |
-| Gemini CLI | `.gemini/settings.json` | Supported |
-| Codex CLI | `.codex/config.json` | Supported |
-| GitHub Copilot | VS Code settings | Supported |
+| Agent          | Config Location         | Status    |
+| -------------- | ----------------------- | --------- |
+| Claude Code    | `.mcp.json`             | Supported |
+| Cursor         | `.cursor/mcp.json`      | Supported |
+| Gemini CLI     | `.gemini/settings.json` | Supported |
+| Codex CLI      | `.codex/config.json`    | Supported |
+| GitHub Copilot | VS Code settings        | Supported |
 
 If detected, the CLI can add MCP server config for them.
 
@@ -259,11 +268,11 @@ See [scaffold-mcp documentation](../../packages/scaffold-mcp/docs/template-conve
 
 ## Related Packages
 
-| Package | Description |
-|---------|-------------|
-| [@agiflowai/scaffold-mcp](../../packages/scaffold-mcp) | MCP server for code scaffolding |
-| [@agiflowai/architect-mcp](../../packages/architect-mcp) | MCP server for design patterns |
-| [@agiflowai/one-mcp](../../packages/one-mcp) | MCP proxy for reduced token usage |
+| Package                                                  | Description                       |
+| -------------------------------------------------------- | --------------------------------- |
+| [@agiflowai/scaffold-mcp](../../packages/scaffold-mcp)   | MCP server for code scaffolding   |
+| [@agiflowai/architect-mcp](../../packages/architect-mcp) | MCP server for design patterns    |
+| [@agiflowai/one-mcp](../../packages/one-mcp)             | MCP proxy for reduced token usage |
 
 ---
 

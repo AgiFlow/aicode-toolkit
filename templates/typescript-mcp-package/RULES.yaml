@@ -1,4 +1,4 @@
-version: '1.0'
+version: "1.0"
 template: typescript-mcp-package
 description: Rules and patterns for typescript-mcp-package template
 rules:

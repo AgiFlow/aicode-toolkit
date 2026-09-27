@@ -14,6 +14,7 @@ Your task is to detect discrepancies between current design patterns and scaffol
 ## Step 1: Gather Context
 
 Determine scope:
+
 - If `templateName` is provided, scope the work to that template
 - If `filePath` is provided, focus on templates that generate files matching that path pattern
 - Otherwise, ask the user which template or file type to update
@@ -29,6 +30,7 @@ get-file-design-pattern({ file_path: "<path matching the template's target file>
 ```
 
 **What to capture from the response:**
+
 - `must_do` rules — patterns that MUST appear in generated code
 - `must_not_do` rules — anti-patterns to eliminate from templates
 - `should_do` rules — best practices to incorporate
@@ -41,6 +43,7 @@ For example, if a template generates `src/tools/MyTool.ts`, call `get-file-desig
 ## Step 3: Read Existing Template Files
 
 For each `.liquid` template file that corresponds to the file types you checked:
+
 - Read the current template content
 - Note what patterns, imports, class structures, and boilerplate it contains
 - Identify the Liquid variables in use (e.g., `{{ toolName }}`, `{{ serviceName }}`)
@@ -53,17 +56,20 @@ Template files live in the templates directory under the template name folder wi
 Compare template content against the design patterns. Look for:
 
 **Critical discrepancies (must fix):**
+
 - Missing required imports or base classes (`must_do` violations)
 - Presence of forbidden patterns (`must_not_do` violations)
 - Wrong class/function structure that contradicts current patterns
 - Outdated error handling, typing, or interface patterns
 
 **Important discrepancies (should fix):**
+
 - Missing `should_do` best practices
 - Outdated code examples in template headers
 - Stale design pattern documentation in the file header comment
 
 **Document each discrepancy before making changes:**
+
 - Which template file is affected
 - What the current template does
 - What the design pattern requires
@@ -83,6 +89,7 @@ For each discrepancy, use `generate-boilerplate-file` to update the template:
 ```
 
 **Critical rules when updating templates:**
+
 - **Preserve all Liquid variables** — `{{ variableName }}`, `{% if condition %}`, filter chains like `{{ name | pascalCase }}` must remain intact
 - **Keep templates minimal and business-agnostic** — structural/boilerplate code only, not specific logic
 - **Update the header comment** to reflect the new design patterns, coding standards, and things to avoid
@@ -99,6 +106,7 @@ If the design pattern changes affect the architectural guidance documented in th
 ## Step 7: Verify
 
 After updating:
+
 1. Confirm all `must_do` patterns are present in the updated template
 2. Confirm all `must_not_do` patterns are removed
 3. Confirm Liquid syntax is valid (variables and tags intact)
@@ -116,8 +124,4 @@ After updating:
 
 {% if not isMonolith %}1. Call `list-scaffolding-methods` with `{ "templateName": "nextjs-15" }` to see features and their includes
 {% else %}1. Call `list-scaffolding-methods` to see available features and their includes
-{% endif %}2. For each feature's included files, call `get-file-design-pattern` with a matching real file path
-3. Read the corresponding `.liquid` template files
-4. Document all discrepancies found
-5. Call `generate-boilerplate-file` for each file that needs updating
-6. Report a summary: which files were updated, what changed, and why
+{% endif %}2. For each feature's included files, call `get-file-design-pattern` with a matching real file path 3. Read the corresponding `.liquid` template files 4. Document all discrepancies found 5. Call `generate-boilerplate-file` for each file that needs updating 6. Report a summary: which files were updated, what changed, and why

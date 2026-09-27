@@ -1,6 +1,7 @@
 {
   "name": "@scaffold-mcp/source",
   "version": "0.0.0",
+  "private": true,
   "license": "AGPL-3.0",
   "scripts": {
     "build": "nx run-many -t build",
@@ -8,14 +9,13 @@
     "typecheck": "nx run-many -t typecheck",
     "lint": "nx run-many -t lint",
     "lint:fix": "nx run-many -t lint:fix",
-    "format": "biome format --write .",
-    "format:check": "biome format .",
+    "format": "oxfmt .",
+    "format:check": "oxfmt . --check",
     "commit": "commit",
     "release": "nx release",
     "release:dry-run": "nx release --dry-run",
     "prepare": "husky"
   },
-  "private": true,
   "dependencies": {
     "@nx/js": "23.2.1",
     "@nx/vitest": "23.2.1",
@@ -25,11 +25,13 @@
     "vitest": "4.1.11"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.14",
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-nx-scopes": "21.2.3",
     "@commitlint/prompt-cli": "21.2.3",
     "husky": "9.1.7",
+    "oxfmt": "0.68.0",
+    "oxlint": "1.83.0",
+    "oxlint-tsgolint": "7.0.2002",
     "syncpack": "15.3.3"
   }
 }

@@ -44,6 +44,7 @@ pnpm release -- --first-release
 ```
 
 This will:
+
 - ✅ Skip version bumping (already at 0.0.1)
 - ✅ Generate changelogs
 - ✅ Create git tags
@@ -126,6 +127,7 @@ pnpm exec nx release publish --projects=@agiflowai/architect-mcp
 4. **Publish**: `pnpm exec nx release publish --projects=@agiflowai/aicode-utils`
 
 Or combine versioning and publishing in one command:
+
 ```bash
 pnpm exec nx release 0.2.0 --projects=@agiflowai/aicode-utils
 ```
@@ -195,6 +197,7 @@ The release process is configured in `nx.json`:
 ```
 
 Key features:
+
 - **Conventional Commits**: Automatically determines version bump based on commit messages
 - **Update Dependents**: Automatically updates dependent packages when dependencies change
 - **GitHub Releases**: Creates GitHub releases with changelog
@@ -261,6 +264,7 @@ jobs:
 ### Required Secrets
 
 Add to your GitHub repository settings:
+
 - `NPM_TOKEN`: Your npm access token (create at https://www.npmjs.com/settings/tokens)
 
 ## Troubleshooting

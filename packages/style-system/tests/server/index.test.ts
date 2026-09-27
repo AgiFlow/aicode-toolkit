@@ -20,7 +20,6 @@ vi.mock('@modelcontextprotocol/server', () => {
   return { Server: MockServer };
 });
 
-
 describe('style-system server capability metadata', () => {
   it('adds capability tags to listed tools', async () => {
     const { createServer } = await import('../../src/server');
@@ -46,10 +45,7 @@ describe('style-system server capability metadata', () => {
         expect.objectContaining({
           name: 'get_component_visual',
           _meta: {
-            'agiflowai/capabilities': expect.arrayContaining([
-              'visual-preview',
-              'design-review',
-            ]),
+            'agiflowai/capabilities': expect.arrayContaining(['visual-preview', 'design-review']),
           },
         }),
       ]),

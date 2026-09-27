@@ -106,7 +106,9 @@ export class RuntimeStateService implements RuntimeStateManager {
   async list(): Promise<RuntimeStateRecord[]> {
     try {
       const entries = await readdir(this.runtimeDir, { withFileTypes: true });
-      const files = entries.filter((entry) => entry.isFile() && entry.name.endsWith(RUNTIME_FILE_SUFFIX));
+      const files = entries.filter(
+        (entry) => entry.isFile() && entry.name.endsWith(RUNTIME_FILE_SUFFIX),
+      );
 
       const records = await Promise.all(
         files.map(async (file): Promise<RuntimeStateRecord | null> => {

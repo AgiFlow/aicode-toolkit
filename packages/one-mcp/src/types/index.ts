@@ -10,7 +10,12 @@
  * - Use descriptive names for types and interfaces
  */
 
-import type { CallToolResult, GetPromptResult, ReadResourceResult, Tool as McpTool } from '@modelcontextprotocol/server';
+import type {
+  CallToolResult,
+  GetPromptResult,
+  ReadResourceResult,
+  Tool as McpTool,
+} from '@modelcontextprotocol/server';
 
 /**
  * Tool definition for MCP
@@ -357,7 +362,11 @@ export interface McpClientConnection {
   /** List available prompts from the server */
   listPrompts(): Promise<McpPromptInfo[]>;
   /** Call a tool with the given name and arguments */
-  callTool(name: string, args: Record<string, unknown>, options?: { timeout?: number }): Promise<CallToolResult>;
+  callTool(
+    name: string,
+    args: Record<string, unknown>,
+    options?: { timeout?: number },
+  ): Promise<CallToolResult>;
   /** Read a resource by URI */
   readResource(uri: string): Promise<ReadResourceResult>;
   /** Get a prompt by name with optional arguments */

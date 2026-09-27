@@ -44,13 +44,13 @@ The normalized `HookContext` passed to callbacks includes:
 
 ```typescript
 interface HookContext {
-  toolName: string;        // Name of the tool (e.g., "Read", "Write", "Edit")
-  toolInput: Record<string, any>;  // Input parameters
-  filePath?: string;       // File path for file operations
-  operation?: 'read' | 'write' | 'edit';  // Operation type
-  cwd: string;             // Current working directory
-  sessionId: string;       // Unique session identifier
-  llmTool?: string;        // Optional LLM tool identifier
+  toolName: string; // Name of the tool (e.g., "Read", "Write", "Edit")
+  toolInput: Record<string, any>; // Input parameters
+  filePath?: string; // File path for file operations
+  operation?: 'read' | 'write' | 'edit'; // Operation type
+  cwd: string; // Current working directory
+  sessionId: string; // Unique session identifier
+  llmTool?: string; // Optional LLM tool identifier
 }
 ```
 
@@ -60,10 +60,10 @@ Callbacks should return a `HookResponse`:
 
 ```typescript
 interface HookResponse {
-  decision: 'allow' | 'deny' | 'ask' | 'skip';  // Permission decision
-  message: string;         // Message for the LLM
-  userMessage?: string;    // Optional message for the user only
-  updatedInput?: Record<string, any>;  // Optional updated input parameters
+  decision: 'allow' | 'deny' | 'ask' | 'skip'; // Permission decision
+  message: string; // Message for the LLM
+  userMessage?: string; // Optional message for the user only
+  updatedInput?: Record<string, any>; // Optional updated input parameters
 }
 ```
 

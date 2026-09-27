@@ -24,7 +24,7 @@ scaffold-mcp:
   hook:
     claude-code:
       preToolUse:
-        args:       # extra CLI args appended to the generated hook command
+        args: # extra CLI args appended to the generated hook command
           llm-tool: gemini-cli
       postToolUse: {}
       stop: {}
@@ -163,12 +163,12 @@ Existing-file edits (`*** Update File:`) and shell writes (`Bash`) are not inter
 
 ## Hook Decisions
 
-| Decision | Claude Code | Gemini CLI | Behavior |
-|----------|-------------|------------|----------|
-| Allow | `allow` | `ALLOW` | Proceed with optional guidance message |
-| Deny | `deny` | `BLOCK` | Show message and block operation |
-| Skip | `skip` | - | Silently allow (no output) |
-| Warn | - | `WARN` | Show warning but allow |
+| Decision | Claude Code | Gemini CLI | Behavior                               |
+| -------- | ----------- | ---------- | -------------------------------------- |
+| Allow    | `allow`     | `ALLOW`    | Proceed with optional guidance message |
+| Deny     | `deny`      | `BLOCK`    | Show message and block operation       |
+| Skip     | `skip`      | -          | Silently allow (no output)             |
+| Warn     | -           | `WARN`     | Show warning but allow                 |
 
 **Note:** The PreToolUse hook uses `deny` to show scaffolding options. This displays the message to Claude but doesn't actually block the Write operation—Claude can still proceed if no scaffold methods are relevant. Codex CLI uses the same decision contract as Claude Code (`hookSpecificOutput.permissionDecision: allow | deny | ask`).
 
@@ -215,6 +215,7 @@ See [Template Conventions](./template-conventions.md#excluding-files-from-scaffo
 ## Session Tracking
 
 Hooks track executions per session:
+
 - Each file path is only checked once per session
 - Repeated suggestions for the same file are skipped
 - Tracking resets when the session ends

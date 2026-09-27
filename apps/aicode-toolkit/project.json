@@ -29,13 +29,13 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check apps/aicode-toolkit"
+        "command": "oxlint apps/aicode-toolkit && oxfmt --check apps/aicode-toolkit"
       }
     },
     "lint:fix": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check --write apps/aicode-toolkit"
+        "command": "oxlint --fix apps/aicode-toolkit && oxfmt apps/aicode-toolkit"
       }
     }
   },

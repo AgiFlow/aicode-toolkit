@@ -38,10 +38,8 @@ export const stopCommand = new Command('stop')
   .description('Stop a running HTTP one-mcp server')
   .option('--id <id>', 'Target server ID from the runtime registry')
   .option('--host <host>', 'Target runtime host')
-  .option(
-    '--port <port>',
-    'Target runtime port',
-    (value: string): number => Number.parseInt(value, 10),
+  .option('--port <port>', 'Target runtime port', (value: string): number =>
+    Number.parseInt(value, 10),
   )
   .option('-c, --config <path>', 'Reserved for future config-based targeting support')
   .option('--force', 'Skip server ID verification against the /health response', false)
@@ -55,7 +53,9 @@ export const stopCommand = new Command('stop')
   .action(async (options: StopCommandOptions): Promise<void> => {
     try {
       if (options.config) {
-        console.error('Warning: --config is not used yet; runtime resolution uses the persisted registry.');
+        console.error(
+          'Warning: --config is not used yet; runtime resolution uses the persisted registry.',
+        );
       }
 
       const stopServerService = new StopServerService();

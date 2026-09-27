@@ -40,10 +40,7 @@ async function main() {
   try {
     const program = new Command();
 
-    program
-      .name('one-mcp')
-      .description('One MCP server package')
-      .version(packageJson.version);
+    program.name('one-mcp').description('One MCP server package').version(packageJson.version);
 
     // Add all commands
     program.addCommand(initCommand);

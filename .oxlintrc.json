@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript"],
+  "options": {
+    "typeAware": true,
+    "typeCheck": true
+  },
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "no-unused-vars": "error"
+  },
+  "overrides": [
+    {
+      "files": ["tests/**/*.ts", "**/*.test.ts", "**/*.spec.ts"],
+      "rules": {
+        "typescript/unbound-method": "off"
+      }
+    }
+  ],
+  "ignorePatterns": ["dist", "node_modules", "build", "coverage", ".nx", "tmp", "**/*.d.ts"]
+}

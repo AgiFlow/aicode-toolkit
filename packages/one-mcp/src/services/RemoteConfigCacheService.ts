@@ -41,11 +41,7 @@ export class RemoteConfigCacheService {
   private readEnabled: boolean; // Whether to read from cache
   private writeEnabled: boolean; // Whether to write to cache
 
-  constructor(options?: {
-    ttl?: number;
-    readEnabled?: boolean;
-    writeEnabled?: boolean;
-  }) {
+  constructor(options?: { ttl?: number; readEnabled?: boolean; writeEnabled?: boolean }) {
     this.cacheDir = join(tmpdir(), 'one-mcp-cache', 'remote-configs');
     this.cacheTTL = options?.ttl || 60 * 60 * 1000; // Default: 1 hour
     this.readEnabled = options?.readEnabled !== undefined ? options.readEnabled : true;

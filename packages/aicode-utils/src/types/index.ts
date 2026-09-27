@@ -387,9 +387,7 @@ export interface GeneratorContext {
   /** Variable-replacement service injected to avoid circular imports. */
   variableReplacer: IVariableReplacementService;
   /** ScaffoldProcessingService constructor — passed to avoid circular imports. */
-  ScaffoldProcessingService: new (
-    ...args: unknown[]
-  ) => unknown;
+  ScaffoldProcessingService: new (...args: unknown[]) => unknown;
   /**
    * Return the workspace root path.
    * @returns Absolute path of the workspace root.

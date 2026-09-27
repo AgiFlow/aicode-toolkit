@@ -1,4 +1,4 @@
-version: '1.0'
+version: "1.0"
 template: nextjs-15-drizzle
 description: Rules and patterns for nextjs-15-drizzle template
 rules:

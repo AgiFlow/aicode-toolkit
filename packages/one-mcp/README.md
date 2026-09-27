@@ -9,6 +9,7 @@ MCP proxy for aggregating multiple MCP servers behind one endpoint.
 - `search`: expose `describe_tools`, `list_tools`, and `use_tool`
 
 Use this when:
+
 - you want one MCP entry instead of many
 - you want cached startup metadata across multiple downstream servers
 - you want to choose between meta-tool routing and direct flat exposure
@@ -29,19 +30,19 @@ mcpServers:
     command: npx
     args:
       - -y
-      - "@modelcontextprotocol/server-filesystem"
-      - "${HOME}/Documents"
+      - '@modelcontextprotocol/server-filesystem'
+      - '${HOME}/Documents'
     config:
-      instruction: "Access files in the Documents folder"
+      instruction: 'Access files in the Documents folder'
 
   scaffold-mcp:
     command: npx
     args:
       - -y
-      - "@agiflowai/scaffold-mcp"
-      - "mcp-serve"
+      - '@agiflowai/scaffold-mcp'
+      - 'mcp-serve'
     config:
-      instruction: "Scaffold projects and features"
+      instruction: 'Scaffold projects and features'
 ```
 
 ### 2. Configure Your Agent
@@ -66,7 +67,15 @@ To change proxy behavior, set `--proxy-mode`:
   "mcpServers": {
     "one-mcp": {
       "command": "npx",
-      "args": ["-y", "@agiflowai/one-mcp", "mcp-serve", "--proxy-mode", "search", "--config", "./mcp-config.yaml"]
+      "args": [
+        "-y",
+        "@agiflowai/one-mcp",
+        "mcp-serve",
+        "--proxy-mode",
+        "search",
+        "--config",
+        "./mcp-config.yaml"
+      ]
     }
   }
 }
@@ -85,17 +94,20 @@ To change proxy behavior, set `--proxy-mode`:
 Use `mcp-serve --proxy-mode <mode>` to control how one-mcp exposes downstream tools.
 
 `meta` mode:
+
 - Default mode
 - Exposes `describe_tools` and `use_tool`
 - `describe_tools` includes the proxied capability catalog in its description
 
 `flat` mode:
+
 - Exposes proxied tools directly in `tools/list`
 - Exposes proxied resources directly in `resources/list`
 - Name clashes are prefixed as `serverName__toolName` or `serverName__resourceUri`
 - `describe_tools` is still exposed when file-based skills or prompt-based skills exist
 
 `search` mode:
+
 - Exposes `describe_tools`, `list_tools`, and `use_tool`
 - `describe_tools` stays compact and is used for schemas and skill instructions
 - `list_tools` shows server capability summaries and can filter results by capability or server
@@ -109,32 +121,32 @@ mcpServers:
     command: npx
     args:
       - -y
-      - "@modelcontextprotocol/server-example"
+      - '@modelcontextprotocol/server-example'
     env:
-      API_KEY: "${MY_API_KEY}"
+      API_KEY: '${MY_API_KEY}'
     config:
-      instruction: "Description for the AI agent"
+      instruction: 'Description for the AI agent'
 
   # HTTP/SSE server (remote)
   remote-server:
     url: https://api.example.com/mcp
-    type: sse  # or http
+    type: sse # or http
     headers:
-      Authorization: "Bearer ${TOKEN}"
+      Authorization: 'Bearer ${TOKEN}'
     config:
-      instruction: "Remote server description"
+      instruction: 'Remote server description'
 
   # Disabled server (skipped)
   disabled-server:
     command: node
-    args: ["server.js"]
+    args: ['server.js']
     disabled: true
 
   # Custom timeout for slow servers
   slow-server:
     command: npx
-    args: ["-y", "@heavy/mcp-package"]
-    timeout: 60000  # 60 seconds (default: 30000)
+    args: ['-y', '@heavy/mcp-package']
+    timeout: 60000 # 60 seconds (default: 30000)
 ```
 
 ### Environment Variables
@@ -146,10 +158,10 @@ mcpServers:
   api-server:
     command: npx
     args:
-      - "@mycompany/mcp-server"
-      - "${HOME}/data"           # Expands to /Users/username/data
+      - '@mycompany/mcp-server'
+      - '${HOME}/data' # Expands to /Users/username/data
     env:
-      API_KEY: "${MY_API_KEY}"   # Reads from environment
+      API_KEY: '${MY_API_KEY}' # Reads from environment
 ```
 
 ### Tool Blacklisting
@@ -160,9 +172,9 @@ Prevent specific downstream tools from being listed or executed:
 mcpServers:
   filesystem:
     command: npx
-    args: ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]
+    args: ['-y', '@modelcontextprotocol/server-filesystem', '/workspace']
     config:
-      instruction: "File system access (read-only)"
+      instruction: 'File system access (read-only)'
       toolBlacklist:
         - write_file
         - create_directory
@@ -170,6 +182,7 @@ mcpServers:
 ```
 
 Blacklisted tools:
+
 - Won't appear in tool listings
 - Return an error if called
 
@@ -181,12 +194,13 @@ Omit downstream tool descriptions from capability listings:
 mcpServers:
   filesystem:
     command: npx
-    args: ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]
+    args: ['-y', '@modelcontextprotocol/server-filesystem', '/workspace']
     config:
-      omitToolDescription: true  # Show only tool names
+      omitToolDescription: true # Show only tool names
 ```
 
 **Default output:**
+
 ```
 filesystem:
   - read_file: Read contents of a file at the specified path...
@@ -194,6 +208,7 @@ filesystem:
 ```
 
 **With omitToolDescription:**
+
 ```
 filesystem:
   read_file, list_directory, search_files
@@ -213,13 +228,14 @@ mcpServers:
 
 skills:
   paths:
-    - ".claude/skills"           # Relative to config file
-    - "/absolute/path/to/skills" # Absolute paths also supported
+    - '.claude/skills' # Relative to config file
+    - '/absolute/path/to/skills' # Absolute paths also supported
 ```
 
 #### Skill File Structure
 
 Example:
+
 ```
 .claude/skills/
 ├── pdf/
@@ -229,6 +245,7 @@ Example:
 ```
 
 `SKILL.md` format:
+
 ```markdown
 ---
 name: pdf
@@ -240,12 +257,14 @@ description: Create and manipulate PDF documents
 This skill helps you work with PDF files...
 
 ## Usage
+
 ...
 ```
 
 #### Required Frontmatter
 
 Each `SKILL.md` must define:
+
 - `name`: Unique identifier for the skill
 - `description`: Brief description shown to clients
 
@@ -262,6 +281,7 @@ You can also expose MCP prompts as skills.
 If prompt content contains YAML frontmatter with `name` and `description`, `one-mcp` can expose it as a skill.
 
 Prompt content example:
+
 ```markdown
 ---
 name: code-reviewer
@@ -281,9 +301,9 @@ mcpServers:
     command: npx
     args:
       - -y
-      - "@agiflowai/scaffold-mcp"
-      - "mcp-serve"
-      - "--prompt-as-skill"  # Enables front-matter in prompts
+      - '@agiflowai/scaffold-mcp'
+      - 'mcp-serve'
+      - '--prompt-as-skill' # Enables front-matter in prompts
 ```
 
 Multi-line descriptions are supported:
@@ -309,28 +329,28 @@ mcpServers:
     command: npx
     args:
       - -y
-      - "@mycompany/mcp-server"
+      - '@mycompany/mcp-server'
     config:
-      instruction: "My MCP server"
+      instruction: 'My MCP server'
       prompts:
         code-review:
           skill:
             name: code-reviewer
-            description: "Review code for best practices and potential issues"
-            folder: "./prompts/code-review"  # Optional: resource folder
+            description: 'Review code for best practices and potential issues'
+            folder: './prompts/code-review' # Optional: resource folder
         documentation:
           skill:
             name: doc-generator
-            description: "Generate documentation from code"
+            description: 'Generate documentation from code'
 ```
 
 #### Skill Configuration Fields (Explicit Config)
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | Unique skill identifier shown to clients |
-| `description` | Yes | Brief description of what the skill does |
-| `folder` | No | Optional folder path for skill resources |
+| Field         | Required | Description                              |
+| ------------- | -------- | ---------------------------------------- |
+| `name`        | Yes      | Unique skill identifier shown to clients |
+| `description` | Yes      | Brief description of what the skill does |
+| `folder`      | No       | Optional folder path for skill resources |
 
 #### Skill Naming and Precedence
 
@@ -470,14 +490,14 @@ npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --parallel
 npx @agiflowai/one-mcp prefetch --config ./mcp-config.yaml --filter npx
 ```
 
-| Option | Description |
-|--------|-------------|
-| `-c, --config` | Path to config file |
-| `-p, --parallel` | Run prefetch commands in parallel |
-| `-d, --dry-run` | Show what would be prefetched without executing |
-| `-f, --filter` | Filter by package manager: `npx`, `pnpx`, `uvx`, or `uv` |
-| `--definitions-out` | Write a JSON or YAML definitions cache file for `mcp-serve` |
-| `--skip-packages` | Skip package prefetch and only write the definitions cache |
+| Option                      | Description                                                   |
+| --------------------------- | ------------------------------------------------------------- |
+| `-c, --config`              | Path to config file                                           |
+| `-p, --parallel`            | Run prefetch commands in parallel                             |
+| `-d, --dry-run`             | Show what would be prefetched without executing               |
+| `-f, --filter`              | Filter by package manager: `npx`, `pnpx`, `uvx`, or `uv`      |
+| `--definitions-out`         | Write a JSON or YAML definitions cache file for `mcp-serve`   |
+| `--skip-packages`           | Skip package prefetch and only write the definitions cache    |
 | `--clear-definitions-cache` | Delete the effective definitions cache file before continuing |
 
 ### Definitions Cache Workflow
@@ -500,15 +520,15 @@ The definitions cache stores tool schemas, prompt metadata, and prompt-based ski
 
 ### Server Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-c, --config` | Path to config file (YAML or JSON) | Required |
-| `-t, --type` | Transport: `stdio`, `http`, `sse`, `stdio-http` | `stdio` |
-| `-p, --port` | Port for HTTP/SSE/stdio-http internal HTTP | `3000` |
-| `--host` | Host for HTTP/SSE/stdio-http internal HTTP | `localhost` |
-| `--no-cache` | Force reload config, bypass cache | `false` |
-| `--definitions-cache` | Read tool/prompt/skill definitions from a specific JSON or YAML cache file | Auto-derived from config path |
-| `--clear-definitions-cache` | Delete the effective definitions cache file before startup | `false` |
+| Option                      | Description                                                                | Default                       |
+| --------------------------- | -------------------------------------------------------------------------- | ----------------------------- |
+| `-c, --config`              | Path to config file (YAML or JSON)                                         | Required                      |
+| `-t, --type`                | Transport: `stdio`, `http`, `sse`, `stdio-http`                            | `stdio`                       |
+| `-p, --port`                | Port for HTTP/SSE/stdio-http internal HTTP                                 | `3000`                        |
+| `--host`                    | Host for HTTP/SSE/stdio-http internal HTTP                                 | `localhost`                   |
+| `--no-cache`                | Force reload config, bypass cache                                          | `false`                       |
+| `--definitions-cache`       | Read tool/prompt/skill definitions from a specific JSON or YAML cache file | Auto-derived from config path |
+| `--clear-definitions-cache` | Delete the effective definitions cache file before startup                 | `false`                       |
 
 ## Notes
 

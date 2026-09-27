@@ -22,13 +22,13 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check packages/hooks-adapter"
+        "command": "oxlint packages/hooks-adapter && oxfmt --check packages/hooks-adapter"
       }
     },
     "lint:fix": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check --write packages/hooks-adapter"
+        "command": "oxlint --fix packages/hooks-adapter && oxfmt packages/hooks-adapter"
       }
     }
   },

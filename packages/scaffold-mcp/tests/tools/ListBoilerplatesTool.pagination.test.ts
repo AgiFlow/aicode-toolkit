@@ -193,7 +193,6 @@ describe('ListBoilerplatesTool - Pagination', () => {
     expect(firstPage._meta).toEqual({ total: 25, offset: 0, limit: 10 });
 
     // Decode cursor to verify it points to index 10
-    // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
     const decoded = PaginationHelper.decodeCursor(firstPage.nextCursor!);
     expect(decoded).toBe(10);
 
@@ -212,7 +211,6 @@ describe('ListBoilerplatesTool - Pagination', () => {
     expect(secondPage._meta).toEqual({ total: 25, offset: 10, limit: 10 });
 
     // Decode cursor to verify it points to index 20
-    // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
     const decoded2 = PaginationHelper.decodeCursor(secondPage.nextCursor!);
     expect(decoded2).toBe(20);
   });

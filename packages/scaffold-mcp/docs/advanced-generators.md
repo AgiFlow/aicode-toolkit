@@ -81,6 +81,7 @@ Create a `package.json` in the `generators/` folder:
 ```
 
 This enables:
+
 - Proper TypeScript support and IntelliSense
 - Type definitions for generator context
 - Shared utilities (though most are passed via context to avoid import resolution issues)
@@ -135,41 +136,43 @@ export default generate;
 
 The `GeneratorContext` object provides everything needed for scaffolding:
 
-| Property | Type | Description |
-|----------|------|-------------|
-| **Core Properties** | | |
-| `variables` | `Record<string, any>` | User-provided variables from the MCP call or CLI |
-| `config` | `ArchitectConfig[string]` | Scaffold configuration from `scaffold.yaml` |
-| `targetPath` | `string` | Absolute path to the target project directory |
-| `templatePath` | `string` | Absolute path to the template directory |
-| **Services** | | |
-| `fileSystem` | `IFileSystemService` | File system operations (read, write, copy, etc.) |
-| `scaffoldConfigLoader` | `IScaffoldConfigLoader` | Config parsing and validation utilities |
-| `variableReplacer` | `IVariableReplacementService` | Liquid template variable replacement |
-| **Utilities** | | |
-| `ScaffoldProcessingService` | `class` | Constructor for processing service (recommended) |
-| `getRootPath` | `() => string` | Get workspace root path |
-| `getProjectPath` | `(absolutePath: string) => string` | Convert absolute path to relative project path |
+| Property                    | Type                               | Description                                      |
+| --------------------------- | ---------------------------------- | ------------------------------------------------ |
+| **Core Properties**         |                                    |                                                  |
+| `variables`                 | `Record<string, any>`              | User-provided variables from the MCP call or CLI |
+| `config`                    | `ArchitectConfig[string]`          | Scaffold configuration from `scaffold.yaml`      |
+| `targetPath`                | `string`                           | Absolute path to the target project directory    |
+| `templatePath`              | `string`                           | Absolute path to the template directory          |
+| **Services**                |                                    |                                                  |
+| `fileSystem`                | `IFileSystemService`               | File system operations (read, write, copy, etc.) |
+| `scaffoldConfigLoader`      | `IScaffoldConfigLoader`            | Config parsing and validation utilities          |
+| `variableReplacer`          | `IVariableReplacementService`      | Liquid template variable replacement             |
+| **Utilities**               |                                    |                                                  |
+| `ScaffoldProcessingService` | `class`                            | Constructor for processing service (recommended) |
+| `getRootPath`               | `() => string`                     | Get workspace root path                          |
+| `getProjectPath`            | `(absolutePath: string) => string` | Convert absolute path to relative project path   |
 
 ### Built-in Variables
 
 The following variables are automatically available (in addition to user-provided variables):
 
 **For Boilerplates:**
+
 ```typescript
 {
-  projectName: string;    // Project directory name
-  packageName: string;    // NPM package name
+  projectName: string; // Project directory name
+  packageName: string; // NPM package name
   // ...user variables
 }
 ```
 
 **For Features:**
+
 ```typescript
 {
-  projectName: string;    // Name of the target project
-  appPath: string;        // Absolute path to the project
-  appName: string;        // Same as projectName
+  projectName: string; // Name of the target project
+  appPath: string; // Absolute path to the project
+  appName: string; // Same as projectName
   // ...user variables
 }
 ```
@@ -180,32 +183,31 @@ Your generator must return a `ScaffoldResult` object:
 
 ```typescript
 interface ScaffoldResult {
-  success: boolean;                // Whether scaffolding succeeded
-  message: string;                 // User-facing message
-  warnings?: string[];             // Optional warnings
-  createdFiles?: string[];         // List of created file paths
-  existingFiles?: string[];        // List of existing files that were preserved
+  success: boolean; // Whether scaffolding succeeded
+  message: string; // User-facing message
+  warnings?: string[]; // Optional warnings
+  createdFiles?: string[]; // List of created file paths
+  existingFiles?: string[]; // List of existing files that were preserved
 }
 ```
 
 **Success example:**
+
 ```typescript
 return {
   success: true,
   message: `Successfully scaffolded route at ${routePath}`,
-  createdFiles: [
-    '/path/to/route/page.tsx',
-    '/path/to/route/layout.tsx'
-  ],
-  warnings: ['Route already has a loading.tsx file, skipped']
+  createdFiles: ['/path/to/route/page.tsx', '/path/to/route/layout.tsx'],
+  warnings: ['Route already has a loading.tsx file, skipped'],
 };
 ```
 
 **Error example:**
+
 ```typescript
 return {
   success: false,
-  message: `Invalid route path: ${routePath}. Routes must start with /`
+  message: `Invalid route path: ${routePath}. Routes must start with /`,
 };
 ```
 
@@ -252,10 +254,7 @@ const generate = async (context: GeneratorContext): Promise<ScaffoldResult> => {
   const { fileSystem, variableReplacer, variables, templatePath, targetPath } = context;
 
   // Create processing service instance
-  const processingService = new ScaffoldProcessingService(
-    fileSystem,
-    variableReplacer
-  );
+  const processingService = new ScaffoldProcessingService(fileSystem, variableReplacer);
 
   const createdFiles: string[] = [];
   const existingFiles: string[] = [];
@@ -266,19 +265,20 @@ const generate = async (context: GeneratorContext): Promise<ScaffoldResult> => {
     path.join(targetPath, 'src/components/MyComponent.tsx'),
     variables,
     createdFiles,
-    existingFiles  // Optional: track existing files separately
+    existingFiles, // Optional: track existing files separately
   );
 
   return {
     success: true,
     message: 'Component scaffolded successfully',
     createdFiles,
-    existingFiles
+    existingFiles,
   };
 };
 ```
 
 **Key features of `copyAndProcess`:**
+
 - Automatically handles `.liquid` template files (strips extension)
 - Performs Liquid variable replacement
 - Tracks created files
@@ -326,7 +326,7 @@ Transform paths based on user input (e.g., for routing structures):
 
 ```typescript
 interface RouteVariables {
-  routePath: string;  // e.g., "/dashboard/users/[id]"
+  routePath: string; // e.g., "/dashboard/users/[id]"
 }
 
 const generate = async (context: GeneratorContext): Promise<ScaffoldResult> => {
@@ -342,12 +342,12 @@ const generate = async (context: GeneratorContext): Promise<ScaffoldResult> => {
   const customIncludes = [
     {
       source: 'src/app/page/page.tsx',
-      target: path.join(folderPath, 'page.tsx')
+      target: path.join(folderPath, 'page.tsx'),
     },
     {
       source: 'src/app/page/layout.tsx',
-      target: path.join(folderPath, 'layout.tsx')
-    }
+      target: path.join(folderPath, 'layout.tsx'),
+    },
   ];
 
   // Process with custom paths
@@ -356,14 +356,14 @@ const generate = async (context: GeneratorContext): Promise<ScaffoldResult> => {
       path.join(templatePath, source),
       path.join(targetPath, target),
       variables,
-      createdFiles
+      createdFiles,
     );
   }
 
   return {
     success: true,
     message: `Route scaffolded at ${folderPath}`,
-    createdFiles
+    createdFiles,
   };
 };
 ```
@@ -381,7 +381,7 @@ const generate = async (context: GeneratorContext): Promise<ScaffoldResult> => {
     if (!variables.featureName) {
       return {
         success: false,
-        message: 'Feature name is required'
+        message: 'Feature name is required',
       };
     }
 
@@ -389,7 +389,7 @@ const generate = async (context: GeneratorContext): Promise<ScaffoldResult> => {
     if (!/^[A-Z]/.test(variables.featureName)) {
       return {
         success: false,
-        message: 'Feature name must start with an uppercase letter'
+        message: 'Feature name must start with an uppercase letter',
       };
     }
 
@@ -398,13 +398,12 @@ const generate = async (context: GeneratorContext): Promise<ScaffoldResult> => {
 
     return {
       success: true,
-      message: 'Feature scaffolded successfully'
+      message: 'Feature scaffolded successfully',
     };
-
   } catch (error) {
     return {
       success: false,
-      message: `Error scaffolding feature: ${error instanceof Error ? error.message : String(error)}`
+      message: `Error scaffolding feature: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 };
@@ -447,17 +446,17 @@ import {
   GeneratorContext,
   ParsedInclude,
   ScaffoldResult,
-  ScaffoldProcessingService
+  ScaffoldProcessingService,
 } from '@agiflowai/aicode-utils';
 
 interface ViteReactRouteVariables {
   appPath: string;
   appName: string;
-  routeName: string;           // e.g., "dashboard/users"
-  routeNamePascal: string;     // e.g., "DashboardUsers"
+  routeName: string; // e.g., "dashboard/users"
+  routeNamePascal: string; // e.g., "DashboardUsers"
   withUI?: boolean;
   withValidator?: boolean;
-  dynamicParams?: string[];    // e.g., ["id", "slug"]
+  dynamicParams?: string[]; // e.g., ["id", "slug"]
   projectName: string;
   packageName: string;
 }
@@ -471,16 +470,13 @@ const generate = async (context: GeneratorContext): Promise<ScaffoldResult> => {
       targetPath,
       fileSystem,
       scaffoldConfigLoader,
-      variableReplacer
+      variableReplacer,
     } = context;
 
     const typedVariables = variables as ViteReactRouteVariables;
 
     // Initialize processing service
-    const processingService = new ScaffoldProcessingService(
-      fileSystem,
-      variableReplacer
-    );
+    const processingService = new ScaffoldProcessingService(fileSystem, variableReplacer);
 
     // Parse includes from config with custom path transformation
     const parsedIncludes: ParsedInclude[] = [];
@@ -525,12 +521,7 @@ const generate = async (context: GeneratorContext): Promise<ScaffoldResult> => {
       const sourcePath = path.join(templatePath, parsed.sourcePath);
       const targetFilePath = path.join(targetPath, parsed.targetPath);
 
-      await processingService.copyAndProcess(
-        sourcePath,
-        targetFilePath,
-        variables,
-        createdFiles
-      );
+      await processingService.copyAndProcess(sourcePath, targetFilePath, variables, createdFiles);
     }
 
     // Prepare success message
@@ -543,7 +534,6 @@ const generate = async (context: GeneratorContext): Promise<ScaffoldResult> => {
       warnings: warnings.length > 0 ? warnings : undefined,
       createdFiles: createdFiles.length > 0 ? createdFiles : undefined,
     };
-
   } catch (error) {
     return {
       success: false,
@@ -603,6 +593,7 @@ features:
 ### Template Files
 
 **src/routes/route/index.tsx.liquid:**
+
 ```typescript
 import { createFileRoute } from '@tanstack/react-router'
 
@@ -638,7 +629,7 @@ interface MyFeatureVariables {
 const typedVars = variables as MyFeatureVariables;
 
 // ❌ Bad: Accessing variables without types
-const featureName = variables.featureName;  // No IntelliSense
+const featureName = variables.featureName; // No IntelliSense
 ```
 
 ### 2. Use ScaffoldProcessingService
@@ -665,13 +656,13 @@ await processingService.copyAndProcess(source, target, variables, createdFiles);
 return {
   success: true,
   message: 'Success',
-  createdFiles  // User sees what was created
+  createdFiles, // User sees what was created
 };
 
 // ❌ Bad: Don't track files
 return {
   success: true,
-  message: 'Success'
+  message: 'Success',
   // User has no visibility into what was created
 };
 ```
@@ -686,17 +677,15 @@ await processingService.copyAndProcess(
   target,
   variables,
   createdFiles,
-  existingFiles  // Pass array to track existing files
+  existingFiles, // Pass array to track existing files
 );
 
 return {
   success: true,
   message: 'Success',
   createdFiles,
-  existingFiles,  // User knows what was preserved
-  warnings: existingFiles.length > 0
-    ? [`${existingFiles.length} files were preserved`]
-    : undefined
+  existingFiles, // User knows what was preserved
+  warnings: existingFiles.length > 0 ? [`${existingFiles.length} files were preserved`] : undefined,
 };
 
 // ❌ Bad: Silently overwrite
@@ -746,22 +735,17 @@ const generate = async (context: GeneratorContext): Promise<ScaffoldResult> => {
 return {
   success: true,
   message: `Successfully scaffolded route at ${routePath}`,
-  createdFiles: [
-    '/project/src/routes/page.tsx',
-    '/project/src/routes/layout.tsx'
-  ],
+  createdFiles: ['/project/src/routes/page.tsx', '/project/src/routes/layout.tsx'],
   existingFiles: [
-    '/project/src/routes/loading.tsx'  // Already existed
+    '/project/src/routes/loading.tsx', // Already existed
   ],
-  warnings: [
-    'Route already has a loading.tsx, preserved existing file'
-  ]
+  warnings: ['Route already has a loading.tsx, preserved existing file'],
 };
 
 // ❌ Bad: Minimal result
 return {
   success: true,
-  message: 'Done'
+  message: 'Done',
 };
 ```
 
@@ -771,13 +755,13 @@ return {
 // ✅ Good: Descriptive error with context
 return {
   success: false,
-  message: `Invalid route path "${routePath}". Route paths must start with "/" and contain only alphanumeric characters, hyphens, and underscores.`
+  message: `Invalid route path "${routePath}". Route paths must start with "/" and contain only alphanumeric characters, hyphens, and underscores.`,
 };
 
 // ❌ Bad: Vague error
 return {
   success: false,
-  message: 'Invalid input'
+  message: 'Invalid input',
 };
 ```
 
@@ -802,6 +786,7 @@ const targetPath = targetPath + '/src/components/Button.tsx';
 **Error:** `Error loading or executing generator myGenerator.ts`
 
 **Solutions:**
+
 1. Verify generator file exists at `templates/<template-name>/generators/myGenerator.ts`
 2. Check `scaffold.yaml` references the correct filename
 3. Ensure generator exports a default function
@@ -819,6 +804,7 @@ export { generate };
 **Error:** `Cannot find module '@agiflowai/aicode-utils'`
 
 **Solutions:**
+
 1. Create `package.json` in `generators/` folder:
    ```json
    {
@@ -836,6 +822,7 @@ export { generate };
 **Problem:** Variables not being replaced in generated files
 
 **Solutions:**
+
 1. Ensure source files use `.liquid` extension OR are processed through `copyAndProcess`
 2. Check Liquid syntax: `{{ variableName }}` not `{variableName}`
 3. Verify variables are passed to `copyAndProcess`:
@@ -843,8 +830,8 @@ export { generate };
    await processingService.copyAndProcess(
      sourcePath,
      targetPath,
-     variables,  // ← Make sure this is passed
-     createdFiles
+     variables, // ← Make sure this is passed
+     createdFiles,
    );
    ```
 
@@ -853,6 +840,7 @@ export { generate };
 **Problem:** Files created in wrong location
 
 **Solutions:**
+
 1. Use absolute paths consistently:
    ```typescript
    const targetFilePath = path.join(targetPath, 'src', 'components', 'Button.tsx');
@@ -868,6 +856,7 @@ export { generate };
 **Problem:** Generator succeeds but no files appear
 
 **Solutions:**
+
 1. Ensure directories are created:
    ```typescript
    await fileSystem.ensureDir(path.dirname(targetFilePath));
@@ -881,6 +870,7 @@ export { generate };
 **Problem:** Include conditions not working
 
 **Solutions:**
+
 1. Parse includes correctly:
    ```typescript
    const parsed = scaffoldConfigLoader.parseIncludeEntry(includeEntry, variables);
@@ -888,7 +878,7 @@ export { generate };
 2. Check conditions:
    ```typescript
    if (!scaffoldConfigLoader.shouldIncludeFile(parsed.conditions, variables)) {
-     continue;  // Skip this file
+     continue; // Skip this file
    }
    ```
 3. Ensure condition variables match exactly:
@@ -899,7 +889,9 @@ export { generate };
    ```
    ```typescript
    // Generator must pass withLayout variable
-   variables: { withLayout: true }
+   variables: {
+     withLayout: true;
+   }
    ```
 
 ---
@@ -974,7 +966,7 @@ const generate = async (context: GeneratorContext): Promise<ScaffoldResult> => {
     // kebab-case to PascalCase
     componentNamePascal: variables.componentName
       .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(''),
     // Generate timestamp
     generatedAt: new Date().toISOString(),
@@ -986,8 +978,8 @@ const generate = async (context: GeneratorContext): Promise<ScaffoldResult> => {
   await processingService.copyAndProcess(
     sourcePath,
     targetPath,
-    enrichedVariables,  // ← Enhanced variables
-    createdFiles
+    enrichedVariables, // ← Enhanced variables
+    createdFiles,
   );
 };
 ```

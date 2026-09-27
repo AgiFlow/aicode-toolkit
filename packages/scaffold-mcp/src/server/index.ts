@@ -58,17 +58,21 @@ export function createServer(options: ServerOptions = {}): Server {
   if (!templatesPath) {
     throw new Error(
       'Templates folder not found. Please create a "templates" folder in your workspace root, ' +
-      'or specify "templatesPath" in toolkit.yaml to point to your templates directory.',
+        'or specify "templatesPath" in toolkit.yaml to point to your templates directory.',
     );
   }
 
   // Initialize tools (conditional based on project type)
-  const listBoilerplatesTool = !isMonolith ? new ListBoilerplatesTool(templatesPath, isMonolith) : null;
+  const listBoilerplatesTool = !isMonolith
+    ? new ListBoilerplatesTool(templatesPath, isMonolith)
+    : null;
   const useBoilerplateTool = !isMonolith ? new UseBoilerplateTool(templatesPath, isMonolith) : null;
   const listScaffoldingMethodsTool = new ListScaffoldingMethodsTool(templatesPath, isMonolith);
   const useScaffoldMethodTool = new UseScaffoldMethodTool(templatesPath, isMonolith);
   const writeToFileTool = new WriteToFileTool();
-  const generateBoilerplateTool = adminEnabled ? new GenerateBoilerplateTool(templatesPath, isMonolith) : null;
+  const generateBoilerplateTool = adminEnabled
+    ? new GenerateBoilerplateTool(templatesPath, isMonolith)
+    : null;
   const generateBoilerplateFileTool = adminEnabled
     ? new GenerateBoilerplateFileTool(templatesPath, isMonolith)
     : null;
@@ -189,7 +193,9 @@ export function createServer(options: ServerOptions = {}): Server {
 
       return { tools };
     } catch (error) {
-      throw new Error(`Failed to list tools: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to list tools: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   });
 
@@ -245,7 +251,9 @@ export function createServer(options: ServerOptions = {}): Server {
 
       throw new Error(`Unknown tool: ${name}`);
     } catch (error) {
-      throw new Error(`Tool '${name}' execution failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Tool '${name}' execution failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   });
 
@@ -258,13 +266,16 @@ export function createServer(options: ServerOptions = {}): Server {
 
       if (adminEnabled) {
         if (generateBoilerplatePrompt) prompts.push(generateBoilerplatePrompt.getDefinition());
-        if (generateFeatureScaffoldPrompt) prompts.push(generateFeatureScaffoldPrompt.getDefinition());
+        if (generateFeatureScaffoldPrompt)
+          prompts.push(generateFeatureScaffoldPrompt.getDefinition());
         if (syncTemplatePatternsPrompt) prompts.push(syncTemplatePatternsPrompt.getDefinition());
       }
 
       return { prompts };
     } catch (error) {
-      throw new Error(`Failed to list prompts: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to list prompts: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   });
 
@@ -302,7 +313,9 @@ export function createServer(options: ServerOptions = {}): Server {
 
       throw new Error(`Unknown prompt: ${name}`);
     } catch (error) {
-      throw new Error(`Prompt '${name}' execution failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Prompt '${name}' execution failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   });
 

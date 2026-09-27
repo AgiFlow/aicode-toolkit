@@ -265,20 +265,16 @@ describe('DefinitionsCacheService', () => {
   });
 
   it('derives a home-directory cache path from the sanitized absolute config path', () => {
-    expect(
-      DefinitionsCacheService.getDefaultCachePath('/tmp/project/mcp-config.yaml'),
-    ).toBe(
-      join(
-        homedir(),
-        '.aicode-toolkit',
-        'tmp_project_mcp-config.yaml.definitions-cache.json',
-      ),
+    expect(DefinitionsCacheService.getDefaultCachePath('/tmp/project/mcp-config.yaml')).toBe(
+      join(homedir(), '.aicode-toolkit', 'tmp_project_mcp-config.yaml.definitions-cache.json'),
     );
   });
 
   it('collapses repeated unsafe characters when sanitizing the config path', () => {
     expect(
-      DefinitionsCacheService.getDefaultCachePath('/tmp///project///nested config///mcp config.yaml'),
+      DefinitionsCacheService.getDefaultCachePath(
+        '/tmp///project///nested config///mcp config.yaml',
+      ),
     ).toBe(
       join(
         homedir(),
@@ -289,7 +285,6 @@ describe('DefinitionsCacheService', () => {
   });
 
   it('validates cache metadata', () => {
-
     expect(
       DefinitionsCacheService.isCacheValid(
         {

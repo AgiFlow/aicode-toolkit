@@ -11,10 +11,10 @@ Hooks let architect-mcp provide patterns before file edits and review feedback a
 
 ## Supported Agents
 
-| Agent | Status | Hook Events |
-|-------|--------|-------------|
-| Claude Code | Stable | `PreToolUse`, `PostToolUse` |
-| Gemini CLI | WIP | `beforeToolUse`, `afterToolUse` |
+| Agent       | Status | Hook Events                     |
+| ----------- | ------ | ------------------------------- |
+| Claude Code | Stable | `PreToolUse`, `PostToolUse`     |
+| Gemini CLI  | WIP    | `beforeToolUse`, `afterToolUse` |
 
 ## Claude Code Hooks
 
@@ -80,6 +80,7 @@ Add directly to `.claude/settings.json` or `.claude/settings.local.json`:
 #### PreToolUse (Edit|MultiEdit|Write)
 
 Before Claude edits or writes a file, the hook:
+
 1. Extracts the file path from the tool input
 2. Looks up design patterns from `architect.yaml` that match the file
 3. Retrieves applicable coding rules from `RULES.yaml`
@@ -88,6 +89,7 @@ Before Claude edits or writes a file, the hook:
 #### PostToolUse (Edit|MultiEdit|Write)
 
 After Claude edits or writes a file, the hook:
+
 1. Reads the modified file content
 2. Checks for violations against `RULES.yaml` rules
 3. Returns feedback on any issues found
@@ -95,16 +97,17 @@ After Claude edits or writes a file, the hook:
 
 ### Hook Decisions
 
-| Decision | Behavior |
-|----------|----------|
-| `allow` | Proceed with the operation, optionally with guidance message |
-| `deny` | Block the operation with an error message |
-| `ask` | Prompt the user for confirmation |
-| `skip` | Silently allow (no output to Claude) |
+| Decision | Behavior                                                     |
+| -------- | ------------------------------------------------------------ |
+| `allow`  | Proceed with the operation, optionally with guidance message |
+| `deny`   | Block the operation with an error message                    |
+| `ask`    | Prompt the user for confirmation                             |
+| `skip`   | Silently allow (no output to Claude)                         |
 
 ### Execution Tracking
 
 Hooks track executions per session to avoid duplicate processing:
+
 - Each file is only analyzed once per tool use cycle
 - Tracking resets when the session ends
 - Stable IDs are based on file path and tool input hash
@@ -144,11 +147,11 @@ Add to your Gemini CLI settings (`~/.gemini/settings.json`):
 
 ### Hook Decisions
 
-| Decision | Behavior |
-|----------|----------|
-| `ALLOW` | Proceed with the operation, optionally with guidance message |
-| `BLOCK` | Block the operation with an error message |
-| `WARN` | Show a warning but allow the operation |
+| Decision | Behavior                                                     |
+| -------- | ------------------------------------------------------------ |
+| `ALLOW`  | Proceed with the operation, optionally with guidance message |
+| `BLOCK`  | Block the operation with an error message                    |
+| `WARN`   | Show a warning but allow the operation                       |
 
 ## CLI Commands
 
@@ -176,6 +179,7 @@ architect-mcp hook --type gemini-cli.afterToolUse   # Code review after edit
 ### Input/Output
 
 Hook commands:
+
 - Read tool use context from **stdin** (JSON format)
 - Write hook responses to **stdout** (JSON format)
 
@@ -184,6 +188,7 @@ These commands are called by the AI agent's hook system, not directly by users.
 ## Architecture
 
 The hooks system uses `@agiflowai/hooks-adapter` for:
+
 - shared hook logic across agents
 - agent-specific input/output adapters
 - execution logging
@@ -199,6 +204,7 @@ The hooks system uses `@agiflowai/hooks-adapter` for:
 ### Duplicate hook executions
 
 The execution tracking should prevent this, but if you see duplicates:
+
 1. Check if multiple hook configurations are active
 2. Verify the session ID is being passed correctly
 

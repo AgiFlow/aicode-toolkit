@@ -107,7 +107,9 @@ describe('SearchListToolsTool', () => {
     const definition = await tool.getDefinition();
 
     expect(definition.description).toContain('alpha: documentation, search');
-    expect(definition.description).toContain('beta: code-review, documentation, quality-checks, search');
+    expect(definition.description).toContain(
+      'beta: code-review, documentation, quality-checks, search',
+    );
   });
 
   it('filters by server name', async () => {

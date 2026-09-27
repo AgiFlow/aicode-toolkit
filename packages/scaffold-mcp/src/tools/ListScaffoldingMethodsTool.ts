@@ -108,7 +108,6 @@ export class ListScaffoldingMethodsTool {
           result = await this.scaffoldingMethodsService.listScaffoldingMethods(projectPath, cursor);
         } else {
           result = await this.scaffoldingMethodsService.listScaffoldingMethodsByTemplate(
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
             templateName!,
             cursor,
           );

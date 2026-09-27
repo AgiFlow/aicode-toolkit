@@ -29,13 +29,13 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check packages/scaffold-mcp"
+        "command": "oxlint packages/scaffold-mcp && oxfmt --check packages/scaffold-mcp"
       }
     },
     "lint:fix": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check --write packages/scaffold-mcp"
+        "command": "oxlint --fix packages/scaffold-mcp && oxfmt packages/scaffold-mcp"
       }
     }
   },

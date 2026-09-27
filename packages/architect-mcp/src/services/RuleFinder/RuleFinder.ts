@@ -257,7 +257,6 @@ export class RuleFinder {
 
     // Merge all rules in priority order: project -> template -> global
     return {
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       ...baseConfig!,
       rules: [
         ...(projectRules?.rules || []),
@@ -276,7 +275,6 @@ export class RuleFinder {
   }> {
     // Check cache
     if (this.rulesCache.has(sourceTemplate)) {
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       const cached = this.rulesCache.get(sourceTemplate)!;
       const templatesRoot = await TemplatesManagerService.findTemplatesPath(this.workspaceRoot);
       if (!templatesRoot) {

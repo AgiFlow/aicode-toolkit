@@ -25,7 +25,7 @@ concurrency:
 env:
   # The pre-commit hook runs the full test suite and commitlint on every commit.
   # Release commits carry a fixed message and are validated by the lanes below.
-  HUSKY: '0'
+  HUSKY: "0"
 
 jobs:
   prepare:
@@ -165,6 +165,10 @@ jobs:
 
       - name: Install frozen registry and workspace dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        if: matrix.target == 'build'
+        run: pnpm format:check
 
       - name: Build packages
         run: pnpm nx run-many -t build --parallel=3

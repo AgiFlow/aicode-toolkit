@@ -94,7 +94,6 @@ export class ArchitectParser {
 
     // Check cache first
     if (this.configCache.has(architectPath)) {
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       return this.configCache.get(architectPath)!;
     }
 
@@ -181,7 +180,6 @@ export class ArchitectParser {
 
     // Check cache first
     if (this.configCache.has(resolvedPath)) {
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       return this.configCache.get(resolvedPath)!;
     }
 

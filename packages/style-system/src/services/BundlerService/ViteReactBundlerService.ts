@@ -319,7 +319,6 @@ export class ViteReactBundlerService extends BaseBundlerService {
     // If server is already running for the same app, return existing info
     if (this.isServerRunning() && this.currentAppPath === resolvedAppPath) {
       log.info(`[ViteReactBundlerService] Server already running for ${resolvedAppPath}`);
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       return { url: this.serverUrl!, port: this.serverPort! };
     }
 
@@ -699,7 +698,6 @@ ${cssImportStatements}
 
     // Use absolute path to wrapper CSS with @source directive for Tailwind v4
     // Virtual modules don't have a real location, so relative paths don't work
-    // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
     const wrapperCssPath = path.join(tmpDir!, 'tailwind-wrapper.css').replace(/\\/g, '/');
     const cssImports = `import '${wrapperCssPath}';`;
 
