@@ -18,11 +18,10 @@
  * - Direct tool implementation (services should be tool-agnostic)
  */
 
-import type { ChildProcess } from 'node:child_process';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { Client } from '@modelcontextprotocol/client';
+import { SSEClientTransport } from '@modelcontextprotocol/client';
+import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import type {
   McpClientConnection,
   McpHttpConfig,
@@ -57,9 +56,8 @@ class McpClient implements McpClientConnection {
   prompts?: Record<string, PromptConfig>;
   transport: McpServerTransportType;
   private client: Client;
-  private childProcess?: ChildProcess;
   private connected: boolean = false;
-  private reconnectFn?: () => Promise<{ client: Client; childProcess?: ChildProcess }>;
+  private reconnectFn?: () => Promise<{ client: Client }>;
 
   constructor(
     serverName: string,
@@ -81,10 +79,6 @@ class McpClient implements McpClientConnection {
     this.client = client;
   }
 
-  setChildProcess(process: ChildProcess): void {
-    this.childProcess = process;
-  }
-
   setConnected(connected: boolean): void {
     this.connected = connected;
   }
@@ -94,7 +88,7 @@ class McpClient implements McpClientConnection {
    * Called automatically by withSessionRetry when a session error is detected
    * (e.g., downstream HTTP server restarted and the old session ID is invalid).
    */
-  setReconnectFn(fn: () => Promise<{ client: Client; childProcess?: ChildProcess }>): void {
+  setReconnectFn(fn: () => Promise<{ client: Client }>): void {
     this.reconnectFn = fn;
   }
 
@@ -122,9 +116,6 @@ class McpClient implements McpClientConnection {
       }
       const result = await this.reconnectFn();
       this.client = result.client;
-      if (result.childProcess) {
-        this.childProcess = result.childProcess;
-      }
       return await operation();
     }
   }
@@ -165,7 +156,7 @@ class McpClient implements McpClientConnection {
     }
     return this.withSessionRetry(async () => {
       const requestOptions = options?.timeout ? { timeout: options.timeout } : undefined;
-      return await this.client.callTool({ name, arguments: args }, undefined, requestOptions);
+      return await this.client.callTool({ name, arguments: args }, requestOptions);
     });
   }
 
@@ -188,9 +179,7 @@ class McpClient implements McpClientConnection {
   }
 
   async close(): Promise<void> {
-    if (this.childProcess) {
-      this.childProcess.kill();
-    }
+    // The public client/transport close API owns stdio child shutdown in SDK v2.
     await this.client.close();
     this.connected = false;
   }
@@ -204,30 +193,13 @@ export class McpClientManagerService {
   private serverConfigs: Map<string, McpServerConfig> = new Map();
   private connectionPromises: Map<string, Promise<McpClient>> = new Map();
 
-  /**
-   * Synchronously kill all stdio MCP server child processes.
-   * Must be called by the owner (e.g. transport/command layer) during shutdown.
-   */
+  /** Close downstream clients and their stdio children using the SDK transport API. */
   cleanupChildProcesses(): void {
-    // Kill all stdio MCP server child processes
-    for (const [serverName, client] of this.clients) {
-      try {
-        // biome-ignore lint/complexity/useLiteralKeys: accessing private property intentionally
-        const childProcess = client['childProcess'];
-        if (childProcess && !childProcess.killed) {
-          console.error(`Killing stdio MCP server: ${serverName} (PID: ${childProcess.pid})`);
-          childProcess.kill('SIGTERM');
-
-          // Force kill after timeout if process doesn't exit
-          setTimeout(() => {
-            if (!childProcess.killed) {
-              console.error(`Force killing stdio MCP server: ${serverName} (PID: ${childProcess.pid})`);
-              childProcess.kill('SIGKILL');
-            }
-          }, 1000);
-        }
-      } catch (error) {
-        console.error(`Failed to kill child process for ${serverName}:`, error);
+    for (const client of this.clients.values()) {
+      if (client.transport === 'stdio') {
+        void client.close().catch((error: unknown) => {
+          console.error('Failed to close stdio MCP server:', error);
+        });
       }
     }
   }
@@ -291,6 +263,7 @@ export class McpClientManagerService {
       },
       {
         capabilities: {},
+        enforceStrictCapabilities: true,
       },
     );
 
@@ -302,13 +275,22 @@ export class McpClientManagerService {
     });
 
     try {
-      // Wrap connection with timeout
-      await Promise.race([
-        this.performConnection(mcpClient, config),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error(`Connection timeout after ${timeoutMs}ms`)), timeoutMs),
-        ),
-      ]);
+      // Clear the watchdog after either connection outcome so successful clients
+      // do not keep the host process alive for the full connection timeout.
+      let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          this.performConnection(mcpClient, config),
+          new Promise<never>((_, reject) => {
+            timeoutHandle = setTimeout(
+              () => reject(new Error(`Connection timeout after ${timeoutMs}ms`)),
+              timeoutMs,
+            );
+          }),
+        ]);
+      } finally {
+        if (timeoutHandle) clearTimeout(timeoutHandle);
+      }
 
       mcpClient.setConnected(true);
 
@@ -318,7 +300,10 @@ export class McpClientManagerService {
       if (config.transport === 'http' || config.transport === 'sse') {
         mcpClient.setReconnectFn(async () => {
           try {
-            const newClient = new Client({ name: '@agiflowai/one-mcp-client', version: '0.1.0' }, { capabilities: {} });
+            const newClient = new Client(
+              { name: '@agiflowai/one-mcp-client', version: '0.1.0' },
+              { capabilities: {}, enforceStrictCapabilities: true },
+            );
             const newMcpClient = new McpClient(serverName, config.transport, newClient, {});
             await this.performConnection(newMcpClient, config);
             return { client: newClient };
@@ -375,15 +360,7 @@ export class McpClientManagerService {
 
     // biome-ignore lint/complexity/useLiteralKeys: accessing private property intentionally
     await mcpClient['client'].connect(transport);
-
-    // Capture the child process from the transport for proper cleanup
-    // biome-ignore lint/complexity/useLiteralKeys: accessing private property intentionally
-    const childProcess = transport['_process'];
-    if (childProcess) {
-      mcpClient.setChildProcess(childProcess);
-    }
   }
-
   private async connectHttpClient(mcpClient: McpClient, config: McpHttpConfig): Promise<void> {
     const transport = new StreamableHTTPClientTransport(new URL(config.url), {
       requestInit: config.headers ? { headers: config.headers } : undefined,

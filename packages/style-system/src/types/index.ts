@@ -10,7 +10,7 @@
  * - Use descriptive names for types and interfaces
  */
 
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 
 /**
  * Tool definition for MCP
@@ -19,7 +19,7 @@ export interface ToolDefinition {
   name: string;
   description: string;
   inputSchema: {
-    type: string;
+    type: 'object';
     properties: Record<string, any>;
     required?: string[];
     additionalProperties?: boolean;

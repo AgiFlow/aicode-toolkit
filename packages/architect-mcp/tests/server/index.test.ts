@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@modelcontextprotocol/sdk/server/index.js', () => {
+vi.mock('@modelcontextprotocol/server', () => {
   class MockServer {
     public name: string;
     public version: string;
@@ -19,11 +19,6 @@ vi.mock('@modelcontextprotocol/sdk/server/index.js', () => {
 
   return { Server: MockServer };
 });
-
-vi.mock('@modelcontextprotocol/sdk/types.js', () => ({
-  CallToolRequestSchema: {},
-  ListToolsRequestSchema: {},
-}));
 
 describe('architect-mcp server capability metadata', () => {
   it('adds capability tags to listed tools', async () => {

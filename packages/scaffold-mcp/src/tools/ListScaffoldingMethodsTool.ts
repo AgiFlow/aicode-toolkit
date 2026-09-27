@@ -1,4 +1,4 @@
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import { ProjectConfigResolver } from '@agiflowai/aicode-utils';
 import listScaffoldingMethodsDescription from '../instructions/tools/list-scaffolding-methods/description.md?raw';
 import { FileSystemService } from '../services/FileSystemService';

@@ -20,7 +20,7 @@ import { log } from '@agiflowai/aicode-utils';
  * - Missing input validation
  */
 
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import type {
   Tool,
   ToolDefinition,

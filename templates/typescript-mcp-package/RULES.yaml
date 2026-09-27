@@ -317,19 +317,19 @@ rules:
       - export-standards
       - error-handling
     must_do:
-      - rule: Register all tools in ListToolsRequestSchema handler
+      - rule: Register all tools in the tools/list handler
         codeExample: |
           // ✅ GOOD
-          server.setRequestHandler(ListToolsRequestSchema, async () => ({
+          server.setRequestHandler('tools/list', async () => ({
             tools: [
               myTool.getDefinition(),
               otherTool.getDefinition(),
             ],
           }));
-      - rule: Handle tool calls in CallToolRequestSchema handler
+      - rule: Handle tool calls in the tools/call handler
         codeExample: |
           // ✅ GOOD
-          server.setRequestHandler(CallToolRequestSchema, async (request) => {
+          server.setRequestHandler('tools/call', async (request) => {
             const { name, arguments: args } = request.params;
 
             if (name === MyTool.TOOL_NAME) {
@@ -480,10 +480,10 @@ rules:
       - rule: Import correct transport for use case (Stdio or SSE)
         codeExample: |-
           // For stdio (CLI usage)
-          import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+          import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
           // For SSE (HTTP usage)
-          import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+          import { SSEServerTransport } from '@modelcontextprotocol/server-legacy/sse';
     must_not_do:
       - rule: Mix multiple transports in same entry point
         codeExample: |-

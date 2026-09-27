@@ -19,7 +19,7 @@
  * - Missing input validation
  */
 
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import { AppComponentsService } from '../services';
 import type { Tool, ToolDefinition } from '../types';
 

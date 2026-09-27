@@ -11,8 +11,8 @@
  * - Import tools from ../tools/ and register them in the handlers
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { Server } from '@modelcontextprotocol/server';
+
 import { GetFileDesignPatternTool } from '../tools/GetFileDesignPatternTool';
 import { ReviewCodeChangeTool } from '../tools/ReviewCodeChangeTool';
 import { AddDesignPatternTool } from '../tools/AddDesignPatternTool';
@@ -124,7 +124,7 @@ Example workflow:
   const addRuleTool = adminEnabled ? new AddRuleTool() : null;
   const validateArchitectTool = adminEnabled ? new ValidateArchitectTool() : null;
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
+  server.setRequestHandler('tools/list', async () => {
     const tools = [
       withCapabilities(getFileDesignPatternTool.getDefinition(), [
         'architecture',
@@ -171,7 +171,7 @@ Example workflow:
     return { tools };
   });
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler('tools/call', async (request) => {
     const { name, arguments: args } = request.params;
 
     if (name === GetFileDesignPatternTool.TOOL_NAME) {

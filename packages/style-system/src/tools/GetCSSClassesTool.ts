@@ -21,7 +21,7 @@
 
 import path from 'node:path';
 import { TemplatesManagerService } from '@agiflowai/aicode-utils';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import { getAppDesignSystemConfig, getGetCssClassesConfig } from '../config';
 import type { BaseCSSClassesService, CSSClassCategory } from '../services/CssClasses';
 import { CSSClassesServiceFactory } from '../services/CssClasses';

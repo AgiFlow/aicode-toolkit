@@ -13,15 +13,8 @@
  * - Import tools from ../tools/ and register them in the handlers
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  ListResourcesRequestSchema,
-  ReadResourceRequestSchema,
-  ListPromptsRequestSchema,
-  GetPromptRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { Server } from '@modelcontextprotocol/server';
+
 import { ConfigFetcherService } from '../services/ConfigFetcherService';
 import { DefinitionsCacheService } from '../services/DefinitionsCacheService';
 import { McpClientManagerService } from '../services/McpClientManagerService';
@@ -488,7 +481,7 @@ export async function createSessionServer(shared: SharedServices): Promise<Serve
     }
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  server.setRequestHandler('tools/list', async () => ({
     tools: proxyMode === 'flat'
       ? await (async () => {
           const currentServerDefinitions = await definitionsCacheService.getServerDefinitions();
@@ -516,7 +509,7 @@ export async function createSessionServer(shared: SharedServices): Promise<Serve
         ],
   }));
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler('tools/call', async (request) => {
     const { name, arguments: args } = request.params;
 
     if (name === DescribeToolsTool.TOOL_NAME) {
@@ -559,7 +552,7 @@ export async function createSessionServer(shared: SharedServices): Promise<Serve
     throw new Error(`Unknown tool: ${name}`);
   });
 
-  server.setRequestHandler(ListResourcesRequestSchema, async () => {
+  server.setRequestHandler('resources/list', async () => {
     const currentServerDefinitions = await definitionsCacheService.getServerDefinitions();
     const resourceToServers = new Map<string, string[]>();
 
@@ -578,6 +571,7 @@ export async function createSessionServer(shared: SharedServices): Promise<Serve
         const hasClash = (resourceToServers.get(resource.uri) || []).length > 1;
         resources.push({
           ...resource,
+          name: resource.name ?? resource.uri,
           uri: hasClash ? `${serverDefinition.serverName}__${resource.uri}` : resource.uri,
         });
       }
@@ -586,7 +580,7 @@ export async function createSessionServer(shared: SharedServices): Promise<Serve
     return { resources };
   });
 
-  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  server.setRequestHandler('resources/read', async (request) => {
     const { uri } = request.params;
     const { serverName, actualToolName: actualUri } = parseToolName(uri);
 
@@ -612,7 +606,7 @@ export async function createSessionServer(shared: SharedServices): Promise<Serve
     return await client.readResource(actualUri);
   });
 
-  server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  server.setRequestHandler('prompts/list', async () => {
     const currentServerDefinitions = await definitionsCacheService.getServerDefinitions();
 
     const promptToServers = new Map<string, string[]>();
@@ -647,7 +641,7 @@ export async function createSessionServer(shared: SharedServices): Promise<Serve
     return { prompts: aggregatedPrompts };
   });
 
-  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  server.setRequestHandler('prompts/get', async (request) => {
     const { name, arguments: args } = request.params;
     const currentServerDefinitions = await definitionsCacheService.getServerDefinitions();
 

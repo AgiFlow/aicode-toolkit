@@ -1,7 +1,7 @@
 import { beforeEach, vi } from 'vitest';
 
-// Mock @modelcontextprotocol/sdk
-vi.mock('@modelcontextprotocol/sdk/server/index.js', () => {
+// Mock the v2 server for isolated unit tests; integration tests use the real SDK.
+vi.mock('@modelcontextprotocol/server', () => {
   class MockServer {
     public name: string;
     public version: string;
@@ -24,13 +24,6 @@ vi.mock('@modelcontextprotocol/sdk/server/index.js', () => {
     Server: MockServer,
   };
 });
-
-vi.mock('@modelcontextprotocol/sdk/types.js', () => ({
-  CallToolRequestSchema: {},
-  ListToolsRequestSchema: {},
-  ListPromptsRequestSchema: {},
-  GetPromptRequestSchema: {},
-}));
 
 // Global test setup
 beforeEach(() => {

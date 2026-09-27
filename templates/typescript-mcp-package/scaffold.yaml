@@ -2,7 +2,7 @@ boilerplate:
   - name: scaffold-mcp-package
     targetFolder: packages
     description: |-
-      A TypeScript-based Model Context Protocol (MCP) server package template with complete tooling setup, including Vitest for testing, tsdown for bundling, and comprehensive TypeScript configuration. Built on @modelcontextprotocol/sdk for MCP server implementation with support for tools, resources, and prompts.
+      A TypeScript-based Model Context Protocol (MCP) server package template with complete tooling setup, including Vitest for testing, tsdown for bundling, and comprehensive TypeScript configuration. Built on @modelcontextprotocol/server for MCP server implementation with support for tools, resources, and prompts.
 
       Perfect for building MCP servers that extend Claude Code and other MCP clients with custom tools, integrations, and workflows. Includes both stdio and SSE transport options for flexible deployment.
 
@@ -196,7 +196,7 @@ features:
 
       Naming conventions: Tool classes use PascalCase with 'Tool' suffix (e.g., FileReadTool). Tool names (in TOOL_NAME constant) use snake_case (e.g., 'file_read'). Service classes use PascalCase with 'Service' suffix.
 
-      Usage guidelines: Import Tool, ToolDefinition from ../types and CallToolResult from @modelcontextprotocol/sdk/types.js. Define inputSchema in getDefinition() using JSON Schema. Implement execute method to handle tool logic. Return CallToolResult with content array. Handle errors gracefully with isError flag.
+      Usage guidelines: Import Tool, ToolDefinition from ../types and CallToolResult from @modelcontextprotocol/server. Define inputSchema in getDefinition() using JSON Schema. Implement execute method to handle tool logic. Return CallToolResult with content array. Handle errors gracefully with isError flag.
 
       IMPORTANT - Service Reuse:
       1. BEFORE creating a new tool, check src/services/ for existing services that may already provide the logic you need
@@ -207,8 +207,8 @@ features:
       Registration steps:
       1. Import your tool: import { MyTool } from '../tools/MyTool';
       2. Instantiate: const myTool = new MyTool();
-      3. In ListToolsRequestSchema handler: Add myTool.getDefinition() to tools array
-      4. In CallToolRequestSchema handler: if (name === MyTool.TOOL_NAME) return await myTool.execute(args as any);
+      3. In the tools/list handler: Add myTool.getDefinition() to tools array
+      4. In the tools/call handler: if (name === MyTool.TOOL_NAME) return await myTool.execute(args as any);
 
       Testing approach: Write unit tests with mocked services. Test input validation, success cases, and error handling. Use Vitest for testing framework.
     patterns:

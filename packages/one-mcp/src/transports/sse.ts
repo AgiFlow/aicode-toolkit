@@ -22,8 +22,8 @@
  */
 
 import type { Server as HttpServer } from 'node:http';
-import type { Server as McpServer } from '@modelcontextprotocol/sdk/server/index.js';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import type { Server as McpServer } from '@modelcontextprotocol/server';
+import { SSEServerTransport } from '@modelcontextprotocol/server-legacy/sse';
 import express, { type Request, type Response } from 'express';
 import type {
   HttpTransportHandler as IHttpTransportHandler,

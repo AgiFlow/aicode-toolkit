@@ -20,7 +20,7 @@
  */
 
 import { log } from '@agiflowai/aicode-utils';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import { getSharedComponentTags } from '../config';
 import { StoriesIndexService } from '../services';
 import type { Tool, ToolDefinition } from '../types';

@@ -25,9 +25,9 @@ import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import type { Server as HttpServer } from 'node:http';
 import { promisify } from 'node:util';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
-import type { Server as McpServer } from '@modelcontextprotocol/sdk/server/index.js';
+import { NodeStreamableHTTPServerTransport } from '@modelcontextprotocol/node';
+import { isInitializeRequest } from '@modelcontextprotocol/server';
+import type { Server as McpServer } from '@modelcontextprotocol/server';
 import express, { type Request, type Response } from 'express';
 import type {
   HttpTransportAdminOptions,
@@ -41,7 +41,7 @@ import type {
  * Session data for HTTP connections
  */
 interface HttpSession {
-  transport: StreamableHTTPServerTransport;
+  transport: NodeStreamableHTTPServerTransport;
   server: McpServer;
 }
 
@@ -56,7 +56,7 @@ class HttpFullSessionManager {
     return this.sessions.get(sessionId);
   }
 
-  setSession(sessionId: string, transport: StreamableHTTPServerTransport, server: McpServer): void {
+  setSession(sessionId: string, transport: NodeStreamableHTTPServerTransport, server: McpServer): void {
     this.sessions.set(sessionId, { transport, server });
   }
 
@@ -302,7 +302,7 @@ export class HttpTransportHandler implements IHttpTransportHandler {
 
   private async handlePostRequest(req: Request, res: Response): Promise<void> {
     const sessionId = req.headers['mcp-session-id'] as string | undefined;
-    let transport: StreamableHTTPServerTransport;
+    let transport: NodeStreamableHTTPServerTransport;
 
     if (sessionId && this.sessionManager.hasSession(sessionId)) {
       // Reuse existing transport
@@ -313,7 +313,7 @@ export class HttpTransportHandler implements IHttpTransportHandler {
       // New initialization request - create new server instance
       const mcpServer = await this.serverFactory();
 
-      transport = new StreamableHTTPServerTransport({
+      transport = new NodeStreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         enableJsonResponse: true, // Return JSON instead of SSE for simple request/response
         onsessioninitialized: (initializedSessionId) => {
