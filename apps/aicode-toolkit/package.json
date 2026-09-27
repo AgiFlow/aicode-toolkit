@@ -62,10 +62,10 @@
     "@inquirer/prompts": "8.7.2",
     "chalk": "6.0.0",
     "commander": "15.0.0",
-    "execa": "9.6.1",
+    "execa": "10.0.1",
     "express": "5.2.1",
     "gradient-string": "3.0.0",
-    "js-yaml": "4.3.2",
+    "js-yaml": "5.4.2",
     "liquidjs": "10.29.0",
     "ora": "9.4.1",
     "pino": "10.3.1",
@@ -75,10 +75,9 @@
   },
   "devDependencies": {
     "@types/express": "5.0.6",
-    "@types/js-yaml": "4.0.9",
     "@types/node": "26.6.3",
     "tsdown": "0.23.0",
-    "typescript": "5.9.3",
+    "typescript": "6.0.3",
     "unplugin-raw": "0.8.0"
   }
 }

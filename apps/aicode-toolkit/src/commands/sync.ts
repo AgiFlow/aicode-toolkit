@@ -29,7 +29,7 @@ import type {
   HookAgentConfig,
   ArchitectHookAgentConfig,
 } from '@agiflowai/aicode-utils';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 
 // ---------------------------------------------------------------------------
 // Output path constants

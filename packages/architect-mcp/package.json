@@ -46,18 +46,17 @@
     "@types/express": "5.0.6",
     "chalk": "6.0.0",
     "commander": "15.0.0",
-    "execa": "9.6.1",
+    "execa": "10.0.1",
     "express": "5.2.1",
-    "js-yaml": "4.3.2",
+    "js-yaml": "5.4.2",
     "minimatch": "10.2.6",
     "uuid": "14.0.2",
     "zod": "4.6.5"
   },
   "devDependencies": {
-    "@types/js-yaml": "4.0.9",
     "@types/node": "26.6.3",
     "tsdown": "0.23.0",
-    "typescript": "5.9.3",
-    "vitest": "4.1.11"
+    "typescript": "6.0.3",
+    "vitest": "5.0.2"
   }
 }

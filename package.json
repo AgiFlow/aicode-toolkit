@@ -21,17 +21,17 @@
     "@nx/vitest": "23.2.1",
     "@nx/workspace": "23.2.1",
     "nx": "23.2.1",
-    "typescript": "5.9.3",
-    "vitest": "4.1.11"
+    "typescript": "6.0.3",
+    "vitest": "5.0.2"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-nx-scopes": "21.2.3",
     "@commitlint/prompt-cli": "21.2.3",
     "husky": "9.1.7",
-    "oxfmt": "0.68.0",
-    "oxlint": "1.83.0",
-    "oxlint-tsgolint": "7.0.2002",
+    "oxfmt": "0.70.0",
+    "oxlint": "1.85.0",
+    "oxlint-tsgolint": "7.0.2003",
     "syncpack": "15.3.3"
   }
 }

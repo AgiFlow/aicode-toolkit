@@ -47,20 +47,18 @@
   },
   "dependencies": {
     "chalk": "6.0.0",
-    "execa": "9.6.1",
-    "js-yaml": "4.3.2",
+    "execa": "10.0.1",
+    "js-yaml": "5.4.2",
     "ora": "9.4.1",
     "pino": "10.3.1"
   },
   "devDependencies": {
     "@types/chance": "1.1.8",
-    "@types/js-yaml": "4.0.9",
     "@types/node": "26.6.3",
-    "@types/ora": "3.2.0",
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "5.0.2",
     "chance": "1.1.13",
     "tsdown": "0.23.0",
-    "typescript": "5.9.3",
-    "vitest": "4.1.11"
+    "typescript": "6.0.3",
+    "vitest": "5.0.2"
   }
 }

@@ -10,7 +10,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import type { SkillService } from './SkillService';
 import type { McpClientManagerService } from './McpClientManagerService';
 import type {

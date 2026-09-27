@@ -19,7 +19,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import type { RemoteMcpConfiguration } from '../types';
 import {
   parseMcpConfig,

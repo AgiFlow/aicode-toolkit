@@ -7,7 +7,7 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { log, TemplatesManagerService } from '@agiflowai/aicode-utils';
 
 /**

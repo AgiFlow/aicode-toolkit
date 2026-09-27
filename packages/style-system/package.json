@@ -42,18 +42,17 @@
   "dependencies": {
     "@agiflowai/aicode-utils": "workspace:*",
     "@modelcontextprotocol/server": "2.1.0",
-    "@storybook/csf-tools": "8.6.18",
     "@tailwindcss/vite": "4.3.3",
     "chalk": "6.0.0",
     "commander": "15.0.0",
     "glob": "13.0.6",
-    "js-yaml": "4.3.2",
+    "js-yaml": "5.4.2",
     "playwright": "1.63.0",
     "postcss": "8.5.28",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "sharp": "0.35.4",
-    "storybook": "8.6.18",
+    "storybook": "10.6.0",
     "tailwindcss": "4.3.3",
     "vite": "8.3.1",
     "vite-plugin-singlefile": "2.3.3"
@@ -63,15 +62,14 @@
     "@babel/traverse": "8.0.6",
     "@babel/types": "8.0.6",
     "@types/babel__traverse": "7.28.0",
-    "@types/js-yaml": "4.0.9",
     "@types/node": "26.6.3",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "esbuild": "0.28.2",
     "tsdown": "0.23.0",
     "tsx": "4.23.15",
-    "typescript": "5.9.3",
-    "vitest": "4.1.11"
+    "typescript": "6.0.3",
+    "vitest": "5.0.2"
   },
   "engines": {
     "node": ">=20.9.0"

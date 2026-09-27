@@ -20,7 +20,7 @@
 import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import { log, TemplatesManagerService } from '@agiflowai/aicode-utils';
-import { loadCsf } from '@storybook/csf-tools';
+import { loadCsf } from 'storybook/internal/csf-tools';
 import { glob } from 'glob';
 import type { ComponentInfo, StoryMeta } from './types';
 

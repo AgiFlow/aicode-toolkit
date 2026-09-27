@@ -47,38 +47,14 @@ export class ScaffoldGeneratorService {
    * Custom YAML dumper that forces literal block style (|) for description and instruction fields
    */
   private dumpYamlWithLiteralBlocks(config: ScaffoldConfig): string {
-    // Create a custom type for literal blocks
-    const LiteralBlockType = new yaml.Type('tag:yaml.org,2002:str', {
-      kind: 'scalar',
-      construct: (data) => data,
-      represent: (data) => {
-        return data;
-      },
-      defaultStyle: '|', // Force block literal style
-    });
-
-    const LITERAL_SCHEMA = yaml.DEFAULT_SCHEMA.extend([LiteralBlockType]);
-
-    // Deep clone and mark description/instruction fields
+    // Deep clone and trim description/instruction fields; multi-line strings
+    // are emitted as literal blocks (|) by the default scalar style rules
     const processedConfig = this.processConfigForLiteralBlocks(config);
 
     return yaml.dump(processedConfig, {
-      schema: LITERAL_SCHEMA,
       indent: 2,
       lineWidth: -1,
       noRefs: true,
-      sortKeys: false,
-      styles: {
-        '!!str': 'literal',
-      },
-      replacer: (key, value) => {
-        // Force literal block style for description and instruction
-        if ((key === 'description' || key === 'instruction') && typeof value === 'string') {
-          // Return a specially marked string
-          return value;
-        }
-        return value;
-      },
     });
   }
 

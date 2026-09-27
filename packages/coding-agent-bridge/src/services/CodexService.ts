@@ -413,9 +413,8 @@ export class CodexService extends BaseCodingAgentService {
     } catch (error) {
       // Clean up on error
       rl.close();
-      if (!child.killed) {
-        child.kill();
-      }
+      // No-op if the subprocess has already exited
+      child.kill();
 
       // Provide descriptive error messages based on error type
       if (error instanceof Error) {

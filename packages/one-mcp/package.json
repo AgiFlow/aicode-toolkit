@@ -45,17 +45,16 @@
     "chalk": "6.0.0",
     "commander": "15.0.0",
     "express": "5.2.1",
-    "js-yaml": "4.3.2",
+    "js-yaml": "5.4.2",
     "liquidjs": "10.29.0",
     "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/express": "5.0.6",
-    "@types/js-yaml": "4.0.9",
     "@types/node": "26.6.3",
     "tsdown": "0.23.0",
-    "typescript": "5.9.3",
+    "typescript": "6.0.3",
     "unplugin-raw": "0.8.0",
-    "vitest": "4.1.11"
+    "vitest": "5.0.2"
   }
 }
