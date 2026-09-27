@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ScaffoldFeaturePrompt } from '../../src/prompts/ScaffoldFeaturePrompt';
+import { getText } from '../helpers/getText';
 
 describe('ScaffoldFeaturePrompt', () => {
   let prompt: ScaffoldFeaturePrompt;
@@ -40,46 +41,46 @@ describe('ScaffoldFeaturePrompt', () => {
     it('should include user request when provided', () => {
       const messages = prompt.getMessages({ request: 'Add a user profile page' });
 
-      expect(messages[0].content.text).toContain('Add a user profile page');
+      expect(getText(messages[0].content)).toContain('Add a user profile page');
     });
 
     it('should include project path when provided', () => {
       const messages = prompt.getMessages({ projectPath: 'apps/my-app' });
 
-      expect(messages[0].content.text).toContain('apps/my-app');
+      expect(getText(messages[0].content)).toContain('apps/my-app');
     });
 
     it('should work without arguments', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toBeTruthy();
+      expect(getText(messages[0].content)).toBeTruthy();
     });
 
     it('should include workflow instructions', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toContain('list-scaffolding-methods');
-      expect(messages[0].content.text).toContain('use-scaffold-method');
+      expect(getText(messages[0].content)).toContain('list-scaffolding-methods');
+      expect(getText(messages[0].content)).toContain('use-scaffold-method');
     });
 
     it('should include guidelines for variables', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toContain('variables_schema');
-      expect(messages[0].content.text).toContain('PascalCase');
+      expect(getText(messages[0].content)).toContain('variables_schema');
+      expect(getText(messages[0].content)).toContain('PascalCase');
     });
 
     it('should mention conditional files', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toContain('?condition=true');
+      expect(getText(messages[0].content)).toContain('?condition=true');
     });
 
     it('should include example workflow', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toContain('Example');
-      expect(messages[0].content.text).toContain('scaffold_feature_name');
+      expect(getText(messages[0].content)).toContain('Example');
+      expect(getText(messages[0].content)).toContain('scaffold_feature_name');
     });
   });
 
@@ -93,13 +94,13 @@ describe('ScaffoldFeaturePrompt', () => {
     it('should adjust instructions for monolith mode', () => {
       const messages = monolithPrompt.getMessages();
 
-      expect(messages[0].content.text).toContain('monolith mode');
-      expect(messages[0].content.text).toContain('current working directory');
+      expect(getText(messages[0].content)).toContain('monolith mode');
+      expect(getText(messages[0].content)).toContain('current working directory');
     });
 
     it('should not require projectPath in examples for monolith mode', () => {
       const messages = monolithPrompt.getMessages();
-      const text = messages[0].content.text;
+      const text = getText(messages[0].content);
 
       // Check that the JSON example doesn't include projectPath
       expect(text).toContain('```json');

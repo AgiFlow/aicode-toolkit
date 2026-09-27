@@ -1,9 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UseScaffoldMethodTool } from '../../src/tools/UseScaffoldMethodTool';
+import { getText } from '../helpers/getText';
+import type { ScaffoldingMethodsService } from '../../src/services/ScaffoldingMethodsService';
 
 // Mock the services
 vi.mock('../../src/services/FileSystemService');
 vi.mock('../../src/services/ScaffoldingMethodsService');
+
+/** Exposes the tool's private service so tests can spy on it. */
+function internals(tool: UseScaffoldMethodTool): {
+  scaffoldingMethodsService: ScaffoldingMethodsService;
+} {
+  return tool as unknown as { scaffoldingMethodsService: ScaffoldingMethodsService };
+}
 
 describe('UseScaffoldMethodTool', () => {
   let tool: UseScaffoldMethodTool;
@@ -47,7 +56,7 @@ describe('UseScaffoldMethodTool', () => {
         },
       };
 
-      const spy = vi.spyOn(tool.scaffoldingMethodsService, 'useScaffoldMethod');
+      const spy = vi.spyOn(internals(tool).scaffoldingMethodsService, 'useScaffoldMethod');
       spy.mockResolvedValue({
         success: true,
         message: 'Successfully scaffolded scaffold-route in /test/apps/my-app',
@@ -57,7 +66,7 @@ describe('UseScaffoldMethodTool', () => {
 
       expect(result.isError).toBeFalsy();
       expect(result.content[0].type).toBe('text');
-      expect(result.content[0].text).toContain('Successfully scaffolded');
+      expect(getText(result.content[0])).toContain('Successfully scaffolded');
       expect(spy).toHaveBeenCalledWith({
         projectPath: '/test/apps/my-app',
         scaffold_feature_name: 'scaffold-route',
@@ -72,13 +81,13 @@ describe('UseScaffoldMethodTool', () => {
         variables: { routePath: 'about' },
       };
 
-      const spy = vi.spyOn(tool.scaffoldingMethodsService, 'useScaffoldMethod');
+      const spy = vi.spyOn(internals(tool).scaffoldingMethodsService, 'useScaffoldMethod');
       spy.mockRejectedValue(new Error('Scaffold method not found'));
 
       const result = await tool.execute(args);
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain('Scaffold method not found');
+      expect(getText(result.content[0])).toContain('Scaffold method not found');
     });
   });
 });

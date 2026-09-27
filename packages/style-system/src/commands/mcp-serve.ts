@@ -78,7 +78,9 @@ export const mcpServeCommand = new Command('mcp-serve')
       if (options.dev) {
         if (!options.appPath) {
           console.error('Error: --app-path is required when using --dev flag');
-          console.error(`Example: ${STYLE_SYSTEM_CLI_NAME} mcp-serve --dev --app-path apps/agiflow-app`);
+          console.error(
+            `Example: ${STYLE_SYSTEM_CLI_NAME} mcp-serve --dev --app-path apps/agiflow-app`,
+          );
           process.exit(1);
         }
 

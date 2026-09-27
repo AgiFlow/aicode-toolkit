@@ -59,7 +59,7 @@ export class RuleFinder {
       const globalRulesContent = await fs.readFile(globalRulesPath, UTF8_ENCODING);
       this.globalRulesCache = yaml.load(globalRulesContent) as RulesYamlConfig;
       return this.globalRulesCache;
-    } catch (_error) {
+    } catch {
       // Global rules are optional
       return null;
     }
@@ -80,7 +80,7 @@ export class RuleFinder {
       const rulesConfig = yaml.load(projectRulesContent) as RulesYamlConfig;
       this.projectRulesCache.set(projectRoot, rulesConfig);
       return rulesConfig;
-    } catch (_error) {
+    } catch {
       // Project rules are optional
       this.projectRulesCache.set(projectRoot, null);
       return null;
@@ -257,7 +257,6 @@ export class RuleFinder {
 
     // Merge all rules in priority order: project -> template -> global
     return {
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       ...baseConfig!,
       rules: [
         ...(projectRules?.rules || []),
@@ -276,7 +275,6 @@ export class RuleFinder {
   }> {
     // Check cache
     if (this.rulesCache.has(sourceTemplate)) {
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       const cached = this.rulesCache.get(sourceTemplate)!;
       const templatesRoot = await TemplatesManagerService.findTemplatesPath(this.workspaceRoot);
       if (!templatesRoot) {

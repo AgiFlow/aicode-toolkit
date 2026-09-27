@@ -16,22 +16,8 @@ vi.mock('@agiflowai/aicode-utils', async () => {
 });
 
 vi.mock('js-yaml', () => ({
-  default: {
-    load: vi.fn(),
-    dump: vi.fn(),
-    Type: vi.fn(),
-    Schema: vi.fn(),
-    DEFAULT_SCHEMA: {
-      extend: vi.fn().mockReturnValue({}),
-    },
-  },
   load: vi.fn(),
   dump: vi.fn(),
-  Type: vi.fn(),
-  Schema: vi.fn(),
-  DEFAULT_SCHEMA: {
-    extend: vi.fn().mockReturnValue({}),
-  },
 }));
 
 describe('BoilerplateGeneratorService', () => {

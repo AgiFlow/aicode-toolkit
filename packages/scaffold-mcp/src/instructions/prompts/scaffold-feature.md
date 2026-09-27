@@ -11,21 +11,26 @@ description: Add a new feature to an existing project such as service, route, pa
 Your task is to scaffold a new feature by following this workflow:
 
 ## Step 1: Identify the Project
+
 Determine the project path where the feature will be added:
+
 - If projectPath is provided, use it
 - Otherwise, ask the user or infer from context (e.g., "apps/my-app", "packages/my-lib")
-{% if isMonolith %}- In monolith mode, you can use the current working directory (no projectPath needed){% else %}- The path should point to a directory containing a `project.json` file{% endif %}
+  {% if isMonolith %}- In monolith mode, you can use the current working directory (no projectPath needed){% else %}- The path should point to a directory containing a `project.json` file{% endif %}
 
 ## Step 2: List Available Scaffolding Methods
+
 Use the `list-scaffolding-methods` tool{% if not isMonolith %} with the projectPath{% endif %}.
 
 **What to look for:**
+
 - Feature name (e.g., "scaffold-nextjs-page", "scaffold-react-component")
 - Description of what files/code it generates
 - Required and optional variables in the variables_schema
 - The template type (derived from project's sourceTemplate)
 
 **Example:**
+
 ```json
 {% if isMonolith %}{}{% else %}{
   "projectPath": "apps/my-dashboard"
@@ -33,23 +38,29 @@ Use the `list-scaffolding-methods` tool{% if not isMonolith %} with the projectP
 ```
 
 ## Step 3: Gather Required Information
+
 Based on the selected scaffolding method's variables_schema, collect:
+
 - **Feature-specific variables**: Name, path, type, etc.
 - **Required variables**: All variables marked as required: true
 - **Optional variables**: Variables with required: false (ask user if needed)
 
 Common variables:
+
 - `componentName` / `pageName` / `serviceName`: Name in PascalCase
 - `componentPath` / `pagePath`: Where to place the file (may use kebab-case)
 - Boolean flags: `withTests`, `withLayout`, `withStyles`, etc.
 
 ## Step 4: Execute the Scaffolding Method
+
 Use the `use-scaffold-method` tool with:
 {% if not isMonolith %}- `projectPath`: Same path from step 1
 {% endif %}- `scaffold_feature_name`: Exact name from list-scaffolding-methods response
+
 - `variables`: Object matching the variables_schema exactly
 
 **Example:**
+
 ```json
 {
 {% if not isMonolith %}  "projectPath": "apps/my-dashboard",
@@ -64,6 +75,7 @@ Use the `use-scaffold-method` tool with:
 ```
 
 ## Important Guidelines:
+
 - **Always call `list-scaffolding-methods` first**{% if not isMonolith %} with the projectPath{% endif %}
 - **Use exact variable names** from the schema (case-sensitive)
 - **Provide all required variables** - the tool will fail if any are missing
@@ -75,7 +87,9 @@ Use the `use-scaffold-method` tool with:
 - After creation, inform the user what files were created
 
 ## Step 5: Review and Implement Generated Files
+
 After scaffolding completes, **you MUST**:
+
 1. **READ** all generated files to understand their structure
 2. **IMPLEMENT** the actual business logic:
    - Replace TODO comments with real code
@@ -94,13 +108,14 @@ After scaffolding completes, **you MUST**:
 6. **DO NOT SKIP** this step - scaffolded files are templates that need actual code
 
 ## Example Workflow:
+
 1. Identify project path (provided or ask user){% if not isMonolith %}
 2. Call `list-scaffolding-methods` → See available features for this project{% else %}
-2. Call `list-scaffolding-methods` → See available features for your template{% endif %}
-3. Ask user which feature to add (or infer from request)
-4. Collect required variables based on schema
-5. Call `use-scaffold-method` with {% if not isMonolith %}projectPath, {% endif %}scaffold_feature_name, and variables
-6. **READ the generated files and IMPLEMENT the actual logic**
-7. **REMOVE `// @scaffold-generated` from each file once implemented**
-8. **REGISTER the feature in server/index.ts and other config files**
-9. Report success and list created files with implementation details
+3. Call `list-scaffolding-methods` → See available features for your template{% endif %}
+4. Ask user which feature to add (or infer from request)
+5. Collect required variables based on schema
+6. Call `use-scaffold-method` with {% if not isMonolith %}projectPath, {% endif %}scaffold_feature_name, and variables
+7. **READ the generated files and IMPLEMENT the actual logic**
+8. **REMOVE `// @scaffold-generated` from each file once implemented**
+9. **REGISTER the feature in server/index.ts and other config files**
+10. Report success and list created files with implementation details

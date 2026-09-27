@@ -3,8 +3,7 @@
     "one-mcp": {
       "command": "bun",
       "args": ["run", "packages/one-mcp/src/cli.ts", "mcp-serve", "--config", "mcp-config.yaml"],
-      "env": {
-      },
+      "env": {},
       "timeout": 30000,
       "trust": false
     }

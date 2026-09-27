@@ -1,0 +1,272 @@
+name: Release cut
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Validate and preview the version bumps without cutting a release branch or opening a pull request.
+        required: true
+        default: true
+        type: boolean
+      all_packages:
+        description: Consider every package instead of only those affected since the last release tag.
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  pull-requests: none
+
+concurrency:
+  group: aicode-toolkit-release-cut
+  cancel-in-progress: false
+
+env:
+  # The pre-commit hook runs the full test suite and commitlint on every commit.
+  # Release commits carry a fixed message and are validated by the lanes below.
+  HUSKY: "0"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      has_release: ${{ steps.select.outputs.release_projects != '' }}
+      release_projects: ${{ steps.select.outputs.release_projects }}
+      candidate_commit: ${{ steps.candidate.outputs.candidate_commit }}
+    steps:
+      - name: Check out the selected release revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11.16.0
+
+      - name: Set up Node.js and npm registry
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install frozen registry and workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Sync the release base branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_TYPE}" = "branch"
+          # shellcheck disable=SC2016 # GH_TOKEN expands inside Git's credential-helper shell.
+          git -c credential.helper='!f() { echo "username=x-access-token"; echo "password=${GH_TOKEN}"; }; f' fetch origin "${GITHUB_REF_NAME}"
+          git rebase "origin/${GITHUB_REF_NAME}"
+
+      - name: Select the projects to release
+        id: select
+        env:
+          ALL_PACKAGES: ${{ inputs.all_packages }}
+        run: |
+          set -euo pipefail
+          readonly AFFECTED_FILE="${RUNNER_TEMP}/aicode-toolkit-release-affected.json"
+          RELEASE_PROJECTS=""
+
+          if [[ "${ALL_PACKAGES}" == "true" ]]; then
+            echo "Selecting every publishable project."
+            RELEASE_PROJECTS="$(node scripts/filter-release-projects.mjs --all)"
+          elif BASE_TAG="$(git describe --tags --abbrev=0 HEAD 2> /dev/null)"; then
+            BASE_SHA="$(git rev-list -n 1 "${BASE_TAG}")"
+            echo "Detecting the projects affected since ${BASE_TAG} (${BASE_SHA})."
+            pnpm nx show projects --affected --base="${BASE_SHA}" --head=HEAD --json > "${AFFECTED_FILE}"
+            RELEASE_PROJECTS="$(node scripts/filter-release-projects.mjs "${AFFECTED_FILE}")"
+          else
+            echo "No release tag is reachable from HEAD, selecting every publishable project."
+            RELEASE_PROJECTS="$(node scripts/filter-release-projects.mjs --all)"
+          fi
+
+          if [[ -z "${RELEASE_PROJECTS}" ]]; then
+            echo "No publishable project changed since the last release, there is nothing to cut."
+          else
+            echo "Releasing ${RELEASE_PROJECTS}"
+          fi
+          echo "release_projects=${RELEASE_PROJECTS}" >> "${GITHUB_OUTPUT}"
+
+      - name: Freeze the release candidate
+        id: candidate
+        if: steps.select.outputs.release_projects != ''
+        env:
+          RELEASE_PROJECTS: ${{ steps.select.outputs.release_projects }}
+        run: |
+          set -euo pipefail
+          CANDIDATE_COMMIT="$(git rev-parse HEAD)"
+          readonly CANDIDATE_COMMIT
+          readonly BUNDLE="${RUNNER_TEMP}/candidate.bundle"
+          readonly METADATA="${RUNNER_TEMP}/candidate.env"
+          git bundle create "${BUNDLE}" HEAD
+          {
+            printf 'candidate_commit=%s\n' "${CANDIDATE_COMMIT}"
+            printf 'release_projects=%s\n' "${RELEASE_PROJECTS}"
+          } > "${METADATA}"
+          echo "candidate_commit=${CANDIDATE_COMMIT}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload the frozen release candidate
+        if: steps.select.outputs.release_projects != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-cut-candidate
+          path: |
+            ${{ runner.temp }}/candidate.bundle
+            ${{ runner.temp }}/candidate.env
+          if-no-files-found: error
+          retention-days: 1
+
+  validate:
+    needs: prepare
+    if: needs.prepare.outputs.has_release == 'true'
+    name: Validate (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [build, lint, typecheck, test]
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the workflow revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Restore the frozen release candidate
+        uses: ./.github/actions/restore-release-candidate
+        with:
+          artifact-name: release-cut-candidate
+          candidate-commit: ${{ needs.prepare.outputs.candidate_commit }}
+          release-projects: ${{ needs.prepare.outputs.release_projects }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11.16.0
+
+      - name: Set up Node.js and npm registry
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install frozen registry and workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        if: matrix.target == 'build'
+        run: pnpm format:check
+
+      - name: Build packages
+        run: pnpm nx run-many -t build --parallel=3
+
+      - name: Run ${{ matrix.target }}
+        if: matrix.target != 'build'
+        run: pnpm nx run-many -t ${{ matrix.target }} --parallel=3
+
+  release:
+    needs:
+      - prepare
+      - validate
+    if: needs.prepare.outputs.has_release == 'true' && needs.validate.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      RELEASE_PROJECTS: ${{ needs.prepare.outputs.release_projects }}
+    steps:
+      - name: Check out the workflow revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Restore the frozen release candidate
+        uses: ./.github/actions/restore-release-candidate
+        with:
+          artifact-name: release-cut-candidate
+          candidate-commit: ${{ needs.prepare.outputs.candidate_commit }}
+          release-projects: ${{ needs.prepare.outputs.release_projects }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11.16.0
+
+      - name: Set up Node.js and npm registry
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install frozen registry and workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure release git identity
+        run: |
+          git config user.name "aicode-toolkit-release-bot"
+          git config user.email "aicode-toolkit-release-bot@users.noreply.github.com"
+
+      - name: Preview the next versions
+        run: pnpm nx release --projects "${RELEASE_PROJECTS}" --dry-run --skip-publish
+
+      - name: Cut the release branch
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          RELEASE_BRANCH="release/cut-${GITHUB_RUN_ID}"
+          git switch -c "${RELEASE_BRANCH}"
+          pnpm nx release --projects "${RELEASE_PROJECTS}" --skip-publish
+          # Conventional commits can find nothing worth a bump (only chore, docs or ci
+          # commits), in which case nx release writes no commit and there is nothing to cut.
+          if [[ -z "$(git log --format=%H "origin/${GITHUB_REF_NAME}..HEAD")" ]]; then
+            echo "No conventional commit warrants a version bump, there is nothing to cut."
+            exit 0
+          fi
+          # shellcheck disable=SC2016 # GH_TOKEN expands inside Git's credential-helper shell.
+          git -c credential.helper='!f() { echo "username=x-access-token"; echo "password=${GH_TOKEN}"; }; f' push origin "${RELEASE_BRANCH}"
+          echo "RELEASE_BRANCH=${RELEASE_BRANCH}" >> "${GITHUB_ENV}"
+
+      - name: Open the release pull request
+        if: env.RELEASE_BRANCH != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BODY_FILE="${RUNNER_TEMP}/aicode-toolkit-release-pr-body.md"
+          {
+            echo "Cut by the Release cut workflow from $(git rev-parse "origin/${GITHUB_REF_NAME}")."
+            echo
+            echo "Merging this pull request publishes the bumped versions below to npm under the latest tag, tags them, and creates their GitHub releases."
+            echo
+            echo "| Package | Version |"
+            echo "| --- | --- |"
+            git diff --name-only "origin/${GITHUB_REF_NAME}..HEAD" -- '*/package.json' | while IFS= read -r manifest; do
+              # shellcheck disable=SC2016 # The template literals belong to the Node.js script.
+              node -e 'const m = require(`./${process.argv[1]}`); console.log(`| ${m.name} | ${m.version} |`)' "${manifest}"
+            done
+          } > "${BODY_FILE}"
+
+          gh pr create \
+            --base "${GITHUB_REF_NAME}" \
+            --head "${RELEASE_BRANCH}" \
+            --title "chore(release): publish" \
+            --body-file "${BODY_FILE}"

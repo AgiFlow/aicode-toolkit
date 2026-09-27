@@ -1,7 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerateFeatureScaffoldTool } from '../../src/tools/GenerateFeatureScaffoldTool';
+import { getText } from '../helpers/getText';
+import type { ScaffoldGeneratorService } from '../../src/services/ScaffoldGeneratorService';
 
 vi.mock('../../src/services/ScaffoldGeneratorService');
+
+/** Exposes the tool's private service so tests can spy on it. */
+function internals(tool: GenerateFeatureScaffoldTool): {
+  scaffoldGeneratorService: ScaffoldGeneratorService;
+} {
+  return tool as unknown as { scaffoldGeneratorService: ScaffoldGeneratorService };
+}
 
 describe('GenerateFeatureScaffoldTool', () => {
   let tool: GenerateFeatureScaffoldTool;
@@ -55,7 +64,7 @@ describe('GenerateFeatureScaffoldTool', () => {
         ],
       };
 
-      const spy = vi.spyOn(tool.scaffoldGeneratorService, 'generateFeatureScaffold');
+      const spy = vi.spyOn(internals(tool).scaffoldGeneratorService, 'generateFeatureScaffold');
       spy.mockResolvedValue({
         success: true,
         message: 'Feature created',
@@ -67,7 +76,7 @@ describe('GenerateFeatureScaffoldTool', () => {
 
       expect(result.isError).toBeFalsy();
       expect(result.content[0].type).toBe('text');
-      const response = JSON.parse(result.content[0].text);
+      const response = JSON.parse(getText(result.content[0]));
       expect(response.success).toBe(true);
     });
 
@@ -82,7 +91,7 @@ describe('GenerateFeatureScaffoldTool', () => {
         patterns: ['src/**/*.tsx'],
       };
 
-      const spy = vi.spyOn(tool.scaffoldGeneratorService, 'generateFeatureScaffold');
+      const spy = vi.spyOn(internals(tool).scaffoldGeneratorService, 'generateFeatureScaffold');
       spy.mockResolvedValue({
         success: true,
         message: 'Feature created',
@@ -101,7 +110,7 @@ describe('GenerateFeatureScaffoldTool', () => {
         variables: [],
       };
 
-      const spy = vi.spyOn(tool.scaffoldGeneratorService, 'generateFeatureScaffold');
+      const spy = vi.spyOn(internals(tool).scaffoldGeneratorService, 'generateFeatureScaffold');
       spy.mockResolvedValue({
         success: false,
         message: 'Feature already exists',

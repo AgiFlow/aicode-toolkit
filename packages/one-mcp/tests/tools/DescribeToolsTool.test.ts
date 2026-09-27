@@ -3,7 +3,12 @@ import { DescribeToolsTool } from '../../src/tools/DescribeToolsTool';
 import { DefinitionsCacheService } from '../../src/services/DefinitionsCacheService';
 import type { McpClientManagerService } from '../../src/services/McpClientManagerService';
 import type { SkillService } from '../../src/services/SkillService';
-import type { DefinitionsCacheFile, McpClientConnection, Skill, PromptConfig } from '../../src/types';
+import type {
+  DefinitionsCacheFile,
+  McpClientConnection,
+  Skill,
+  PromptConfig,
+} from '../../src/types';
 
 /**
  * Text content shape returned by tool execution
@@ -184,7 +189,7 @@ describe('DescribeToolsTool', () => {
 
       expect(definition.name).toBe('describe_tools');
       expect(definition.inputSchema).toBeDefined();
-      expect(definition.inputSchema.properties.toolNames).toBeDefined();
+      expect(definition.inputSchema.properties?.toolNames).toBeDefined();
     });
 
     it('should include MCP servers in description', async () => {
@@ -654,9 +659,7 @@ describe('DescribeToolsTool', () => {
       });
 
       vi.mocked(mockClientManager.getAllClients).mockReturnValue([mockClient]);
-      vi.mocked(mockClientManager.ensureConnected).mockRejectedValue(
-        new Error('Client not found'),
-      );
+      vi.mocked(mockClientManager.ensureConnected).mockRejectedValue(new Error('Client not found'));
 
       const tool = new DescribeToolsTool(mockClientManager, mockSkillService);
       const result = await tool.execute({ toolNames: ['skill__orphan-skill'] });

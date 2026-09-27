@@ -20,11 +20,18 @@ vi.mock('@modelcontextprotocol/server', () => {
   return { Server: MockServer };
 });
 
+type ListToolsHandler = (request: unknown) => Promise<{ tools: unknown[] }>;
+
+/** Shape of the mocked Server above, which records handlers in requestHandlers */
+interface MockServerShape {
+  requestHandlers: Map<unknown, ListToolsHandler>;
+}
+
 describe('architect-mcp server capability metadata', () => {
   it('adds capability tags to listed tools', async () => {
     const { createServer } = await import('../../src/server');
 
-    const server = createServer({ adminEnabled: true });
+    const server = createServer({ adminEnabled: true }) as unknown as MockServerShape;
     const listToolsHandler = Array.from(server.requestHandlers.values())[0];
     const result = await listToolsHandler({});
 

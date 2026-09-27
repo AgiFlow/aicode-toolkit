@@ -140,7 +140,6 @@ export const initMachine = createMachine(
         invoke: {
           src: 'detectProjectType',
           input: ({ context }) => ({
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             workspaceRoot: context.workspaceRoot!,
           }),
           onDone: [
@@ -231,7 +230,6 @@ export const initMachine = createMachine(
             invoke: {
               src: 'createProjectDirectory',
               input: ({ context }) => ({
-                // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
                 projectName: context.projectName!,
               }),
               onDone: {
@@ -257,7 +255,6 @@ export const initMachine = createMachine(
             invoke: {
               src: 'promptGitSetup',
               input: ({ context }) => ({
-                // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
                 projectPath: context.projectPath!,
               }),
               onDone: {
@@ -341,7 +338,6 @@ export const initMachine = createMachine(
         invoke: {
           src: 'checkTemplatesFolder',
           input: ({ context }) => ({
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             workspaceRoot: context.workspaceRoot!,
           }),
           onDone: [
@@ -404,7 +400,6 @@ export const initMachine = createMachine(
         invoke: {
           src: 'listTemplates',
           input: ({ context }) => ({
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             tmpTemplatesPath: context.tmpTemplatesPath!,
           }),
           onDone: {
@@ -426,9 +421,7 @@ export const initMachine = createMachine(
         invoke: {
           src: 'promptTemplateSelection',
           input: ({ context }) => ({
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             tmpTemplatesPath: context.tmpTemplatesPath!,
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             projectType: context.projectType!,
           }),
           onDone: {
@@ -453,15 +446,10 @@ export const initMachine = createMachine(
         invoke: {
           src: 'copyTemplates',
           input: ({ context }) => ({
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             tmpTemplatesPath: context.tmpTemplatesPath!,
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             workspaceRoot: context.workspaceRoot!,
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             templatesPath: context.templatesPath!,
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             selectedTemplates: context.selectedTemplates!,
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             projectType: context.projectType!,
             selectedMcpServers: context.selectedMcpServers,
           }),
@@ -484,9 +472,7 @@ export const initMachine = createMachine(
         invoke: {
           src: 'createConfig',
           input: ({ context }) => ({
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             workspaceRoot: context.workspaceRoot!,
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             projectType: context.projectType!,
             templatesPath: context.templatesPath,
             selectedTemplates: context.selectedTemplates,
@@ -525,7 +511,6 @@ export const initMachine = createMachine(
         invoke: {
           src: 'detectCodingAgent',
           input: ({ context }) => ({
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             workspaceRoot: context.workspaceRoot!,
           }),
           onDone: {
@@ -574,9 +559,7 @@ export const initMachine = createMachine(
         invoke: {
           src: 'configureMCP',
           input: ({ context }) => ({
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             workspaceRoot: context.workspaceRoot!,
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             codingAgent: context.codingAgent!,
             selectedMcpServers: context.selectedMcpServers,
           }),
@@ -599,7 +582,6 @@ export const initMachine = createMachine(
         invoke: {
           src: 'detectSpecTool',
           input: ({ context }) => ({
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             workspaceRoot: context.workspaceRoot!,
           }),
           onDone: {
@@ -651,7 +633,6 @@ export const initMachine = createMachine(
         invoke: {
           src: 'setupSpec',
           input: ({ context }) => ({
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             workspaceRoot: context.workspaceRoot!,
             isAlreadyInstalled: context.detectedSpecTool !== null,
             selectedMcpServers: context.selectedMcpServers,
@@ -703,7 +684,6 @@ export const initMachine = createMachine(
         invoke: {
           src: 'updateSpecInstructions',
           input: ({ context }) => ({
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by state machine
             workspaceRoot: context.workspaceRoot!,
             selectedMcpServers: context.selectedMcpServers,
             codingAgent: context.codingAgent,

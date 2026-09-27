@@ -37,35 +37,29 @@ interface MockAicodeUtils {
     debug: Mock;
   };
   TemplatesManagerService: {
-    getWorkspaceRootSync: Mock<[], string>;
+    getWorkspaceRootSync: Mock<() => string>;
   };
 }
 
 // Mock the file system and TemplatesManagerService before importing config
-vi.mock(
-  'node:fs',
-  (): MockFs => ({
-    promises: {
-      readFile: vi.fn(),
-      access: vi.fn(),
-    },
-  }),
-);
+vi.mock('node:fs', (): MockFs => ({
+  promises: {
+    readFile: vi.fn(),
+    access: vi.fn(),
+  },
+}));
 
-vi.mock(
-  '@agiflowai/aicode-utils',
-  (): MockAicodeUtils => ({
-    log: {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-    },
-    TemplatesManagerService: {
-      getWorkspaceRootSync: vi.fn((): string => '/mock/workspace'),
-    },
-  }),
-);
+vi.mock('@agiflowai/aicode-utils', (): MockAicodeUtils => ({
+  log: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+  TemplatesManagerService: {
+    getWorkspaceRootSync: vi.fn((): string => '/mock/workspace'),
+  },
+}));
 
 import { promises as fs } from 'node:fs';
 import {

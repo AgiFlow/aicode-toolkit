@@ -3,7 +3,21 @@
  */
 
 import { describe, test, expect, beforeEach } from 'vitest';
-import { ClaudeCodeAdapter } from '../../src/adapters/ClaudeCodeAdapter';
+import {
+  ClaudeCodeAdapter,
+  type ClaudeCodeHookInput,
+  type ClaudeCodePostToolUseInput,
+} from '../../src/adapters/ClaudeCodeAdapter';
+
+/**
+ * Narrow a parsed hook input to the PostToolUse variant
+ */
+function asPostToolUse(context: ClaudeCodeHookInput): ClaudeCodePostToolUseInput {
+  if (context.hook_event_name !== 'PostToolUse') {
+    throw new Error(`Expected PostToolUse input, got ${context.hook_event_name}`);
+  }
+  return context;
+}
 
 describe('ClaudeCodeAdapter (PostToolUse)', () => {
   let adapter: ClaudeCodeAdapter;
@@ -27,7 +41,7 @@ describe('ClaudeCodeAdapter (PostToolUse)', () => {
         llm_tool: 'claude-code',
       });
 
-      const context = adapter.parseInput(input);
+      const context = asPostToolUse(adapter.parseInput(input));
 
       expect(context.tool_name).toBe('Read');
       expect(context.tool_input).toEqual({ file_path: '/test/file.ts', limit: 100 });
@@ -55,7 +69,7 @@ describe('ClaudeCodeAdapter (PostToolUse)', () => {
         tool_use_id: 'tool-use-123',
       });
 
-      const context = adapter.parseInput(input);
+      const context = asPostToolUse(adapter.parseInput(input));
 
       expect(context.tool_name).toBe(toolName);
       expect(context.tool_input).toEqual(toolInput);
@@ -74,7 +88,7 @@ describe('ClaudeCodeAdapter (PostToolUse)', () => {
         tool_use_id: 'tool-use-789',
       });
 
-      const context = adapter.parseInput(input);
+      const context = asPostToolUse(adapter.parseInput(input));
 
       expect(context.tool_input.file_path).toBe('/test/input-file.ts');
     });
@@ -92,7 +106,7 @@ describe('ClaudeCodeAdapter (PostToolUse)', () => {
         tool_use_id: 'tool-use-789',
       });
 
-      const context = adapter.parseInput(input);
+      const context = asPostToolUse(adapter.parseInput(input));
 
       expect(context.tool_response).toEqual({
         filePath: '/test/response-file.ts',
@@ -113,7 +127,7 @@ describe('ClaudeCodeAdapter (PostToolUse)', () => {
         tool_use_id: 'tool-use-999',
       });
 
-      const context = adapter.parseInput(input);
+      const context = asPostToolUse(adapter.parseInput(input));
 
       expect(context.tool_name).toBe('Bash');
       expect(context.tool_input).toEqual({ command: 'ls -la' });
@@ -133,9 +147,9 @@ describe('ClaudeCodeAdapter (PostToolUse)', () => {
         tool_use_id: 'tool-use-111',
       });
 
-      const context = adapter.parseInput(input);
+      const context = asPostToolUse(adapter.parseInput(input));
 
-      expect(context.llmTool).toBeUndefined();
+      expect(context.llm_tool).toBeUndefined();
     });
 
     test('throws error on invalid JSON', () => {

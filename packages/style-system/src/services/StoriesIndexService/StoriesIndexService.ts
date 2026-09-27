@@ -20,7 +20,7 @@
 import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import { log, TemplatesManagerService } from '@agiflowai/aicode-utils';
-import { loadCsf } from '@storybook/csf-tools';
+import { loadCsf } from 'storybook/internal/csf-tools';
 import { glob } from 'glob';
 import type { ComponentInfo, StoryMeta } from './types';
 
@@ -154,7 +154,7 @@ export class StoriesIndexService {
     });
 
     // Parse the CSF to extract meta and stories
-    await csf.parse();
+    csf.parse();
 
     // Validate meta exists with title
     if (!csf.meta?.title) {

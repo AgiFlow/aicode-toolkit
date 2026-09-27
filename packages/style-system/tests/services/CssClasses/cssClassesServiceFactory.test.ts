@@ -62,14 +62,12 @@ describe('CSSClassesServiceFactory', () => {
       );
     });
 
-    it('should use tailwind as default framework when only themePath is provided', async () => {
+    it('should use tailwind as default framework when config omits cssFramework', async () => {
       const factory = new CSSClassesServiceFactory();
 
-      const service = await factory.createService({
-        themePath: '/custom/theme.css',
-      });
+      const service = await factory.createService({});
 
-      // Should create tailwind service (default framework) regardless of themePath
+      // Should create tailwind service (default framework) when no framework is set
       expect(service).toBeInstanceOf(TailwindCSSClassesService);
       expect(service.getFrameworkId()).toBe('tailwind');
     });

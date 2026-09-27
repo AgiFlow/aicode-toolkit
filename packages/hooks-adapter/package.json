@@ -1,7 +1,15 @@
 {
   "name": "@agiflowai/hooks-adapter",
-  "description": "Hook adapters for normalizing AI agent hook formats (Claude Code, Gemini, etc.)",
   "version": "0.1.2",
+  "description": "Hook adapters for normalizing AI agent hook formats (Claude Code, Gemini, etc.)",
+  "keywords": [
+    "library",
+    "typescript"
+  ],
+  "homepage": "https://github.com/AgiFlow/aicode-toolkit#readme",
+  "bugs": {
+    "url": "https://github.com/AgiFlow/aicode-toolkit/issues"
+  },
   "license": "AGPL-3.0",
   "author": "AgiflowIO",
   "repository": {
@@ -9,21 +17,21 @@
     "url": "https://github.com/AgiFlow/aicode-toolkit.git",
     "directory": "packages/hooks-adapter"
   },
-  "homepage": "https://github.com/AgiFlow/aicode-toolkit#readme",
-  "bugs": {
-    "url": "https://github.com/AgiFlow/aicode-toolkit/issues"
-  },
-  "keywords": [
-    "typescript",
-    "library"
-  ],
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.cts",
   "files": [
     "dist",
     "README.md"
   ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.cts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "build": "tsdown",
     "test": "vitest --run",
@@ -34,19 +42,12 @@
     "@agiflowai/coding-agent-bridge": "workspace:*"
   },
   "devDependencies": {
+    "@types/chance": "1.1.8",
     "@types/node": "26.6.3",
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "5.0.2",
     "chance": "1.1.13",
     "tsdown": "0.23.0",
-    "typescript": "5.9.3",
-    "vitest": "4.1.11"
-  },
-  "type": "module",
-  "exports": {
-    ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
-    },
-    "./package.json": "./package.json"
+    "typescript": "6.0.3",
+    "vitest": "5.0.2"
   }
 }

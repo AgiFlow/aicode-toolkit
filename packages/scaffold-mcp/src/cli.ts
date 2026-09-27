@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import packageJson from '../package.json' assert { type: 'json' };
+import packageJson from '../package.json' with { type: 'json' };
 import { boilerplateCommand } from './commands/boilerplate';
 import { fileCommand } from './commands/file';
 import { mcpServeCommand } from './commands/mcp-serve';
@@ -31,4 +31,4 @@ async function main() {
   await program.parseAsync(process.argv);
 }
 
-main();
+void main();

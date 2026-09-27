@@ -67,11 +67,10 @@ vi.mock(
   async (
     importOriginal: () => Promise<typeof import('@agiflowai/hooks-adapter')>,
   ): Promise<object> => {
-    const actual = await importOriginal<typeof import('@agiflowai/hooks-adapter')>();
+    const actual = await importOriginal();
     return {
       ...actual,
       // Vitest v4 requires a regular function (not arrow) for constructor mocks
-      // biome-ignore lint/complexity/useArrowFunction: regular function required for `new` call in Vitest v4
       ExecutionLogService: vi.fn(function (): MockExecutionLogService {
         return {
           hasExecuted: mockHasExecuted,
@@ -92,7 +91,6 @@ vi.mock('@agiflowai/aicode-utils', (): object => ({
     }),
   },
   // Vitest v4 requires a regular function (not arrow) for constructor mocks
-  // biome-ignore lint/complexity/useArrowFunction: regular function required for `new` call in Vitest v4
   ProjectFinderService: vi.fn(function (): MockProjectFinderService {
     return {
       findProjectForFile: vi.fn().mockResolvedValue({ root: '/test/apps/my-app' }),
@@ -102,7 +100,6 @@ vi.mock('@agiflowai/aicode-utils', (): object => ({
 
 vi.mock('../../../src/tools', (): object => ({
   // Vitest v4 requires a regular function (not arrow) for constructor mocks
-  // biome-ignore lint/complexity/useArrowFunction: regular function required for `new` call in Vitest v4
   ListScaffoldingMethodsTool: vi.fn(function (): MockListScaffoldingMethodsTool {
     return { execute: mockExecute };
   }),

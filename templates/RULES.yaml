@@ -1,4 +1,4 @@
-version: '1.0'
+version: "1.0"
 template: shared
 description: Shared rules and patterns for all Agiflow templates
 rules:

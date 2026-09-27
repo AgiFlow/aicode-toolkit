@@ -1,8 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UseBoilerplateTool } from '../../src/tools/UseBoilerplateTool';
+import { getText } from '../helpers/getText';
+import type { BoilerplateService } from '../../src/services/BoilerplateService';
 
 // Mock the service
 vi.mock('../../src/services/BoilerplateService');
+
+/** Exposes the tool's private service so tests can spy on it. */
+function internals(tool: UseBoilerplateTool): { boilerplateService: BoilerplateService } {
+  return tool as unknown as { boilerplateService: BoilerplateService };
+}
 
 describe('UseBoilerplateTool', () => {
   let tool: UseBoilerplateTool;
@@ -43,18 +50,17 @@ describe('UseBoilerplateTool', () => {
         },
       };
 
-      const spy = vi.spyOn(tool.boilerplateService, 'useBoilerplate');
+      const spy = vi.spyOn(internals(tool).boilerplateService, 'useBoilerplate');
       spy.mockResolvedValue({
         success: true,
         message: 'Successfully scaffolded boilerplate at /path/to/project',
-        projectPath: '/path/to/project',
       });
 
       const result = await tool.execute(args);
 
       expect(result.isError).toBeFalsy();
       expect(result.content[0].type).toBe('text');
-      expect(result.content[0].text).toContain('Successfully scaffolded');
+      expect(getText(result.content[0])).toContain('Successfully scaffolded');
       expect(spy).toHaveBeenCalledWith({
         boilerplateName: 'scaffold-nextjs-app',
         variables: { appName: 'my-app', description: 'My test app' },
@@ -69,13 +75,13 @@ describe('UseBoilerplateTool', () => {
         variables: { appName: 'test' },
       };
 
-      const spy = vi.spyOn(tool.boilerplateService, 'useBoilerplate');
+      const spy = vi.spyOn(internals(tool).boilerplateService, 'useBoilerplate');
       spy.mockRejectedValue(new Error('Boilerplate not found'));
 
       const result = await tool.execute(args);
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain('Boilerplate not found');
+      expect(getText(result.content[0])).toContain('Boilerplate not found');
     });
   });
 });

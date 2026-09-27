@@ -88,7 +88,8 @@ export class UseToolTool implements Tool<UseToolToolInput> {
   ) {
     this.clientManager = clientManager;
     this.skillService = skillService;
-    this.definitionsCacheService = definitionsCacheService || new DefinitionsCacheService(clientManager, skillService);
+    this.definitionsCacheService =
+      definitionsCacheService || new DefinitionsCacheService(clientManager, skillService);
     this.serverId = serverId || DEFAULT_SERVER_ID;
   }
 
@@ -167,7 +168,8 @@ IMPORTANT: Only use tools discovered from describe_tools with id="${this.serverI
    * @returns CallToolResult with guidance message
    */
   private executePromptSkill(promptSkill: PromptSkillMatch): CallToolResult {
-    const location = promptSkill.skill.folder || `prompt:${promptSkill.serverName}/${promptSkill.promptName}`;
+    const location =
+      promptSkill.skill.folder || `prompt:${promptSkill.serverName}/${promptSkill.promptName}`;
     return {
       content: [
         {

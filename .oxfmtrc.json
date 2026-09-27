@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "overrides": [
+    {
+      "files": ["**/*.{yaml,yml}"],
+      "options": {
+        "singleQuote": false
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "dist",
+    "node_modules",
+    "build",
+    "coverage",
+    ".nx",
+    "tmp",
+    "**/*.min.js",
+    "**/*.d.ts",
+    "**/CHANGELOG.md",
+    "pnpm-lock.yaml"
+  ]
+}

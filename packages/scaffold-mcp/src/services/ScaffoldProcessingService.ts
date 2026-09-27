@@ -117,7 +117,7 @@ export class ScaffoldProcessingService {
     try {
       items = await this.fileSystem.readdir(dirPath);
     } catch (error) {
-      log.warn(`Cannot read directory ${dirPath}: ${error}`);
+      log.warn(`Cannot read directory ${dirPath}: ${String(error)}`);
       return;
     }
 
@@ -131,7 +131,7 @@ export class ScaffoldProcessingService {
           const stat = await this.fileSystem.stat(itemPath);
           return { itemPath, stat, error: null };
         } catch (error) {
-          log.warn(`Cannot stat ${itemPath}: ${error}`);
+          log.warn(`Cannot stat ${itemPath}: ${String(error)}`);
           return { itemPath, stat: null, error };
         }
       }),
@@ -163,7 +163,7 @@ export class ScaffoldProcessingService {
     try {
       items = await this.fileSystem.readdir(dirPath);
     } catch (error) {
-      log.warn(`Cannot read directory ${dirPath}: ${error}`);
+      log.warn(`Cannot read directory ${dirPath}: ${String(error)}`);
       return;
     }
 
@@ -177,7 +177,7 @@ export class ScaffoldProcessingService {
           const stat = await this.fileSystem.stat(itemPath);
           return { itemPath, stat, error: null };
         } catch (error) {
-          log.warn(`Cannot stat ${itemPath}: ${error}`);
+          log.warn(`Cannot stat ${itemPath}: ${String(error)}`);
           return { itemPath, stat: null, error };
         }
       }),

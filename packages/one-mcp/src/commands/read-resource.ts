@@ -63,19 +63,17 @@ export const readResourceCommand = new Command('read-resource')
 
       // Connect to all configured MCP servers in parallel
       await Promise.all(
-        Object.entries(config.mcpServers).map(
-          async ([serverName, serverConfig]): Promise<void> => {
-            try {
-              await clientManager.connectToServer(serverName, serverConfig);
-              if (!options.json) {
-                console.error(`✓ Connected to ${serverName}`);
-              }
-            } catch (error) {
-              // Always log to stderr — does not corrupt JSON stdout
-              console.error(`✗ Failed to connect to ${serverName}: ${toErrorMessage(error)}`);
+        Object.entries(config.mcpServers).map(async ([serverName, serverConfig]): Promise<void> => {
+          try {
+            await clientManager.connectToServer(serverName, serverConfig);
+            if (!options.json) {
+              console.error(`✓ Connected to ${serverName}`);
             }
-          },
-        ),
+          } catch (error) {
+            // Always log to stderr — does not corrupt JSON stdout
+            console.error(`✗ Failed to connect to ${serverName}: ${toErrorMessage(error)}`);
+          }
+        }),
       );
 
       const clients = clientManager.getAllClients();

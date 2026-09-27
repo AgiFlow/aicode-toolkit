@@ -22,13 +22,13 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check packages/coding-agent-bridge"
+        "command": "oxlint packages/coding-agent-bridge && oxfmt --check packages/coding-agent-bridge"
       }
     },
     "lint:fix": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check --write packages/coding-agent-bridge"
+        "command": "oxlint --fix packages/coding-agent-bridge && oxfmt packages/coding-agent-bridge"
       }
     }
   },

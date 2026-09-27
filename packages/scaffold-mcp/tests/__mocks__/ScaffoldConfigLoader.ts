@@ -8,22 +8,20 @@ import type {
 
 export const createMockScaffoldConfigLoader = (): IScaffoldConfigLoader => ({
   parseArchitectConfig: vi.fn().mockResolvedValue({
-    boilerplate: [
-      {
-        name: 'test-boilerplate',
-        targetFolder: 'apps',
-        description: 'Test boilerplate',
-        variables_schema: {
-          type: 'object',
-          properties: {
-            appName: { type: 'string', description: 'App name' },
-          },
-          required: ['appName'],
+    boilerplate: {
+      name: 'test-boilerplate',
+      description: 'Test boilerplate',
+      variables_schema: {
+        type: 'object',
+        properties: {
+          appName: { type: 'string', description: 'App name' },
         },
-        includes: ['package.json', 'src/index.ts'],
+        required: ['appName'],
+        additionalProperties: false,
       },
-    ],
-  } as ArchitectConfig),
+      includes: ['package.json', 'src/index.ts'],
+    },
+  } satisfies ArchitectConfig),
 
   parseIncludeEntry: vi
     .fn()

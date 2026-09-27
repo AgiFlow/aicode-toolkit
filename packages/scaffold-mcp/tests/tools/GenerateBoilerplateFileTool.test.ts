@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerateBoilerplateFileTool } from '../../src/tools/GenerateBoilerplateFileTool';
+import { getText } from '../helpers/getText';
+import type { BoilerplateGeneratorService } from '../../src/services/BoilerplateGeneratorService';
+
+/** Exposes the tool's private service so tests can spy on it. */
+function internals(tool: GenerateBoilerplateFileTool): {
+  boilerplateGeneratorService: BoilerplateGeneratorService;
+} {
+  return tool as unknown as { boilerplateGeneratorService: BoilerplateGeneratorService };
+}
 
 describe('GenerateBoilerplateFileTool', () => {
   let tool: GenerateBoilerplateFileTool;
@@ -43,7 +52,7 @@ describe('GenerateBoilerplateFileTool', () => {
       };
 
       // Spy on the service instance's method
-      const spy = vi.spyOn(tool.boilerplateGeneratorService, 'createTemplateFile');
+      const spy = vi.spyOn(internals(tool).boilerplateGeneratorService, 'createTemplateFile');
       spy.mockResolvedValue({
         success: true,
         message: 'File created',
@@ -54,7 +63,7 @@ describe('GenerateBoilerplateFileTool', () => {
       const result = await tool.execute(args);
 
       expect(result.isError).toBeFalsy();
-      const response = JSON.parse(result.content[0].text);
+      const response = JSON.parse(getText(result.content[0]));
       expect(response.success).toBe(true);
       expect(response.filePath).toBe('package.json.liquid');
     });
@@ -66,7 +75,7 @@ describe('GenerateBoilerplateFileTool', () => {
         sourceFile: '/path/to/source.ts',
       };
 
-      const spy = vi.spyOn(tool.boilerplateGeneratorService, 'createTemplateFile');
+      const spy = vi.spyOn(internals(tool).boilerplateGeneratorService, 'createTemplateFile');
       spy.mockResolvedValue({
         success: true,
         message: 'File created',
@@ -76,7 +85,7 @@ describe('GenerateBoilerplateFileTool', () => {
       const result = await tool.execute(args);
 
       expect(result.isError).toBeFalsy();
-      const response = JSON.parse(result.content[0].text);
+      const response = JSON.parse(getText(result.content[0]));
       expect(response.sourceFile).toBe('/path/to/source.ts');
     });
 
@@ -88,7 +97,7 @@ describe('GenerateBoilerplateFileTool', () => {
         header: '/**\n * Component Header\n */',
       };
 
-      const spy = vi.spyOn(tool.boilerplateGeneratorService, 'createTemplateFile');
+      const spy = vi.spyOn(internals(tool).boilerplateGeneratorService, 'createTemplateFile');
       spy.mockResolvedValue({
         success: true,
         message: 'File created',
@@ -107,7 +116,7 @@ describe('GenerateBoilerplateFileTool', () => {
         content: 'test',
       };
 
-      const spy = vi.spyOn(tool.boilerplateGeneratorService, 'createTemplateFile');
+      const spy = vi.spyOn(internals(tool).boilerplateGeneratorService, 'createTemplateFile');
       spy.mockResolvedValue({
         success: false,
         message: 'Template directory does not exist',
@@ -116,7 +125,7 @@ describe('GenerateBoilerplateFileTool', () => {
       const result = await tool.execute(args);
 
       expect(result.isError).toBeTruthy();
-      expect(result.content[0].text).toContain('does not exist');
+      expect(getText(result.content[0])).toContain('does not exist');
     });
 
     it('should handle exceptions', async () => {
@@ -126,13 +135,13 @@ describe('GenerateBoilerplateFileTool', () => {
         content: 'test',
       };
 
-      const spy = vi.spyOn(tool.boilerplateGeneratorService, 'createTemplateFile');
+      const spy = vi.spyOn(internals(tool).boilerplateGeneratorService, 'createTemplateFile');
       spy.mockRejectedValue(new Error('File system error'));
 
       const result = await tool.execute(args);
 
       expect(result.isError).toBeTruthy();
-      expect(result.content[0].text).toContain('File system error');
+      expect(getText(result.content[0])).toContain('File system error');
     });
   });
 });

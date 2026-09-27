@@ -17,7 +17,7 @@ function mcpRequest(
   return new Promise((resolve, reject) => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json, text/event-stream',
+      Accept: 'application/json, text/event-stream',
     };
     if (sessionId) {
       headers['mcp-session-id'] = sessionId;
@@ -32,7 +32,9 @@ function mcpRequest(
       { hostname: '127.0.0.1', port, path: '/mcp', method, headers },
       (res) => {
         let data = '';
-        res.on('data', (chunk: string) => { data += chunk; });
+        res.on('data', (chunk: string) => {
+          data += chunk;
+        });
         res.on('end', () => {
           let parsed: unknown;
           try {
@@ -94,7 +96,11 @@ function createMockSharedServices(overrides?: Partial<SharedServices>): SharedSe
       getDefinition: vi.fn().mockResolvedValue({
         name: 'describe_tools',
         description: 'Mock describe tools',
-        inputSchema: { type: 'object', properties: { toolNames: { type: 'array', items: { type: 'string' } } }, required: ['toolNames'] },
+        inputSchema: {
+          type: 'object',
+          properties: { toolNames: { type: 'array', items: { type: 'string' } } },
+          required: ['toolNames'],
+        },
       }),
       execute: vi.fn().mockResolvedValue({ content: [{ type: 'text', text: '{}' }] }),
       clearAutoDetectedSkillsCache: vi.fn(),
@@ -103,7 +109,11 @@ function createMockSharedServices(overrides?: Partial<SharedServices>): SharedSe
       getDefinition: vi.fn().mockReturnValue({
         name: 'use_tool',
         description: 'Mock use tool',
-        inputSchema: { type: 'object', properties: { toolName: { type: 'string' }, toolArgs: { type: 'object' } }, required: ['toolName'] },
+        inputSchema: {
+          type: 'object',
+          properties: { toolName: { type: 'string' }, toolArgs: { type: 'object' } },
+          required: ['toolName'],
+        },
       }),
       execute: vi.fn().mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] }),
     } as any,
@@ -180,10 +190,11 @@ describe('HTTP Transport - Concurrent Sessions', () => {
   });
 
   it('should return tools from shared services for all sessions', async () => {
-    handler = new HttpTransportHandler(
-      () => createSessionServer(shared),
-      { mode: 'http', port, host: '127.0.0.1' },
-    );
+    handler = new HttpTransportHandler(() => createSessionServer(shared), {
+      mode: 'http',
+      port,
+      host: '127.0.0.1',
+    });
     await handler.start();
 
     const s1 = await initializeSession(port);
@@ -203,10 +214,11 @@ describe('HTTP Transport - Concurrent Sessions', () => {
   });
 
   it('should handle session deletion without affecting other sessions', async () => {
-    handler = new HttpTransportHandler(
-      () => createSessionServer(shared),
-      { mode: 'http', port, host: '127.0.0.1' },
-    );
+    handler = new HttpTransportHandler(() => createSessionServer(shared), {
+      mode: 'http',
+      port,
+      host: '127.0.0.1',
+    });
     await handler.start();
 
     const sessionA = await initializeSession(port);
@@ -226,10 +238,11 @@ describe('HTTP Transport - Concurrent Sessions', () => {
   });
 
   it('should clean up all sessions on stop', async () => {
-    handler = new HttpTransportHandler(
-      () => createSessionServer(shared),
-      { mode: 'http', port, host: '127.0.0.1' },
-    );
+    handler = new HttpTransportHandler(() => createSessionServer(shared), {
+      mode: 'http',
+      port,
+      host: '127.0.0.1',
+    });
     await handler.start();
 
     await initializeSession(port);
@@ -249,9 +262,7 @@ describe('HTTP Transport - Concurrent Sessions', () => {
     await handler.start();
 
     // Initialize 20 sessions concurrently
-    const sessionIds = await Promise.all(
-      Array.from({ length: 20 }, () => initializeSession(port)),
-    );
+    const sessionIds = await Promise.all(Array.from({ length: 20 }, () => initializeSession(port)));
 
     // All 20 should succeed with unique IDs
     expect(factorySpy).toHaveBeenCalledTimes(20);
@@ -260,10 +271,11 @@ describe('HTTP Transport - Concurrent Sessions', () => {
   });
 
   it('should reject requests with unknown session ID', async () => {
-    handler = new HttpTransportHandler(
-      () => createSessionServer(shared),
-      { mode: 'http', port, host: '127.0.0.1' },
-    );
+    handler = new HttpTransportHandler(() => createSessionServer(shared), {
+      mode: 'http',
+      port,
+      host: '127.0.0.1',
+    });
     await handler.start();
 
     const res = await mcpRequest(port, 'POST', LIST_TOOLS_REQUEST, 'non-existent-session-id');
@@ -271,10 +283,11 @@ describe('HTTP Transport - Concurrent Sessions', () => {
   });
 
   it('should reject non-initialize POST without session ID', async () => {
-    handler = new HttpTransportHandler(
-      () => createSessionServer(shared),
-      { mode: 'http', port, host: '127.0.0.1' },
-    );
+    handler = new HttpTransportHandler(() => createSessionServer(shared), {
+      mode: 'http',
+      port,
+      host: '127.0.0.1',
+    });
     await handler.start();
 
     const res = await mcpRequest(port, 'POST', LIST_TOOLS_REQUEST);

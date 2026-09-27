@@ -10,7 +10,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import type { SkillService } from './SkillService';
 import type { McpClientManagerService } from './McpClientManagerService';
 import type {
@@ -20,7 +20,6 @@ import type {
   DefinitionsCacheFile,
   McpPromptInfo,
   McpResourceInfo,
-  McpToolInfo,
   PromptSkillConfig,
   Skill,
 } from '../types';
@@ -201,7 +200,11 @@ export class DefinitionsCacheService {
     if (options.configHash && cache.configHash && cache.configHash !== options.configHash) {
       return false;
     }
-    if (options.oneMcpVersion && cache.oneMcpVersion && cache.oneMcpVersion !== options.oneMcpVersion) {
+    if (
+      options.oneMcpVersion &&
+      cache.oneMcpVersion &&
+      cache.oneMcpVersion !== options.oneMcpVersion
+    ) {
       return false;
     }
     return true;

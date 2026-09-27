@@ -50,8 +50,10 @@ describe('AddRuleTool', () => {
     });
 
     expect(result.isError).toBe(true);
-    expect(result.content[0].type).toBe('text');
-    const response = JSON.parse(result.content[0].text);
+    const content = result.content[0];
+    expect(content.type).toBe('text');
+    if (content.type !== 'text') throw new Error('Expected text content');
+    const response = JSON.parse(content.text);
     expect(response.error).toContain('not found');
   });
 
@@ -71,8 +73,10 @@ describe('AddRuleTool', () => {
     });
 
     expect(result.isError).toBe(true);
-    expect(result.content[0].type).toBe('text');
-    const response = JSON.parse(result.content[0].text);
+    const content = result.content[0];
+    expect(content.type).toBe('text');
+    if (content.type !== 'text') throw new Error('Expected text content');
+    const response = JSON.parse(content.text);
     expect(response.error).toContain('already exists');
   });
 });

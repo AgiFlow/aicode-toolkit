@@ -25,7 +25,7 @@ import { UseToolTool } from '../tools/UseToolTool';
 import { getToolCapabilities, getUniqueSortedCapabilities } from '../utils/toolCapabilities';
 import { parseToolName, generateServerId } from '../utils';
 import type { CachedServerDefinition, ToolDefinition } from '../types';
-import packageJson from '../../package.json' assert { type: 'json' };
+import packageJson from '../../package.json' with { type: 'json' };
 
 /**
  * Configuration options for creating an MCP server instance
@@ -70,9 +70,8 @@ export interface SharedServices {
 export function summarizeServerTools(serverDefinition: CachedServerDefinition): string {
   const toolNames = serverDefinition.tools.map((tool) => tool.name);
   const capabilities = getUniqueSortedCapabilities(serverDefinition.tools);
-  const capabilitySummary = capabilities.length > 0
-    ? `; capabilities: ${capabilities.join(', ')}`
-    : '';
+  const capabilitySummary =
+    capabilities.length > 0 ? `; capabilities: ${capabilities.join(', ')}` : '';
   if (toolNames.length === 0) {
     return `${serverDefinition.serverName} (no tools cached${capabilitySummary})`;
   }
@@ -83,9 +82,7 @@ export function buildFlatToolDescription(
   serverDefinition: CachedServerDefinition,
   tool: CachedServerDefinition['tools'][number],
 ): string {
-  const parts = [
-    `Proxied from server "${serverDefinition.serverName}" as tool "${tool.name}".`,
-  ];
+  const parts = [`Proxied from server "${serverDefinition.serverName}" as tool "${tool.name}".`];
 
   if (serverDefinition.serverInstruction) {
     parts.push(`Server summary: ${serverDefinition.serverInstruction}`);
@@ -103,7 +100,9 @@ export function buildFlatToolDescription(
   return parts.join('\n\n');
 }
 
-export function buildFlatToolDefinitions(serverDefinitions: CachedServerDefinition[]): ToolDefinition[] {
+export function buildFlatToolDefinitions(
+  serverDefinitions: CachedServerDefinition[],
+): ToolDefinition[] {
   const toolToServers = new Map<string, string[]>();
 
   for (const serverDefinition of serverDefinitions) {
@@ -140,16 +139,19 @@ async function hasAnySkills(
     definitionsCacheService.getServerDefinitions(),
   ]);
 
-  return fileSkills.length > 0 || serverDefinitions.some((server) => server.promptSkills.length > 0);
+  return (
+    fileSkills.length > 0 || serverDefinitions.some((server) => server.promptSkills.length > 0)
+  );
 }
 
 export function buildSkillsDescribeDefinition(
   serverDefinitions: CachedServerDefinition[],
   serverId: string,
 ): ToolDefinition {
-  const proxySummary = serverDefinitions.length > 0
-    ? serverDefinitions.map(summarizeServerTools).join('; ')
-    : 'No proxied servers available.';
+  const proxySummary =
+    serverDefinitions.length > 0
+      ? serverDefinitions.map(summarizeServerTools).join('; ')
+      : 'No proxied servers available.';
 
   return {
     name: DescribeToolsTool.TOOL_NAME,
@@ -181,9 +183,10 @@ export function buildSearchDescribeDefinition(
   serverDefinitions: CachedServerDefinition[],
   serverId: string,
 ): ToolDefinition {
-  const summary = serverDefinitions.length > 0
-    ? serverDefinitions.map(summarizeServerTools).join('; ')
-    : 'No proxied servers available.';
+  const summary =
+    serverDefinitions.length > 0
+      ? serverDefinitions.map(summarizeServerTools).join('; ')
+      : 'No proxied servers available.';
 
   return {
     name: DescribeToolsTool.TOOL_NAME,
@@ -217,9 +220,10 @@ export function buildProxyInstructions(
   mode: 'meta' | 'flat' | 'search',
   includeSkillsTool: boolean,
 ): string {
-  const summary = serverDefinitions.length > 0
-    ? serverDefinitions.map(summarizeServerTools).join('; ')
-    : 'No proxied servers available.';
+  const summary =
+    serverDefinitions.length > 0
+      ? serverDefinitions.map(summarizeServerTools).join('; ')
+      : 'No proxied servers available.';
 
   if (mode === 'flat') {
     return [
@@ -271,7 +275,7 @@ export async function initializeSharedServices(options?: ServerOptions): Promise
       config = await configFetcher.fetchConfiguration(options.noCache || false);
     } catch (error) {
       throw new Error(
-        `Failed to load MCP configuration from '${options.configFilePath}': ${error instanceof Error ? error.message : String(error)}`
+        `Failed to load MCP configuration from '${options.configFilePath}': ${error instanceof Error ? error.message : String(error)}`,
       );
     }
 
@@ -316,24 +320,32 @@ export async function initializeSharedServices(options?: ServerOptions): Promise
             failedConnections.push({ serverName, error: err });
             console.error(`Failed to connect to ${serverName}:`, error);
           }
-        }
+        },
       );
 
       await Promise.all(connectionPromises);
 
-      if (failedConnections.length > 0 && failedConnections.length < Object.keys(config.mcpServers).length) {
+      if (
+        failedConnections.length > 0 &&
+        failedConnections.length < Object.keys(config.mcpServers).length
+      ) {
         console.error(
-          `Warning: Some MCP server connections failed: ${failedConnections.map((f) => f.serverName).join(', ')}`
+          `Warning: Some MCP server connections failed: ${failedConnections.map((f) => f.serverName).join(', ')}`,
         );
       }
 
-      if (failedConnections.length > 0 && failedConnections.length === Object.keys(config.mcpServers).length) {
+      if (
+        failedConnections.length > 0 &&
+        failedConnections.length === Object.keys(config.mcpServers).length
+      ) {
         throw new Error(
-          `All MCP server connections failed: ${failedConnections.map((f) => `${f.serverName}: ${f.error.message}`).join(', ')}`
+          `All MCP server connections failed: ${failedConnections.map((f) => `${f.serverName}: ${f.error.message}`).join(', ')}`,
         );
       }
     } else {
-      console.error(`[definitions-cache] Using cached definitions from ${effectiveDefinitionsCachePath}`);
+      console.error(
+        `[definitions-cache] Using cached definitions from ${effectiveDefinitionsCachePath}`,
+      );
     }
   }
 
@@ -345,13 +357,14 @@ export async function initializeSharedServices(options?: ServerOptions): Promise
 
   const toolsRef: { describeTools: DescribeToolsTool | null } = { describeTools: null };
 
-  const skillService = skillPaths.length > 0
-    ? new SkillService(process.cwd(), skillPaths, {
-        onCacheInvalidated: () => {
-          toolsRef.describeTools?.clearAutoDetectedSkillsCache();
-        },
-      })
-    : undefined;
+  const skillService =
+    skillPaths.length > 0
+      ? new SkillService(process.cwd(), skillPaths, {
+          onCacheInvalidated: () => {
+            toolsRef.describeTools?.clearAutoDetectedSkillsCache();
+          },
+        })
+      : undefined;
 
   let definitionsCacheService: DefinitionsCacheService;
   if (effectiveDefinitionsCachePath) {
@@ -387,12 +400,7 @@ export async function initializeSharedServices(options?: ServerOptions): Promise
     serverId,
     definitionsCacheService,
   );
-  const useTool = new UseToolTool(
-    clientManager,
-    skillService,
-    serverId,
-    definitionsCacheService,
-  );
+  const useTool = new UseToolTool(clientManager, skillService, serverId, definitionsCacheService);
   const searchListTools = new SearchListToolsTool(clientManager, definitionsCacheService);
 
   toolsRef.describeTools = describeTools;
@@ -400,7 +408,9 @@ export async function initializeSharedServices(options?: ServerOptions): Promise
   // Start watching skill directories for changes (non-critical)
   if (skillService) {
     skillService.startWatching().catch((error) => {
-      console.error(`[skill-watcher] File watcher failed (non-critical): ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error(
+        `[skill-watcher] File watcher failed (non-critical): ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     });
   }
 
@@ -478,35 +488,36 @@ export async function createSessionServer(shared: SharedServices): Promise<Serve
         prompts: {},
       },
       instructions: buildProxyInstructions(serverDefinitions, proxyMode, includeSkillsTool),
-    }
+    },
   );
 
   server.setRequestHandler('tools/list', async () => ({
-    tools: proxyMode === 'flat'
-      ? await (async () => {
-          const currentServerDefinitions = await definitionsCacheService.getServerDefinitions();
-          const shouldIncludeSkillsTool = await hasAnySkills(definitionsCacheService, skillService);
-
-          return [
-            ...buildFlatToolDefinitions(currentServerDefinitions),
-            ...(shouldIncludeSkillsTool
-              ? [buildSkillsDescribeDefinition(currentServerDefinitions, serverId)]
-              : []),
-          ];
-        })()
-      : proxyMode === 'search'
+    tools:
+      proxyMode === 'flat'
         ? await (async () => {
             const currentServerDefinitions = await definitionsCacheService.getServerDefinitions();
+            const shouldIncludeSkillsTool = await hasAnySkills(
+              definitionsCacheService,
+              skillService,
+            );
+
             return [
-              buildSearchDescribeDefinition(currentServerDefinitions, serverId),
-              await searchListTools.getDefinition(),
-              useToolWithCache.getDefinition(),
+              ...buildFlatToolDefinitions(currentServerDefinitions),
+              ...(shouldIncludeSkillsTool
+                ? [buildSkillsDescribeDefinition(currentServerDefinitions, serverId)]
+                : []),
             ];
           })()
-      : [
-          await describeTools.getDefinition(),
-          useToolWithCache.getDefinition(),
-        ],
+        : proxyMode === 'search'
+          ? await (async () => {
+              const currentServerDefinitions = await definitionsCacheService.getServerDefinitions();
+              return [
+                buildSearchDescribeDefinition(currentServerDefinitions, serverId),
+                await searchListTools.getDefinition(),
+                useToolWithCache.getDefinition(),
+              ];
+            })()
+          : [await describeTools.getDefinition(), useToolWithCache.getDefinition()],
   }));
 
   server.setRequestHandler('tools/call', async (request) => {
@@ -517,7 +528,7 @@ export async function createSessionServer(shared: SharedServices): Promise<Serve
         return await describeTools.execute(args as any);
       } catch (error) {
         throw new Error(
-          `Failed to execute ${name}: ${error instanceof Error ? error.message : String(error)}`
+          `Failed to execute ${name}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }
@@ -527,7 +538,7 @@ export async function createSessionServer(shared: SharedServices): Promise<Serve
         return await useToolWithCache.execute(args as any);
       } catch (error) {
         throw new Error(
-          `Failed to execute ${name}: ${error instanceof Error ? error.message : String(error)}`
+          `Failed to execute ${name}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }
@@ -610,7 +621,14 @@ export async function createSessionServer(shared: SharedServices): Promise<Serve
     const currentServerDefinitions = await definitionsCacheService.getServerDefinitions();
 
     const promptToServers = new Map<string, string[]>();
-    const serverPromptsMap = new Map<string, Array<{ name: string; description?: string; arguments?: Array<{ name: string; description?: string; required?: boolean }> }>>();
+    const serverPromptsMap = new Map<
+      string,
+      Array<{
+        name: string;
+        description?: string;
+        arguments?: Array<{ name: string; description?: string; required?: boolean }>;
+      }>
+    >();
 
     for (const serverDefinition of currentServerDefinitions) {
       serverPromptsMap.set(serverDefinition.serverName, serverDefinition.prompts);
@@ -622,7 +640,11 @@ export async function createSessionServer(shared: SharedServices): Promise<Serve
       }
     }
 
-    const aggregatedPrompts: Array<{ name: string; description?: string; arguments?: Array<{ name: string; description?: string; required?: boolean }> }> = [];
+    const aggregatedPrompts: Array<{
+      name: string;
+      description?: string;
+      arguments?: Array<{ name: string; description?: string; required?: boolean }>;
+    }> = [];
 
     for (const serverDefinition of currentServerDefinitions) {
       const prompts = serverPromptsMap.get(serverDefinition.serverName) || [];
@@ -666,13 +688,15 @@ export async function createSessionServer(shared: SharedServices): Promise<Serve
     if (serversWithPrompt.length > 1) {
       throw new Error(
         `Prompt "${name}" exists on multiple servers: ${serversWithPrompt.join(', ')}. ` +
-        `Use the prefixed format (e.g., "${serversWithPrompt[0]}__${name}") to specify which server to use.`
+          `Use the prefixed format (e.g., "${serversWithPrompt[0]}__${name}") to specify which server to use.`,
       );
     }
 
     const client = clientManager.getClient(serversWithPrompt[0]);
     if (!client) {
-      return await (await clientManager.ensureConnected(serversWithPrompt[0])).getPrompt(name, args);
+      return await (
+        await clientManager.ensureConnected(serversWithPrompt[0])
+      ).getPrompt(name, args);
     }
     return await client.getPrompt(name, args);
   });

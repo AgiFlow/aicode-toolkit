@@ -23,13 +23,15 @@ Your task:
    - `use-scaffold-method` - Test the feature
 
 Important:
+
 - Feature names: prefix with "scaffold-"
 - Conditional includes: use "file.tsx?withLayout=true"
 - Template syntax: use {{ variableName }}
-{% if isMonolith %}- Template name will be auto-detected from `.toolkit/settings.yaml`{% endif %}
+  {% if isMonolith %}- Template name will be auto-detected from `.toolkit/settings.yaml`{% endif %}
 
 **Description Field Guidelines (CRITICAL)**:
 The description should explain what the feature scaffold generates (2-3 sentences):
+
 - Sentence 1: What type of code it generates (component, page, service, etc.)
 - Sentence 2: Key features or capabilities included
 - Sentence 3: Primary use cases or when to use it
@@ -57,6 +59,7 @@ Write comprehensive [tests/docs] for all [public methods/exports]."
 Keep it concise but informative - focus on the patterns and conventions that AI needs to understand to work with the generated code effectively.
 
 Template File Content Guidelines:
+
 - Keep content MINIMAL and business-agnostic
 - Focus on structure and patterns, not business logic
 - Use placeholder/generic examples only

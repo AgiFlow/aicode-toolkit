@@ -31,6 +31,7 @@ Add to your MCP config (`.mcp.json`, `.cursor/mcp.json`, etc.):
 ```
 
 **Flags:**
+
 - `--admin-enable`: Enables tools for creating new templates (optional, useful during setup)
 
 ### 3. Start Using
@@ -51,21 +52,21 @@ Agent: [calls list-scaffolding-methods, then use-scaffold-method]
 
 ### Standard Tools
 
-| Tool | Purpose | When to Use |
-|------|---------|-------------|
-| `list-boilerplates` | Show available project templates | Starting a new project |
-| `use-boilerplate` | Create project from template | After choosing a template |
-| `list-scaffolding-methods` | Show features for a project | Adding to existing project |
-| `use-scaffold-method` | Add feature to project | After choosing a feature |
-| `write-to-file` | Write content to file | Custom files not in templates |
+| Tool                       | Purpose                          | When to Use                   |
+| -------------------------- | -------------------------------- | ----------------------------- |
+| `list-boilerplates`        | Show available project templates | Starting a new project        |
+| `use-boilerplate`          | Create project from template     | After choosing a template     |
+| `list-scaffolding-methods` | Show features for a project      | Adding to existing project    |
+| `use-scaffold-method`      | Add feature to project           | After choosing a feature      |
+| `write-to-file`            | Write content to file            | Custom files not in templates |
 
 ### Admin Tools (with `--admin-enable`)
 
-| Tool | Purpose | When to Use |
-|------|---------|-------------|
-| `generate-boilerplate` | Create new project template | Building custom templates |
+| Tool                        | Purpose                     | When to Use               |
+| --------------------------- | --------------------------- | ------------------------- |
+| `generate-boilerplate`      | Create new project template | Building custom templates |
 | `generate-feature-scaffold` | Create new feature scaffold | Adding feature generators |
-| `generate-boilerplate-file` | Add files to templates | Populating template files |
+| `generate-boilerplate-file` | Add files to templates      | Populating template files |
 
 ---
 
@@ -91,11 +92,11 @@ apps/
 
 ## Built-in Templates
 
-| Template | Stack | What You Can Generate |
-|----------|-------|----------------------|
-| `nextjs-15-drizzle` | Next.js 15 + App Router | Pages, layouts, components, API routes |
-| `typescript-lib` | TypeScript library | Library structure, tests |
-| `typescript-mcp-package` | MCP server | CLI commands, MCP tools |
+| Template                 | Stack                   | What You Can Generate                  |
+| ------------------------ | ----------------------- | -------------------------------------- |
+| `nextjs-15-drizzle`      | Next.js 15 + App Router | Pages, layouts, components, API routes |
+| `typescript-lib`         | TypeScript library      | Library structure, tests               |
+| `typescript-mcp-package` | MCP server              | CLI commands, MCP tools                |
 
 ---
 
@@ -187,15 +188,15 @@ scaffold-mcp:
 
 The first valid entry is used when `fallbackTool` is not set.
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-t, --type` | Transport: `stdio`, `http`, `sse` | `stdio` |
-| `-p, --port` | Port for HTTP/SSE | `3000` |
-| `--host` | Host for HTTP/SSE | `localhost` |
-| `--admin-enable` | Enable template creation tools | `false` |
-| `--prompt-as-skill` | Render MCP prompts with Claude Code skill front matter, exposing them as `/skill` commands | `false` |
-| `--fallback-tool` | LLM tool for scaffold operations (`claude-code`, `gemini-cli`, `codex`) | disabled |
-| `--fallback-tool-config` | JSON config for the CLI fallback tool; settings files may also use ordered `fallbacks` entries | `{}` |
+| Option                   | Description                                                                                    | Default     |
+| ------------------------ | ---------------------------------------------------------------------------------------------- | ----------- |
+| `-t, --type`             | Transport: `stdio`, `http`, `sse`                                                              | `stdio`     |
+| `-p, --port`             | Port for HTTP/SSE                                                                              | `3000`      |
+| `--host`                 | Host for HTTP/SSE                                                                              | `localhost` |
+| `--admin-enable`         | Enable template creation tools                                                                 | `false`     |
+| `--prompt-as-skill`      | Render MCP prompts with Claude Code skill front matter, exposing them as `/skill` commands     | `false`     |
+| `--fallback-tool`        | LLM tool for scaffold operations (`claude-code`, `gemini-cli`, `codex`)                        | disabled    |
+| `--fallback-tool-config` | JSON config for the CLI fallback tool; settings files may also use ordered `fallbacks` entries | `{}`        |
 
 ---
 
@@ -204,11 +205,13 @@ The first valid entry is used when `fallbackTool` is not set.
 ### Option 1: Using Admin Tools
 
 Ask your AI agent:
+
 ```
 "Create a boilerplate template for our React + Vite setup"
 ```
 
 The agent will use:
+
 1. `generate-boilerplate`
 2. `generate-boilerplate-file`
 
@@ -323,13 +326,13 @@ See [Hooks Documentation](./docs/hooks.md) for details.
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [MCP Tools Reference](./docs/mcp-tools.md) | Detailed tool documentation |
-| [CLI Commands](./docs/cli-commands.md) | Complete CLI reference |
-| [Template Conventions](./docs/template-conventions.md) | How to create templates |
-| [Advanced Generators](./docs/advanced-generators.md) | Custom TypeScript generators |
-| [Hooks Integration](./docs/hooks.md) | AI agent hooks setup |
+| Document                                               | Description                  |
+| ------------------------------------------------------ | ---------------------------- |
+| [MCP Tools Reference](./docs/mcp-tools.md)             | Detailed tool documentation  |
+| [CLI Commands](./docs/cli-commands.md)                 | Complete CLI reference       |
+| [Template Conventions](./docs/template-conventions.md) | How to create templates      |
+| [Advanced Generators](./docs/advanced-generators.md)   | Custom TypeScript generators |
+| [Hooks Integration](./docs/hooks.md)                   | AI agent hooks setup         |
 
 ---
 

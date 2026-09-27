@@ -1,9 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ListScaffoldingMethodsTool } from '../../src/tools/ListScaffoldingMethodsTool';
+import { getText } from '../helpers/getText';
+import type {
+  ListScaffoldingMethodsResult,
+  ScaffoldingMethodsService,
+} from '../../src/services/ScaffoldingMethodsService';
 
 // Mock the services
 vi.mock('../../src/services/FileSystemService');
 vi.mock('../../src/services/ScaffoldingMethodsService');
+
+/** Exposes the tool's private service so tests can spy on it. */
+function internals(tool: ListScaffoldingMethodsTool): {
+  scaffoldingMethodsService: ScaffoldingMethodsService;
+} {
+  return tool as unknown as { scaffoldingMethodsService: ScaffoldingMethodsService };
+}
 
 describe('ListScaffoldingMethodsTool', () => {
   let tool: ListScaffoldingMethodsTool;
@@ -36,7 +48,7 @@ describe('ListScaffoldingMethodsTool', () => {
 
   describe('execute', () => {
     it('should list scaffolding methods successfully', async () => {
-      const mockMethods = {
+      const mockMethods: ListScaffoldingMethodsResult = {
         sourceTemplate: 'nextjs-15',
         templatePath: 'nextjs-15',
         methods: [
@@ -50,6 +62,7 @@ describe('ListScaffoldingMethodsTool', () => {
                 pageTitle: { type: 'string', description: 'Page title' },
               },
               required: ['routePath', 'pageTitle'],
+              additionalProperties: false,
             },
           },
           {
@@ -61,12 +74,13 @@ describe('ListScaffoldingMethodsTool', () => {
                 componentName: { type: 'string', description: 'Component name' },
               },
               required: ['componentName'],
+              additionalProperties: false,
             },
           },
         ],
       };
 
-      const spy = vi.spyOn(tool.scaffoldingMethodsService, 'listScaffoldingMethods');
+      const spy = vi.spyOn(internals(tool).scaffoldingMethodsService, 'listScaffoldingMethods');
       spy.mockResolvedValue(mockMethods);
 
       const result = await tool.execute({ projectPath: '/test/apps/my-app' });
@@ -74,7 +88,7 @@ describe('ListScaffoldingMethodsTool', () => {
       expect(result.isError).toBeFalsy();
       expect(result.content[0].type).toBe('text');
 
-      const response = JSON.parse(result.content[0].text);
+      const response = JSON.parse(getText(result.content[0]));
       expect(response.sourceTemplate).toBe('nextjs-15');
       expect(response.methods).toHaveLength(2);
       expect(response.methods[0].name).toBe('scaffold-route');
@@ -85,13 +99,13 @@ describe('ListScaffoldingMethodsTool', () => {
       const result = await tool.execute({});
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain(
+      expect(getText(result.content[0])).toContain(
         'Either projectPath or templateName must be provided',
       );
     });
 
     it('should list scaffolding methods by templateName successfully', async () => {
-      const mockMethods = {
+      const mockMethods: ListScaffoldingMethodsResult = {
         sourceTemplate: 'typescript-mcp-package',
         templatePath: 'typescript-mcp-package',
         methods: [
@@ -104,12 +118,16 @@ describe('ListScaffoldingMethodsTool', () => {
                 toolName: { type: 'string', description: 'Tool name' },
               },
               required: ['toolName'],
+              additionalProperties: false,
             },
           },
         ],
       };
 
-      const spy = vi.spyOn(tool.scaffoldingMethodsService, 'listScaffoldingMethodsByTemplate');
+      const spy = vi.spyOn(
+        internals(tool).scaffoldingMethodsService,
+        'listScaffoldingMethodsByTemplate',
+      );
       spy.mockResolvedValue(mockMethods);
 
       const result = await tool.execute({ templateName: 'typescript-mcp-package' });
@@ -117,7 +135,7 @@ describe('ListScaffoldingMethodsTool', () => {
       expect(result.isError).toBeFalsy();
       expect(result.content[0].type).toBe('text');
 
-      const response = JSON.parse(result.content[0].text);
+      const response = JSON.parse(getText(result.content[0]));
       expect(response.sourceTemplate).toBe('typescript-mcp-package');
       expect(response.methods).toHaveLength(1);
       expect(response.methods[0].name).toBe('scaffold-tool');
@@ -131,11 +149,14 @@ describe('ListScaffoldingMethodsTool', () => {
         methods: [],
       };
 
-      const projectPathSpy = vi.spyOn(tool.scaffoldingMethodsService, 'listScaffoldingMethods');
+      const projectPathSpy = vi.spyOn(
+        internals(tool).scaffoldingMethodsService,
+        'listScaffoldingMethods',
+      );
       projectPathSpy.mockResolvedValue(mockMethods);
 
       const templateNameSpy = vi.spyOn(
-        tool.scaffoldingMethodsService,
+        internals(tool).scaffoldingMethodsService,
         'listScaffoldingMethodsByTemplate',
       );
 
@@ -152,24 +173,24 @@ describe('ListScaffoldingMethodsTool', () => {
         methods: [],
       };
 
-      const spy = vi.spyOn(tool.scaffoldingMethodsService, 'listScaffoldingMethods');
+      const spy = vi.spyOn(internals(tool).scaffoldingMethodsService, 'listScaffoldingMethods');
       spy.mockResolvedValue(mockMethods);
 
       const result = await tool.execute({ projectPath: '/test/apps/my-app' });
 
       expect(result.isError).toBeFalsy();
-      const response = JSON.parse(result.content[0].text);
+      const response = JSON.parse(getText(result.content[0]));
       expect(response.methods).toHaveLength(0);
     });
 
     it('should handle service errors gracefully', async () => {
-      const spy = vi.spyOn(tool.scaffoldingMethodsService, 'listScaffoldingMethods');
+      const spy = vi.spyOn(internals(tool).scaffoldingMethodsService, 'listScaffoldingMethods');
       spy.mockRejectedValue(new Error('Project not found or missing project.json'));
 
       const result = await tool.execute({ projectPath: '/test/apps/missing' });
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain('Project not found or missing project.json');
+      expect(getText(result.content[0])).toContain('Project not found or missing project.json');
     });
   });
 });

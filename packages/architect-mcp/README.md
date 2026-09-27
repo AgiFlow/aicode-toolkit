@@ -25,10 +25,14 @@ Add to your MCP config (`.mcp.json`, `.cursor/mcp.json`, etc.):
     "architect-mcp": {
       "command": "npx",
       "args": [
-        "-y", "@agiflowai/architect-mcp", "mcp-serve",
+        "-y",
+        "@agiflowai/architect-mcp",
+        "mcp-serve",
         "--admin-enable",
-        "--design-pattern-tool", "claude-code",
-        "--review-tool", "gemini-cli"
+        "--design-pattern-tool",
+        "claude-code",
+        "--review-tool",
+        "gemini-cli"
       ]
     }
   }
@@ -36,6 +40,7 @@ Add to your MCP config (`.mcp.json`, `.cursor/mcp.json`, etc.):
 ```
 
 **Flags:**
+
 - `--admin-enable`: Enables tools for adding new patterns/rules
 - `--design-pattern-tool claude-code`: Uses Claude to filter relevant patterns
 - `--review-tool claude-code`: Uses Claude for intelligent code review
@@ -61,17 +66,17 @@ Agent:
 
 ### Standard Tools
 
-| Tool | Purpose | When to Use |
-|------|---------|-------------|
+| Tool                      | Purpose                           | When to Use             |
+| ------------------------- | --------------------------------- | ----------------------- |
 | `get-file-design-pattern` | Get patterns and rules for a file | Before editing any file |
-| `review-code-change` | Validate code against rules | After editing a file |
+| `review-code-change`      | Validate code against rules       | After editing a file    |
 
 ### Admin Tools (with `--admin-enable`)
 
-| Tool | Purpose | When to Use |
-|------|---------|-------------|
-| `add-design-pattern` | Add pattern to architect.yaml | Documenting new patterns |
-| `add-rule` | Add rule to RULES.yaml | Adding coding standards |
+| Tool                 | Purpose                                   | When to Use                    |
+| -------------------- | ----------------------------------------- | ------------------------------ |
+| `add-design-pattern` | Add pattern to architect.yaml             | Documenting new patterns       |
+| `add-rule`           | Add rule to RULES.yaml                    | Adding coding standards        |
 | `validate-architect` | Validate architect.yaml syntax and schema | Debugging configuration issues |
 
 ---
@@ -140,6 +145,7 @@ architect-mcp supports a three-level configuration hierarchy:
 Example: override a template pattern for one project
 
 Template pattern (`templates/typescript-mcp-package/architect.yaml`):
+
 ```yaml
 features:
   - name: tool-pattern
@@ -149,6 +155,7 @@ features:
 ```
 
 Project override (`packages/my-custom-mcp/.architect.yaml`):
+
 ```yaml
 features:
   - name: tool-pattern
@@ -328,6 +335,7 @@ Hooks let architect-mcp provide guidance automatically when files are edited.
 ```
 
 **What happens:**
+
 - **PreToolUse**: Before editing, shows relevant patterns from architect.yaml
 - **PostToolUse**: After editing, reviews code against RULES.yaml
 
@@ -385,27 +393,27 @@ architect-mcp:
           model: gpt-5.2-mini
 ```
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-t, --type` | Transport: `stdio`, `http`, `sse` | `stdio` |
-| `-p, --port` | Port for HTTP/SSE | `3000` |
-| `--admin-enable` | Enable pattern/rule creation tools | `false` |
-| `--design-pattern-tool` | LLM for pattern filtering (`claude-code`, `gemini-cli`, `codex`) | disabled |
-| `--design-pattern-tool-config` | JSON config for design pattern LLM tool (e.g., `{"model":"gpt-5.2"}`) | `{}` |
-| `--review-tool` | LLM for code review (`claude-code`, `gemini-cli`, `codex`) | disabled |
-| `--review-tool-config` | JSON config for review LLM tool (e.g., `{"model":"gpt-5.2"}`) | `{}` |
-| `--fallback-tool` | LLM used for both tools when the specific flag is not set | disabled |
-| `--fallback-tool-config` | JSON config applied to the CLI fallback tool; settings files may also use ordered `fallbacks` entries | `{}` |
+| Option                         | Description                                                                                           | Default  |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------- | -------- |
+| `-t, --type`                   | Transport: `stdio`, `http`, `sse`                                                                     | `stdio`  |
+| `-p, --port`                   | Port for HTTP/SSE                                                                                     | `3000`   |
+| `--admin-enable`               | Enable pattern/rule creation tools                                                                    | `false`  |
+| `--design-pattern-tool`        | LLM for pattern filtering (`claude-code`, `gemini-cli`, `codex`)                                      | disabled |
+| `--design-pattern-tool-config` | JSON config for design pattern LLM tool (e.g., `{"model":"gpt-5.2"}`)                                 | `{}`     |
+| `--review-tool`                | LLM for code review (`claude-code`, `gemini-cli`, `codex`)                                            | disabled |
+| `--review-tool-config`         | JSON config for review LLM tool (e.g., `{"model":"gpt-5.2"}`)                                         | `{}`     |
+| `--fallback-tool`              | LLM used for both tools when the specific flag is not set                                             | disabled |
+| `--fallback-tool-config`       | JSON config applied to the CLI fallback tool; settings files may also use ordered `fallbacks` entries | `{}`     |
 
 ---
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
+| Document                                                     | Description                                       |
+| ------------------------------------------------------------ | ------------------------------------------------- |
 | [Design Pattern Overview](./docs/design-pattern-overview.md) | Philosophy and architecture of the pattern system |
-| [Rules Overview](./docs/rules-overview.md) | How RULES.yaml works, inheritance, review modes |
-| [Hooks Integration](./docs/hooks.md) | Setting up automatic hooks with AI agents |
+| [Rules Overview](./docs/rules-overview.md)                   | How RULES.yaml works, inheritance, review modes   |
+| [Hooks Integration](./docs/hooks.md)                         | Setting up automatic hooks with AI agents         |
 
 ---
 

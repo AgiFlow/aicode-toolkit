@@ -25,6 +25,7 @@ npx @agiflowai/scaffold-mcp boilerplate info nextjs-15-drizzle
 ```
 
 **Output includes:**
+
 - Name and description
 - Template path
 - Required variables with their schemas
@@ -41,14 +42,16 @@ npx @agiflowai/scaffold-mcp boilerplate create nextjs-15-drizzle \
 ```
 
 **Options:**
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--vars <json>` | Variables matching the boilerplate schema | Required |
-| `--target-folder <path>` | Override target folder | Boilerplate target folder |
-| `--monolith` | Create as monolith project at workspace root | `false` |
-| `--marker <tag>` | Custom scaffold marker injected into generated code files | `@scaffold-generated` |
+
+| Option                   | Description                                               | Default                   |
+| ------------------------ | --------------------------------------------------------- | ------------------------- |
+| `--vars <json>`          | Variables matching the boilerplate schema                 | Required                  |
+| `--target-folder <path>` | Override target folder                                    | Boilerplate target folder |
+| `--monolith`             | Create as monolith project at workspace root              | `false`                   |
+| `--marker <tag>`         | Custom scaffold marker injected into generated code files | `@scaffold-generated`     |
 
 **What happens:**
+
 1. Creates `<target>/<projectName>` directory
 2. Copies and processes all template files
 3. Replaces Liquid variables with provided values
@@ -71,6 +74,7 @@ npx @agiflowai/scaffold-mcp scaffold list
 ```
 
 **How it works:**
+
 1. Reads `project.json` from the project directory
 2. Extracts the `sourceTemplate` field
 3. Finds matching template and reads `scaffold.yaml`
@@ -87,8 +91,9 @@ npx @agiflowai/scaffold-mcp scaffold info scaffold-nextjs-page --project ./apps/
 ```
 
 **Options:**
-| Option | Description |
-|--------|-------------|
+
+| Option             | Description                    |
+| ------------------ | ------------------------------ |
 | `--project <path>` | Path to the project (required) |
 
 ### `scaffold add <feature-name>`
@@ -107,13 +112,15 @@ npx @agiflowai/scaffold-mcp scaffold add scaffold-nextjs-page \
 ```
 
 **Options:**
-| Option | Description |
-|--------|-------------|
-| `--project <path>` | Path to the project (required) |
-| `--vars <json>` | Variables matching the method's schema (required) |
-| `--marker <tag>` | Custom scaffold marker injected into generated code files |
+
+| Option             | Description                                               |
+| ------------------ | --------------------------------------------------------- |
+| `--project <path>` | Path to the project (required)                            |
+| `--vars <json>`    | Variables matching the method's schema (required)         |
+| `--marker <tag>`   | Custom scaffold marker injected into generated code files |
 
 **What happens:**
+
 1. Validates project has correct `sourceTemplate`
 2. Finds the scaffold method configuration
 3. If custom generator exists, executes it
@@ -141,14 +148,15 @@ npx @agiflowai/scaffold-mcp boilerplate generate scaffold-vite-app \
 ```
 
 **Options:**
-| Option | Description |
-|--------|-------------|
-| `--template <name>` | Template name; optional in monolith mode |
-| `--description <text>` / `--description-file <path>` | Boilerplate description |
-| `--instruction <text>` / `--instruction-file <path>` | Optional usage instructions |
-| `--target-folder <path>` | Target folder; defaults to `.` in monolith mode |
-| `--variables <json>` | JSON array of variable definitions |
-| `--include <path>` | Include path; repeat for multiple files |
+
+| Option                                               | Description                                     |
+| ---------------------------------------------------- | ----------------------------------------------- |
+| `--template <name>`                                  | Template name; optional in monolith mode        |
+| `--description <text>` / `--description-file <path>` | Boilerplate description                         |
+| `--instruction <text>` / `--instruction-file <path>` | Optional usage instructions                     |
+| `--target-folder <path>`                             | Target folder; defaults to `.` in monolith mode |
+| `--variables <json>`                                 | JSON array of variable definitions              |
+| `--include <path>`                                   | Include path; repeat for multiple files         |
 
 ### `scaffold generate <name>`
 
@@ -164,14 +172,15 @@ npx @agiflowai/scaffold-mcp scaffold generate scaffold-service \
 ```
 
 **Options:**
-| Option | Description |
-|--------|-------------|
-| `--template <name>` | Template name; optional in monolith mode |
-| `--description <text>` / `--description-file <path>` | Feature description |
-| `--instruction <text>` / `--instruction-file <path>` | Optional usage instructions |
-| `--variables <json>` | JSON array of variable definitions |
-| `--include <path>` | Include path; repeat for multiple files |
-| `--pattern <glob>` | Matching file pattern; repeat for multiple patterns |
+
+| Option                                               | Description                                         |
+| ---------------------------------------------------- | --------------------------------------------------- |
+| `--template <name>`                                  | Template name; optional in monolith mode            |
+| `--description <text>` / `--description-file <path>` | Feature description                                 |
+| `--instruction <text>` / `--instruction-file <path>` | Optional usage instructions                         |
+| `--variables <json>`                                 | JSON array of variable definitions                  |
+| `--include <path>`                                   | Include path; repeat for multiple files             |
+| `--pattern <glob>`                                   | Matching file pattern; repeat for multiple patterns |
 
 ### `template file create <file-path>`
 
@@ -232,16 +241,16 @@ npx @agiflowai/scaffold-mcp scaffold add scaffold-nextjs-page \
 
 ## Exit Codes
 
-| Code | Meaning |
-|------|---------|
-| `0` | Success |
-| `1` | Error (template not found, validation failed, etc.) |
+| Code | Meaning                                             |
+| ---- | --------------------------------------------------- |
+| `0`  | Success                                             |
+| `1`  | Error (template not found, validation failed, etc.) |
 
 ---
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `MCP_PORT` | Port for HTTP/SSE servers | `3000` |
+| Variable   | Description               | Default     |
+| ---------- | ------------------------- | ----------- |
+| `MCP_PORT` | Port for HTTP/SSE servers | `3000`      |
 | `MCP_HOST` | Host for HTTP/SSE servers | `localhost` |

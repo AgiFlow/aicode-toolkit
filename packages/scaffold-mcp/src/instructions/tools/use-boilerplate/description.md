@@ -11,6 +11,7 @@ Creates a new project from a boilerplate template with the specified variables.
 This tool creates new sub-projects (apps, packages) in your monorepo. Each project can use a different template.
 
 This tool will:
+
 - Generate all necessary files from the selected boilerplate template
 - Replace template variables with provided values
 - Create the project in targetFolder/projectName (e.g., apps/my-new-app)
@@ -18,9 +19,10 @@ This tool will:
 - Create project.json with sourceTemplate reference
 
 IMPORTANT:
+
 - Always call `list-boilerplates` first to get the exact variable schema
 - Follow the schema exactly - required fields must be provided
 - Use kebab-case for project names (e.g., "my-new-app", not "MyNewApp")
 - The tool will validate all variables against the schema before proceeding
 - Each new project can use a different boilerplate template
-{% endif %}
+  {% endif %}

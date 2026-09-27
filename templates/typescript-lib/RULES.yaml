@@ -1,4 +1,4 @@
-version: '1.0'
+version: "1.0"
 template: typescript-lib
 description: Rules and patterns for typescript-lib template
 rules:

@@ -7,6 +7,7 @@
 ![AI Code Toolkit Banner](./docs/workflow.jpg)
 
 This repo provides:
+
 - project and feature scaffolding via templates
 - file-level design guidance before edits
 - rule-based review after edits
@@ -19,6 +20,7 @@ As projects scale, conventions in docs like `CLAUDE.md`, `AGENTS.md`, and style 
 ## Quick Start
 
 Requirements:
+
 - Node.js >= 18
 - an MCP-compatible agent such as Claude Code, Cursor, or Gemini CLI
 
@@ -50,10 +52,14 @@ Example for Claude Code:
     "architect-mcp": {
       "command": "npx",
       "args": [
-        "-y", "@agiflowai/architect-mcp", "mcp-serve",
+        "-y",
+        "@agiflowai/architect-mcp",
+        "mcp-serve",
         "--admin-enable",
-        "--design-pattern-tool", "codex",
-        "--review-tool", "gemini-cli"
+        "--design-pattern-tool",
+        "codex",
+        "--review-tool",
+        "gemini-cli"
       ]
     },
     "style-system": {
@@ -65,6 +71,7 @@ Example for Claude Code:
 ```
 
 Useful flags:
+
 - `--admin-enable`: enable admin/template-authoring tools
 - `--design-pattern-tool <tool>`: use an LLM to filter design patterns
 - `--review-tool <tool>`: use an LLM for review output
@@ -97,12 +104,14 @@ AI agent
 Generates projects and feature boilerplate from templates.
 
 Core tools:
+
 - `list-boilerplates`
 - `use-boilerplate`
 - `list-scaffolding-methods`
 - `use-scaffold-method`
 
 Admin tools:
+
 - `generate-boilerplate`
 - `generate-feature-scaffold`
 - `generate-boilerplate-file`
@@ -112,10 +121,12 @@ Admin tools:
 Provides file-specific patterns before edits and reviews changes against `RULES.yaml`.
 
 Core tools:
+
 - `get-file-design-pattern`
 - `review-code-change`
 
 Admin tools:
+
 - `add-design-pattern`
 - `add-rule`
 
@@ -124,6 +135,7 @@ Admin tools:
 Provides theme, CSS class, and component discovery tools.
 
 Core tools:
+
 - `list_themes`
 - `get_css_classes`
 - `get_component_visual`
@@ -200,14 +212,14 @@ Defines boilerplates and feature scaffolds.
 ```yaml
 boilerplates:
   - name: nextjs-15-app
-    description: "Next.js 15 with App Router"
+    description: 'Next.js 15 with App Router'
     targetFolder: apps
     includes:
       - boilerplate/**/*
 
 features:
   - name: add-route
-    description: "Add route with page and layout"
+    description: 'Add route with page and layout'
     variables_schema:
       name: { type: string, required: true }
     includes:
@@ -221,9 +233,9 @@ Defines file-level patterns that should be shown before edits.
 ```yaml
 patterns:
   - name: server-component
-    description: "Default for page components"
+    description: 'Default for page components'
     file_patterns:
-      - "**/app/**/page.tsx"
+      - '**/app/**/page.tsx'
     description: |
       - Use async/await for data fetching
       - Keep components focused on rendering
@@ -283,7 +295,7 @@ my-workspace/
 Monoliths use `.toolkit/settings.yaml`.
 
 ```yaml
-version: "1.0"
+version: '1.0'
 projectType: monolith
 sourceTemplate: nextjs-15
 ```
@@ -292,11 +304,11 @@ sourceTemplate: nextjs-15
 
 Included templates:
 
-| Template | Stack | Includes |
-|----------|-------|----------|
-| `nextjs-drizzle` | Next.js 15, App Router | TypeScript, Tailwind 4, Drizzle, Storybook |
-| `typescript-lib` | TypeScript Library | ESM/CJS, Vitest, TSDoc |
-| `typescript-mcp-package` | MCP Server | Commander, MCP SDK |
+| Template                 | Stack                  | Includes                                   |
+| ------------------------ | ---------------------- | ------------------------------------------ |
+| `nextjs-drizzle`         | Next.js 15, App Router | TypeScript, Tailwind 4, Drizzle, Storybook |
+| `typescript-lib`         | TypeScript Library     | ESM/CJS, Vitest, TSDoc                     |
+| `typescript-mcp-package` | MCP Server             | Commander, MCP SDK                         |
 
 ## Custom Templates
 
@@ -308,29 +320,30 @@ For template authoring, start from an existing repo or template and use the admi
 ```
 
 For design/rule authoring, use:
+
 - `add-design-pattern`
 - `add-rule`
 
 ## Supported Agents
 
-| Agent | Config Location | Status |
-|-------|-----------------|--------|
-| Claude Code | `.mcp.json` | Supported |
-| Cursor | `.cursor/mcp.json` | Supported |
-| Gemini CLI | `.gemini/settings.json` | Supported |
-| Codex CLI | `.codex/config.json` | Supported |
-| GitHub Copilot | VS Code settings | Supported |
-| Windsurf | - | Planned |
+| Agent          | Config Location         | Status    |
+| -------------- | ----------------------- | --------- |
+| Claude Code    | `.mcp.json`             | Supported |
+| Cursor         | `.cursor/mcp.json`      | Supported |
+| Gemini CLI     | `.gemini/settings.json` | Supported |
+| Codex CLI      | `.codex/config.json`    | Supported |
+| GitHub Copilot | VS Code settings        | Supported |
+| Windsurf       | -                       | Planned   |
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| [@agiflowai/aicode-toolkit](./apps/aicode-toolkit) | CLI for init and config sync |
-| [@agiflowai/scaffold-mcp](./packages/scaffold-mcp) | Scaffolding server |
-| [@agiflowai/architect-mcp](./packages/architect-mcp) | Pattern and review server |
-| [@agiflowai/style-system](./packages/style-system) | Design-system server |
-| [@agiflowai/one-mcp](./packages/one-mcp) | MCP proxy for progressive discovery |
+| Package                                              | Description                         |
+| ---------------------------------------------------- | ----------------------------------- |
+| [@agiflowai/aicode-toolkit](./apps/aicode-toolkit)   | CLI for init and config sync        |
+| [@agiflowai/scaffold-mcp](./packages/scaffold-mcp)   | Scaffolding server                  |
+| [@agiflowai/architect-mcp](./packages/architect-mcp) | Pattern and review server           |
+| [@agiflowai/style-system](./packages/style-system)   | Design-system server                |
+| [@agiflowai/one-mcp](./packages/one-mcp)             | MCP proxy for progressive discovery |
 
 ## Contributing
 

@@ -35,7 +35,11 @@ export const useToolCommand = new Command('use-tool')
   .option('-c, --config <path>', 'Path to MCP server configuration file')
   .option('-s, --server <name>', 'Server name (required if tool exists on multiple servers)')
   .option('-a, --args <json>', 'Tool arguments as JSON string', '{}')
-  .option('-t, --timeout <ms>', 'Request timeout in milliseconds for tool execution (default: 60000)', parseInt)
+  .option(
+    '-t, --timeout <ms>',
+    'Request timeout in milliseconds for tool execution (default: 60000)',
+    parseInt,
+  )
   .option('-j, --json', 'Output as JSON', false)
   .action(async (toolName: string, options) => {
     try {
@@ -51,7 +55,7 @@ export const useToolCommand = new Command('use-tool')
       let toolArgs: any = {};
       try {
         toolArgs = JSON.parse(options.args);
-      } catch (_error) {
+      } catch {
         console.error('Error: Invalid JSON in --args');
         process.exit(1);
       }
@@ -65,18 +69,20 @@ export const useToolCommand = new Command('use-tool')
       const clientManager = new McpClientManagerService();
 
       // Connect to all configured MCP servers
-      const connectionPromises = Object.entries(config.mcpServers).map(async ([serverName, serverConfig]) => {
-        try {
-          await clientManager.connectToServer(serverName, serverConfig);
-          if (!options.json) {
-            console.error(`✓ Connected to ${serverName}`);
+      const connectionPromises = Object.entries(config.mcpServers).map(
+        async ([serverName, serverConfig]) => {
+          try {
+            await clientManager.connectToServer(serverName, serverConfig);
+            if (!options.json) {
+              console.error(`✓ Connected to ${serverName}`);
+            }
+          } catch (error) {
+            if (!options.json) {
+              console.error(`✗ Failed to connect to ${serverName}:`, error);
+            }
           }
-        } catch (error) {
-          if (!options.json) {
-            console.error(`✗ Failed to connect to ${serverName}:`, error);
-          }
-        }
-      });
+        },
+      );
 
       await Promise.all(connectionPromises);
 
@@ -166,7 +172,9 @@ export const useToolCommand = new Command('use-tool')
           try {
             const skillService = new SkillService(cwd, skillPaths);
             // Handle skill__ prefix
-            const skillName = toolName.startsWith('skill__') ? toolName.slice('skill__'.length) : toolName;
+            const skillName = toolName.startsWith('skill__')
+              ? toolName.slice('skill__'.length)
+              : toolName;
 
             const skill = await skillService.getSkill(skillName);
             if (skill) {
@@ -197,13 +205,17 @@ export const useToolCommand = new Command('use-tool')
           }
         }
 
-        console.error(`Tool or skill "${toolName}" not found on any connected server or configured skill paths`);
+        console.error(
+          `Tool or skill "${toolName}" not found on any connected server or configured skill paths`,
+        );
         await clientManager.disconnectAll();
         process.exit(1);
       }
 
       if (matchingServers.length > 1) {
-        console.error(`Tool "${toolName}" found on multiple servers: ${matchingServers.join(', ')}`);
+        console.error(
+          `Tool "${toolName}" found on multiple servers: ${matchingServers.join(', ')}`,
+        );
         console.error('Please specify --server to disambiguate');
         await clientManager.disconnectAll();
         process.exit(1);

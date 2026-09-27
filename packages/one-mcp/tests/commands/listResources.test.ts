@@ -43,7 +43,7 @@ const MOCK_RESOURCE: MockResource = {
 };
 
 vi.mock('../../src/services', (): Record<string, unknown> => ({
-  ConfigFetcherService: vi.fn().mockImplementation(function(): Record<string, unknown> {
+  ConfigFetcherService: vi.fn().mockImplementation(function (): Record<string, unknown> {
     return {
       fetchConfiguration: vi.fn<() => Promise<Record<string, unknown>>>().mockResolvedValue({
         mcpServers: {
@@ -52,7 +52,7 @@ vi.mock('../../src/services', (): Record<string, unknown> => ({
       }),
     };
   }),
-  McpClientManagerService: vi.fn().mockImplementation(function(): Record<string, unknown> {
+  McpClientManagerService: vi.fn().mockImplementation(function (): Record<string, unknown> {
     return {
       connectToServer: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
       getAllClients: vi.fn<() => MockClient[]>().mockReturnValue([
@@ -117,9 +117,7 @@ describe('ListResourcesCommand', (): void => {
   });
 
   it('should define --json option with default false', (): void => {
-    const option = listResourcesCommand.options.find(
-      (option): boolean => option.long === '--json',
-    );
+    const option = listResourcesCommand.options.find((option): boolean => option.long === '--json');
     expect(option).toBeDefined();
     expect(option?.defaultValue).toBe(false);
   });

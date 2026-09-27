@@ -31,11 +31,13 @@ architect-mcp makes architecture **explicit, discoverable, and enforceable** by:
 **Principle**: Architecture should be declarative, not just in documentation.
 
 **Implementation**:
+
 - `architect.yaml` declares design patterns for file types
 - `RULES.yaml` declares coding standards and rules
 - Templates bundle both configuration and implementation
 
 **Why it matters**:
+
 - Patterns are version-controlled alongside code
 - Changes to architecture are explicit in git history
 - New team members discover patterns by reading config files
@@ -45,6 +47,7 @@ architect-mcp makes architecture **explicit, discoverable, and enforceable** by:
 **Principle**: Developers should get relevant guidance without searching docs.
 
 **Thought Process**:
+
 ```
 Developer opens: src/services/UserService.ts
   ↓
@@ -61,6 +64,7 @@ Returns specific guidance:
 ```
 
 **Why it matters**:
+
 - Zero friction - guidance appears when needed
 - Precise - only shows patterns relevant to current file
 - Actionable - includes code examples
@@ -70,6 +74,7 @@ Returns specific guidance:
 **Principle**: Good architecture should be reusable across projects.
 
 **Thought Process**:
+
 ```
 Create Template:
   typescript-mcp-package/
@@ -86,6 +91,7 @@ Update Template:
 ```
 
 **Why it matters**:
+
 - Consistency across projects
 - Architecture improvements benefit all projects
 - Knowledge captured once, applied everywhere
@@ -97,6 +103,7 @@ Update Template:
 **Two Modes**:
 
 **Mode 1: Agent-Driven (LLM disabled)**
+
 ```
 architect-mcp returns:
   - All potential design patterns
@@ -109,6 +116,7 @@ AI agent analyzes:
 ```
 
 **Mode 2: LLM-Enhanced (LLM enabled)**
+
 ```
 architect-mcp:
   - Filters patterns based on file content
@@ -122,6 +130,7 @@ AI agent receives:
 ```
 
 **Why this approach**:
+
 - Works without requiring external LLM services
 - Leverages LLM when available for precision
 - AI agent always gets structured architectural context
@@ -137,7 +146,7 @@ features:
   - name: Service Layer
     design_pattern: Service classes with dependency injection
     includes:
-      - src/services/**/*.ts    # Files this pattern applies to
+      - src/services/**/*.ts # Files this pattern applies to
     description: |
       Services contain business logic and are injected
       into other components. They should be stateless
@@ -200,6 +209,7 @@ Result: Developer sees Service Layer + TypeScript Standards guidance
 **Design Decision**: Use file paths as architectural boundaries.
 
 **Rationale**:
+
 - **Convention over Configuration**: File organization reflects architecture
 - **Intuitive**: `src/services/` contains services, `src/tools/` contains tools
 - **Scalable**: Add new patterns without changing existing code
@@ -224,6 +234,7 @@ Result: Developer sees Service Layer + TypeScript Standards guidance
    - Precise, context-aware feedback
 
 **Process Overview**:
+
 ```
 File → Find applicable rules → Review (agent or LLM) → Report violations
 ```
@@ -233,11 +244,13 @@ File → Find applicable rules → Review (agent or LLM) → Report violations
 ### Why Separate Patterns from Rules?
 
 **Patterns (architect.yaml)**:
+
 - **Purpose**: Architectural guidance - "What should this file do?"
 - **Scope**: High-level design decisions
 - **Use Case**: Understanding system structure
 
 **Rules (RULES.yaml)**:
+
 - **Purpose**: Code quality enforcement - "How should this code be written?"
 - **Scope**: Specific coding standards
 - **Use Case**: Code review and validation
@@ -249,6 +262,7 @@ File → Find applicable rules → Review (agent or LLM) → Report violations
 **Philosophy**: AI assistance should enhance, not require.
 
 **Benefits of Optional LLM**:
+
 1. **Flexibility**: Works in any environment (with or without LLM access)
 2. **Speed**: When disabled, instant response (no API calls)
 3. **Cost**: No LLM costs when running in agent mode
@@ -264,6 +278,7 @@ File → Find applicable rules → Review (agent or LLM) → Report violations
 **Solution**: Wrap Claude Code CLI which handles auth automatically.
 
 **Trade-off**:
+
 - ✓ Works with Vertex AI out of the box
 - ✓ Simple `execa` wrapper
 - ✗ Requires Claude Code CLI installed
@@ -296,6 +311,7 @@ architect-mcp:
 ```
 
 **Benefits**:
+
 - **Single source of truth**: Template is canonical
 - **Update propagation**: Improve template → all projects benefit
 - **Consistency**: All template projects follow same patterns
@@ -308,11 +324,13 @@ architect-mcp:
 **"Architecture Configuration System"**
 
 Just as:
+
 - `tsconfig.json` configures TypeScript
 - `package.json` configures dependencies
 - `.eslintrc` configures linting
 
 architect-mcp uses:
+
 - `architect.yaml` to configure architecture patterns
 - `RULES.yaml` to configure coding standards
 - `project.json` to link projects to templates
@@ -331,6 +349,7 @@ Your Codebase:
 ```
 
 Each zone has:
+
 - Expected patterns
 - Coding rules
 - Examples
@@ -340,6 +359,7 @@ Each zone has:
 **"Architectural Blueprints"**
 
 When you scaffold from a template, you get:
+
 - Code structure (from boilerplate)
 - Patterns (from architect.yaml)
 - Rules (from RULES.yaml)
@@ -350,6 +370,7 @@ When you scaffold from a template, you get:
 ### For Individual Developers
 
 **Before architect-mcp**:
+
 ```
 Developer: "How should I structure this service?"
   → Search docs (if they exist)
@@ -359,6 +380,7 @@ Developer: "How should I structure this service?"
 ```
 
 **With architect-mcp**:
+
 ```
 Developer: Opens file
   → Gets relevant patterns automatically
@@ -370,12 +392,14 @@ Developer: Opens file
 ### For Teams
 
 **Before**:
+
 - Architecture knowledge in senior devs' heads
 - Inconsistent patterns across codebase
 - Code reviews focus on obvious issues
 - New developers learn by osmosis
 
 **With**:
+
 - Architecture codified in version control
 - Consistent patterns enforced by tools
 - Automated first-pass review
@@ -384,12 +408,14 @@ Developer: Opens file
 ### For Organizations
 
 **Before**:
+
 - Each team invents own patterns
 - Knowledge doesn't transfer between teams
 - Architectural drift over time
 - Hard to maintain standards at scale
 
 **With**:
+
 - Shared templates across organization
 - Knowledge captured in templates
 - Automated consistency checking
@@ -398,11 +424,13 @@ Developer: Opens file
 ## Future Vision
 
 ### Short Term
+
 - More LLM provider support (not just Claude Code CLI)
 - Pattern suggestion based on file content
 - Auto-generate rules from code examples
 
 ### Long Term
+
 - **Living Architecture Documentation**: Patterns update as code evolves
 - **Cross-Project Insights**: "This pattern works well across 10 projects"
 - **Automated Migration**: "Template updated? Migrate all projects"

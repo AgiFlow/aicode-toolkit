@@ -5,14 +5,13 @@
 # Run `aicode sync` to regenerate .claude/settings.json and mcp-config.yaml.
 
 projectType: monorepo
-version: '1.0'
+version: "1.0"
 
 # ---------------------------------------------------------------------------
 # scaffold-mcp
 # ---------------------------------------------------------------------------
 
 scaffold-mcp:
-
   mcp-serve:
     adminEnable: true
     promptAsSkill: true
@@ -23,11 +22,11 @@ scaffold-mcp:
     # Applies to all agents. Matched against absolute paths, so prefix with `**`.
     # Template-specific relaxations belong in that template's scaffold.yaml `exclude`.
     excludeGlobs:
-      - '**/*.md'
-      - '**/*.mdx'
-      - '**/src/content/**'
-      - '**/*.test.ts'
-      - '**/*.spec.ts'
+      - "**/*.md"
+      - "**/*.mdx"
+      - "**/src/content/**"
+      - "**/*.test.ts"
+      - "**/*.spec.ts"
 
     claude-code:
       preToolUse:
@@ -46,7 +45,6 @@ scaffold-mcp:
 # ---------------------------------------------------------------------------
 
 architect-mcp:
-
   mcp-serve:
     adminEnable: true
     designPatternTool: gemini-cli
@@ -67,4 +65,3 @@ architect-mcp:
         llm-tool: gemini-cli
         tool-config:
           model: gemini-3-flash-preview
-

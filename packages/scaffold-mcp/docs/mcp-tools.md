@@ -13,6 +13,7 @@ List all available project boilerplate templates.
 **Arguments:** None
 
 **Returns:**
+
 ```json
 {
   "boilerplates": [
@@ -42,6 +43,7 @@ List all available project boilerplate templates.
 Create a new project from a boilerplate template.
 
 **Arguments:**
+
 ```typescript
 {
   boilerplateName: string;    // Exact name from list-boilerplates
@@ -54,6 +56,7 @@ Create a new project from a boilerplate template.
 ```
 
 **Example:**
+
 ```json
 {
   "boilerplateName": "nextjs-15-drizzle",
@@ -66,6 +69,7 @@ Create a new project from a boilerplate template.
 ```
 
 **Returns:**
+
 ```json
 {
   "success": true,
@@ -85,13 +89,15 @@ Create a new project from a boilerplate template.
 List available scaffold methods (features) for an existing project.
 
 **Arguments:**
+
 ```typescript
 {
-  projectPath: string;  // Absolute path to the project directory
+  projectPath: string; // Absolute path to the project directory
 }
 ```
 
 **Example:**
+
 ```json
 {
   "projectPath": "/Users/me/workspace/apps/my-app"
@@ -99,6 +105,7 @@ List available scaffold methods (features) for an existing project.
 ```
 
 **Returns:**
+
 ```json
 {
   "scaffoldingMethods": [
@@ -118,6 +125,7 @@ List available scaffold methods (features) for an existing project.
 ```
 
 **How it works:**
+
 1. Reads `project.json` from the project directory
 2. Extracts `sourceTemplate` field
 3. Finds the template and reads `scaffold.yaml`
@@ -130,6 +138,7 @@ List available scaffold methods (features) for an existing project.
 Add a feature to an existing project using a scaffold method.
 
 **Arguments:**
+
 ```typescript
 {
   projectPath: string;           // Absolute path to the project
@@ -141,6 +150,7 @@ Add a feature to an existing project using a scaffold method.
 ```
 
 **Example:**
+
 ```json
 {
   "projectPath": "/Users/me/workspace/apps/my-app",
@@ -155,6 +165,7 @@ Add a feature to an existing project using a scaffold method.
 ```
 
 **Returns:**
+
 ```json
 {
   "success": true,
@@ -173,14 +184,16 @@ Add a feature to an existing project using a scaffold method.
 Write content to a file (utility tool).
 
 **Arguments:**
+
 ```typescript
 {
-  file_path: string;  // Absolute or relative path to file
-  content: string;    // Content to write
+  file_path: string; // Absolute or relative path to file
+  content: string; // Content to write
 }
 ```
 
 **Example:**
+
 ```json
 {
   "file_path": "/Users/me/workspace/apps/my-app/.env.local",
@@ -201,6 +214,7 @@ Available when server is started with `--admin-enable` flag.
 Create a new boilerplate configuration in a template's scaffold.yaml.
 
 **Arguments:**
+
 ```typescript
 {
   templateName: string;      // Template folder name
@@ -225,6 +239,7 @@ Create a new boilerplate configuration in a template's scaffold.yaml.
 Create a new feature configuration in a template's scaffold.yaml.
 
 **Arguments:**
+
 ```typescript
 {
   templateName: string;     // Template folder name
@@ -249,6 +264,7 @@ Create a new feature configuration in a template's scaffold.yaml.
 Create template files for boilerplates or features.
 
 **Arguments:**
+
 ```typescript
 {
   templateName: string;    // Template folder name

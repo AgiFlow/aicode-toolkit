@@ -1,7 +1,15 @@
 {
   "name": "@agiflowai/coding-agent-bridge",
-  "description": "Bridge library for connecting coding agents with various development tools and services",
   "version": "1.3.0",
+  "description": "Bridge library for connecting coding agents with various development tools and services",
+  "keywords": [
+    "library",
+    "typescript"
+  ],
+  "homepage": "https://github.com/AgiFlow/aicode-toolkit#readme",
+  "bugs": {
+    "url": "https://github.com/AgiFlow/aicode-toolkit/issues"
+  },
   "license": "AGPL-3.0",
   "author": "AgiflowIO",
   "repository": {
@@ -9,21 +17,21 @@
     "url": "https://github.com/AgiFlow/aicode-toolkit.git",
     "directory": "packages/coding-agent-bridge"
   },
-  "homepage": "https://github.com/AgiFlow/aicode-toolkit#readme",
-  "bugs": {
-    "url": "https://github.com/AgiFlow/aicode-toolkit/issues"
-  },
-  "keywords": [
-    "typescript",
-    "library"
-  ],
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.cts",
   "files": [
     "dist",
     "README.md"
   ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.cts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "build": "tsdown",
     "test": "vitest --run",
@@ -31,23 +39,14 @@
   },
   "dependencies": {
     "@agiflowai/aicode-utils": "workspace:*",
-    "execa": "9.6.1",
+    "execa": "10.0.1",
     "uuid": "14.0.2"
   },
   "devDependencies": {
     "@types/node": "26.6.3",
-    "@types/uuid": "11.0.0",
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "5.0.2",
     "tsdown": "0.23.0",
-    "typescript": "5.9.3",
-    "vitest": "4.1.11"
-  },
-  "type": "module",
-  "exports": {
-    ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
-    },
-    "./package.json": "./package.json"
+    "typescript": "6.0.3",
+    "vitest": "5.0.2"
   }
 }

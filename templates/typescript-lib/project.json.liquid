@@ -22,13 +22,13 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check packages/{{ packageName | replace: '@agiflowai/', '' }}"
+        "command": "oxlint packages/{{ packageName | replace: '@agiflowai/', '' }} && oxfmt --check packages/{{ packageName | replace: '@agiflowai/', '' }}"
       }
     },
     "lint:fix": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "biome check --write packages/{{ packageName | replace: '@agiflowai/', '' }}"
+        "command": "oxlint --fix packages/{{ packageName | replace: '@agiflowai/', '' }} && oxfmt packages/{{ packageName | replace: '@agiflowai/', '' }}"
       }
     }
   },

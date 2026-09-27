@@ -1,8 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerateBoilerplateTool } from '../../src/tools/GenerateBoilerplateTool';
+import { getText } from '../helpers/getText';
+import type { BoilerplateGeneratorService } from '../../src/services/BoilerplateGeneratorService';
 
 // Mock the service
 vi.mock('../../src/services/BoilerplateGeneratorService');
+
+/** Exposes the tool's private service so tests can spy on it. */
+function internals(tool: GenerateBoilerplateTool): {
+  boilerplateGeneratorService: BoilerplateGeneratorService;
+} {
+  return tool as unknown as { boilerplateGeneratorService: BoilerplateGeneratorService };
+}
 
 describe('GenerateBoilerplateTool', () => {
   let tool: GenerateBoilerplateTool;
@@ -50,7 +59,7 @@ describe('GenerateBoilerplateTool', () => {
         ],
       };
 
-      const spy = vi.spyOn(tool.boilerplateGeneratorService, 'generateBoilerplate');
+      const spy = vi.spyOn(internals(tool).boilerplateGeneratorService, 'generateBoilerplate');
       spy.mockResolvedValue({
         success: true,
         message: 'Boilerplate created',
@@ -62,7 +71,7 @@ describe('GenerateBoilerplateTool', () => {
 
       expect(result.isError).toBeFalsy();
       expect(result.content[0].type).toBe('text');
-      const response = JSON.parse(result.content[0].text);
+      const response = JSON.parse(getText(result.content[0]));
       expect(response.success).toBe(true);
     });
 
@@ -75,7 +84,7 @@ describe('GenerateBoilerplateTool', () => {
         variables: [],
       };
 
-      const spy = vi.spyOn(tool.boilerplateGeneratorService, 'generateBoilerplate');
+      const spy = vi.spyOn(internals(tool).boilerplateGeneratorService, 'generateBoilerplate');
       spy.mockResolvedValue({
         success: false,
         message: 'Boilerplate already exists',
@@ -84,7 +93,7 @@ describe('GenerateBoilerplateTool', () => {
       const result = await tool.execute(args);
 
       expect(result.isError).toBeTruthy();
-      expect(result.content[0].text).toContain('already exists');
+      expect(getText(result.content[0])).toContain('already exists');
     });
 
     it('should handle exceptions gracefully', async () => {
@@ -96,13 +105,13 @@ describe('GenerateBoilerplateTool', () => {
         variables: [],
       };
 
-      const spy = vi.spyOn(tool.boilerplateGeneratorService, 'generateBoilerplate');
+      const spy = vi.spyOn(internals(tool).boilerplateGeneratorService, 'generateBoilerplate');
       spy.mockRejectedValue(new Error('Unexpected error'));
 
       const result = await tool.execute(args);
 
       expect(result.isError).toBeTruthy();
-      expect(result.content[0].text).toContain('Unexpected error');
+      expect(getText(result.content[0])).toContain('Unexpected error');
     });
   });
 });

@@ -77,7 +77,11 @@ export class StopServerService {
       );
     }
 
-    if (!request.force && health.payload?.serverId && health.payload.serverId !== runtime.serverId) {
+    if (
+      !request.force &&
+      health.payload?.serverId &&
+      health.payload.serverId !== runtime.serverId
+    ) {
       throw new Error(
         `Refusing to stop runtime at http://${runtime.host}:${runtime.port}: expected server ID '${runtime.serverId}' but health endpoint reported '${health.payload.serverId}'. Use --force to override.`,
       );

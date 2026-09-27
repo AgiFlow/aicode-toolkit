@@ -3,7 +3,7 @@ import { searchToolsCommand } from '../../src/commands';
 import { findConfigFile } from '../../src/utils';
 
 vi.mock('../../src/services', () => ({
-  ConfigFetcherService: vi.fn().mockImplementation(function() {
+  ConfigFetcherService: vi.fn().mockImplementation(function () {
     return {
       fetchConfiguration: vi.fn().mockResolvedValue({
         mcpServers: {
@@ -13,7 +13,7 @@ vi.mock('../../src/services', () => ({
     };
   }),
   DefinitionsCacheService: Object.assign(
-    vi.fn().mockImplementation(function() {
+    vi.fn().mockImplementation(function () {
       return {
         getServerDefinitions: vi.fn().mockResolvedValue([
           {
@@ -39,7 +39,7 @@ vi.mock('../../src/services', () => ({
       readFromFile: vi.fn().mockRejectedValue(new Error('missing cache')),
     },
   ),
-  McpClientManagerService: vi.fn().mockImplementation(function() {
+  McpClientManagerService: vi.fn().mockImplementation(function () {
     return {
       registerServerConfigs: vi.fn(),
       connectToServer: vi.fn().mockResolvedValue(undefined),

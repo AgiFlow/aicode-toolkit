@@ -26,6 +26,7 @@ When working on code in this repository, **ALWAYS** follow this workflow using M
 Use the `get_file_design_pattern` MCP tool from architect-mcp with the file path you're about to edit.
 
 This returns:
+
 - Project information and source template
 - Applicable design patterns from architect.yaml
 - Coding rules from RULES.yaml (must_do, should_do, must_not_do)
@@ -40,6 +41,7 @@ This returns:
 Use the `review_code_change` MCP tool from architect-mcp with the file path you just edited.
 
 This checks:
+
 - Must not do violations (critical issues)
 - Must do missing (required patterns not followed)
 - Should do suggestions (best practices)
@@ -71,4 +73,4 @@ pnpm test
 pnpm typecheck
 ```
 
-Code quality: Uses [Biome](https://biomejs.dev/) for fast linting/formatting (config: `biome.json`)
+Code quality: Uses [oxlint](https://oxc.rs/docs/guide/usage/linter) for type-aware linting (config: `.oxlintrc.json`) and [oxfmt](https://oxc.rs/docs/guide/usage/formatter) for formatting (config: `.oxfmtrc.json`)

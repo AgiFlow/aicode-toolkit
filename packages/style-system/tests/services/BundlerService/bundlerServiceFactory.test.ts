@@ -36,22 +36,21 @@ function createMockBundlerService(
     config: {},
     getBundlerId: vi.fn(() => bundlerId),
     getFrameworkId: vi.fn(() => frameworkId),
-    startDevServer: vi.fn(
-      (): Promise<DevServerResult> => Promise.resolve({ url: 'http://localhost:3000', port: 3000 }),
+    startDevServer: vi.fn((): Promise<DevServerResult> =>
+      Promise.resolve({ url: 'http://localhost:3000', port: 3000 }),
     ),
-    serveComponent: vi.fn(
-      (): Promise<ServeComponentResult> =>
-        Promise.resolve({ url: 'http://localhost:3000/component' }),
+    serveComponent: vi.fn((): Promise<ServeComponentResult> =>
+      Promise.resolve({ url: 'http://localhost:3000/component' }),
     ),
-    prerenderComponent: vi.fn(
-      (): Promise<PrerenderResult> => Promise.resolve({ htmlFilePath: '/tmp/component.html' }),
+    prerenderComponent: vi.fn((): Promise<PrerenderResult> =>
+      Promise.resolve({ htmlFilePath: '/tmp/component.html' }),
     ),
     isServerRunning: vi.fn(() => false),
     getServerUrl: vi.fn(() => null),
     getServerPort: vi.fn(() => null),
     getCurrentAppPath: vi.fn(() => null),
     cleanup: vi.fn((): Promise<void> => Promise.resolve()),
-  } as BaseBundlerService;
+  } as unknown as BaseBundlerService;
 }
 
 /**
@@ -65,7 +64,7 @@ interface MockAicodeUtils {
     debug: Mock;
   };
   TemplatesManagerService: {
-    getWorkspaceRootSync: Mock<[], string>;
+    getWorkspaceRootSync: Mock<() => string>;
   };
 }
 
@@ -77,27 +76,21 @@ interface MockConfig {
 }
 
 // Mock dependencies before importing
-vi.mock(
-  '@agiflowai/aicode-utils',
-  (): MockAicodeUtils => ({
-    log: {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-    },
-    TemplatesManagerService: {
-      getWorkspaceRootSync: vi.fn((): string => '/mock/workspace'),
-    },
-  }),
-);
+vi.mock('@agiflowai/aicode-utils', (): MockAicodeUtils => ({
+  log: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+  TemplatesManagerService: {
+    getWorkspaceRootSync: vi.fn((): string => '/mock/workspace'),
+  },
+}));
 
-vi.mock(
-  '../../../src/config',
-  (): MockConfig => ({
-    getBundlerConfig: vi.fn(),
-  }),
-);
+vi.mock('../../../src/config', (): MockConfig => ({
+  getBundlerConfig: vi.fn(),
+}));
 
 // Mock ViteReactBundlerService
 const mockViteService = {

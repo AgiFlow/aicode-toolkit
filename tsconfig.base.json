@@ -4,7 +4,7 @@
     "rootDir": ".",
     "sourceMap": true,
     "declaration": false,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "importHelpers": true,
@@ -13,9 +13,8 @@
     "lib": ["ES2022"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
-    "baseUrl": ".",
     "paths": {
-      "@agiflowai/scaffold-mcp": ["packages/scaffold-mcp/src/index.ts"]
+      "@agiflowai/scaffold-mcp": ["./packages/scaffold-mcp/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

@@ -5,6 +5,7 @@ Shared utilities and types for AI-powered code generation, scaffolding, and temp
 ## What It Does
 
 Core utilities used across the aicode-toolkit ecosystem:
+
 - **Template discovery** - Find templates/ folder by walking up from any directory
 - **Workspace detection** - Locate .git root and resolve project structure
 - **Config management** - Read/write toolkit.yaml and project.json configurations
@@ -30,6 +31,7 @@ console.log(templatesPath); // /workspace/templates
 ```
 
 **Algorithm**:
+
 1. Find workspace root (searches for .git)
 2. Check toolkit.yaml for custom templatesPath
 3. Falls back to /workspace/templates
@@ -57,13 +59,11 @@ print.header('Available Templates');
 print.item('nextjs-15');
 print.item('typescript-mcp-package');
 
-sections.createdFiles([
-  'src/app/page.tsx',
-  'src/components/Button.tsx',
-]);
+sections.createdFiles(['src/app/page.tsx', 'src/components/Button.tsx']);
 ```
 
 **Output**:
+
 ```
 ✅ Templates initialized
 
@@ -136,6 +136,7 @@ static async writeToolkitConfig(config: ToolkitConfig, startPath?: string): Prom
 ```
 
 **ToolkitConfig interface**:
+
 ```typescript
 interface ToolkitConfig {
   version?: string;
@@ -173,6 +174,7 @@ clearCache(): void
 ```
 
 **ProjectConfig interface**:
+
 ```typescript
 interface ProjectConfig {
   name: string;
@@ -191,16 +193,16 @@ interface ProjectConfig {
 ```typescript
 import { print } from '@agiflowai/aicode-utils';
 
-print.info('Information message');     // Cyan
-print.success('Success message');      // Green
-print.warning('Warning message');      // Yellow
-print.error('Error message');          // Red
-print.debug('Debug message');          // Gray
-print.header('Section Header');        // Bold cyan
-print.item('List item');               // White with "   - " prefix
-print.indent('Indented text');         // White with "   " prefix
-print.highlight('Important text');     // Bold green
-print.newline();                       // Empty line
+print.info('Information message'); // Cyan
+print.success('Success message'); // Green
+print.warning('Warning message'); // Yellow
+print.error('Error message'); // Red
+print.debug('Debug message'); // Gray
+print.header('Section Header'); // Bold cyan
+print.item('List item'); // White with "   - " prefix
+print.indent('Indented text'); // White with "   " prefix
+print.highlight('Important text'); // Bold green
+print.newline(); // Empty line
 ```
 
 #### messages - Output with icons
@@ -223,25 +225,13 @@ import { sections } from '@agiflowai/aicode-utils';
 
 sections.header('Main Title');
 
-sections.list('Available Options', [
-  'Option 1',
-  'Option 2',
-]);
+sections.list('Available Options', ['Option 1', 'Option 2']);
 
-sections.nextSteps([
-  'Run pnpm install',
-  'Run pnpm dev',
-]);
+sections.nextSteps(['Run pnpm install', 'Run pnpm dev']);
 
-sections.createdFiles([
-  'src/app/page.tsx',
-  'src/components/Button.tsx',
-], 10); // maxShow = 10
+sections.createdFiles(['src/app/page.tsx', 'src/components/Button.tsx'], 10); // maxShow = 10
 
-sections.warnings([
-  'Deprecated API usage',
-  'Missing required field',
-]);
+sections.warnings(['Deprecated API usage', 'Missing required field']);
 ```
 
 #### icons - Emoji constants
@@ -249,13 +239,13 @@ sections.warnings([
 ```typescript
 import { icons } from '@agiflowai/aicode-utils';
 
-console.log(icons.rocket);    // 🚀
-console.log(icons.check);     // ✅
-console.log(icons.cross);     // ❌
-console.log(icons.warning);   // ⚠️
-console.log(icons.package);   // 📦
-console.log(icons.folder);    // 📁
-console.log(icons.bulb);      // 💡
+console.log(icons.rocket); // 🚀
+console.log(icons.check); // ✅
+console.log(icons.cross); // ❌
+console.log(icons.warning); // ⚠️
+console.log(icons.package); // 📦
+console.log(icons.folder); // 📁
+console.log(icons.bulb); // 💡
 // ... and more
 ```
 
@@ -265,12 +255,12 @@ console.log(icons.bulb);      // 💡
 import { ProjectType, ConfigSource } from '@agiflowai/aicode-utils';
 
 // Project types
-ProjectType.MONOLITH  // 'monolith'
-ProjectType.MONOREPO  // 'monorepo'
+ProjectType.MONOLITH; // 'monolith'
+ProjectType.MONOREPO; // 'monorepo'
 
 // Config sources
-ConfigSource.PROJECT_JSON   // 'project.json'
-ConfigSource.TOOLKIT_YAML   // 'toolkit.yaml'
+ConfigSource.PROJECT_JSON; // 'project.json'
+ConfigSource.TOOLKIT_YAML; // 'toolkit.yaml'
 ```
 
 ## Use Cases
@@ -286,9 +276,7 @@ const workspaceRoot = await TemplatesManagerService.getWorkspaceRoot();
 const finder = new ProjectFinderService(workspaceRoot);
 
 // User editing apps/web/src/components/Button.tsx
-const project = await finder.findProjectForFile(
-  '/workspace/apps/web/src/components/Button.tsx'
-);
+const project = await finder.findProjectForFile('/workspace/apps/web/src/components/Button.tsx');
 
 if (project?.sourceTemplate === 'nextjs-15') {
   // Apply Next.js 15 specific rules
@@ -317,11 +305,7 @@ import { messages, sections, print } from '@agiflowai/aicode-utils';
 messages.loading('Downloading templates...');
 
 sections.header('Setup Complete!');
-sections.nextSteps([
-  'cd my-project',
-  'pnpm install',
-  'pnpm dev',
-]);
+sections.nextSteps(['cd my-project', 'pnpm install', 'pnpm dev']);
 
 print.highlight('🎉 Ready to code!');
 ```
@@ -347,18 +331,21 @@ await TemplatesManagerService.writeToolkitConfig({
 ## Architecture
 
 **Design patterns**:
+
 - Static service classes for utility functions
 - File system traversal with caching
 - Upward directory search (finds .git root)
 - Consistent error handling with descriptive messages
 
 **Key features**:
+
 - Both async and sync APIs for flexibility
 - Caching in ProjectFinderService for performance
 - Graceful fallbacks (defaults to cwd if no .git found)
 - Type-safe constants with `as const` assertions
 
 **Dependencies**:
+
 - `chalk` - Terminal colors and styling
 - `js-yaml` - YAML parsing for toolkit.yaml
 - `pino` - Structured logging
@@ -368,6 +355,7 @@ await TemplatesManagerService.writeToolkitConfig({
 ### Workspace Root Discovery
 
 All services use the same algorithm:
+
 1. Start from provided path (or cwd)
 2. Walk up directories looking for .git
 3. Return .git parent directory

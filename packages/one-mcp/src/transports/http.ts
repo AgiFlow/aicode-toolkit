@@ -56,7 +56,11 @@ class HttpFullSessionManager {
     return this.sessions.get(sessionId);
   }
 
-  setSession(sessionId: string, transport: NodeStreamableHTTPServerTransport, server: McpServer): void {
+  setSession(
+    sessionId: string,
+    transport: NodeStreamableHTTPServerTransport,
+    server: McpServer,
+  ): void {
     this.sessions.set(sessionId, { transport, server });
   }
 
@@ -76,7 +80,9 @@ class HttpFullSessionManager {
     try {
       await session.server.close();
     } catch (error) {
-      throw new Error(`Failed to close MCP server for session '${sessionId}': ${toErrorMessage(error)}`);
+      throw new Error(
+        `Failed to close MCP server for session '${sessionId}': ${toErrorMessage(error)}`,
+      );
     } finally {
       this.closingSessions.delete(sessionId);
     }
@@ -124,9 +130,7 @@ class AdminRateLimiter {
   isAllowed(ip: string): boolean {
     const now = Date.now();
     const windowStart = now - ADMIN_RATE_LIMIT_WINDOW_MS;
-    const timestamps = (this.requests.get(ip) ?? []).filter(
-      (t): boolean => t > windowStart,
-    );
+    const timestamps = (this.requests.get(ip) ?? []).filter((t): boolean => t > windowStart);
 
     if (timestamps.length >= ADMIN_RATE_LIMIT_MAX_REQUESTS) {
       this.requests.set(ip, timestamps);
@@ -153,7 +157,7 @@ export class HttpTransportHandler implements IHttpTransportHandler {
   private adminRateLimiter = new AdminRateLimiter();
 
   constructor(
-    serverFactory: (() => McpServer | Promise<McpServer>),
+    serverFactory: () => McpServer | Promise<McpServer>,
     config: TransportConfig,
     adminOptions?: HttpTransportAdminOptions,
   ) {
@@ -306,7 +310,6 @@ export class HttpTransportHandler implements IHttpTransportHandler {
 
     if (sessionId && this.sessionManager.hasSession(sessionId)) {
       // Reuse existing transport
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       const session = this.sessionManager.getSession(sessionId)!;
       transport = session.transport;
     } else if (!sessionId && isInitializeRequest(req.body)) {
@@ -328,7 +331,9 @@ export class HttpTransportHandler implements IHttpTransportHandler {
           try {
             await this.sessionManager.deleteSession(transport.sessionId);
           } catch (error) {
-            console.error(`Failed to clean up session '${transport.sessionId}': ${toErrorMessage(error)}`);
+            console.error(
+              `Failed to clean up session '${transport.sessionId}': ${toErrorMessage(error)}`,
+            );
           }
         }
       };
@@ -373,12 +378,13 @@ export class HttpTransportHandler implements IHttpTransportHandler {
       return;
     }
 
-    // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
     const session = this.sessionManager.getSession(sessionId)!;
     try {
       await session.transport.handleRequest(req, res);
     } catch (error) {
-      throw new Error(`Failed handling MCP GET request for session '${sessionId}': ${toErrorMessage(error)}`);
+      throw new Error(
+        `Failed handling MCP GET request for session '${sessionId}': ${toErrorMessage(error)}`,
+      );
     }
   }
 
@@ -390,7 +396,6 @@ export class HttpTransportHandler implements IHttpTransportHandler {
       return;
     }
 
-    // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
     const session = this.sessionManager.getSession(sessionId)!;
     try {
       await session.transport.handleRequest(req, res);
@@ -438,7 +443,9 @@ export class HttpTransportHandler implements IHttpTransportHandler {
     try {
       await this.sessionManager.clear();
     } catch (error) {
-      throw new Error(`Failed to clear sessions during HTTP transport stop: ${toErrorMessage(error)}`);
+      throw new Error(
+        `Failed to clear sessions during HTTP transport stop: ${toErrorMessage(error)}`,
+      );
     }
 
     const closeServer = promisify(this.server.close.bind(this.server));

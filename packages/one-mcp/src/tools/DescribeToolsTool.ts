@@ -759,9 +759,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
           if (servers.length === 1) {
             // Unique tool - found on single server
             const server = servers[0];
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
             const svrTools = serverToolsMap.get(server)!;
-            // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
             const tool = svrTools.find((t) => t.name === actualToolName)!;
             result.tools.push({
               server,
@@ -774,9 +772,7 @@ export class DescribeToolsTool implements Tool<DescribeToolsToolInput> {
           } else {
             // Tool exists on multiple servers - return all matches
             for (const server of servers) {
-              // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
               const svrTools = serverToolsMap.get(server)!;
-              // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
               const tool = svrTools.find((t) => t.name === actualToolName)!;
               result.tools.push({
                 server,

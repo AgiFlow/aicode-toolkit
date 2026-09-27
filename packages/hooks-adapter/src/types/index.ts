@@ -125,8 +125,9 @@ export interface LogEntry {
 /**
  * Scaffold execution data derived from LogEntry
  */
-export interface ScaffoldExecution
-  extends Required<Pick<LogEntry, 'scaffoldId' | 'generatedFiles'>> {
+export interface ScaffoldExecution extends Required<
+  Pick<LogEntry, 'scaffoldId' | 'generatedFiles'>
+> {
   /** Name of the scaffold feature/method */
   readonly featureName?: string;
 }
@@ -134,8 +135,9 @@ export interface ScaffoldExecution
 /**
  * Pending scaffold log entry for temp file storage, derived from LogEntry
  */
-export interface PendingScaffoldLogEntry
-  extends Required<Pick<LogEntry, 'scaffoldId' | 'generatedFiles' | 'projectPath'>> {
+export interface PendingScaffoldLogEntry extends Required<
+  Pick<LogEntry, 'scaffoldId' | 'generatedFiles' | 'projectPath'>
+> {
   /** Scaffold feature name */
   readonly featureName?: string;
 }

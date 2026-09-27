@@ -258,7 +258,6 @@ export class ValidateArchitectTool implements Tool<ValidateArchitectToolInput> {
       };
     }
 
-    // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
     const templatePath = path.join(templatesRoot, input.template_name!);
 
     // Check template directory exists

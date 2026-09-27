@@ -43,10 +43,14 @@ function createMockDirent(name: string, isDir: boolean): Dirent {
     isSymbolicLink: () => false,
     isFIFO: () => false,
     isSocket: () => false,
-    path: '',
     parentPath: '',
   };
 }
+
+/**
+ * readdir is overloaded; pin the withFileTypes overload the service uses so mocks resolve Dirent[].
+ */
+type ReaddirWithFileTypes = (path: string, options: { withFileTypes: true }) => Promise<Dirent[]>;
 
 // Mock @agiflowai/aicode-utils including fs functions, print utilities, and git functions
 vi.mock('@agiflowai/aicode-utils', async () => {
@@ -151,7 +155,7 @@ describe('TemplateSelectionService', () => {
         createMockDirent('README.md', false),
       ];
 
-      vi.mocked(fsHelpers.readdir).mockResolvedValue(mockEntries);
+      vi.mocked(fsHelpers.readdir as ReaddirWithFileTypes).mockResolvedValue(mockEntries);
       vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
 
       const templates = await service.listTemplates();
@@ -164,7 +168,7 @@ describe('TemplateSelectionService', () => {
     it('should read descriptions from scaffold.yaml', async () => {
       const mockEntries: Dirent[] = [createMockDirent('nextjs-15', true)];
 
-      vi.mocked(fsHelpers.readdir).mockResolvedValue(mockEntries);
+      vi.mocked(fsHelpers.readdir as ReaddirWithFileTypes).mockResolvedValue(mockEntries);
       vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
       vi.mocked(fsHelpers.readFile).mockResolvedValue('description: Next.js 15 template');
 

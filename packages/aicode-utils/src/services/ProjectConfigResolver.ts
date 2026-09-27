@@ -35,7 +35,6 @@ import { TemplatesManagerService } from './TemplatesManagerService';
  * 1. project.json (monorepo - Nx/Lerna/Turborepo)
  * 2. toolkit.yaml at workspace root (monolith)
  */
-// biome-ignore lint/complexity/noStaticOnlyClass: architectural pattern
 export class ProjectConfigResolver {
   /**
    * Resolve project configuration with priority fallback
@@ -99,7 +98,7 @@ export class ProjectConfigResolver {
             workspaceRoot,
           };
         }
-      } catch (_error) {
+      } catch {
         // toolkit.yaml doesn't exist or couldn't be read - this is expected for some projects
         // Fall through to error message
       }

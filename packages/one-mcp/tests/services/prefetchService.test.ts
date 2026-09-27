@@ -22,7 +22,7 @@ vi.mock('node:child_process', () => ({
   spawn: vi.fn(),
 }));
 
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 
 /**
@@ -34,13 +34,20 @@ interface MockChildProcess extends EventEmitter {
 }
 
 /**
+ * The mock only implements the emitter surface PrefetchService uses
+ */
+function asChildProcess(proc: MockChildProcess): ChildProcess {
+  return proc as unknown as ChildProcess;
+}
+
+/**
  * Helper to create a mock child process
  * @param exitCode - Exit code to emit on close
  * @param stdout - Optional stdout output
  * @param stderr - Optional stderr output
  * @returns Mock child process with stdout/stderr emitters
  */
-function createMockProcess(exitCode: number, stdout = '', stderr = ''): MockChildProcess {
+function createMockProcess(exitCode: number, stdout = '', stderr = ''): ChildProcess {
   const proc = new EventEmitter() as MockChildProcess;
   proc.stdout = new EventEmitter();
   proc.stderr = new EventEmitter();
@@ -52,7 +59,7 @@ function createMockProcess(exitCode: number, stdout = '', stderr = ''): MockChil
     proc.emit('close', exitCode);
   }, 10);
 
-  return proc;
+  return asChildProcess(proc);
 }
 
 describe('PrefetchService', () => {
@@ -690,7 +697,7 @@ describe('PrefetchService', () => {
         setTimeout(() => {
           proc.emit('error', new Error('Command not found'));
         }, 10);
-        return proc;
+        return asChildProcess(proc);
       });
 
       const config: RemoteMcpConfiguration = {

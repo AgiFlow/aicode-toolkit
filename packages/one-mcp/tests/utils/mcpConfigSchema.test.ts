@@ -8,6 +8,34 @@ import {
 } from '../../src/utils/mcpConfigSchema';
 import { ZodError } from 'zod';
 
+/**
+ * Narrow a server config union to its stdio variant
+ */
+function isStdio<T extends object>(config: T): config is Extract<T, { command: string }> {
+  return 'command' in config;
+}
+
+function stdio<T extends object>(config: T): Extract<T, { command: string }> {
+  if (!isStdio(config)) {
+    throw new Error('Expected a stdio server config');
+  }
+  return config;
+}
+
+/**
+ * Narrow a server config union to its URL based (http or sse) variant
+ */
+function isRemote<T extends object>(config: T): config is Extract<T, { url: string }> {
+  return 'url' in config;
+}
+
+function remote<T extends object>(config: T): Extract<T, { url: string }> {
+  if (!isRemote(config)) {
+    throw new Error('Expected an http or sse server config');
+  }
+  return config;
+}
+
 describe('mcpConfigSchema', () => {
   const originalEnv = process.env;
 
@@ -36,7 +64,7 @@ describe('mcpConfigSchema', () => {
       };
 
       const result = ClaudeCodeMcpConfigSchema.parse(config);
-      expect(result.mcpServers['test-server'].command).toBe('node');
+      expect(stdio(result.mcpServers['test-server']).command).toBe('node');
     });
 
     it('should validate HTTP server config', () => {
@@ -52,7 +80,7 @@ describe('mcpConfigSchema', () => {
       };
 
       const result = ClaudeCodeMcpConfigSchema.parse(config);
-      expect(result.mcpServers['http-server'].url).toBe('https://example.com/mcp');
+      expect(remote(result.mcpServers['http-server']).url).toBe('https://example.com/mcp');
     });
 
     it('should validate SSE server config', () => {
@@ -66,7 +94,7 @@ describe('mcpConfigSchema', () => {
       };
 
       const result = ClaudeCodeMcpConfigSchema.parse(config);
-      expect(result.mcpServers['sse-server'].type).toBe('sse');
+      expect(remote(result.mcpServers['sse-server']).type).toBe('sse');
     });
 
     it('should validate config with instruction', () => {
@@ -147,9 +175,9 @@ describe('mcpConfigSchema', () => {
       const result = transformClaudeCodeConfig(claudeConfig);
 
       expect(result.mcpServers['stdio-server'].transport).toBe('stdio');
-      expect(result.mcpServers['stdio-server'].config.command).toBe('node');
-      expect(result.mcpServers['stdio-server'].config.args).toEqual(['server.js']);
-      expect(result.mcpServers['stdio-server'].config.env).toEqual({
+      expect(stdio(result.mcpServers['stdio-server'].config).command).toBe('node');
+      expect(stdio(result.mcpServers['stdio-server'].config).args).toEqual(['server.js']);
+      expect(stdio(result.mcpServers['stdio-server'].config).env).toEqual({
         NODE_ENV: 'production',
       });
     });
@@ -169,8 +197,8 @@ describe('mcpConfigSchema', () => {
       const result = transformClaudeCodeConfig(claudeConfig);
 
       expect(result.mcpServers['http-server'].transport).toBe('http');
-      expect(result.mcpServers['http-server'].config.url).toBe('https://example.com/mcp');
-      expect(result.mcpServers['http-server'].config.headers).toEqual({
+      expect(remote(result.mcpServers['http-server'].config).url).toBe('https://example.com/mcp');
+      expect(remote(result.mcpServers['http-server'].config).headers).toEqual({
         Authorization: 'Bearer token',
       });
     });
@@ -188,7 +216,9 @@ describe('mcpConfigSchema', () => {
       const result = transformClaudeCodeConfig(claudeConfig);
 
       expect(result.mcpServers['sse-server'].transport).toBe('sse');
-      expect(result.mcpServers['sse-server'].config.url).toBe('https://example.com/mcp/sse');
+      expect(remote(result.mcpServers['sse-server'].config).url).toBe(
+        'https://example.com/mcp/sse',
+      );
     });
 
     it('should skip disabled servers', () => {
@@ -261,7 +291,6 @@ describe('mcpConfigSchema', () => {
       const claudeConfig = {
         mcpServers: {
           'env-server': {
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             command: '${NODE_BIN}',
             args: ['server.js'],
           },
@@ -270,7 +299,7 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      expect(result.mcpServers['env-server'].config.command).toBe('/usr/bin/node');
+      expect(stdio(result.mcpServers['env-server'].config).command).toBe('/usr/bin/node');
     });
 
     it('should interpolate environment variables in args', () => {
@@ -280,7 +309,6 @@ describe('mcpConfigSchema', () => {
         mcpServers: {
           'env-server': {
             command: 'node',
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             args: ['${SERVER_PATH}'],
           },
         },
@@ -288,7 +316,7 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      expect(result.mcpServers['env-server'].config.args).toEqual(['/path/to/server.js']);
+      expect(stdio(result.mcpServers['env-server'].config).args).toEqual(['/path/to/server.js']);
     });
 
     it('should interpolate environment variables in env values', () => {
@@ -300,7 +328,6 @@ describe('mcpConfigSchema', () => {
             command: 'node',
             args: ['server.js'],
             env: {
-              // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
               API_TOKEN: '${API_KEY}',
             },
           },
@@ -309,7 +336,7 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      expect(result.mcpServers['env-server'].config.env?.API_TOKEN).toBe('secret-key-123');
+      expect(stdio(result.mcpServers['env-server'].config).env?.API_TOKEN).toBe('secret-key-123');
     });
 
     it('should interpolate environment variables in URLs', () => {
@@ -318,7 +345,6 @@ describe('mcpConfigSchema', () => {
       const claudeConfig = {
         mcpServers: {
           'http-server': {
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             url: '${MCP_HOST}/api',
           },
         },
@@ -326,7 +352,9 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      expect(result.mcpServers['http-server'].config.url).toBe('https://mcp.example.com/api');
+      expect(remote(result.mcpServers['http-server'].config).url).toBe(
+        'https://mcp.example.com/api',
+      );
     });
 
     it('should interpolate environment variables in headers', () => {
@@ -337,7 +365,6 @@ describe('mcpConfigSchema', () => {
           'http-server': {
             url: 'https://example.com/mcp',
             headers: {
-              // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
               Authorization: '${AUTH_TOKEN}',
             },
           },
@@ -346,7 +373,7 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      expect(result.mcpServers['http-server'].config.headers?.Authorization).toBe(
+      expect(remote(result.mcpServers['http-server'].config).headers?.Authorization).toBe(
         'Bearer token123',
       );
     });
@@ -357,7 +384,6 @@ describe('mcpConfigSchema', () => {
       const claudeConfig = {
         mcpServers: {
           'env-server': {
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             command: '${UNDEFINED_VAR}',
             args: ['server.js'],
           },
@@ -366,8 +392,7 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
-      expect(result.mcpServers['env-server'].config.command).toBe('${UNDEFINED_VAR}');
+      expect(stdio(result.mcpServers['env-server'].config).command).toBe('${UNDEFINED_VAR}');
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining('Environment variable UNDEFINED_VAR is not defined'),
       );
@@ -383,7 +408,6 @@ describe('mcpConfigSchema', () => {
         mcpServers: {
           'env-server': {
             command: 'node',
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             args: ['${HOME}/${PROJECT}/server.js'],
           },
         },
@@ -391,7 +415,7 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      expect(result.mcpServers['env-server'].config.args).toEqual([
+      expect(stdio(result.mcpServers['env-server'].config).args).toEqual([
         '/home/user/myproject/server.js',
       ]);
     });
@@ -411,7 +435,7 @@ describe('mcpConfigSchema', () => {
       const result = parseMcpConfig(rawConfig);
 
       expect(result.mcpServers['test-server'].transport).toBe('stdio');
-      expect(result.mcpServers['test-server'].config.command).toBe('node');
+      expect(stdio(result.mcpServers['test-server'].config).command).toBe('node');
     });
 
     it('should throw error for invalid Claude Code config', () => {
@@ -442,7 +466,6 @@ describe('mcpConfigSchema', () => {
         mcpServers: {
           filesystem: {
             command: 'npx',
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
             args: ['-y', '@modelcontextprotocol/server-filesystem', '${HOME}/Documents'],
             instruction: 'Access files in Documents folder',
           },
@@ -450,7 +473,6 @@ describe('mcpConfigSchema', () => {
             url: 'https://api.example.com/mcp',
             type: 'sse' as const,
             headers: {
-              // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
               Authorization: 'Bearer ${API_KEY}',
             },
           },
@@ -465,10 +487,10 @@ describe('mcpConfigSchema', () => {
       const result = parseMcpConfig(rawConfig);
 
       expect(result.mcpServers.filesystem).toBeDefined();
-      expect(result.mcpServers.filesystem.config.args).toContain('/home/user/Documents');
+      expect(stdio(result.mcpServers.filesystem.config).args).toContain('/home/user/Documents');
       expect(result.mcpServers['remote-api']).toBeDefined();
       expect(result.mcpServers['remote-api'].transport).toBe('sse');
-      expect(result.mcpServers['remote-api'].config.headers?.Authorization).toBe(
+      expect(remote(result.mcpServers['remote-api'].config).headers?.Authorization).toBe(
         'Bearer secret123',
       );
       expect(result.mcpServers['disabled-server']).toBeUndefined();
@@ -583,7 +605,6 @@ describe('mcpConfigSchema', () => {
       process.env.TEST_URL = 'https://secure.example.com';
 
       const source = {
-        // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
         url: '${TEST_URL}/mcp-config.json',
         validation: {
           url: '^https://secure\\..*',
@@ -670,7 +691,6 @@ describe('mcpConfigSchema', () => {
       const source = {
         url: 'https://example.com/mcp-config.json',
         headers: {
-          // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
           Authorization: 'Bearer ${TEST_TOKEN}',
         },
         validation: {
@@ -1009,7 +1029,6 @@ describe('mcpConfigSchema', () => {
         process.env.TEST_HOST = '127.0.0.1';
 
         const source = {
-          // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
           url: 'https://${TEST_HOST}/config.json',
         };
 
@@ -1024,7 +1043,6 @@ describe('mcpConfigSchema', () => {
         process.env.TEST_HOST = 'api.example.com';
 
         const source = {
-          // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional test data string
           url: 'https://${TEST_HOST}/config.json',
         };
 

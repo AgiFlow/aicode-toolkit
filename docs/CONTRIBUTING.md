@@ -49,7 +49,7 @@ We appreciate all contributions! Please follow these guidelines when submitting 
 
 > Keep the codebase clean and consistent
 
-- **Biome is king** - We use [Biome](https://biomejs.dev/) for linting and formatting
+- **Oxc for linting and formatting** - We use [oxlint](https://oxc.rs/docs/guide/usage/linter) (type-aware) and [oxfmt](https://oxc.rs/docs/guide/usage/formatter)
   - Run `pnpm format` before committing
   - Run `pnpm lint:fix` to auto-fix issues
 - **Favor micro-libraries** - Prefer small, focused libraries over monolithic ones
@@ -65,6 +65,7 @@ We appreciate all contributions! Please follow these guidelines when submitting 
 We use [Conventional Commits](https://www.conventionalcommits.org/) enforced by [commitlint](https://commitlint.js.org/).
 
 **Commit message format:**
+
 ```
 type(scope): subject
 
@@ -74,6 +75,7 @@ type(scope): subject
 ```
 
 **Commit types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -86,6 +88,7 @@ type(scope): subject
 - `revert`: Revert a previous commit
 
 **Examples:**
+
 ```bash
 feat(scaffold-mcp): add support for Vue.js templates
 fix(aicode-utils): resolve path resolution issue on Windows
@@ -94,6 +97,7 @@ test(scaffold-mcp): add tests for conditional includes
 ```
 
 **Rules:**
+
 - Present tense ("add feature" not "added feature")
 - Maximum 100 characters for subject line
 - Use imperative mood ("fix bug" not "fixes bug")
@@ -105,6 +109,7 @@ We use [Husky](https://typicode.github.io/husky/) to enforce commit message form
 ### Environment Setup
 
 **Prerequisites:**
+
 - Node.js `>= 18` (use [nvm](https://github.com/nvm-sh/nvm) or [asdf](https://asdf-vm.com/))
 - pnpm `>= 9` (install with `npm install -g pnpm`)
 - Git `>= 2.13.2`
@@ -112,17 +117,20 @@ We use [Husky](https://typicode.github.io/husky/) to enforce commit message form
 **Setup steps:**
 
 1. **Fork and clone the repository:**
+
    ```bash
    git clone https://github.com/<your-username>/aicode-toolkit.git
    cd aicode-toolkit
    ```
 
 2. **Install dependencies:**
+
    ```bash
    pnpm install
    ```
 
 3. **Build all packages:**
+
    ```bash
    pnpm build
    ```
@@ -137,21 +145,25 @@ We use [Husky](https://typicode.github.io/husky/) to enforce commit message form
 ### Testing
 
 **Run all tests:**
+
 ```bash
 pnpm test
 ```
 
 **Test a specific package:**
+
 ```bash
 pnpm exec nx test scaffold-mcp
 ```
 
 **Run tests in watch mode:**
+
 ```bash
 pnpm exec nx test scaffold-mcp --watch
 ```
 
 **Check test coverage:**
+
 ```bash
 pnpm exec nx test scaffold-mcp --coverage
 ```
@@ -159,15 +171,18 @@ pnpm exec nx test scaffold-mcp --coverage
 ### Documentation Updates
 
 **Update package documentation:**
+
 - Edit the relevant `README.md` in `packages/<package-name>/`
 - Follow the existing structure and style
 - Include code examples for new features
 
 **Update main documentation:**
+
 - Edit `README.md` in the project root
 - Update `CLAUDE.md` if adding new guidance for AI agents
 
 **Build and preview documentation:**
+
 ```bash
 # Format markdown files
 pnpm format
@@ -233,6 +248,7 @@ aicode-toolkit/
 ```
 
 **Dependency graph:**
+
 ```
 scaffold-mcp
     └── aicode-utils
@@ -242,6 +258,7 @@ architect-mcp
 ```
 
 **View the full project graph:**
+
 ```bash
 pnpm exec nx graph
 ```

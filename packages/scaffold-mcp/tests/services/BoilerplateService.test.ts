@@ -48,9 +48,8 @@ describe('BoilerplateService', () => {
     vi.clearAllMocks();
 
     const { readdirSync } = await import('node:fs');
-    const { pathExistsSync, statSync, ProjectConfigResolver } = await import(
-      '@agiflowai/aicode-utils'
-    );
+    const { pathExistsSync, statSync, ProjectConfigResolver } =
+      await import('@agiflowai/aicode-utils');
 
     (ProjectConfigResolver.resolveProjectConfig as any).mockResolvedValue({
       type: 'monorepo',

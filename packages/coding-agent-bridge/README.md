@@ -5,6 +5,7 @@ Bridge library for connecting coding agents (Claude Code, Cursor, Cline, etc.) w
 ## What It Does
 
 Provides a unified API for:
+
 - Detecting and configuring coding agents in workspaces
 - Managing MCP (Model Context Protocol) server settings
 - Invoking coding agents as pure LLMs (no tool execution)
@@ -13,11 +14,13 @@ Provides a unified API for:
 ## Supported Coding Agents
 
 **Currently Implemented**:
+
 - **Claude Code** - Anthropic's CLI with direct codebase access
 - **Codex** - OpenAI's code translation system
 - **Gemini CLI** - Google's command-line coding interface
 
 **Defined (Not Yet Implemented)**:
+
 - **Cursor** - AI-first code editor (constants defined, service pending)
 - **Cline** - CLI-based AI assistant (constants defined, service pending)
 
@@ -227,8 +230,8 @@ Automate MCP server setup across different coding agents:
 ```typescript
 const mcpConfig = {
   servers: {
-    'architect-mcp': { /* ... */ },
-    'scaffold-mcp': { /* ... */ },
+    'architect-mcp': {/* ... */},
+    'scaffold-mcp': {/* ... */},
   },
 };
 
@@ -241,11 +244,7 @@ await service.updateMcpSettings(mcpConfig);
 Test coding agent quality without tool execution:
 
 ```typescript
-const testCases = [
-  'Explain this code: ...',
-  'Find bugs in: ...',
-  'Suggest improvements: ...',
-];
+const testCases = ['Explain this code: ...', 'Find bugs in: ...', 'Suggest improvements: ...'];
 
 for (const prompt of testCases) {
   const response = await service.invokeAsLlm({ prompt, maxTokens: 1000 });
@@ -274,9 +273,9 @@ All services support a `toolConfig` option that passes CLI arguments to the unde
 const service = new ClaudeCodeService({
   workspaceRoot: '/path/to/workspace',
   toolConfig: {
-    model: 'claude-sonnet-4-20250514',  // becomes --model claude-sonnet-4-20250514
-    maxTokens: 4000,                     // becomes --max-tokens 4000
-    timeout: 120000,                     // becomes --timeout 120000
+    model: 'claude-sonnet-4-20250514', // becomes --model claude-sonnet-4-20250514
+    maxTokens: 4000, // becomes --max-tokens 4000
+    timeout: 120000, // becomes --timeout 120000
   },
 });
 ```
@@ -286,6 +285,7 @@ This enables tool-specific customization like model selection, timeouts, and oth
 ## Architecture
 
 **Design patterns**:
+
 - Interface-based abstraction for multiple coding agents
 - Service class pattern with dependency injection
 - Base class (`BaseCodingAgentService`) for shared functionality
@@ -293,6 +293,7 @@ This enables tool-specific customization like model selection, timeouts, and oth
 - Type-safe constants with `as const` assertions
 
 **Dependencies**:
+
 - `execa` - Process execution for CLI invocation
 - `uuid` - Session ID generation
 

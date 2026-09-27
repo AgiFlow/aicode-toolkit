@@ -4,42 +4,33 @@
     "default": {
       "runner": "nx/tasks-runners/default",
       "options": {
-        "cacheableOperations": [
-          "build",
-          "test",
-          "lint",
-          "typecheck",
-          "format"
-        ],
+        "cacheableOperations": ["build", "test", "lint", "typecheck", "format"],
         "cacheDirectory": ".nx/cache"
       }
     }
   },
   "namedInputs": {
-    "default": [
-      "{projectRoot}/**/*",
-      "sharedGlobals"
-    ],
-    "production": [
-      "default"
-    ],
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": ["default"],
     "sharedGlobals": []
   },
   "release": {
-    "projects": [
-      "packages/*",
-      "apps/*"
-    ],
+    "projects": ["packages/*", "apps/*"],
     "projectsRelationship": "independent",
+    "git": {
+      "tag": false
+    },
+    "releaseTag": {
+      "pattern": "{projectName}@{version}"
+    },
     "version": {
       "conventionalCommits": true,
-      "generatorOptions": {
-        "updateDependents": "auto"
-      }
+      "updateDependents": "auto"
     },
     "changelog": {
+      "automaticFromRef": true,
       "projectChangelogs": {
-        "createRelease": "github",
+        "createRelease": false,
         "renderOptions": {
           "authors": true
         }

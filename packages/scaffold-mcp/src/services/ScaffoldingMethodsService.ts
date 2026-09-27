@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { log, ProjectConfigResolver } from '@agiflowai/aicode-utils';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import type { IFileSystemService } from '../types/interfaces';
 import type { ScaffoldResult } from '../types/scaffold';
 import { PaginationHelper } from '../utils/pagination';

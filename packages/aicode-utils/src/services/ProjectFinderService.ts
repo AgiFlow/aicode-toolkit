@@ -104,7 +104,6 @@ export class ProjectFinderService {
   private async loadProjectConfig(projectJsonPath: string): Promise<ProjectConfig | null> {
     // Check cache first
     if (this.projectCache.has(projectJsonPath)) {
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       return this.projectCache.get(projectJsonPath)!;
     }
 
@@ -134,7 +133,6 @@ export class ProjectFinderService {
   private loadProjectConfigSync(projectJsonPath: string): ProjectConfig | null {
     // Check cache first
     if (this.projectCache.has(projectJsonPath)) {
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       return this.projectCache.get(projectJsonPath)!;
     }
 

@@ -6,6 +6,7 @@ Use `list-scaffolding-methods` for available features instead.
 Lists all available project boilerplates for creating new applications, APIs, or packages in the monorepo.
 
 Each boilerplate includes:
+
 - Complete project template with starter files
 - Variable schema for customization
 - Target directory information (e.g., apps/, packages/)

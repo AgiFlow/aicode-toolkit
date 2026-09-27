@@ -28,7 +28,6 @@ import { readFileSync } from 'node:fs';
 import { pathExists, pathExistsSync } from '../utils/fsHelpers';
 import type { ToolkitConfig } from '../types';
 
-// biome-ignore lint/complexity/noStaticOnlyClass: architectural pattern
 export class TemplatesManagerService {
   private static SCAFFOLD_CONFIG_FILE = 'scaffold.yaml';
   private static TEMPLATES_FOLDER = 'templates';

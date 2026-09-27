@@ -388,7 +388,7 @@ const initActors = {
             const templateSelectionService = new TemplateSelectionService(finalTemplatesPath);
             const templates = await templateSelectionService.listTemplates();
             existingTemplates = templates.map((t) => t.name);
-          } catch (_error) {
+          } catch {
             print.warning('Could not read existing templates, will proceed anyway');
           }
         }
@@ -412,7 +412,7 @@ const initActors = {
       const tmpPath = await templateSelectionService.downloadTemplatesToTmp(DEFAULT_TEMPLATE_REPO);
       spinner.succeed('Templates downloaded successfully');
       return tmpPath;
-    } catch (_error) {
+    } catch {
       spinner.warn('Failed to download templates - skipping template setup');
       print.info('You can run "aicode-toolkit init" again later to set up templates');
       return null; // Return null to indicate download failed gracefully
@@ -647,7 +647,7 @@ const initActors = {
         const templateSelectionService = new TemplateSelectionService(input.tmpTemplatesPath);
         await templateSelectionService.cleanup();
         spinner.succeed('Cleaned up temporary files');
-      } catch (_error) {
+      } catch {
         spinner.warn('Could not clean up all temporary files');
       }
     }

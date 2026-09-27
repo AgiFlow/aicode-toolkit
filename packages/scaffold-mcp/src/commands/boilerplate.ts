@@ -198,7 +198,7 @@ boilerplateCommand
         const projectName =
           (variables as Record<string, unknown>).appName ||
           (variables as Record<string, unknown>).packageName;
-        if (projectName) {
+        if (typeof projectName === 'string' && projectName) {
           // Determine the correct path based on monolith flag
           const targetFolder =
             options.targetFolder || (options.monolith ? '.' : boilerplate.target_folder);

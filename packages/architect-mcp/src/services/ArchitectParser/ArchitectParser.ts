@@ -31,6 +31,16 @@ import {
 import { architectConfigSchema } from '../../schemas';
 import { ParseArchitectError, InvalidConfigError } from '../../utils/errors';
 
+/**
+ * Convert a loosely typed YAML value to text: falsy values become '', objects become JSON
+ */
+function valueToText(value: unknown): string {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return JSON.stringify(value);
+}
+
 export class ArchitectParser {
   private configCache: Map<string, ArchitectConfig> = new Map();
   private workspaceRoot: string;
@@ -94,7 +104,6 @@ export class ArchitectParser {
 
     // Check cache first
     if (this.configCache.has(architectPath)) {
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       return this.configCache.get(architectPath)!;
     }
 
@@ -181,7 +190,6 @@ export class ArchitectParser {
 
     // Check cache first
     if (this.configCache.has(resolvedPath)) {
-      // biome-ignore lint/style/noNonNullAssertion: value guaranteed by context
       return this.configCache.get(resolvedPath)!;
     }
 
@@ -213,12 +221,13 @@ export class ArchitectParser {
               for (const example of examples) {
                 if (example && typeof example === 'object' && 'pattern' in example) {
                   const ex = example as Record<string, unknown>;
+                  const pattern = valueToText(ex.pattern);
                   features.push({
-                    name: String(ex.pattern || ''),
-                    design_pattern: String(ex.pattern || ''),
+                    name: pattern,
+                    design_pattern: pattern,
                     includes: Array.isArray(ex.files) ? (ex.files as string[]) : [],
-                    description: String(
-                      ex.description || (prompt as Record<string, unknown>).description || '',
+                    description: valueToText(
+                      ex.description || (prompt as Record<string, unknown>).description,
                     ),
                   });
                 }

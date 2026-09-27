@@ -21,7 +21,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import postcss from 'postcss';
 import { BaseCSSClassesService } from './BaseCSSClassesService';
-import type { CSSClassCategory, CSSClassesResult, CSSClassValue } from './types';
+import type { CSSClassesResult, CSSClassValue } from './types';
 
 /**
  * Tailwind CSS class extraction service.
@@ -59,10 +59,7 @@ export class TailwindCSSClassesService extends BaseCSSClassesService {
    * @returns Promise resolving to extracted CSS classes organized by category
    * @throws Error if theme file cannot be read or parsed
    */
-  async extractClasses(
-    category: CSSClassCategory | string,
-    themePath: string,
-  ): Promise<CSSClassesResult> {
+  async extractClasses(category: string, themePath: string): Promise<CSSClassesResult> {
     try {
       await this.validateThemePath(themePath);
 
@@ -173,7 +170,7 @@ export class TailwindCSSClassesService extends BaseCSSClassesService {
    */
   private generateClassesFromVariables(
     variables: Map<string, string>,
-    category: CSSClassCategory | string,
+    category: string,
   ): CSSClassesResult {
     const colorClasses: CSSClassValue[] = [];
     const typographyClasses: CSSClassValue[] = [];

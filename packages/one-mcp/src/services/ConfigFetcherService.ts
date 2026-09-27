@@ -19,7 +19,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import type { RemoteMcpConfiguration } from '../types';
 import {
   parseMcpConfig,
@@ -174,7 +174,7 @@ export class ConfigFetcherService {
   private async parseConfig(rawConfig: any): Promise<RemoteMcpConfiguration> {
     try {
       // Remove remoteConfigs before parsing to avoid validation errors
-      const { remoteConfigs, ...configWithoutRemote } = rawConfig;
+      const { remoteConfigs: _remoteConfigs, ...configWithoutRemote } = rawConfig;
 
       // Parse and transform using Zod schema
       return parseMcpConfig(configWithoutRemote) as RemoteMcpConfiguration;
@@ -354,7 +354,7 @@ export class ConfigFetcherService {
       }
 
       default:
-        throw new Error(`Unknown merge strategy: ${mergeStrategy}`);
+        throw new Error(`Unknown merge strategy: ${String(mergeStrategy)}`);
     }
   }
 

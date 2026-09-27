@@ -317,7 +317,6 @@ export class McpClientManagerService {
       // Get server instruction from MCP server if config instruction is not provided
       if (!mcpClient.serverInstruction) {
         try {
-          // biome-ignore lint/complexity/useLiteralKeys: accessing private property intentionally
           const serverInstruction = mcpClient['client'].getInstructions();
           if (serverInstruction) {
             mcpClient.serverInstruction = serverInstruction;
@@ -347,7 +346,7 @@ export class McpClientManagerService {
     } else if (config.transport === 'sse') {
       await this.connectSseClient(mcpClient, config.config as McpSseConfig);
     } else {
-      throw new Error(`Unsupported transport type: ${config.transport}`);
+      throw new Error(`Unsupported transport type: ${String(config.transport)}`);
     }
   }
 
@@ -358,7 +357,6 @@ export class McpClientManagerService {
       env: { ...process.env, ...(config.env ?? {}) } as Record<string, string>,
     });
 
-    // biome-ignore lint/complexity/useLiteralKeys: accessing private property intentionally
     await mcpClient['client'].connect(transport);
   }
   private async connectHttpClient(mcpClient: McpClient, config: McpHttpConfig): Promise<void> {
@@ -366,14 +364,12 @@ export class McpClientManagerService {
       requestInit: config.headers ? { headers: config.headers } : undefined,
     });
 
-    // biome-ignore lint/complexity/useLiteralKeys: accessing private property intentionally
     await mcpClient['client'].connect(transport);
   }
 
   private async connectSseClient(mcpClient: McpClient, config: McpSseConfig): Promise<void> {
     const transport = new SSEClientTransport(new URL(config.url));
 
-    // biome-ignore lint/complexity/useLiteralKeys: accessing private property intentionally
     await mcpClient['client'].connect(transport);
   }
 

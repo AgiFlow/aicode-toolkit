@@ -7,6 +7,7 @@ Help AI coding agents follow your company's branding and style guide. style-syst
 ## Why Use This?
 
 When AI agents write frontend code, they don't know your brand guidelines:
+
 - What colors, spacing, and typography are approved?
 - What UI components already exist in your design system?
 - Does the output match your brand's visual identity?
@@ -59,13 +60,13 @@ Agent:
 
 ## Available Tools
 
-| Tool | Purpose | When to Use |
-|------|---------|-------------|
-| `list_themes` | List available brand themes | Understanding brand variations |
-| `get_css_classes` | Extract approved design tokens from theme | Before writing any styles |
-| `list_shared_components` | List brand-approved UI components | Before creating new components |
-| `list_app_components` | List app-specific components | Finding existing branded components |
-| `get_component_visual` | Render component preview screenshot | Verifying brand alignment |
+| Tool                     | Purpose                                   | When to Use                         |
+| ------------------------ | ----------------------------------------- | ----------------------------------- |
+| `list_themes`            | List available brand themes               | Understanding brand variations      |
+| `get_css_classes`        | Extract approved design tokens from theme | Before writing any styles           |
+| `list_shared_components` | List brand-approved UI components         | Before creating new components      |
+| `list_app_components`    | List app-specific components              | Finding existing branded components |
+| `get_component_visual`   | Render component preview screenshot       | Verifying brand alignment           |
 
 ---
 
@@ -101,6 +102,7 @@ Agent:
 ### Workflow Examples
 
 **Enforcing Brand Tokens:**
+
 ```
 User: "Add hover styles to the card"
 
@@ -111,6 +113,7 @@ Agent:
 ```
 
 **Reusing Brand Components:**
+
 ```
 User: "I need a modal dialog"
 
@@ -121,6 +124,7 @@ Agent:
 ```
 
 **Verifying Brand Alignment:**
+
 ```
 User: "Show me the Button variants"
 
@@ -151,9 +155,9 @@ Add `style-system` config to your app's `project.json`:
 }
 ```
 
-| Setup | project.json Location |
-|-------|----------------------|
-| Monorepo | `apps/my-app/project.json` |
+| Setup    | project.json Location           |
+| -------- | ------------------------------- |
+| Monorepo | `apps/my-app/project.json`      |
 | Monolith | `./project.json` (project root) |
 
 ### Workspace Defaults (toolkit.yaml)
@@ -164,8 +168,8 @@ Configure workspace-level defaults and custom service overrides in `toolkit.yaml
 style-system:
   # Default tags for list_shared_components tool
   sharedComponentTags:
-    - "ui"
-    - "primitives"
+    - 'ui'
+    - 'primitives'
 
   # Custom service for get_css_classes tool (optional)
   getCssClasses:
@@ -176,24 +180,24 @@ style-system:
     customService: ./my-custom-bundler.ts
 ```
 
-| Option | Description |
-|--------|-------------|
-| `sharedComponentTags` | Default tags for `list_shared_components` tool |
+| Option                        | Description                                                             |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| `sharedComponentTags`         | Default tags for `list_shared_components` tool                          |
 | `getCssClasses.customService` | Path to custom CSS extraction service (extends `BaseCSSClassesService`) |
-| `bundler.customService` | Path to custom bundler service (extends `BaseBundlerService`) |
+| `bundler.customService`       | Path to custom bundler service (extends `BaseBundlerService`)           |
 
 ### Configuration Options
 
-| Option | Required | Description |
-|--------|----------|-------------|
-| `type` | Yes | Style system type: `tailwind` or `shadcn` |
-| `themeProvider` | Yes | Package or path providing brand theme |
-| `themePath` | No | Path to brand token CSS file |
-| `cssFiles` | No | Additional brand CSS files for rendering |
-| `rootComponent` | No | Wrapper component for branded previews |
-| `tailwindConfig` | No | Path to tailwind.config.js (if non-standard) |
-| `sharedComponentTags` | No | Storybook tags for brand components (default: `['style-system']`) |
-| `componentLibrary` | No | Component library path (for shadcn type) |
+| Option                | Required | Description                                                       |
+| --------------------- | -------- | ----------------------------------------------------------------- |
+| `type`                | Yes      | Style system type: `tailwind` or `shadcn`                         |
+| `themeProvider`       | Yes      | Package or path providing brand theme                             |
+| `themePath`           | No       | Path to brand token CSS file                                      |
+| `cssFiles`            | No       | Additional brand CSS files for rendering                          |
+| `rootComponent`       | No       | Wrapper component for branded previews                            |
+| `tailwindConfig`      | No       | Path to tailwind.config.js (if non-standard)                      |
+| `sharedComponentTags` | No       | Storybook tags for brand components (default: `['style-system']`) |
+| `componentLibrary`    | No       | Component library path (for shadcn type)                          |
 
 ---
 
@@ -223,7 +227,9 @@ For custom CSS extraction logic, extend `BaseCSSClassesService`:
 import { BaseCSSClassesService } from '@agiflowai/style-system';
 
 export default class MyCustomCSSService extends BaseCSSClassesService {
-  getFrameworkId(): string { return 'my-framework'; }
+  getFrameworkId(): string {
+    return 'my-framework';
+  }
 
   // Key method to override:
   async extractClasses(category, themePath) {
@@ -258,10 +264,18 @@ import { BaseBundlerService } from '@agiflowai/style-system';
 
 export default class MyCustomBundlerService extends BaseBundlerService {
   // Key methods to override:
-  async startDevServer(appPath: string) { /* Start dev server */ }
-  async serveComponent(options) { /* Serve component via dev server */ }
-  async prerenderComponent(options) { /* Build static HTML */ }
-  async cleanup() { /* Cleanup resources */ }
+  async startDevServer(appPath: string) {
+    /* Start dev server */
+  }
+  async serveComponent(options) {
+    /* Serve component via dev server */
+  }
+  async prerenderComponent(options) {
+    /* Build static HTML */
+  }
+  async cleanup() {
+    /* Cleanup resources */
+  }
 }
 ```
 
@@ -288,10 +302,10 @@ npx @agiflowai/style-system mcp-serve --type http --port 3000
 npx @agiflowai/style-system mcp-serve --type sse --port 3000
 ```
 
-| Option | Description | Default |
-|--------|-------------|---------|
+| Option       | Description                       | Default |
+| ------------ | --------------------------------- | ------- |
 | `-t, --type` | Transport: `stdio`, `http`, `sse` | `stdio` |
-| `-p, --port` | Port for HTTP/SSE | `3000` |
+| `-p, --port` | Port for HTTP/SSE                 | `3000`  |
 
 ---
 

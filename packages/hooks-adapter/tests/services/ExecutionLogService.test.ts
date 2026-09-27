@@ -11,6 +11,7 @@ vi.mock('node:fs/promises');
 
 // Import after mocking
 import { ExecutionLogService } from '../../src/services/ExecutionLogService';
+import type { Decision } from '../../src/types';
 
 describe('ExecutionLogService', () => {
   let service: ExecutionLogService;
@@ -46,7 +47,7 @@ describe('ExecutionLogService', () => {
       expect(result).toBe(true);
     });
 
-    test.each([
+    test.each<[string, Decision, string]>([
       ['/test/other.ts', 'deny', 'different file'],
       ['/test/file.ts', 'allow', 'different decision'],
     ])('returns false for %s', async (filePath, decision) => {

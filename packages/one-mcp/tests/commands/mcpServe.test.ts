@@ -234,9 +234,9 @@ describe('mcp-serve command', (): void => {
     const exitSpy = createExitSpy();
     const errorSpy = createErrorSpy();
 
-    await expect(
-      mcpServeCommand.parseAsync(['node', 'cli', '--type', 'invalid']),
-    ).rejects.toThrow('process.exit called');
+    await expect(mcpServeCommand.parseAsync(['node', 'cli', '--type', 'invalid'])).rejects.toThrow(
+      'process.exit called',
+    );
 
     expect(errorSpy).toHaveBeenCalledWith(
       "Failed to start MCP server with transport 'stdio': Unknown transport type: 'invalid'. Valid options: stdio, http, sse, stdio-http",

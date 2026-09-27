@@ -21,7 +21,11 @@
  */
 
 import { Command } from 'commander';
-import { ConfigFetcherService, DefinitionsCacheService, McpClientManagerService } from '../services';
+import {
+  ConfigFetcherService,
+  DefinitionsCacheService,
+  McpClientManagerService,
+} from '../services';
 import { SearchListToolsTool } from '../tools/SearchListToolsTool';
 import { findConfigFile } from '../utils';
 

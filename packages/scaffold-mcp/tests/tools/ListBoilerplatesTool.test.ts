@@ -1,8 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ListBoilerplatesTool } from '../../src/tools/ListBoilerplatesTool';
+import type { ListBoilerplateResponse } from '../../src/types/boilerplateTypes';
+import { getText } from '../helpers/getText';
+import type { BoilerplateService } from '../../src/services/BoilerplateService';
 
 // Mock the service
 vi.mock('../../src/services/BoilerplateService');
+
+/** Exposes the tool's private service so tests can spy on it. */
+function internals(tool: ListBoilerplatesTool): { boilerplateService: BoilerplateService } {
+  return tool as unknown as { boilerplateService: BoilerplateService };
+}
 
 describe('ListBoilerplatesTool', () => {
   let tool: ListBoilerplatesTool;
@@ -34,7 +42,7 @@ describe('ListBoilerplatesTool', () => {
 
   describe('execute', () => {
     it('should list boilerplates successfully', async () => {
-      const mockBoilerplates = {
+      const mockBoilerplates: ListBoilerplateResponse = {
         boilerplates: [
           {
             name: 'scaffold-nextjs-app',
@@ -46,8 +54,10 @@ describe('ListBoilerplatesTool', () => {
               },
               required: ['appName'],
             },
+            instruction: '',
             template_path: 'nextjs-15',
             target_folder: 'apps',
+            includes: [],
           },
           {
             name: 'scaffold-vite-app',
@@ -59,13 +69,15 @@ describe('ListBoilerplatesTool', () => {
               },
               required: ['appName'],
             },
+            instruction: '',
             template_path: 'vite-react',
             target_folder: 'apps',
+            includes: [],
           },
         ],
       };
 
-      const spy = vi.spyOn(tool.boilerplateService, 'listBoilerplates');
+      const spy = vi.spyOn(internals(tool).boilerplateService, 'listBoilerplates');
       spy.mockResolvedValue(mockBoilerplates);
 
       const result = await tool.execute({});
@@ -73,7 +85,7 @@ describe('ListBoilerplatesTool', () => {
       expect(result.isError).toBeFalsy();
       expect(result.content[0].type).toBe('text');
 
-      const response = JSON.parse(result.content[0].text);
+      const response = JSON.parse(getText(result.content[0]));
       expect(response.boilerplates).toHaveLength(2);
       expect(response.boilerplates[0].name).toBe('scaffold-nextjs-app');
       expect(spy).toHaveBeenCalled();
@@ -84,24 +96,24 @@ describe('ListBoilerplatesTool', () => {
         boilerplates: [],
       };
 
-      const spy = vi.spyOn(tool.boilerplateService, 'listBoilerplates');
+      const spy = vi.spyOn(internals(tool).boilerplateService, 'listBoilerplates');
       spy.mockResolvedValue(mockBoilerplates);
 
       const result = await tool.execute();
 
       expect(result.isError).toBeFalsy();
-      const response = JSON.parse(result.content[0].text);
+      const response = JSON.parse(getText(result.content[0]));
       expect(response.boilerplates).toHaveLength(0);
     });
 
     it('should handle service errors gracefully', async () => {
-      const spy = vi.spyOn(tool.boilerplateService, 'listBoilerplates');
+      const spy = vi.spyOn(internals(tool).boilerplateService, 'listBoilerplates');
       spy.mockRejectedValue(new Error('Failed to read templates directory'));
 
       const result = await tool.execute();
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain('Failed to read templates directory');
+      expect(getText(result.content[0])).toContain('Failed to read templates directory');
     });
   });
 });
