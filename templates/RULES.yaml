@@ -36,14 +36,14 @@ rules:
           // ❌ BAD - Explicit /index in path
           import { UserService } from '../services/index';
           import { myTool } from '../tools/index';
-      - rule: Import from barrel exports, not individual files (except @modelcontextprotocol/sdk)
+      - rule: Import from barrel exports, not individual files (except @modelcontextprotocol/server)
         codeExample: |
           // ✅ GOOD - Import from barrel
           import { UserService, OrderService } from '../services';
           import { MyTool } from '../tools';
 
-          // ✅ OK - @modelcontextprotocol/sdk requires .js extension
-          import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+          // ✅ OK - @modelcontextprotocol/server uses package exports (no .js suffix)
+          import type { CallToolResult } from '@modelcontextprotocol/server';
 
           // ❌ BAD - Direct file imports
           import { UserService } from '../services/UserService';

@@ -11,8 +11,7 @@
  * - Import tools from ../tools/ and register them in the handlers
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { Server } from '@modelcontextprotocol/server';
 
 // Import Tool classes
 import {
@@ -59,7 +58,7 @@ export function createServer(themePath?: string): Server {
   const listSharedComponentsTool = new ListSharedComponentsTool();
   const listAppComponentsTool = new ListAppComponentsTool();
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
+  server.setRequestHandler('tools/list', async () => {
     const tools = [
       withCapabilities(listThemesTool.getDefinition(), ['themes', 'design-system', 'styling']),
       withCapabilities(getCSSClassesTool.getDefinition(), [
@@ -88,7 +87,7 @@ export function createServer(themePath?: string): Server {
     return { tools };
   });
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler('tools/call', async (request) => {
     const { name, arguments: args } = request.params;
 
     // Route to appropriate tool based on name

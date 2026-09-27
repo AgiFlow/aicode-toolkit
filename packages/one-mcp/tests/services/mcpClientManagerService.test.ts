@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { McpClientManagerService } from '../../src/services/McpClientManagerService';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import type { McpServerConfig } from '../../src/types';
 
 // Track all created mock client instances
@@ -23,24 +22,12 @@ function createMockClientInstance(): Record<string, ReturnType<typeof vi.fn>> {
 }
 
 // Mock the SDK transports
-vi.mock('@modelcontextprotocol/sdk/client/streamableHttp.js', () => ({
-  StreamableHTTPClientTransport: class MockHTTPTransport {
-    constructor() {}
-  },
-}));
-vi.mock('@modelcontextprotocol/sdk/client/sse.js', () => ({
-  SSEClientTransport: class MockSSETransport {
-    constructor() {}
-  },
-}));
-vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
-  StdioClientTransport: class MockStdioTransport {
-    constructor() {}
-  },
+vi.mock('@modelcontextprotocol/client/stdio', () => ({
+  StdioClientTransport: class MockStdioTransport {},
 }));
 
-// Mock the Client class as a proper constructor
-vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
+// Mock the Client class and browser transports.
+vi.mock('@modelcontextprotocol/client', () => ({
   Client: class MockClient {
     [key: string]: ReturnType<typeof vi.fn> | undefined;
     constructor() {
@@ -48,6 +35,8 @@ vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
       Object.assign(this, instance);
     }
   },
+  SSEClientTransport: class MockSSETransport {},
+  StreamableHTTPClientTransport: class MockHTTPTransport {},
 }));
 
 const httpConfig: McpServerConfig = {
@@ -105,9 +94,7 @@ describe('McpClientManagerService', () => {
       if (!client) return;
 
       const firstInstance = mockClientInstances[0];
-      firstInstance.listTools.mockRejectedValueOnce(
-        new Error('Bad Request: unknown session ID'),
-      );
+      firstInstance.listTools.mockRejectedValueOnce(new Error('Bad Request: unknown session ID'));
 
       const tools = await client.listTools();
       expect(tools).toBeDefined();
@@ -137,9 +124,7 @@ describe('McpClientManagerService', () => {
       if (!client) return;
 
       const firstInstance = mockClientInstances[0];
-      firstInstance.callTool.mockRejectedValue(
-        new Error('Bad Request: unknown session ID'),
-      );
+      firstInstance.callTool.mockRejectedValue(new Error('Bad Request: unknown session ID'));
 
       // Should throw without retrying since stdio has no reconnect
       await expect(client.callTool('test_tool', {})).rejects.toThrow('unknown session');

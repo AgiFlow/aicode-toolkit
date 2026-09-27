@@ -1,4 +1,4 @@
-import type { GetPromptResult } from '@modelcontextprotocol/sdk/types.js';
+import type { GetPromptResult } from '@modelcontextprotocol/server';
 
 export interface PromptArgument {
   name: string;
@@ -6,12 +6,7 @@ export interface PromptArgument {
   required?: boolean;
 }
 
-export interface PromptContent {
-  type: 'text' | 'image';
-  text?: string;
-  data?: string;
-  mimeType?: string;
-}
+export type PromptContent = GetPromptResult['messages'][number]['content'];
 
 export interface PromptDefinition {
   name: string;

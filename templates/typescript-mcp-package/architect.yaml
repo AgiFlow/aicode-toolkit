@@ -134,7 +134,7 @@ features:
 
       ## What TO DO ✅
 
-      - Create a server instance using Server from @modelcontextprotocol/sdk/server/index.js
+      - Create a server instance using Server from @modelcontextprotocol/server
       - Register all tools using server.tool() with tool definitions
       - Register prompts using server.prompt() if needed
       - Use proper error handling in request handlers
@@ -153,7 +153,7 @@ features:
 
       ### Basic MCP Server
       ```typescript
-      import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+      import { Server } from '@modelcontextprotocol/server';
       import { MyTool } from '../tools/MyTool';
 
       const server = new Server(
@@ -316,12 +316,12 @@ features:
 
       ### Stdio Transport
       ```typescript
-      import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-      import { server } from './server/index';
+      import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
+      import { createServer } from './server/index';
 
       async function main() {
         const transport = new StdioServerTransport();
-        await server.connect(transport);
+        await createServer().connect(transport);
       }
 
       main().catch((error) => {
@@ -332,19 +332,16 @@ features:
 
       ### SSE Transport
       ```typescript
-      import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
-      import { server } from './server/index';
+      import { SSEServerTransport } from '@modelcontextprotocol/server-legacy/sse';
+      import { createServer } from './server/index';
+      import express from 'express';
 
-      async function startSSEServer(port = 3000) {
-        const transport = new SSEServerTransport('/message', (response) => {
-          response.writeHead(200, { 'Content-Type': 'text/event-stream' });
-        });
-        
-        await server.connect(transport);
-        console.log(`SSE server running on port ${port}`);
-      }
-
-      startSSEServer().catch(console.error);
+      const app = express();
+      app.get('/sse', async (_req, res) => {
+        const transport = new SSEServerTransport('/message', res);
+        await createServer().connect(transport);
+      });
+      app.listen(3000);
       ```
   - name: mcp-prompt-pattern
     design_pattern: MCP Prompt Pattern

@@ -11,11 +11,8 @@
  * - Import tools from ../tools/ and register them in the handlers
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { Server } from '@modelcontextprotocol/server';
+
 
 // TODO: Import your tools here
 // import { MyTool } from '../tools/MyTool';
@@ -36,14 +33,14 @@ export function createServer(): Server {
   // TODO: Initialize your tools here
   // const myTool = new MyTool();
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  server.setRequestHandler('tools/list', async () => ({
     tools: [
       // TODO: Add tool definitions here
       // myTool.getDefinition(),
     ],
   }));
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler('tools/call', async (request) => {
     const { name, arguments: args } = request.params;
 
     // TODO: Add tool execution here

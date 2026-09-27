@@ -25,7 +25,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.19.1",
+    "@modelcontextprotocol/server": "2.1.0",{% if withHttpTransport %}
+    "@modelcontextprotocol/node": "2.1.0",
+    "@modelcontextprotocol/server-legacy": "2.1.0",{% endif %}
     "chalk": "5.6.2",
     "commander": "14.0.1"{% if withHttpTransport %},
     "express": "^4.21.2"{% endif %}

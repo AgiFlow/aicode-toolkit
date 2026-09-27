@@ -1,4 +1,4 @@
-import type { GetPromptResult } from '@modelcontextprotocol/sdk/types.js';
+import type { GetPromptResult } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import syncTemplatePatternsTemplate from '../instructions/prompts/sync-template-patterns.md?raw';
 import { TemplateService } from '../services';

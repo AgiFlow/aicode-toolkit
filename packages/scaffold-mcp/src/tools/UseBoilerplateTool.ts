@@ -1,4 +1,4 @@
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import useBoilerplateDescription from '../instructions/tools/use-boilerplate/description.md?raw';
 import { BoilerplateService } from '../services/BoilerplateService';
 import { TemplateService } from '../services/TemplateService';

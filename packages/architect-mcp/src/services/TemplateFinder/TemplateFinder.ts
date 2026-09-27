@@ -64,7 +64,7 @@ export class TemplateFinder {
         projectPath = projectConfig.workspaceRoot || this.workspaceRoot;
       }
 
-      if (!projectConfig || !projectConfig.sourceTemplate) {
+      if (!projectConfig?.sourceTemplate) {
         return null;
       }
 

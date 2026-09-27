@@ -1,4 +1,4 @@
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import { ProjectConfigResolver } from '@agiflowai/aicode-utils';
 import { BoilerplateGeneratorService } from '../services/BoilerplateGeneratorService';
 import type { ToolDefinition } from './types';

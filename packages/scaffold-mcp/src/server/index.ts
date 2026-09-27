@@ -1,11 +1,6 @@
 import { TemplatesManagerService } from '@agiflowai/aicode-utils';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import {
-  CallToolRequestSchema,
-  GetPromptRequestSchema,
-  ListPromptsRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { Server } from '@modelcontextprotocol/server';
+
 import packageJson from '../../package.json' assert { type: 'json' };
 import serverInstructionsTemplate from '../instructions/server.md?raw';
 import {
@@ -119,7 +114,7 @@ export function createServer(options: ServerOptions = {}): Server {
     },
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
+  server.setRequestHandler('tools/list', async () => {
     try {
       const tools = [
         withCapabilities(listScaffoldingMethodsTool.getDefinition(), [
@@ -198,7 +193,7 @@ export function createServer(options: ServerOptions = {}): Server {
     }
   });
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler('tools/call', async (request) => {
     const { name, arguments: args } = request.params;
     try {
       if (name === ListBoilerplatesTool.TOOL_NAME) {
@@ -254,7 +249,7 @@ export function createServer(options: ServerOptions = {}): Server {
     }
   });
 
-  server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  server.setRequestHandler('prompts/list', async () => {
     try {
       const prompts = [
         scaffoldApplicationPrompt.getDefinition(),
@@ -273,7 +268,7 @@ export function createServer(options: ServerOptions = {}): Server {
     }
   });
 
-  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  server.setRequestHandler('prompts/get', async (request) => {
     const { name, arguments: args } = request.params;
     try {
       if (name === ScaffoldApplicationPrompt.PROMPT_NAME) {

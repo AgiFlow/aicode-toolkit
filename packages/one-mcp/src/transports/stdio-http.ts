@@ -17,23 +17,16 @@
  * - Swallowing cleanup failures silently
  */
 
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  GetPromptRequestSchema,
-  ListPromptsRequestSchema,
-  ListResourcesRequestSchema,
-  ListToolsRequestSchema,
-  ReadResourceRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { Client } from '@modelcontextprotocol/client';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
+import { Server } from '@modelcontextprotocol/server';
+import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
+
 import type {
   CallToolRequest,
   GetPromptRequest,
   ReadResourceRequest,
-} from '@modelcontextprotocol/sdk/types.js';
+} from '@modelcontextprotocol/server';
 import type { TransportHandler } from '../types';
 
 interface StdioHttpProxyTransportConfig {
@@ -63,6 +56,7 @@ export class StdioHttpTransportHandler implements TransportHandler {
         },
         {
           capabilities: {},
+          enforceStrictCapabilities: true,
         },
       );
 
@@ -149,7 +143,7 @@ export class StdioHttpTransportHandler implements TransportHandler {
       },
     );
 
-    proxyServer.setRequestHandler(ListToolsRequestSchema, async () => {
+    proxyServer.setRequestHandler('tools/list', async () => {
       try {
         return await client.listTools();
       } catch (error) {
@@ -159,7 +153,7 @@ export class StdioHttpTransportHandler implements TransportHandler {
       }
     });
 
-    proxyServer.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
+    proxyServer.setRequestHandler('tools/call', async (request: CallToolRequest) => {
       try {
         return await client.callTool({
           name: request.params.name,
@@ -172,7 +166,7 @@ export class StdioHttpTransportHandler implements TransportHandler {
       }
     });
 
-    proxyServer.setRequestHandler(ListResourcesRequestSchema, async () => {
+    proxyServer.setRequestHandler('resources/list', async () => {
       try {
         return await client.listResources();
       } catch (error) {
@@ -182,7 +176,7 @@ export class StdioHttpTransportHandler implements TransportHandler {
       }
     });
 
-    proxyServer.setRequestHandler(ReadResourceRequestSchema, async (request: ReadResourceRequest) => {
+    proxyServer.setRequestHandler('resources/read', async (request: ReadResourceRequest) => {
       try {
         return await client.readResource({ uri: request.params.uri });
       } catch (error) {
@@ -192,7 +186,7 @@ export class StdioHttpTransportHandler implements TransportHandler {
       }
     });
 
-    proxyServer.setRequestHandler(ListPromptsRequestSchema, async () => {
+    proxyServer.setRequestHandler('prompts/list', async () => {
       try {
         return await client.listPrompts();
       } catch (error) {
@@ -202,7 +196,7 @@ export class StdioHttpTransportHandler implements TransportHandler {
       }
     });
 
-    proxyServer.setRequestHandler(GetPromptRequestSchema, async (request: GetPromptRequest) => {
+    proxyServer.setRequestHandler('prompts/get', async (request: GetPromptRequest) => {
       try {
         return await client.getPrompt({
           name: request.params.name,

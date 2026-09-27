@@ -253,7 +253,7 @@ export class ArchitectParser {
     const seenNames = new Set<string>();
 
     for (const config of configs) {
-      if (!config || !config.features) continue;
+      if (!config?.features) continue;
 
       for (const feature of config.features) {
         // Avoid duplicates based on name or architecture

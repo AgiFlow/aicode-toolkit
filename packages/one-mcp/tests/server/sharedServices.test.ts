@@ -1,3 +1,4 @@
+import { Client, InMemoryTransport } from '@modelcontextprotocol/client';
 import { describe, expect, it, vi } from 'vitest';
 import { createSessionServer } from '../../src/server';
 import type { SharedServices } from '../../src/server';
@@ -27,7 +28,11 @@ function createMockSharedServices(overrides?: Partial<SharedServices>): SharedSe
       getDefinition: vi.fn().mockResolvedValue({
         name: 'describe_tools',
         description: 'Mock describe tools',
-        inputSchema: { type: 'object', properties: { toolNames: { type: 'array', items: { type: 'string' } } }, required: ['toolNames'] },
+        inputSchema: {
+          type: 'object',
+          properties: { toolNames: { type: 'array', items: { type: 'string' } } },
+          required: ['toolNames'],
+        },
       }),
       execute: vi.fn().mockResolvedValue({ content: [{ type: 'text', text: '{}' }] }),
       clearAutoDetectedSkillsCache: vi.fn(),
@@ -36,7 +41,11 @@ function createMockSharedServices(overrides?: Partial<SharedServices>): SharedSe
       getDefinition: vi.fn().mockReturnValue({
         name: 'use_tool',
         description: 'Mock use tool',
-        inputSchema: { type: 'object', properties: { toolName: { type: 'string' }, toolArgs: { type: 'object' } }, required: ['toolName'] },
+        inputSchema: {
+          type: 'object',
+          properties: { toolName: { type: 'string' }, toolArgs: { type: 'object' } },
+          required: ['toolName'],
+        },
       }),
       execute: vi.fn().mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] }),
     } as any,
@@ -78,7 +87,8 @@ describe('SharedServices & createSessionServer', () => {
     // getServerDefinitions is called during each createSessionServer (for instructions + hasAnySkills)
     // The key assertion is that both sessions use the same mock instance
     expect(shared.definitionsCacheService.getServerDefinitions).toHaveBeenCalled();
-    const callCount = (shared.definitionsCacheService.getServerDefinitions as any).mock.calls.length;
+    const callCount = (shared.definitionsCacheService.getServerDefinitions as any).mock.calls
+      .length;
     expect(callCount).toBeGreaterThanOrEqual(2);
   });
 
@@ -104,6 +114,45 @@ describe('SharedServices & createSessionServer', () => {
       const shared = createMockSharedServices({ proxyMode: mode });
       const server = await createSessionServer(shared);
       expect(server).toBeDefined();
+    }
+  });
+
+  it('negotiates with real v2 clients and isolates session shutdown', async () => {
+    const shared = createMockSharedServices();
+    const first = await createSessionServer(shared);
+    const second = await createSessionServer(shared);
+    const [firstClientTransport, firstServerTransport] = InMemoryTransport.createLinkedPair();
+    const [secondClientTransport, secondServerTransport] = InMemoryTransport.createLinkedPair();
+    const firstClient = new Client({ name: 'test-client', version: '1.0.0' }, { capabilities: {} });
+    const secondClient = new Client(
+      { name: 'test-client', version: '1.0.0' },
+      { capabilities: {} },
+    );
+    try {
+      await Promise.all([
+        first.connect(firstServerTransport),
+        second.connect(secondServerTransport),
+      ]);
+      await Promise.all([
+        firstClient.connect(firstClientTransport),
+        secondClient.connect(secondClientTransport),
+      ]);
+      expect((await firstClient.listTools()).tools.map((tool) => tool.name)).toContain('use_tool');
+      expect(
+        (await firstClient.callTool({ name: 'use_tool', arguments: { toolName: 'example' } }))
+          .content,
+      ).toEqual([{ type: 'text', text: 'ok' }]);
+      await firstClient.close();
+      await first.close();
+      expect((await secondClient.listTools()).tools.map((tool) => tool.name)).toContain('use_tool');
+      expect(shared.dispose).not.toHaveBeenCalled();
+    } finally {
+      await Promise.allSettled([
+        firstClient.close(),
+        secondClient.close(),
+        first.close(),
+        second.close(),
+      ]);
     }
   });
 });

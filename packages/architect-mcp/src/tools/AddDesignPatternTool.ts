@@ -20,7 +20,7 @@
  * - Missing input validation
  */
 
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import type { Tool, ToolDefinition, Feature } from '../types/index.js';
 import { TemplatesManagerService } from '@agiflowai/aicode-utils';
 import * as fs from 'node:fs/promises';

@@ -1,5 +1,5 @@
 import path from 'node:path';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import { FileSystemService } from '../services/FileSystemService';
 import type { ToolDefinition } from './types';
 

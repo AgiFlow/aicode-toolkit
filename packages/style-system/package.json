@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@agiflowai/aicode-utils": "workspace:*",
-    "@modelcontextprotocol/sdk": "1.29.0",
+    "@modelcontextprotocol/server": "2.1.0",
     "@storybook/csf-tools": "8.6.18",
     "@tailwindcss/vite": "4.2.2",
     "chalk": "5.6.2",

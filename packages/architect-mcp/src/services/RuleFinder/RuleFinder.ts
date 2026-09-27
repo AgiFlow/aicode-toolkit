@@ -200,7 +200,7 @@ export class RuleFinder {
     // Find the project containing this file
     const project = await this.findProjectForFile(normalizedPath);
 
-    if (!project || !project.sourceTemplate) {
+    if (!project?.sourceTemplate) {
       return { project, rulesConfig: null, matchedRule: null, templatePath: null };
     }
 
@@ -408,7 +408,7 @@ export class RuleFinder {
         projectName = path.basename(projectRoot);
       }
 
-      if (!projectConfig || !projectConfig.sourceTemplate) {
+      if (!projectConfig?.sourceTemplate) {
         return null;
       }
 

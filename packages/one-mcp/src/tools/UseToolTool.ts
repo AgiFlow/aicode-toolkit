@@ -23,7 +23,7 @@
  * - Skills use skill__skillName format (skill__ prefix)
  */
 
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import { DEFAULT_SERVER_ID, SKILL_PREFIX } from '../constants';
 import { DefinitionsCacheService } from '../services/DefinitionsCacheService';
 import type { McpClientManagerService } from '../services/McpClientManagerService';

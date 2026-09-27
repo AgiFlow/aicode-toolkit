@@ -1,5 +1,5 @@
 import { ProjectConfigResolver, TemplatesManagerService, readFile } from '@agiflowai/aicode-utils';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 
 export function parseJsonOption<T>(value: string | undefined, flagName: string): T {
   if (!value) {

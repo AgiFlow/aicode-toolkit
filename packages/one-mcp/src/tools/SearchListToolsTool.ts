@@ -1,4 +1,4 @@
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import type { Tool, ToolDefinition } from '../types';
 import { DefinitionsCacheService } from '../services/DefinitionsCacheService';
 import { getToolCapabilities, getUniqueSortedCapabilities } from '../utils/toolCapabilities';

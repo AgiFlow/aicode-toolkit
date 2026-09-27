@@ -10,7 +10,7 @@
  * - Use descriptive names for types and interfaces
  */
 
-import type { CallToolResult, GetPromptResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult, GetPromptResult, ReadResourceResult, Tool as McpTool } from '@modelcontextprotocol/server';
 
 /**
  * Tool definition for MCP
@@ -21,12 +21,7 @@ import type { CallToolResult, GetPromptResult, ReadResourceResult } from '@model
 export interface ToolDefinition {
   name: string;
   description: string;
-  inputSchema: {
-    type: string;
-    properties: Record<string, unknown>;
-    required?: string[];
-    additionalProperties?: boolean;
-  };
+  inputSchema: McpTool['inputSchema'];
   _meta?: Record<string, unknown>;
 }
 

@@ -25,7 +25,7 @@
  * - Plain tool names resolve to unique tools or return all matches if clashing
  */
 
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import type { Tool, ToolDefinition } from '../types';
 import type { McpClientManagerService } from '../services/McpClientManagerService';
 import type { SkillService } from '../services/SkillService';

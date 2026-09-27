@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CachedServerDefinition, DefinitionsCacheFile, McpClientConnection } from '../../src/types';
+import type {
+  CachedServerDefinition,
+  DefinitionsCacheFile,
+  McpClientConnection,
+} from '../../src/types';
 
 const mocks = vi.hoisted(() => ({
   mockServerDefinitions: [] as CachedServerDefinition[],
@@ -62,16 +66,20 @@ vi.mock('../../src/services/DefinitionsCacheService', () => {
   class MockDefinitionsCacheService {
     getServerDefinitions = vi.fn().mockImplementation(async () => mocks.mockServerDefinitions);
     getCachedFileSkills = vi.fn().mockImplementation(async () => mocks.mockCachedSkills);
-    getServersForTool = vi.fn().mockImplementation(async (toolName: string) =>
-      mocks.mockServerDefinitions
-        .filter((server) => server.tools.some((tool) => tool.name === toolName))
-        .map((server) => server.serverName),
-    );
-    getServersForResource = vi.fn().mockImplementation(async (uri: string) =>
-      mocks.mockServerDefinitions
-        .filter((server) => server.resources.some((resource) => resource.uri === uri))
-        .map((server) => server.serverName),
-    );
+    getServersForTool = vi
+      .fn()
+      .mockImplementation(async (toolName: string) =>
+        mocks.mockServerDefinitions
+          .filter((server) => server.tools.some((tool) => tool.name === toolName))
+          .map((server) => server.serverName),
+      );
+    getServersForResource = vi
+      .fn()
+      .mockImplementation(async (uri: string) =>
+        mocks.mockServerDefinitions
+          .filter((server) => server.resources.some((resource) => resource.uri === uri))
+          .map((server) => server.serverName),
+      );
     getPromptSkillByName = vi.fn().mockImplementation(async (skillName: string) => {
       for (const server of mocks.mockServerDefinitions) {
         const promptSkill = server.promptSkills.find((skill) => skill.skill.name === skillName);
@@ -117,7 +125,11 @@ function getRequestHandler<T>(server: any, method: string): T {
   if (!handler) {
     throw new Error(`Handler not found for ${method}`);
   }
-  return handler as T;
+  // SDK v2 request handlers receive a request context as the second argument.
+  return ((request: unknown) =>
+    handler(request, {
+      mcpReq: { signal: new AbortController().signal, requestState: () => undefined },
+    })) as T;
 }
 
 describe('createServer flat mode handlers', () => {
@@ -203,10 +215,9 @@ describe('createServer flat mode handlers', () => {
       configFilePath: '/tmp/mcp-config.yaml',
       proxyMode: 'flat',
     });
-    const listToolsHandler = getRequestHandler<(request: unknown) => Promise<{ tools: Array<{ name: string }> }>>(
-      server,
-      'tools/list',
-    );
+    const listToolsHandler = getRequestHandler<
+      (request: unknown) => Promise<{ tools: Array<{ name: string }> }>
+    >(server, 'tools/list');
 
     const result = await listToolsHandler({ method: 'tools/list' });
     const toolNames = result.tools.map((tool) => tool.name);
@@ -233,10 +244,9 @@ describe('createServer flat mode handlers', () => {
       configFilePath: '/tmp/mcp-config.yaml',
       proxyMode: 'flat',
     });
-    const listToolsHandler = getRequestHandler<(request: unknown) => Promise<{ tools: Array<{ name: string }> }>>(
-      server,
-      'tools/list',
-    );
+    const listToolsHandler = getRequestHandler<
+      (request: unknown) => Promise<{ tools: Array<{ name: string }> }>
+    >(server, 'tools/list');
 
     const result = await listToolsHandler({ method: 'tools/list' });
 
@@ -258,10 +268,9 @@ describe('createServer flat mode handlers', () => {
       proxyMode: 'flat',
       skills: { paths: ['.claude/skills'] },
     });
-    const listToolsHandler = getRequestHandler<(request: unknown) => Promise<{ tools: Array<{ name: string }> }>>(
-      server,
-      'tools/list',
-    );
+    const listToolsHandler = getRequestHandler<
+      (request: unknown) => Promise<{ tools: Array<{ name: string }> }>
+    >(server, 'tools/list');
 
     const result = await listToolsHandler({ method: 'tools/list' });
 
@@ -274,7 +283,10 @@ describe('createServer flat mode handlers', () => {
       proxyMode: 'flat',
     });
     const callToolHandler = getRequestHandler<
-      (request: { method: string; params: { name: string; arguments?: Record<string, unknown> } }) => Promise<any>
+      (request: {
+        method: string;
+        params: { name: string; arguments?: Record<string, unknown> };
+      }) => Promise<any>
     >(server, 'tools/call');
 
     await callToolHandler({
@@ -286,7 +298,11 @@ describe('createServer flat mode handlers', () => {
     });
 
     expect(mocks.mockEnsureConnected).toHaveBeenCalledWith('beta');
-    expect(mocks.mockConnectedClient?.callTool).toHaveBeenCalledWith('status', { verbose: true }, undefined);
+    expect(mocks.mockConnectedClient?.callTool).toHaveBeenCalledWith(
+      'status',
+      { verbose: true },
+      undefined,
+    );
   });
 
   it('returns an error when a clashing flat tool is called without a prefix', async () => {
@@ -295,7 +311,10 @@ describe('createServer flat mode handlers', () => {
       proxyMode: 'flat',
     });
     const callToolHandler = getRequestHandler<
-      (request: { method: string; params: { name: string; arguments?: Record<string, unknown> } }) => Promise<any>
+      (request: {
+        method: string;
+        params: { name: string; arguments?: Record<string, unknown> };
+      }) => Promise<any>
     >(server, 'tools/call');
 
     const result = await callToolHandler({
@@ -418,10 +437,7 @@ describe('createServer flat mode handlers', () => {
 
     const result = await listToolsHandler({ method: 'tools/list' });
 
-    expect(result.tools.map((tool) => tool.name)).toEqual([
-      'describe_tools',
-      'use_tool',
-    ]);
+    expect(result.tools.map((tool) => tool.name)).toEqual(['describe_tools', 'use_tool']);
     expect(server._instructions).toContain('meta mode');
   });
 
@@ -431,7 +447,10 @@ describe('createServer flat mode handlers', () => {
       proxyMode: 'search',
     });
     const callToolHandler = getRequestHandler<
-      (request: { method: string; params: { name: string; arguments?: Record<string, unknown> } }) => Promise<any>
+      (request: {
+        method: string;
+        params: { name: string; arguments?: Record<string, unknown> };
+      }) => Promise<any>
     >(server, 'tools/call');
 
     const result = await callToolHandler({

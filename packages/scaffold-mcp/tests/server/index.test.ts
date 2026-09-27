@@ -38,26 +38,19 @@ describe('Server', () => {
     it('should register prompt handlers when admin enabled', () => {
       const server = createServer({ adminEnabled: true });
 
-      // Check if prompt handlers are registered
-      const _hasPromptHandlers = Array.from(server.requestHandlers.keys()).some(
-        (key) => key.name === 'ListPromptsRequestSchema' || key.name === 'GetPromptRequestSchema',
-      );
-
-      // Note: This may not work with the current mock setup, but demonstrates intent
-      expect(server.requestHandlers.size).toBeGreaterThan(0);
+      expect(server.requestHandlers.has('prompts/list')).toBe(true);
+      expect(server.requestHandlers.has('prompts/get')).toBe(true);
     });
 
     it('should not register admin tools when adminEnabled is false', async () => {
       const server = createServer({ adminEnabled: false });
 
-      const listToolsHandler = server.requestHandlers.get({});
-      if (listToolsHandler) {
-        const result = await listToolsHandler({});
-        const toolNames = result.tools.map((t: any) => t.name);
-
-        expect(toolNames).not.toContain('generate-boilerplate');
-        expect(toolNames).not.toContain('generate-feature-scaffold');
-      }
+      const listToolsHandler = server.requestHandlers.get('tools/list');
+      if (!listToolsHandler) throw new Error('tools/list handler is missing');
+      const result = await listToolsHandler({});
+      const toolNames = result.tools.map((t: any) => t.name);
+      expect(toolNames).not.toContain('generate-boilerplate');
+      expect(toolNames).not.toContain('generate-feature-scaffold');
     });
   });
 
@@ -65,33 +58,27 @@ describe('Server', () => {
     it('should register core tools', async () => {
       const server = createServer();
 
-      const listToolsHandler = server.requestHandlers.get({});
-      if (listToolsHandler) {
-        const result = await listToolsHandler({});
-        const toolNames = result.tools.map((t: any) => t.name);
-
-        expect(toolNames).toContain('list-boilerplates');
-        expect(toolNames).toContain('use-boilerplate');
-        expect(toolNames).toContain('list-scaffolding-methods');
-        expect(toolNames).toContain('use-scaffold-method');
-        expect(toolNames).toContain('write-to-file');
-      }
+      const listToolsHandler = server.requestHandlers.get('tools/list');
+      if (!listToolsHandler) throw new Error('tools/list handler is missing');
+      const result = await listToolsHandler({});
+      const toolNames = result.tools.map((t: any) => t.name);
+      expect(toolNames).toContain('list-boilerplates');
+      expect(toolNames).toContain('use-boilerplate');
+      expect(toolNames).toContain('list-scaffolding-methods');
+      expect(toolNames).toContain('use-scaffold-method');
+      expect(toolNames).toContain('write-to-file');
     });
-
     it('should register admin tools when enabled', async () => {
       const server = createServer({ adminEnabled: true });
 
-      const listToolsHandler = server.requestHandlers.get({});
-      if (listToolsHandler) {
-        const result = await listToolsHandler({});
-        const toolNames = result.tools.map((t: any) => t.name);
-
-        expect(toolNames).toContain('generate-boilerplate');
-        expect(toolNames).toContain('generate-boilerplate-file');
-        expect(toolNames).toContain('generate-feature-scaffold');
-      }
+      const listToolsHandler = server.requestHandlers.get('tools/list');
+      if (!listToolsHandler) throw new Error('tools/list handler is missing');
+      const result = await listToolsHandler({});
+      const toolNames = result.tools.map((t: any) => t.name);
+      expect(toolNames).toContain('generate-boilerplate');
+      expect(toolNames).toContain('generate-boilerplate-file');
+      expect(toolNames).toContain('generate-feature-scaffold');
     });
-
     it('should attach capability metadata to listed tools', async () => {
       const server = createServer({ adminEnabled: true });
 
