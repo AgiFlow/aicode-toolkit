@@ -25,7 +25,7 @@
     "vite"
   ],
   "bin": {
-    "aicode": "./dist/cli.cjs"
+    "aicode-toolkit": "./dist/cli.mjs"
   },
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.cts",
@@ -43,28 +43,28 @@
   "dependencies": {
     "@agiflowai/aicode-utils": "workspace:*",
     "@agiflowai/coding-agent-bridge": "workspace:*",
-    "@composio/json-schema-to-zod": "0.1.20",
-    "@inquirer/prompts": "8.4.1",
-    "chalk": "5.6.2",
-    "commander": "14.0.3",
+    "@composio/json-schema-to-zod": "0.3.3",
+    "@inquirer/prompts": "8.7.2",
+    "chalk": "6.0.0",
+    "commander": "15.0.0",
     "execa": "9.6.1",
     "express": "5.2.1",
     "gradient-string": "3.0.0",
     "js-yaml": "4.3.2",
-    "liquidjs": "10.27.2",
-    "ora": "9.3.0",
+    "liquidjs": "10.29.0",
+    "ora": "9.4.1",
     "pino": "10.3.1",
     "pino-pretty": "13.1.3",
-    "xstate": "5.30.0",
-    "zod": "4.3.6"
+    "xstate": "5.33.2",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/express": "5.0.6",
     "@types/js-yaml": "4.0.9",
-    "@types/node": "25.6.0",
-    "tsdown": "0.21.8",
+    "@types/node": "26.6.3",
+    "tsdown": "0.23.0",
     "typescript": "5.9.3",
-    "unplugin-raw": "0.7.0"
+    "unplugin-raw": "0.8.0"
   },
   "publishConfig": {
     "access": "public"

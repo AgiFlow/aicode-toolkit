@@ -9,7 +9,7 @@
     "typescript"
   ],
   "bin": {
-    "architect-mcp": "./dist/cli.cjs"
+    "architect-mcp": "./dist/cli.mjs"
   },
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.cts",
@@ -32,19 +32,19 @@
     "@modelcontextprotocol/server": "2.1.0",
     "@modelcontextprotocol/server-legacy": "2.1.0",
     "@types/express": "5.0.6",
-    "chalk": "5.6.2",
-    "commander": "14.0.3",
+    "chalk": "6.0.0",
+    "commander": "15.0.0",
     "execa": "9.6.1",
     "express": "5.2.1",
     "js-yaml": "4.3.2",
-    "minimatch": "10.2.5",
-    "uuid": "13.0.1",
-    "zod": "4.3.6"
+    "minimatch": "10.2.6",
+    "uuid": "14.0.2",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/js-yaml": "4.0.9",
-    "@types/node": "25.6.0",
-    "tsdown": "0.21.8",
+    "@types/node": "26.6.3",
+    "tsdown": "0.23.0",
     "typescript": "5.9.3",
     "vitest": "4.1.11"
   },
