@@ -53,6 +53,7 @@
     "pino": "10.3.1"
   },
   "devDependencies": {
+    "@types/chance": "1.1.8",
     "@types/js-yaml": "4.0.9",
     "@types/node": "26.6.3",
     "@types/ora": "3.2.0",

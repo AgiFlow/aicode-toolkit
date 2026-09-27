@@ -1,9 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ListBoilerplatesTool } from '../../src/tools/ListBoilerplatesTool';
+import type { BoilerplateInfo } from '../../src/types/boilerplateTypes';
 import { PaginationHelper } from '../../src/utils/pagination';
+import { getText } from '../helpers/getText';
+import type { BoilerplateService } from '../../src/services/BoilerplateService';
 
 // Mock the service
 vi.mock('../../src/services/BoilerplateService');
+
+/** Exposes the tool's private service so tests can spy on it. */
+function internals(tool: ListBoilerplatesTool): { boilerplateService: BoilerplateService } {
+  return tool as unknown as { boilerplateService: BoilerplateService };
+}
 
 describe('ListBoilerplatesTool - Pagination', () => {
   let tool: ListBoilerplatesTool;
@@ -27,7 +35,7 @@ describe('ListBoilerplatesTool - Pagination', () => {
 
   it('should return paginated results on first page', async () => {
     // Create mock data with 15 items to test pagination
-    const mockBoilerplates = Array.from({ length: 15 }, (_, i) => ({
+    const mockBoilerplates = Array.from({ length: 15 }, (_, i): BoilerplateInfo => ({
       name: `scaffold-app-${i + 1}`,
       description: `Application template ${i + 1}`,
       instruction: 'Follow the instructions',
@@ -45,7 +53,7 @@ describe('ListBoilerplatesTool - Pagination', () => {
 
     // Mock the paginated response
     const paginatedResult = PaginationHelper.paginate(mockBoilerplates);
-    const spy = vi.spyOn(tool.boilerplateService, 'listBoilerplates');
+    const spy = vi.spyOn(internals(tool).boilerplateService, 'listBoilerplates');
     spy.mockResolvedValue({
       boilerplates: paginatedResult.items,
       nextCursor: paginatedResult.nextCursor,
@@ -57,7 +65,7 @@ describe('ListBoilerplatesTool - Pagination', () => {
     expect(result.content.length).toBeGreaterThan(0);
     expect(result.content[0].type).toBe('text');
 
-    const response = JSON.parse(result.content[0].text);
+    const response = JSON.parse(getText(result.content[0]));
     expect(response).toHaveProperty('boilerplates');
     expect(Array.isArray(response.boilerplates)).toBe(true);
     expect(response.boilerplates).toHaveLength(10);
@@ -67,7 +75,7 @@ describe('ListBoilerplatesTool - Pagination', () => {
 
   it('should return next page when cursor is provided', async () => {
     // Create mock data with 15 items
-    const mockBoilerplates = Array.from({ length: 15 }, (_, i) => ({
+    const mockBoilerplates = Array.from({ length: 15 }, (_, i): BoilerplateInfo => ({
       name: `scaffold-app-${i + 1}`,
       description: `Application template ${i + 1}`,
       instruction: 'Follow the instructions',
@@ -83,7 +91,7 @@ describe('ListBoilerplatesTool - Pagination', () => {
       includes: ['**/*'],
     }));
 
-    const spy = vi.spyOn(tool.boilerplateService, 'listBoilerplates');
+    const spy = vi.spyOn(internals(tool).boilerplateService, 'listBoilerplates');
 
     // Mock first page
     const firstPageResult = PaginationHelper.paginate(mockBoilerplates);
@@ -93,7 +101,7 @@ describe('ListBoilerplatesTool - Pagination', () => {
     });
 
     const firstPageResponse = await tool.execute({});
-    const firstPage = JSON.parse(firstPageResponse.content[0].text);
+    const firstPage = JSON.parse(getText(firstPageResponse.content[0]));
 
     expect(firstPage.boilerplates).toHaveLength(10);
     expect(firstPage.nextCursor).toBeDefined();
@@ -106,7 +114,7 @@ describe('ListBoilerplatesTool - Pagination', () => {
     });
 
     const secondPageResponse = await tool.execute({ cursor: firstPage.nextCursor });
-    const secondPage = JSON.parse(secondPageResponse.content[0].text);
+    const secondPage = JSON.parse(getText(secondPageResponse.content[0]));
 
     expect(secondPage).toHaveProperty('boilerplates');
     expect(Array.isArray(secondPage.boilerplates)).toBe(true);
@@ -116,7 +124,7 @@ describe('ListBoilerplatesTool - Pagination', () => {
 
   it('should pass cursor parameter to service', async () => {
     const cursor = PaginationHelper.encodeCursor(1);
-    const spy = vi.spyOn(tool.boilerplateService, 'listBoilerplates');
+    const spy = vi.spyOn(internals(tool).boilerplateService, 'listBoilerplates');
     spy.mockResolvedValue({
       boilerplates: [],
       nextCursor: undefined,
@@ -129,7 +137,7 @@ describe('ListBoilerplatesTool - Pagination', () => {
 
   it('should respect page size of 10 items', async () => {
     // Create mock data with 25 items
-    const mockBoilerplates = Array.from({ length: 25 }, (_, i) => ({
+    const mockBoilerplates = Array.from({ length: 25 }, (_, i): BoilerplateInfo => ({
       name: `scaffold-app-${i + 1}`,
       description: `Application template ${i + 1}`,
       instruction: 'Follow the instructions',
@@ -146,21 +154,21 @@ describe('ListBoilerplatesTool - Pagination', () => {
     }));
 
     const paginatedResult = PaginationHelper.paginate(mockBoilerplates);
-    const spy = vi.spyOn(tool.boilerplateService, 'listBoilerplates');
+    const spy = vi.spyOn(internals(tool).boilerplateService, 'listBoilerplates');
     spy.mockResolvedValue({
       boilerplates: paginatedResult.items,
       nextCursor: paginatedResult.nextCursor,
     });
 
     const result = await tool.execute({});
-    const response = JSON.parse(result.content[0].text);
+    const response = JSON.parse(getText(result.content[0]));
 
     // Should have exactly 10 items on first page
     expect(response.boilerplates.length).toBe(10);
   });
 
   it('should correctly encode/decode cursor between pages', async () => {
-    const mockBoilerplates = Array.from({ length: 25 }, (_, i) => ({
+    const mockBoilerplates = Array.from({ length: 25 }, (_, i): BoilerplateInfo => ({
       name: `scaffold-app-${i + 1}`,
       description: `Application template ${i + 1}`,
       instruction: 'Follow the instructions',
@@ -176,7 +184,7 @@ describe('ListBoilerplatesTool - Pagination', () => {
       includes: ['**/*'],
     }));
 
-    const spy = vi.spyOn(tool.boilerplateService, 'listBoilerplates');
+    const spy = vi.spyOn(internals(tool).boilerplateService, 'listBoilerplates');
 
     // First page
     const firstPageResult = PaginationHelper.paginate(mockBoilerplates);
@@ -187,7 +195,7 @@ describe('ListBoilerplatesTool - Pagination', () => {
     });
 
     const firstPageResponse = await tool.execute({});
-    const firstPage = JSON.parse(firstPageResponse.content[0].text);
+    const firstPage = JSON.parse(getText(firstPageResponse.content[0]));
 
     expect(firstPage.nextCursor).toBe('10'); // Points to index 10
     expect(firstPage._meta).toEqual({ total: 25, offset: 0, limit: 10 });
@@ -205,7 +213,7 @@ describe('ListBoilerplatesTool - Pagination', () => {
     });
 
     const secondPageResponse = await tool.execute({ cursor: firstPage.nextCursor });
-    const secondPage = JSON.parse(secondPageResponse.content[0].text);
+    const secondPage = JSON.parse(getText(secondPageResponse.content[0]));
 
     expect(secondPage.nextCursor).toBe('20'); // Points to index 20
     expect(secondPage._meta).toEqual({ total: 25, offset: 10, limit: 10 });

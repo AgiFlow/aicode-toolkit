@@ -173,7 +173,7 @@ export class BoilerplateService {
     if (monolith === undefined || (monolith && !boilerplateName)) {
       try {
         projectConfig = await ProjectConfigResolver.resolveProjectConfig(process.cwd());
-      } catch (_error) {
+      } catch {
         // Config not found - will handle below
       }
     }

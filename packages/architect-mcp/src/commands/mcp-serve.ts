@@ -238,13 +238,21 @@ export const mcpServeCommand = new Command('mcp-serve')
         const handler = new StdioTransportHandler(server);
         await startServer(handler);
       } else if (transportType === TransportMode.HTTP) {
-        const port = options.port ?? fileConfig.port ?? Number(process.env.MCP_PORT) ?? 3000;
+        const port =
+          options.port ??
+          fileConfig.port ??
+          (process.env.MCP_PORT ? Number(process.env.MCP_PORT) : undefined) ??
+          3000;
         const host = options.host ?? fileConfig.host ?? process.env.MCP_HOST ?? 'localhost';
         const config: TransportConfig = { mode: TransportMode.HTTP, port, host };
         const handler = new HttpTransportHandler(() => createServer(serverOptions), config);
         await startServer(handler);
       } else if (transportType === TransportMode.SSE) {
-        const port = options.port ?? fileConfig.port ?? Number(process.env.MCP_PORT) ?? 3000;
+        const port =
+          options.port ??
+          fileConfig.port ??
+          (process.env.MCP_PORT ? Number(process.env.MCP_PORT) : undefined) ??
+          3000;
         const host = options.host ?? fileConfig.host ?? process.env.MCP_HOST ?? 'localhost';
         const config: TransportConfig = { mode: TransportMode.SSE, port, host };
         const handler = new SseTransportHandler(() => createServer(serverOptions), config);

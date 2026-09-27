@@ -8,6 +8,34 @@ import {
 } from '../../src/utils/mcpConfigSchema';
 import { ZodError } from 'zod';
 
+/**
+ * Narrow a server config union to its stdio variant
+ */
+function isStdio<T extends object>(config: T): config is Extract<T, { command: string }> {
+  return 'command' in config;
+}
+
+function stdio<T extends object>(config: T): Extract<T, { command: string }> {
+  if (!isStdio(config)) {
+    throw new Error('Expected a stdio server config');
+  }
+  return config;
+}
+
+/**
+ * Narrow a server config union to its URL based (http or sse) variant
+ */
+function isRemote<T extends object>(config: T): config is Extract<T, { url: string }> {
+  return 'url' in config;
+}
+
+function remote<T extends object>(config: T): Extract<T, { url: string }> {
+  if (!isRemote(config)) {
+    throw new Error('Expected an http or sse server config');
+  }
+  return config;
+}
+
 describe('mcpConfigSchema', () => {
   const originalEnv = process.env;
 
@@ -36,7 +64,7 @@ describe('mcpConfigSchema', () => {
       };
 
       const result = ClaudeCodeMcpConfigSchema.parse(config);
-      expect(result.mcpServers['test-server'].command).toBe('node');
+      expect(stdio(result.mcpServers['test-server']).command).toBe('node');
     });
 
     it('should validate HTTP server config', () => {
@@ -52,7 +80,7 @@ describe('mcpConfigSchema', () => {
       };
 
       const result = ClaudeCodeMcpConfigSchema.parse(config);
-      expect(result.mcpServers['http-server'].url).toBe('https://example.com/mcp');
+      expect(remote(result.mcpServers['http-server']).url).toBe('https://example.com/mcp');
     });
 
     it('should validate SSE server config', () => {
@@ -66,7 +94,7 @@ describe('mcpConfigSchema', () => {
       };
 
       const result = ClaudeCodeMcpConfigSchema.parse(config);
-      expect(result.mcpServers['sse-server'].type).toBe('sse');
+      expect(remote(result.mcpServers['sse-server']).type).toBe('sse');
     });
 
     it('should validate config with instruction', () => {
@@ -147,9 +175,9 @@ describe('mcpConfigSchema', () => {
       const result = transformClaudeCodeConfig(claudeConfig);
 
       expect(result.mcpServers['stdio-server'].transport).toBe('stdio');
-      expect(result.mcpServers['stdio-server'].config.command).toBe('node');
-      expect(result.mcpServers['stdio-server'].config.args).toEqual(['server.js']);
-      expect(result.mcpServers['stdio-server'].config.env).toEqual({
+      expect(stdio(result.mcpServers['stdio-server'].config).command).toBe('node');
+      expect(stdio(result.mcpServers['stdio-server'].config).args).toEqual(['server.js']);
+      expect(stdio(result.mcpServers['stdio-server'].config).env).toEqual({
         NODE_ENV: 'production',
       });
     });
@@ -169,8 +197,8 @@ describe('mcpConfigSchema', () => {
       const result = transformClaudeCodeConfig(claudeConfig);
 
       expect(result.mcpServers['http-server'].transport).toBe('http');
-      expect(result.mcpServers['http-server'].config.url).toBe('https://example.com/mcp');
-      expect(result.mcpServers['http-server'].config.headers).toEqual({
+      expect(remote(result.mcpServers['http-server'].config).url).toBe('https://example.com/mcp');
+      expect(remote(result.mcpServers['http-server'].config).headers).toEqual({
         Authorization: 'Bearer token',
       });
     });
@@ -188,7 +216,9 @@ describe('mcpConfigSchema', () => {
       const result = transformClaudeCodeConfig(claudeConfig);
 
       expect(result.mcpServers['sse-server'].transport).toBe('sse');
-      expect(result.mcpServers['sse-server'].config.url).toBe('https://example.com/mcp/sse');
+      expect(remote(result.mcpServers['sse-server'].config).url).toBe(
+        'https://example.com/mcp/sse',
+      );
     });
 
     it('should skip disabled servers', () => {
@@ -269,7 +299,7 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      expect(result.mcpServers['env-server'].config.command).toBe('/usr/bin/node');
+      expect(stdio(result.mcpServers['env-server'].config).command).toBe('/usr/bin/node');
     });
 
     it('should interpolate environment variables in args', () => {
@@ -286,7 +316,7 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      expect(result.mcpServers['env-server'].config.args).toEqual(['/path/to/server.js']);
+      expect(stdio(result.mcpServers['env-server'].config).args).toEqual(['/path/to/server.js']);
     });
 
     it('should interpolate environment variables in env values', () => {
@@ -306,7 +336,7 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      expect(result.mcpServers['env-server'].config.env?.API_TOKEN).toBe('secret-key-123');
+      expect(stdio(result.mcpServers['env-server'].config).env?.API_TOKEN).toBe('secret-key-123');
     });
 
     it('should interpolate environment variables in URLs', () => {
@@ -322,7 +352,9 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      expect(result.mcpServers['http-server'].config.url).toBe('https://mcp.example.com/api');
+      expect(remote(result.mcpServers['http-server'].config).url).toBe(
+        'https://mcp.example.com/api',
+      );
     });
 
     it('should interpolate environment variables in headers', () => {
@@ -341,7 +373,7 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      expect(result.mcpServers['http-server'].config.headers?.Authorization).toBe(
+      expect(remote(result.mcpServers['http-server'].config).headers?.Authorization).toBe(
         'Bearer token123',
       );
     });
@@ -360,7 +392,7 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      expect(result.mcpServers['env-server'].config.command).toBe('${UNDEFINED_VAR}');
+      expect(stdio(result.mcpServers['env-server'].config).command).toBe('${UNDEFINED_VAR}');
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining('Environment variable UNDEFINED_VAR is not defined'),
       );
@@ -383,7 +415,7 @@ describe('mcpConfigSchema', () => {
 
       const result = transformClaudeCodeConfig(claudeConfig);
 
-      expect(result.mcpServers['env-server'].config.args).toEqual([
+      expect(stdio(result.mcpServers['env-server'].config).args).toEqual([
         '/home/user/myproject/server.js',
       ]);
     });
@@ -403,7 +435,7 @@ describe('mcpConfigSchema', () => {
       const result = parseMcpConfig(rawConfig);
 
       expect(result.mcpServers['test-server'].transport).toBe('stdio');
-      expect(result.mcpServers['test-server'].config.command).toBe('node');
+      expect(stdio(result.mcpServers['test-server'].config).command).toBe('node');
     });
 
     it('should throw error for invalid Claude Code config', () => {
@@ -455,10 +487,10 @@ describe('mcpConfigSchema', () => {
       const result = parseMcpConfig(rawConfig);
 
       expect(result.mcpServers.filesystem).toBeDefined();
-      expect(result.mcpServers.filesystem.config.args).toContain('/home/user/Documents');
+      expect(stdio(result.mcpServers.filesystem.config).args).toContain('/home/user/Documents');
       expect(result.mcpServers['remote-api']).toBeDefined();
       expect(result.mcpServers['remote-api'].transport).toBe('sse');
-      expect(result.mcpServers['remote-api'].config.headers?.Authorization).toBe(
+      expect(remote(result.mcpServers['remote-api'].config).headers?.Authorization).toBe(
         'Bearer secret123',
       );
       expect(result.mcpServers['disabled-server']).toBeUndefined();

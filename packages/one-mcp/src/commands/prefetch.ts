@@ -31,7 +31,7 @@ import {
   type PackageManager,
 } from '../services';
 import { generateServerId, findConfigFile } from '../utils';
-import packageJson from '../../package.json' assert { type: 'json' };
+import packageJson from '../../package.json' with { type: 'json' };
 
 /**
  * Options for the prefetch command

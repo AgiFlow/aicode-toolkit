@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { GenerateFeatureScaffoldPrompt } from '../../src/prompts/GenerateFeatureScaffoldPrompt';
+import { getText } from '../helpers/getText';
 
 describe('GenerateFeatureScaffoldPrompt', () => {
   let prompt: GenerateFeatureScaffoldPrompt;
@@ -38,41 +39,41 @@ describe('GenerateFeatureScaffoldPrompt', () => {
     it('should include user request when provided', () => {
       const messages = prompt.getMessages({ request: 'Create a Next.js page scaffold' });
 
-      expect(messages[0].content.text).toContain('Create a Next.js page scaffold');
+      expect(getText(messages[0].content)).toContain('Create a Next.js page scaffold');
     });
 
     it('should work without user request', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toBeTruthy();
+      expect(getText(messages[0].content)).toBeTruthy();
     });
 
     it('should include workflow instructions', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toContain('generate-feature-scaffold');
-      expect(messages[0].content.text).toContain('generate-boilerplate-file');
-      expect(messages[0].content.text).toContain('list-scaffolding-methods');
-      expect(messages[0].content.text).toContain('use-scaffold-method');
+      expect(getText(messages[0].content)).toContain('generate-feature-scaffold');
+      expect(getText(messages[0].content)).toContain('generate-boilerplate-file');
+      expect(getText(messages[0].content)).toContain('list-scaffolding-methods');
+      expect(getText(messages[0].content)).toContain('use-scaffold-method');
     });
 
     it('should mention feature naming convention', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toContain('scaffold-');
+      expect(getText(messages[0].content)).toContain('scaffold-');
     });
 
     it('should include conditional includes syntax', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toContain('?withLayout=true');
+      expect(getText(messages[0].content)).toContain('?withLayout=true');
     });
 
     it('should include template content guidelines', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toContain('MINIMAL');
-      expect(messages[0].content.text).toContain('business-agnostic');
+      expect(getText(messages[0].content)).toContain('MINIMAL');
+      expect(getText(messages[0].content)).toContain('business-agnostic');
     });
   });
 
@@ -86,13 +87,13 @@ describe('GenerateFeatureScaffoldPrompt', () => {
     it('should adjust instructions for monolith mode', () => {
       const messages = monolithPrompt.getMessages();
 
-      expect(messages[0].content.text).toContain('auto-detected');
-      expect(messages[0].content.text).toContain('.toolkit/settings.yaml');
+      expect(getText(messages[0].content)).toContain('auto-detected');
+      expect(getText(messages[0].content)).toContain('.toolkit/settings.yaml');
     });
 
     it('should mention template name auto-detection', () => {
       const messages = monolithPrompt.getMessages();
-      const text = messages[0].content.text;
+      const text = getText(messages[0].content);
 
       expect(text).toContain('Template name will be auto-detected');
     });

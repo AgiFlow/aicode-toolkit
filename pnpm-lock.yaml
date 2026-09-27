@@ -143,6 +143,9 @@ importers:
         specifier: 10.3.1
         version: 10.3.1
     devDependencies:
+      '@types/chance':
+        specifier: 1.1.8
+        version: 1.1.8
       '@types/js-yaml':
         specifier: 4.0.9
         version: 4.0.9
@@ -272,6 +275,9 @@ importers:
         specifier: workspace:*
         version: link:../coding-agent-bridge
     devDependencies:
+      '@types/chance':
+        specifier: 1.1.8
+        version: 1.1.8
       '@types/node':
         specifier: 26.6.3
         version: 26.6.3
@@ -2936,6 +2942,9 @@ packages:
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
+
+  '@types/chance@1.1.8':
+    resolution: {integrity: sha512-isycXjm4a88/zl3n9lfgMcEClR9wUi+m72lkE9MvEbkgZDQrKzolWbonBiUqDNAJFIwO9GKjzmJFq79qtKVTAQ==}
 
   '@types/connect@3.4.38':
     resolution: {integrity: sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug==}
@@ -7564,6 +7573,8 @@ snapshots:
     dependencies:
       '@types/deep-eql': 4.0.2
       assertion-error: 2.0.1
+
+  '@types/chance@1.1.8': {}
 
   '@types/connect@3.4.38':
     dependencies:

@@ -65,14 +65,16 @@ describe('BaseAdapter', () => {
     readable.push(null);
 
     // Mock process.stdin methods
-    vi.spyOn(process.stdin, 'on').mockImplementation((event: string, handler: any) => {
-      if (event === 'data') {
-        setImmediate(() => handler(Buffer.from(data)));
-      } else if (event === 'end') {
-        setImmediate(() => handler());
-      }
-      return process.stdin;
-    });
+    vi.spyOn(process.stdin, 'on').mockImplementation(
+      (event: string | symbol, handler: (...args: unknown[]) => void) => {
+        if (event === 'data') {
+          setImmediate(() => handler(Buffer.from(data)));
+        } else if (event === 'end') {
+          setImmediate(() => handler());
+        }
+        return process.stdin;
+      },
+    );
 
     return readable;
   }

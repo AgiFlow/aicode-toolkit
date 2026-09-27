@@ -30,7 +30,6 @@ describe('TailwindCSSClassesService', () => {
   let service: TailwindCSSClassesService;
   const mockConfig: StyleSystemConfig = {
     cssFramework: 'tailwind',
-    themePath: '/mock/theme.css',
   };
 
   beforeEach(() => {

@@ -31,7 +31,7 @@ import {
   prefetchCommand,
   stopCommand,
 } from './commands';
-import packageJson from '../package.json' assert { type: 'json' };
+import packageJson from '../package.json' with { type: 'json' };
 
 /**
  * Main entry point
@@ -58,12 +58,14 @@ async function main() {
     // Parse arguments
     await program.parseAsync(process.argv);
   } catch (error) {
-    console.error(`CLI execution failed: ${error instanceof Error ? error.message : error}`);
+    console.error(
+      `CLI execution failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
     process.exit(1);
   }
 }
 
 main().catch((error) => {
-  console.error(`Fatal error: ${error instanceof Error ? error.message : error}`);
+  console.error(`Fatal error: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });

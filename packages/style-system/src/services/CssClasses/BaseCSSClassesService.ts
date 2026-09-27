@@ -19,7 +19,7 @@
  */
 
 import { promises as fs } from 'node:fs';
-import type { CSSClassCategory, CSSClassesResult, StyleSystemConfig } from './types';
+import type { CSSClassesResult, StyleSystemConfig } from './types';
 
 /**
  * Abstract base class for CSS class extraction services.
@@ -58,10 +58,7 @@ export abstract class BaseCSSClassesService {
    * @returns Promise resolving to extracted CSS classes organized by category
    * @throws Error if theme file cannot be read or parsed
    */
-  abstract extractClasses(
-    category: CSSClassCategory | string,
-    themePath: string,
-  ): Promise<CSSClassesResult>;
+  abstract extractClasses(category: string, themePath: string): Promise<CSSClassesResult>;
 
   /**
    * Get the CSS framework identifier for this service

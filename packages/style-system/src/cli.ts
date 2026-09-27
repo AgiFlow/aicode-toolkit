@@ -50,4 +50,4 @@ async function main() {
   await program.parseAsync(process.argv);
 }
 
-main();
+void main();

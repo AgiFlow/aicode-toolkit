@@ -154,7 +154,7 @@ export class StoriesIndexService {
     });
 
     // Parse the CSF to extract meta and stories
-    await csf.parse();
+    csf.parse();
 
     // Validate meta exists with title
     if (!csf.meta?.title) {

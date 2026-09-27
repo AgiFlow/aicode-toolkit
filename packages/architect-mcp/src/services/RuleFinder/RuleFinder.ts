@@ -59,7 +59,7 @@ export class RuleFinder {
       const globalRulesContent = await fs.readFile(globalRulesPath, UTF8_ENCODING);
       this.globalRulesCache = yaml.load(globalRulesContent) as RulesYamlConfig;
       return this.globalRulesCache;
-    } catch (_error) {
+    } catch {
       // Global rules are optional
       return null;
     }
@@ -80,7 +80,7 @@ export class RuleFinder {
       const rulesConfig = yaml.load(projectRulesContent) as RulesYamlConfig;
       this.projectRulesCache.set(projectRoot, rulesConfig);
       return rulesConfig;
-    } catch (_error) {
+    } catch {
       // Project rules are optional
       this.projectRulesCache.set(projectRoot, null);
       return null;

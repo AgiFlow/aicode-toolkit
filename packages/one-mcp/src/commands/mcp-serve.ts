@@ -189,7 +189,7 @@ function validateTransportType(type: string): ValidTransportType {
 
 function validateProxyMode(mode: McpServeOptions['proxyMode']): void {
   if (!isValidProxyMode(mode)) {
-    throw new Error(`Unknown proxy mode: '${mode}'. Valid options: meta, flat, search`);
+    throw new Error(`Unknown proxy mode: '${String(mode)}'. Valid options: meta, flat, search`);
   }
 }
 

@@ -274,8 +274,11 @@ describe('Server prompts handlers', () => {
 
       const client = clientsMap.get(serverName);
       expect(client).toBeDefined();
+      if (!client) {
+        throw new Error(`Client not found for ${serverName}`);
+      }
 
-      const result = await client?.getPrompt(actualPromptName, { arg: 'value' });
+      const result = await client.getPrompt(actualPromptName, { arg: 'value' });
 
       expect(result.messages).toHaveLength(1);
       expect(client1.getPrompt).toHaveBeenCalledWith('my_prompt', { arg: 'value' });

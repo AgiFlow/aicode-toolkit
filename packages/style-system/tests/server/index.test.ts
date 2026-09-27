@@ -20,11 +20,16 @@ vi.mock('@modelcontextprotocol/server', () => {
   return { Server: MockServer };
 });
 
+/** Shape of the mocked Server above, which records handlers instead of serving them. */
+interface MockedServer {
+  requestHandlers: Map<unknown, (request: unknown) => Promise<{ tools: unknown[] }>>;
+}
+
 describe('style-system server capability metadata', () => {
   it('adds capability tags to listed tools', async () => {
     const { createServer } = await import('../../src/server');
 
-    const server = createServer();
+    const server = createServer() as unknown as MockedServer;
     const listToolsHandler = Array.from(server.requestHandlers.values())[0];
     const result = await listToolsHandler({});
 

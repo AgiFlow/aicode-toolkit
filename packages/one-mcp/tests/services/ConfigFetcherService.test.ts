@@ -5,6 +5,20 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
+/**
+ * Narrow a server config union to its stdio variant
+ */
+function isStdio<T extends object>(config: T): config is Extract<T, { command: string }> {
+  return 'command' in config;
+}
+
+function stdio<T extends object>(config: T): Extract<T, { command: string }> {
+  if (!isStdio(config)) {
+    throw new Error('Expected a stdio server config');
+  }
+  return config;
+}
+
 describe('ConfigFetcherService', () => {
   let tempDir: string;
   let tempConfigPath: string;
@@ -226,8 +240,8 @@ mcpServers:
 
       const result2 = await service.fetchConfiguration();
 
-      expect(result1.mcpServers['test-server'].config.args).toEqual(['server1.js']);
-      expect(result2.mcpServers['test-server'].config.args).toEqual(['server2.js']);
+      expect(stdio(result1.mcpServers['test-server'].config).args).toEqual(['server1.js']);
+      expect(stdio(result2.mcpServers['test-server'].config).args).toEqual(['server2.js']);
     });
 
     it('should clear cache manually', async () => {
@@ -383,8 +397,8 @@ mcpServers:
       const result = await service.fetchConfiguration();
 
       // Local should override remote
-      expect(result.mcpServers['shared-server'].config.command).toBe('node');
-      expect(result.mcpServers['shared-server'].config.args).toEqual(['local.js']);
+      expect(stdio(result.mcpServers['shared-server'].config).command).toBe('node');
+      expect(stdio(result.mcpServers['shared-server'].config).args).toEqual(['local.js']);
     });
 
     it('should use remote-priority merge strategy when specified', async () => {
@@ -427,8 +441,8 @@ mcpServers:
       const result = await service.fetchConfiguration();
 
       // Remote should override local
-      expect(result.mcpServers['shared-server'].config.command).toBe('python');
-      expect(result.mcpServers['shared-server'].config.args).toEqual(['remote.py']);
+      expect(stdio(result.mcpServers['shared-server'].config).command).toBe('python');
+      expect(stdio(result.mcpServers['shared-server'].config).args).toEqual(['remote.py']);
     });
 
     it('preserves optional top-level id and skills when merging remote configs', async () => {

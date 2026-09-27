@@ -67,7 +67,7 @@ vi.mock(
   async (
     importOriginal: () => Promise<typeof import('@agiflowai/hooks-adapter')>,
   ): Promise<object> => {
-    const actual = await importOriginal<typeof import('@agiflowai/hooks-adapter')>();
+    const actual = await importOriginal();
     return {
       ...actual,
       // Vitest v4 requires a regular function (not arrow) for constructor mocks

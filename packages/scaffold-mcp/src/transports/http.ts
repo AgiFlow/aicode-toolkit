@@ -35,7 +35,7 @@ class HttpFullSessionManager {
   deleteSession(sessionId: string): void {
     const session = this.sessions.get(sessionId);
     if (session) {
-      session.server.close();
+      void session.server.close();
     }
     this.sessions.delete(sessionId);
   }
@@ -46,7 +46,7 @@ class HttpFullSessionManager {
 
   clear(): void {
     for (const session of this.sessions.values()) {
-      session.server.close();
+      void session.server.close();
     }
     this.sessions.clear();
   }

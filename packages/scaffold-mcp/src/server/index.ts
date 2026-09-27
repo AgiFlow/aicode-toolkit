@@ -1,7 +1,7 @@
 import { TemplatesManagerService } from '@agiflowai/aicode-utils';
 import { Server } from '@modelcontextprotocol/server';
 
-import packageJson from '../../package.json' assert { type: 'json' };
+import packageJson from '../../package.json' with { type: 'json' };
 import serverInstructionsTemplate from '../instructions/server.md?raw';
 import {
   GenerateBoilerplatePrompt,

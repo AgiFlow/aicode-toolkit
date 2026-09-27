@@ -70,6 +70,8 @@ export abstract class BaseCodingAgentService implements CodingAgentService {
         if (options?.allowedFlags && !options.allowedFlags.has(flag)) {
           continue;
         }
+        // Intentional: nested objects stringify as '[object Object]' (pinned by BaseCodingAgentService.test.ts)
+        // oxlint-disable-next-line typescript/no-base-to-string
         args.push(flag, String(value));
       }
     }

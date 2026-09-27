@@ -63,7 +63,7 @@ export class SpecToolService {
       case SpecTool.OPENSPEC:
         return new OpenSpecBridge();
       default:
-        throw new Error(`Unsupported spec tool: ${specTool}`);
+        throw new Error(`Unsupported spec tool: ${String(specTool)}`);
     }
   }
 

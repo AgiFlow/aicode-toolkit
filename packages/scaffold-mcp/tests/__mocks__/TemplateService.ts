@@ -1,8 +1,7 @@
-import { vi } from 'vitest';
+import { type Mocked, vi } from 'vitest';
 import type { ITemplateService } from '../../src/types/interfaces';
 
-export const createMockTemplateService = (): ITemplateService => ({
-  render: vi.fn().mockResolvedValue('rendered content'),
+export const createMockTemplateService = (): Mocked<ITemplateService> => ({
   renderString: vi.fn().mockImplementation((template: string, variables?: Record<string, any>) => {
     // More realistic mock: replace variables with actual values if provided
     if (variables) {
@@ -13,4 +12,5 @@ export const createMockTemplateService = (): ITemplateService => ({
     // Fallback to old behavior for backwards compatibility
     return template.replace(/\{\{(\w+)\}\}/g, 'value');
   }),
+  containsTemplateVariables: vi.fn().mockReturnValue(false),
 });

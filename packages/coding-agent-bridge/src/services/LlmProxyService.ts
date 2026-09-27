@@ -62,7 +62,7 @@ export class LlmProxyService {
   constructor(options: LlmProxyServiceOptions) {
     if (!isValidLlmTool(options.llmTool)) {
       throw new Error(
-        `Invalid LLM tool: ${options.llmTool}. Supported tools: ${Object.keys(LlmToolConfig).join(', ')}`,
+        `Invalid LLM tool: ${String(options.llmTool)}. Supported tools: ${Object.keys(LlmToolConfig).join(', ')}`,
       );
     }
 
@@ -129,7 +129,7 @@ export class LlmProxyService {
       default: {
         // TypeScript exhaustiveness check
         const _exhaustiveCheck: never = llmTool;
-        throw new Error(`Unsupported LLM tool: ${_exhaustiveCheck}`);
+        throw new Error(`Unsupported LLM tool: ${String(_exhaustiveCheck)}`);
       }
     }
   }

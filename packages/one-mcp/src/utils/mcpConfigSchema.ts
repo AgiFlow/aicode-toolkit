@@ -147,7 +147,7 @@ function validateUrlSecurity(url: string, security?: RemoteConfigSource['securit
   let parsedUrl: URL;
   try {
     parsedUrl = new URL(url);
-  } catch (_error) {
+  } catch {
     throw new Error(`Invalid URL format: ${url}`);
   }
 

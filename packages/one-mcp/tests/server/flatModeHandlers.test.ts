@@ -120,6 +120,11 @@ vi.mock('../../src/services/DefinitionsCacheService', () => {
 
 import { createServer } from '../../src/server';
 
+function getInstructions(server: unknown): string | undefined {
+  // The SDK keeps server instructions in a private field with no public getter.
+  return (server as { _instructions?: string })._instructions;
+}
+
 function getRequestHandler<T>(server: any, method: string): T {
   const handler = server._requestHandlers.get(method);
   if (!handler) {
@@ -225,8 +230,8 @@ describe('createServer flat mode handlers', () => {
     expect(toolNames).toEqual(['alpha__search', 'beta__search', 'status']);
     expect(toolNames).not.toContain('use_tool');
     expect(toolNames).not.toContain('describe_tools');
-    expect(server._instructions).toContain('alpha (search)');
-    expect(server._instructions).toContain('beta (search, status)');
+    expect(getInstructions(server)).toContain('alpha (search)');
+    expect(getInstructions(server)).toContain('beta (search, status)');
   });
 
   it('includes describe_tools in flat mode when prompt-based skills exist', async () => {
@@ -438,7 +443,7 @@ describe('createServer flat mode handlers', () => {
     const result = await listToolsHandler({ method: 'tools/list' });
 
     expect(result.tools.map((tool) => tool.name)).toEqual(['describe_tools', 'use_tool']);
-    expect(server._instructions).toContain('meta mode');
+    expect(getInstructions(server)).toContain('meta mode');
   });
 
   it('search mode routes list_tools execution through the search tool handler', async () => {

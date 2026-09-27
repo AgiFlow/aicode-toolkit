@@ -35,7 +35,7 @@ class SseSessionManager implements SessionManager {
     const session = this.sessions.get(sessionId);
     if (session) {
       // Close the server instance
-      session.server.close();
+      void session.server.close();
     }
     this.sessions.delete(sessionId);
   }
@@ -47,7 +47,7 @@ class SseSessionManager implements SessionManager {
   clear(): void {
     // Close all server instances
     for (const session of this.sessions.values()) {
-      session.server.close();
+      void session.server.close();
     }
     this.sessions.clear();
   }

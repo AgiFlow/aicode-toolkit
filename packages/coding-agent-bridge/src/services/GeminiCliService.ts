@@ -180,7 +180,7 @@ export class GeminiCliService extends BaseCodingAgentService {
     try {
       const geminiWorkspaceFile = path.join(this.workspaceRoot, '.gemini');
       return await pathExists(geminiWorkspaceFile);
-    } catch (_error) {
+    } catch {
       // Return false if unable to check file existence
       return false;
     }
@@ -543,8 +543,9 @@ export class GeminiCliService extends BaseCodingAgentService {
       // Provide descriptive error messages based on error type
       if (error instanceof Error) {
         if (error.message.includes('ETIMEDOUT') || error.message.includes('timed out')) {
+          const timeoutValue = params.timeout as number | undefined;
           throw new Error(
-            `Gemini CLI invocation timed out${params.timeout ? ` after ${params.timeout}ms` : ''}. Consider increasing the timeout parameter.`,
+            `Gemini CLI invocation timed out${timeoutValue ? ` after ${timeoutValue}ms` : ''}. Consider increasing the timeout parameter.`,
           );
         }
         if (error.message.includes('ENOENT')) {

@@ -1,8 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WriteToFileTool } from '../../src/tools/WriteToFileTool';
+import { getText } from '../helpers/getText';
+import type { FileSystemService } from '../../src/services/FileSystemService';
 
 // Mock the service
 vi.mock('../../src/services/FileSystemService');
+
+/** Exposes the tool's private service so tests can spy on it. */
+function internals(tool: WriteToFileTool): { fileSystemService: FileSystemService } {
+  return tool as unknown as { fileSystemService: FileSystemService };
+}
 
 describe('WriteToFileTool', () => {
   let tool: WriteToFileTool;
@@ -44,8 +51,8 @@ describe('WriteToFileTool', () => {
         content: 'Hello, World!',
       };
 
-      const ensureDirSpy = vi.spyOn(tool.fileSystemService, 'ensureDir');
-      const writeFileSpy = vi.spyOn(tool.fileSystemService, 'writeFile');
+      const ensureDirSpy = vi.spyOn(internals(tool).fileSystemService, 'ensureDir');
+      const writeFileSpy = vi.spyOn(internals(tool).fileSystemService, 'writeFile');
       ensureDirSpy.mockResolvedValue();
       writeFileSpy.mockResolvedValue();
 
@@ -53,8 +60,8 @@ describe('WriteToFileTool', () => {
 
       expect(result.isError).toBeFalsy();
       expect(result.content[0].type).toBe('text');
-      expect(result.content[0].text).toContain('Successfully wrote content to file');
-      expect(result.content[0].text).toContain('/workspace/test/output/file.txt');
+      expect(getText(result.content[0])).toContain('Successfully wrote content to file');
+      expect(getText(result.content[0])).toContain('/workspace/test/output/file.txt');
       expect(ensureDirSpy).toHaveBeenCalledWith('/workspace/test/output');
       expect(writeFileSpy).toHaveBeenCalledWith('/workspace/test/output/file.txt', 'Hello, World!');
     });
@@ -65,15 +72,15 @@ describe('WriteToFileTool', () => {
         content: 'Test content',
       };
 
-      const ensureDirSpy = vi.spyOn(tool.fileSystemService, 'ensureDir');
-      const writeFileSpy = vi.spyOn(tool.fileSystemService, 'writeFile');
+      const ensureDirSpy = vi.spyOn(internals(tool).fileSystemService, 'ensureDir');
+      const writeFileSpy = vi.spyOn(internals(tool).fileSystemService, 'writeFile');
       ensureDirSpy.mockResolvedValue();
       writeFileSpy.mockResolvedValue();
 
       const result = await tool.execute(args);
 
       expect(result.isError).toBeFalsy();
-      expect(result.content[0].text).toContain('Successfully wrote content to file');
+      expect(getText(result.content[0])).toContain('Successfully wrote content to file');
       expect(ensureDirSpy).toHaveBeenCalled();
       expect(writeFileSpy).toHaveBeenCalled();
     });
@@ -84,8 +91,8 @@ describe('WriteToFileTool', () => {
         content: '',
       };
 
-      const ensureDirSpy = vi.spyOn(tool.fileSystemService, 'ensureDir');
-      const writeFileSpy = vi.spyOn(tool.fileSystemService, 'writeFile');
+      const ensureDirSpy = vi.spyOn(internals(tool).fileSystemService, 'ensureDir');
+      const writeFileSpy = vi.spyOn(internals(tool).fileSystemService, 'writeFile');
       ensureDirSpy.mockResolvedValue();
       writeFileSpy.mockResolvedValue();
 
@@ -103,7 +110,7 @@ describe('WriteToFileTool', () => {
       const result = await tool.execute(args);
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain('Missing required parameter: file_path');
+      expect(getText(result.content[0])).toContain('Missing required parameter: file_path');
     });
 
     it('should return error when content is missing', async () => {
@@ -114,7 +121,7 @@ describe('WriteToFileTool', () => {
       const result = await tool.execute(args);
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain('Missing required parameter: content');
+      expect(getText(result.content[0])).toContain('Missing required parameter: content');
     });
 
     it('should handle file system errors gracefully', async () => {
@@ -123,13 +130,13 @@ describe('WriteToFileTool', () => {
         content: 'Test',
       };
 
-      const ensureDirSpy = vi.spyOn(tool.fileSystemService, 'ensureDir');
+      const ensureDirSpy = vi.spyOn(internals(tool).fileSystemService, 'ensureDir');
       ensureDirSpy.mockRejectedValue(new Error('Permission denied'));
 
       const result = await tool.execute(args);
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain('Permission denied');
+      expect(getText(result.content[0])).toContain('Permission denied');
     });
 
     it('should create parent directories before writing', async () => {
@@ -138,8 +145,8 @@ describe('WriteToFileTool', () => {
         content: 'content',
       };
 
-      const ensureDirSpy = vi.spyOn(tool.fileSystemService, 'ensureDir');
-      const writeFileSpy = vi.spyOn(tool.fileSystemService, 'writeFile');
+      const ensureDirSpy = vi.spyOn(internals(tool).fileSystemService, 'ensureDir');
+      const writeFileSpy = vi.spyOn(internals(tool).fileSystemService, 'writeFile');
       ensureDirSpy.mockResolvedValue();
       writeFileSpy.mockResolvedValue();
 
@@ -155,13 +162,13 @@ describe('WriteToFileTool', () => {
         content: 'blocked',
       };
 
-      const ensureDirSpy = vi.spyOn(tool.fileSystemService, 'ensureDir');
-      const writeFileSpy = vi.spyOn(tool.fileSystemService, 'writeFile');
+      const ensureDirSpy = vi.spyOn(internals(tool).fileSystemService, 'ensureDir');
+      const writeFileSpy = vi.spyOn(internals(tool).fileSystemService, 'writeFile');
 
       const result = await tool.execute(args);
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain('outside the workspace directory');
+      expect(getText(result.content[0])).toContain('outside the workspace directory');
       expect(ensureDirSpy).not.toHaveBeenCalled();
       expect(writeFileSpy).not.toHaveBeenCalled();
     });
@@ -172,13 +179,13 @@ describe('WriteToFileTool', () => {
         content: 'blocked',
       };
 
-      const ensureDirSpy = vi.spyOn(tool.fileSystemService, 'ensureDir');
-      const writeFileSpy = vi.spyOn(tool.fileSystemService, 'writeFile');
+      const ensureDirSpy = vi.spyOn(internals(tool).fileSystemService, 'ensureDir');
+      const writeFileSpy = vi.spyOn(internals(tool).fileSystemService, 'writeFile');
 
       const result = await tool.execute(args);
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain('outside the workspace directory');
+      expect(getText(result.content[0])).toContain('outside the workspace directory');
       expect(ensureDirSpy).not.toHaveBeenCalled();
       expect(writeFileSpy).not.toHaveBeenCalled();
     });

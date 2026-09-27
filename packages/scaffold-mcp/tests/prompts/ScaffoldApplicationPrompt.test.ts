@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ScaffoldApplicationPrompt } from '../../src/prompts/ScaffoldApplicationPrompt';
+import { getText } from '../helpers/getText';
 
 describe('ScaffoldApplicationPrompt', () => {
   let prompt: ScaffoldApplicationPrompt;
@@ -38,34 +39,34 @@ describe('ScaffoldApplicationPrompt', () => {
     it('should include user request when provided', () => {
       const messages = prompt.getMessages({ request: 'Create a Next.js dashboard app' });
 
-      expect(messages[0].content.text).toContain('Create a Next.js dashboard app');
+      expect(getText(messages[0].content)).toContain('Create a Next.js dashboard app');
     });
 
     it('should work without user request', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toBeTruthy();
+      expect(getText(messages[0].content)).toBeTruthy();
     });
 
     it('should include workflow instructions', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toContain('list-boilerplates');
-      expect(messages[0].content.text).toContain('use-boilerplate');
+      expect(getText(messages[0].content)).toContain('list-boilerplates');
+      expect(getText(messages[0].content)).toContain('use-boilerplate');
     });
 
     it('should include guidelines for variables', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toContain('variables_schema');
-      expect(messages[0].content.text).toContain('kebab-case');
+      expect(getText(messages[0].content)).toContain('variables_schema');
+      expect(getText(messages[0].content)).toContain('kebab-case');
     });
 
     it('should include example workflow', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toContain('Example');
-      expect(messages[0].content.text).toContain('boilerplateName');
+      expect(getText(messages[0].content)).toContain('Example');
+      expect(getText(messages[0].content)).toContain('boilerplateName');
     });
   });
 
@@ -79,13 +80,13 @@ describe('ScaffoldApplicationPrompt', () => {
     it('should adjust instructions for monolith mode', () => {
       const messages = monolithPrompt.getMessages();
 
-      expect(messages[0].content.text).toContain('monolith');
-      expect(messages[0].content.text).toContain('auto-detected');
+      expect(getText(messages[0].content)).toContain('monolith');
+      expect(getText(messages[0].content)).toContain('auto-detected');
     });
 
     it('should not require boilerplateName in examples for monolith mode', () => {
       const messages = monolithPrompt.getMessages();
-      const text = messages[0].content.text;
+      const text = getText(messages[0].content);
 
       // In monolith mode, example should not have boilerplateName at the top level
       // It should only have variables
@@ -103,7 +104,7 @@ describe('ScaffoldApplicationPrompt', () => {
     it('should mention toolkit.yaml in monolith mode', () => {
       const messages = monolithPrompt.getMessages();
 
-      expect(messages[0].content.text).toContain('toolkit.yaml');
+      expect(getText(messages[0].content)).toContain('toolkit.yaml');
     });
   });
 });

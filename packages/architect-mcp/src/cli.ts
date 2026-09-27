@@ -25,7 +25,7 @@ import { getFileDesignPatternCommand } from './commands/get-file-design-pattern'
 import { reviewCodeChangeCommand } from './commands/review-code-change';
 import { hookCommand } from './commands/hook';
 import { validateArchitectCommand } from './commands/validate-architect';
-import packageJson from '../package.json' assert { type: 'json' };
+import packageJson from '../package.json' with { type: 'json' };
 
 /**
  * Main entry point
@@ -51,4 +51,4 @@ async function main() {
   await program.parseAsync(process.argv);
 }
 
-main();
+void main();

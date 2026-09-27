@@ -25,7 +25,7 @@ import { UseToolTool } from '../tools/UseToolTool';
 import { getToolCapabilities, getUniqueSortedCapabilities } from '../utils/toolCapabilities';
 import { parseToolName, generateServerId } from '../utils';
 import type { CachedServerDefinition, ToolDefinition } from '../types';
-import packageJson from '../../package.json' assert { type: 'json' };
+import packageJson from '../../package.json' with { type: 'json' };
 
 /**
  * Configuration options for creating an MCP server instance

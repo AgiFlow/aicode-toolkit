@@ -37,7 +37,7 @@ interface MockAicodeUtils {
     debug: Mock;
   };
   TemplatesManagerService: {
-    getWorkspaceRootSync: Mock<[], string>;
+    getWorkspaceRootSync: Mock<() => string>;
   };
 }
 

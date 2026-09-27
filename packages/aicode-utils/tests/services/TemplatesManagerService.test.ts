@@ -22,6 +22,7 @@
 
 import path from 'node:path';
 import * as fs from 'node:fs/promises';
+import type { Stats } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 import Chance from 'chance';
@@ -176,40 +177,13 @@ function isToolkitConfig(value: unknown): value is ToolkitConfig {
 // ---------------------------------------------------------------------------
 // Stat mock factory
 //
-// StatLike mirrors the public API of fs.Stats. TypeScript's structural typing
-// accepts StatLike values wherever Stats is expected, eliminating the need
-// for unsafe type assertions.
+// makeStatResult builds a plain object that satisfies the fs.Stats type
+// structurally, eliminating the need for unsafe type assertions. The Temporal
+// Instant fields are typed as unknown when the Temporal global is not in the
+// compile lib, so they are left undefined.
 // ---------------------------------------------------------------------------
 
-interface StatLike {
-  isFile(): boolean;
-  isDirectory(): boolean;
-  isBlockDevice(): boolean;
-  isCharacterDevice(): boolean;
-  isSymbolicLink(): boolean;
-  isFIFO(): boolean;
-  isSocket(): boolean;
-  dev: number;
-  ino: number;
-  mode: number;
-  nlink: number;
-  uid: number;
-  gid: number;
-  rdev: number;
-  size: number;
-  blksize: number;
-  blocks: number;
-  atimeMs: number;
-  mtimeMs: number;
-  ctimeMs: number;
-  birthtimeMs: number;
-  atime: Date;
-  mtime: Date;
-  ctime: Date;
-  birthtime: Date;
-}
-
-function makeStatResult(directory: boolean): StatLike {
+function makeStatResult(directory: boolean): Stats {
   const now = new Date();
   return {
     isFile: (): boolean => !directory,
@@ -237,6 +211,10 @@ function makeStatResult(directory: boolean): StatLike {
     mtime: now,
     ctime: now,
     birthtime: now,
+    atimeInstant: undefined,
+    mtimeInstant: undefined,
+    ctimeInstant: undefined,
+    birthtimeInstant: undefined,
   };
 }
 

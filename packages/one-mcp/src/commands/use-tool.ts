@@ -55,7 +55,7 @@ export const useToolCommand = new Command('use-tool')
       let toolArgs: any = {};
       try {
         toolArgs = JSON.parse(options.args);
-      } catch (_error) {
+      } catch {
         console.error('Error: Invalid JSON in --args');
         process.exit(1);
       }

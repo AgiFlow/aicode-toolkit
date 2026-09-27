@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { GenerateBoilerplatePrompt } from '../../src/prompts/GenerateBoilerplatePrompt';
+import { getText } from '../helpers/getText';
 
 describe('GenerateBoilerplatePrompt', () => {
   let prompt: GenerateBoilerplatePrompt;
@@ -38,36 +39,36 @@ describe('GenerateBoilerplatePrompt', () => {
     it('should include user request when provided', () => {
       const messages = prompt.getMessages({ request: 'Create a React Vite template' });
 
-      expect(messages[0].content.text).toContain('Create a React Vite template');
+      expect(getText(messages[0].content)).toContain('Create a React Vite template');
     });
 
     it('should work without user request', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toBeTruthy();
+      expect(getText(messages[0].content)).toBeTruthy();
     });
 
     it('should include workflow instructions', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toContain('generate-boilerplate');
-      expect(messages[0].content.text).toContain('generate-boilerplate-file');
-      expect(messages[0].content.text).toContain('list-boilerplates');
-      expect(messages[0].content.text).toContain('use-boilerplate');
+      expect(getText(messages[0].content)).toContain('generate-boilerplate');
+      expect(getText(messages[0].content)).toContain('generate-boilerplate-file');
+      expect(getText(messages[0].content)).toContain('list-boilerplates');
+      expect(getText(messages[0].content)).toContain('use-boilerplate');
     });
 
     it('should include guidelines for description and instruction', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toContain('Description Field');
-      expect(messages[0].content.text).toContain('Instruction Field');
+      expect(getText(messages[0].content)).toContain('Description Field');
+      expect(getText(messages[0].content)).toContain('Instruction Field');
     });
 
     it('should include template content guidelines', () => {
       const messages = prompt.getMessages();
 
-      expect(messages[0].content.text).toContain('MINIMAL');
-      expect(messages[0].content.text).toContain('business-agnostic');
+      expect(getText(messages[0].content)).toContain('MINIMAL');
+      expect(getText(messages[0].content)).toContain('business-agnostic');
     });
   });
 
@@ -81,13 +82,13 @@ describe('GenerateBoilerplatePrompt', () => {
     it('should adjust instructions for monolith mode', () => {
       const messages = monolithPrompt.getMessages();
 
-      expect(messages[0].content.text).toContain('monolith');
-      expect(messages[0].content.text).toContain('defaults to "."');
+      expect(getText(messages[0].content)).toContain('monolith');
+      expect(getText(messages[0].content)).toContain('defaults to "."');
     });
 
     it('should not include list-boilerplates step in monolith mode', () => {
       const messages = monolithPrompt.getMessages();
-      const text = messages[0].content.text;
+      const text = getText(messages[0].content);
 
       // In monolith mode, list-boilerplates step is not included in the workflow
       const listBoilerplatesMatches = text.match(/list-boilerplates/g);

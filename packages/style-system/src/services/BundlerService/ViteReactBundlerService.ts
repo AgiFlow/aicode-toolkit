@@ -782,7 +782,7 @@ root.render(wrappedElement);
   }
 
   private async buildComponent(options: BuildOptions): Promise<string> {
-    const { appPath, darkMode, tmpDir, cssFiles = [] } = options;
+    const { appPath, darkMode, tmpDir, cssFiles } = options;
     const timestamp = Date.now();
 
     try {

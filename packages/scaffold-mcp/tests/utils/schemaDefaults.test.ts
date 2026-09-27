@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { applySchemaDefaults, parseVariablesWithDefaults } from '../../src/utils/schemaDefaults';
+import {
+  applySchemaDefaults,
+  type JsonSchema,
+  parseVariablesWithDefaults,
+} from '../../src/utils/schemaDefaults';
 
 describe('schemaDefaults', () => {
   describe('applySchemaDefaults', () => {
@@ -80,7 +84,7 @@ describe('schemaDefaults', () => {
 
   describe('parseVariablesWithDefaults', () => {
     it('should parse and apply defaults using Zod', () => {
-      const schema = {
+      const schema: JsonSchema = {
         type: 'object',
         properties: {
           name: { type: 'string' },
@@ -100,7 +104,7 @@ describe('schemaDefaults', () => {
     });
 
     it('should return errors for missing required properties', () => {
-      const schema = {
+      const schema: JsonSchema = {
         type: 'object',
         properties: {
           name: { type: 'string' },
@@ -116,7 +120,7 @@ describe('schemaDefaults', () => {
     });
 
     it('should apply boolean defaults correctly', () => {
-      const schema = {
+      const schema: JsonSchema = {
         type: 'object',
         properties: {
           componentName: { type: 'string' },

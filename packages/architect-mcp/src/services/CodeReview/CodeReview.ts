@@ -336,7 +336,7 @@ Provide your review in the specified JSON format.`;
     let currentContent: string;
     try {
       currentContent = await fs.readFile(filePath, 'utf-8');
-    } catch (_error) {
+    } catch {
       throw new Error(`Failed to read file: ${filePath}`);
     }
 
@@ -368,10 +368,19 @@ ${diff}
 
 === CURRENT FILE ===
 ${currentContent}`;
-    } catch (_error) {
+    } catch {
       // Not a git repo, return current content
       return currentContent;
     }
+  }
+
+  /**
+   * Convert an LLM-provided location value to text (objects are rendered as JSON)
+   */
+  private formatLocation(value: unknown): string {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    return JSON.stringify(value);
   }
 
   /**
@@ -427,7 +436,7 @@ ${currentContent}`;
             return {
               type: this.normalizeIssueType(review.type as string),
               rule: (ruleField as string) || this.extractRuleFromContent(descField as string),
-              violation: [descField, locField ? `Line ${locField}` : null]
+              violation: [descField, locField ? `Line ${this.formatLocation(locField)}` : null]
                 .filter(Boolean)
                 .join('. '),
             };
@@ -456,7 +465,7 @@ ${currentContent}`;
             return {
               type: issueType,
               rule: (ruleField as string) || this.extractRuleFromContent(descField as string),
-              violation: [descField, locField ? `Location: ${locField}` : null]
+              violation: [descField, locField ? `Location: ${this.formatLocation(locField)}` : null]
                 .filter(Boolean)
                 .join('. '),
             };
@@ -481,7 +490,7 @@ ${currentContent}`;
             return {
               type: this.normalizeIssueType((ruleField || comment.type) as string),
               rule: (ruleField as string) || this.extractRuleFromContent(descField as string),
-              violation: [descField, locField ? `Line ${locField}` : null]
+              violation: [descField, locField ? `Line ${this.formatLocation(locField)}` : null]
                 .filter(Boolean)
                 .join('. '),
             };

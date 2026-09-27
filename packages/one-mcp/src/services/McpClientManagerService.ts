@@ -346,7 +346,7 @@ export class McpClientManagerService {
     } else if (config.transport === 'sse') {
       await this.connectSseClient(mcpClient, config.config as McpSseConfig);
     } else {
-      throw new Error(`Unsupported transport type: ${config.transport}`);
+      throw new Error(`Unsupported transport type: ${String(config.transport)}`);
     }
   }
 

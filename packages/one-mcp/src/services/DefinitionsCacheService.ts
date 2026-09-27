@@ -20,7 +20,6 @@ import type {
   DefinitionsCacheFile,
   McpPromptInfo,
   McpResourceInfo,
-  McpToolInfo,
   PromptSkillConfig,
   Skill,
 } from '../types';

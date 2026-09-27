@@ -189,7 +189,7 @@ describe('DescribeToolsTool', () => {
 
       expect(definition.name).toBe('describe_tools');
       expect(definition.inputSchema).toBeDefined();
-      expect(definition.inputSchema.properties.toolNames).toBeDefined();
+      expect(definition.inputSchema.properties?.toolNames).toBeDefined();
     });
 
     it('should include MCP servers in description', async () => {

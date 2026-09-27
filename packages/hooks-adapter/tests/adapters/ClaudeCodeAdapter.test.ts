@@ -3,7 +3,21 @@
  */
 
 import { describe, test, expect, beforeEach, it } from 'vitest';
-import { ClaudeCodeAdapter } from '../../src/adapters/ClaudeCodeAdapter';
+import {
+  ClaudeCodeAdapter,
+  type ClaudeCodeHookInput,
+  type ClaudeCodePreToolUseInput,
+} from '../../src/adapters/ClaudeCodeAdapter';
+
+/**
+ * Narrow a parsed hook input to the PreToolUse variant
+ */
+function asPreToolUse(context: ClaudeCodeHookInput): ClaudeCodePreToolUseInput {
+  if (context.hook_event_name !== 'PreToolUse') {
+    throw new Error(`Expected PreToolUse input, got ${context.hook_event_name}`);
+  }
+  return context;
+}
 
 describe('ClaudeCodeAdapter', () => {
   let adapter: ClaudeCodeAdapter;
@@ -26,7 +40,7 @@ describe('ClaudeCodeAdapter', () => {
         llm_tool: 'claude-code',
       });
 
-      const context = adapter.parseInput(input);
+      const context = asPreToolUse(adapter.parseInput(input));
 
       expect(context.tool_name).toBe('Read');
       expect(context.tool_input).toEqual({ file_path: '/test/file.ts', limit: 100 });
@@ -52,7 +66,7 @@ describe('ClaudeCodeAdapter', () => {
         permission_mode: 'ask',
       });
 
-      const context = adapter.parseInput(input);
+      const context = asPreToolUse(adapter.parseInput(input));
 
       expect(context.tool_name).toBe(toolName);
       expect(context.tool_input).toEqual(toolInput);
@@ -70,7 +84,7 @@ describe('ClaudeCodeAdapter', () => {
         permission_mode: 'ask',
       });
 
-      const context = adapter.parseInput(input);
+      const context = asPreToolUse(adapter.parseInput(input));
 
       expect(context.tool_name).toBe('Bash');
       expect(context.tool_input).toEqual({ command: 'ls -la' });
@@ -88,7 +102,7 @@ describe('ClaudeCodeAdapter', () => {
         permission_mode: 'ask',
       });
 
-      const context = adapter.parseInput(input);
+      const context = asPreToolUse(adapter.parseInput(input));
 
       expect(context.llm_tool).toBeUndefined();
     });

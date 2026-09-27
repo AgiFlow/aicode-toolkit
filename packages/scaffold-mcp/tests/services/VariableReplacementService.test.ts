@@ -21,7 +21,7 @@ describe('VariableReplacementService', () => {
 
     mockTemplateService = {
       renderString: vi.fn(),
-      renderFile: vi.fn(),
+      containsTemplateVariables: vi.fn(),
     };
 
     service = new VariableReplacementService(mockFileSystem, mockTemplateService);

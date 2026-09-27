@@ -50,7 +50,7 @@ function createMockBundlerService(
     getServerPort: vi.fn(() => null),
     getCurrentAppPath: vi.fn(() => null),
     cleanup: vi.fn((): Promise<void> => Promise.resolve()),
-  } as BaseBundlerService;
+  } as unknown as BaseBundlerService;
 }
 
 /**
@@ -64,7 +64,7 @@ interface MockAicodeUtils {
     debug: Mock;
   };
   TemplatesManagerService: {
-    getWorkspaceRootSync: Mock<[], string>;
+    getWorkspaceRootSync: Mock<() => string>;
   };
 }
 

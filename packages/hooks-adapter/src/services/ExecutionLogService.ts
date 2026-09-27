@@ -233,7 +233,7 @@ export class ExecutionLogService {
           } else {
             console.warn('Skipping malformed log entry:', line.substring(0, 100));
           }
-        } catch (_parseError) {
+        } catch {
           // Skip unparseable lines
           console.warn('Skipping malformed log entry:', line.substring(0, 100));
         }

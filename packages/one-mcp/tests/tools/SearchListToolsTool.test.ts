@@ -1,8 +1,17 @@
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DefinitionsCacheService } from '../../src/services/DefinitionsCacheService';
 import { SearchListToolsTool } from '../../src/tools/SearchListToolsTool';
 import type { DefinitionsCacheFile } from '../../src/types';
 import type { McpClientManagerService } from '../../src/services/McpClientManagerService';
+
+function firstText(result: CallToolResult): string {
+  const content = result.content[0];
+  if (content?.type !== 'text') {
+    throw new Error('Expected text content in tool result');
+  }
+  return content.text;
+}
 
 describe('SearchListToolsTool', () => {
   const metaKey = 'agiflowai/capabilities';
@@ -75,7 +84,7 @@ describe('SearchListToolsTool', () => {
     const tool = new SearchListToolsTool(mockClientManager, definitions);
 
     const result = await tool.execute({});
-    const parsed = JSON.parse(String(result.content[0].text));
+    const parsed = JSON.parse(firstText(result));
 
     expect(parsed.servers).toHaveLength(2);
     expect(parsed.servers[0].tools[0].name).toBe('alpha__search_docs');
@@ -92,7 +101,7 @@ describe('SearchListToolsTool', () => {
     const tool = new SearchListToolsTool(mockClientManager, definitions);
 
     const result = await tool.execute({ capability: 'code-review' });
-    const parsed = JSON.parse(String(result.content[0].text));
+    const parsed = JSON.parse(firstText(result));
 
     expect(parsed.servers).toHaveLength(1);
     expect(parsed.servers[0].server).toBe('beta');
@@ -119,7 +128,7 @@ describe('SearchListToolsTool', () => {
     const tool = new SearchListToolsTool(mockClientManager, definitions);
 
     const result = await tool.execute({ serverName: 'alpha' });
-    const parsed = JSON.parse(String(result.content[0].text));
+    const parsed = JSON.parse(firstText(result));
 
     expect(parsed.servers).toHaveLength(1);
     expect(parsed.servers[0].server).toBe('alpha');
@@ -132,7 +141,7 @@ describe('SearchListToolsTool', () => {
     const tool = new SearchListToolsTool(mockClientManager, definitions);
 
     const result = await tool.execute({ capability: 'nonexistent' });
-    const parsed = JSON.parse(String(result.content[0].text));
+    const parsed = JSON.parse(firstText(result));
 
     expect(result.isError).toBe(true);
     expect(parsed.servers).toEqual([]);

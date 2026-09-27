@@ -100,7 +100,7 @@ export interface HookConfig {
   /**
    * Glob patterns whose new-file writes bypass scaffold enforcement (allowed
    * through directly instead of being denied with scaffold-method guidance).
-   * Matched against absolute paths, so use `**` prefixes (e.g. `**​/*.md`).
+   * Matched against absolute paths, so use `**` prefixes (e.g. `**` then `/*.md`).
    * Applies to every agent; relaxation that is specific to a template belongs
    * in that template's `scaffold.yaml` `exclude` list instead.
    */

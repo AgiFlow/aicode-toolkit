@@ -217,7 +217,7 @@ export class RemoteConfigCacheService {
               return true; // expired and deleted
             }
             return false; // not expired
-          } catch (_error) {
+          } catch {
             // If we can't read or parse the file, delete it
             await unlink(filePath).catch(() => {
               /* ignore */

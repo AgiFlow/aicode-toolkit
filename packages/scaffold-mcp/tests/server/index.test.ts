@@ -13,10 +13,21 @@ vi.mock('@agiflowai/aicode-utils', async () => {
   };
 });
 
+/** Shape of the MockServer installed by tests/setup.ts in place of the SDK Server. */
+interface MockServer {
+  name: string;
+  version: string;
+  requestHandlers: Map<string, (request: unknown) => Promise<{ tools: Array<{ name: string }> }>>;
+}
+
+function asMockServer(server: ReturnType<typeof createServer>): MockServer {
+  return server as unknown as MockServer;
+}
+
 describe('Server', () => {
   describe('createServer', () => {
     it('should create server with default options', () => {
-      const server = createServer();
+      const server = asMockServer(createServer());
 
       expect(server).toBeDefined();
       expect(server.name).toBe('scaffold-mcp');
@@ -24,26 +35,26 @@ describe('Server', () => {
     });
 
     it('should create server with admin enabled', () => {
-      const server = createServer({ adminEnabled: true });
+      const server = asMockServer(createServer({ adminEnabled: true }));
 
       expect(server).toBeDefined();
     });
 
     it('should register tool handlers', () => {
-      const server = createServer();
+      const server = asMockServer(createServer());
 
       expect(server.requestHandlers.size).toBeGreaterThan(0);
     });
 
     it('should register prompt handlers when admin enabled', () => {
-      const server = createServer({ adminEnabled: true });
+      const server = asMockServer(createServer({ adminEnabled: true }));
 
       expect(server.requestHandlers.has('prompts/list')).toBe(true);
       expect(server.requestHandlers.has('prompts/get')).toBe(true);
     });
 
     it('should not register admin tools when adminEnabled is false', async () => {
-      const server = createServer({ adminEnabled: false });
+      const server = asMockServer(createServer({ adminEnabled: false }));
 
       const listToolsHandler = server.requestHandlers.get('tools/list');
       if (!listToolsHandler) throw new Error('tools/list handler is missing');
@@ -56,7 +67,7 @@ describe('Server', () => {
 
   describe('Tool Registration', () => {
     it('should register core tools', async () => {
-      const server = createServer();
+      const server = asMockServer(createServer());
 
       const listToolsHandler = server.requestHandlers.get('tools/list');
       if (!listToolsHandler) throw new Error('tools/list handler is missing');
@@ -69,7 +80,7 @@ describe('Server', () => {
       expect(toolNames).toContain('write-to-file');
     });
     it('should register admin tools when enabled', async () => {
-      const server = createServer({ adminEnabled: true });
+      const server = asMockServer(createServer({ adminEnabled: true }));
 
       const listToolsHandler = server.requestHandlers.get('tools/list');
       if (!listToolsHandler) throw new Error('tools/list handler is missing');
@@ -80,7 +91,7 @@ describe('Server', () => {
       expect(toolNames).toContain('generate-feature-scaffold');
     });
     it('should attach capability metadata to listed tools', async () => {
-      const server = createServer({ adminEnabled: true });
+      const server = asMockServer(createServer({ adminEnabled: true }));
 
       const listToolsHandler = Array.from(server.requestHandlers.values())[0];
       const result = await listToolsHandler({});
@@ -112,13 +123,13 @@ describe('Server', () => {
 
   describe('Instructions', () => {
     it('should include base instructions', () => {
-      const server = createServer();
+      const server = asMockServer(createServer());
 
       expect(server.requestHandlers).toBeDefined();
     });
 
     it('should include admin instructions when enabled', () => {
-      const server = createServer({ adminEnabled: true });
+      const server = asMockServer(createServer({ adminEnabled: true }));
 
       expect(server.requestHandlers).toBeDefined();
     });

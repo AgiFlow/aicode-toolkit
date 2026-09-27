@@ -41,7 +41,7 @@ export class VariableReplacementService implements IVariableReplacementService {
       items = await this.fileSystem.readdir(dirPath);
     } catch (error) {
       // If we can't read the directory, skip it
-      log.warn(`Skipping directory ${dirPath}: ${error}`);
+      log.warn(`Skipping directory ${dirPath}: ${String(error)}`);
       return;
     }
 
@@ -55,7 +55,7 @@ export class VariableReplacementService implements IVariableReplacementService {
           const stat = await this.fileSystem.stat(itemPath);
           return { itemPath, stat, error: null };
         } catch (error) {
-          log.warn(`Skipping item ${itemPath}: ${error}`);
+          log.warn(`Skipping item ${itemPath}: ${String(error)}`);
           return { itemPath, stat: null, error };
         }
       }),
@@ -95,7 +95,7 @@ export class VariableReplacementService implements IVariableReplacementService {
       await this.fileSystem.writeFile(filePath, renderedContent, 'utf8');
     } catch (error) {
       // If we can't read the file as text, skip it (likely binary)
-      log.warn(`Skipping file ${filePath}: ${error}`);
+      log.warn(`Skipping file ${filePath}: ${String(error)}`);
     }
   }
 
