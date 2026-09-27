@@ -1,3 +1,13 @@
+## 0.5.1 (2026-09-27)
+
+### 🩹 Fixes
+
+- address code scanning and stabilize parallel fetch test ([22b5e65](https://github.com/AgiFlow/aicode-toolkit/commit/22b5e65))
+
+### ❤️ Thank You
+
+- vuongngo
+
 ## 0.5.0 (2026-09-27)
 
 ### 🩹 Fixes
