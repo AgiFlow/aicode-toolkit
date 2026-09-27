@@ -32,13 +32,13 @@
   "dependencies": {
     "@agiflowai/aicode-utils": "workspace:*",
     "execa": "9.6.1",
-    "uuid": "13.0.1"
+    "uuid": "14.0.2"
   },
   "devDependencies": {
-    "@types/node": "25.6.0",
-    "@types/uuid": "10.0.0",
+    "@types/node": "26.6.3",
+    "@types/uuid": "11.0.0",
     "@vitest/coverage-v8": "4.1.11",
-    "tsdown": "0.21.8",
+    "tsdown": "0.23.0",
     "typescript": "5.9.3",
     "vitest": "4.1.11"
   },
