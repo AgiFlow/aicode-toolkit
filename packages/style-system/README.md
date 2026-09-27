@@ -24,7 +24,7 @@ style-system solves this by:
 
 ### 1. Requirements
 
-- Node.js >= 18
+- Node.js >= 22.12
 - MCP-compatible agent (Claude Code, Cursor, Gemini CLI)
 - Chrome browser (recommended) OR Playwright browsers for `get_component_visual` tool
 
@@ -292,21 +292,18 @@ style-system:
 ## Server Options
 
 ```bash
-# stdio transport (default)
-npx @agiflowai/style-system mcp-serve
-
-# HTTP transport
-npx @agiflowai/style-system mcp-serve --type http --port 3000
-
-# SSE transport
-npx @agiflowai/style-system mcp-serve --type sse --port 3000
+# stdio is the only supported transport
+npx @agiflowai/style-system mcp-serve --type stdio
 ```
 
-| Option       | Description                       | Default |
-| ------------ | --------------------------------- | ------- |
-| `-t, --type` | Transport: `stdio`, `http`, `sse` | `stdio` |
-| `-p, --port` | Port for HTTP/SSE                 | `3000`  |
+| Option         | Description                                               | Default |
+| -------------- | --------------------------------------------------------- | ------- |
+| `-t, --type`   | Transport: `stdio`                                        | `stdio` |
+| `--theme-path` | Theme CSS path when app configuration does not define one | —       |
+| `--dev`        | Start Vite dev server; requires `--app-path`              | off     |
+| `--app-path`   | App directory used with `--dev`                           | —       |
 
+Avoid `--dev` when running as a stdio MCP server: its startup messages are written to standard output. Visual rendering executes app code; use trusted workspaces and install the browser prerequisites first.
 ---
 
 ## Development

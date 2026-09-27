@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "aicode-scaffold": {
+      "command": "npx",
+      "args": ["-y", "@agiflowai/scaffold-mcp@2.0.0", "mcp-serve", "--type", "stdio"]
+    },
+    "aicode-architect": {
+      "command": "npx",
+      "args": ["-y", "@agiflowai/architect-mcp@2.0.0", "mcp-serve", "--type", "stdio"]
+    }
+  }
+}

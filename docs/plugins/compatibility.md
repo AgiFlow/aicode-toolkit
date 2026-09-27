@@ -1,0 +1,18 @@
+# Plugin compatibility and verification
+
+**Target clients:** Claude Code, Claude Cowork, Codex, Cursor, Gemini CLI and Grok. A manifest is not evidence of working client support. Every client needs installation, skill discovery, consumer-workspace cwd, MCP startup/tool calls, update/uninstall and co-installation testing before being advertised as fully supported.
+
+| Client        | Available artifact / acquisition path                                    | Verification status                                                                                                             |
+| ------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code   | Root marketplace with five local plugin roots                            | Native strict manifest validation passed; fresh/upgraded install and runtime smoke testing outstanding                          |
+| Claude Cowork | Same Claude marketplace in Settings > Plugins                            | Node/npx availability and local stdio MCP execution in Cowork not verified                                                      |
+| Codex         | `.agents/plugins/marketplace.json` with local root sources               | Manifest/static checks available; live install/runtime testing outstanding                                                      |
+| Cursor        | Per-root `.cursor-plugin/plugin.json`, `mcp.json` and standalone archive | Actual per-purpose native installation route and runtime not verified                                                           |
+| Gemini CLI    | Local checkout: `gemini extensions install ./plugins/<name>`             | Native extension validation passed; runtime testing outstanding. Remote monorepo subdirectory install not established           |
+| Grok          | Standalone plugin roots and archives                                     | Real client CLI unavailable here; installation/runtime testing blocked. Do not assume a subdirectory URL or use automatic trust |
+
+The design plugin currently pins published `@agiflowai/style-system@0.2.0`. The source tree fixes forwarding of `list_themes` and `list_shared_components` arguments, but **0.2.0 does not contain this fix**. Publishing a corrected style-system release and updating the plugin pin are prerequisites for claiming filtered/paginated discovery works. Rendered previews additionally need trusted consumer code, project design config, components/stories and Chromium.
+
+Registry metadata confirms scaffold-mcp, architect-mcp and aicode-toolkit `2.0.0`, plus style-system `0.2.0` exist. A manual isolated consumer fixture (configured monorepo, copied template and plugin archives, and cwd in the consumer project) successfully initialized and listed tools over protocol-clean stdio for all five plugin configurations, including admin. Missing-template scaffold startup remains an expected failure; client-managed cwd, representative tool calls, full component rendering, and all six clients' live installation tests are outstanding. Source style dispatch tests pass. The architect repository's automatic `review-code-change` backend may fail when Gemini authentication is unavailable: a missing backend result must not be treated as passing review.
+
+When client constraints require a dedicated repository root or a hosted MCP service, obtain a distribution decision before claiming those clients are supported. Manual MCP configuration/skill copying is a fallback integration, not equivalent to native installation. Record tested client versions and evidence here when acceptance tests can actually run.

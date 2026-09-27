@@ -1,0 +1,12 @@
+{
+  "name": "aicode-review",
+  "version": "0.5.0",
+  "description": "Review project changes against applicable architecture and coding rules.",
+  "mcpServers": {
+    "aicode-architect": {
+      "command": "npx",
+      "args": ["-y", "@agiflowai/architect-mcp@2.0.0", "mcp-serve", "--type", "stdio"]
+    }
+  },
+  "contextFileName": "GEMINI.md"
+}

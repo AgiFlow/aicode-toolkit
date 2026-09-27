@@ -92,7 +92,7 @@ export function createServer(themePath?: string): Server {
 
     // Route to appropriate tool based on name
     if (name === ListThemesTool.TOOL_NAME) {
-      return await listThemesTool.execute({} as any);
+      return await listThemesTool.execute((args ?? {}) as any);
     }
 
     if (name === GetCSSClassesTool.TOOL_NAME) {
@@ -104,7 +104,7 @@ export function createServer(themePath?: string): Server {
     }
 
     if (name === ListSharedComponentsTool.TOOL_NAME) {
-      return await listSharedComponentsTool.execute({} as any);
+      return await listSharedComponentsTool.execute((args ?? {}) as any);
     }
 
     if (name === ListAppComponentsTool.TOOL_NAME) {

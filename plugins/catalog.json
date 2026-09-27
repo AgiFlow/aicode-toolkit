@@ -1,0 +1,43 @@
+{
+  "name": "aicode-toolkit",
+  "version": "0.5.0",
+  "owner": { "name": "AgiFlow", "email": "vuong@agiflow.io" },
+  "packages": {
+    "scaffold": "@agiflowai/scaffold-mcp@2.0.0",
+    "architect": "@agiflowai/architect-mcp@2.0.0",
+    "design": "@agiflowai/style-system@0.2.0"
+  },
+  "plugins": [
+    {
+      "name": "aicode-bootstrap",
+      "description": "Discover project boilerplates and create new applications with scaffold-mcp.",
+      "servers": ["scaffold"],
+      "skills": ["initialize-workspace", "create-project"]
+    },
+    {
+      "name": "aicode-develop",
+      "description": "Scaffold features with design-pattern guidance and post-edit review.",
+      "servers": ["scaffold", "architect"],
+      "skills": ["develop-feature"]
+    },
+    {
+      "name": "aicode-review",
+      "description": "Review project changes against applicable architecture and coding rules.",
+      "servers": ["architect"],
+      "skills": ["review-changes"]
+    },
+    {
+      "name": "aicode-admin",
+      "description": "Author templates, generators, design patterns and coding rules.",
+      "servers": ["scaffold", "architect"],
+      "skills": ["author-templates", "manage-patterns-and-rules"],
+      "admin": true
+    },
+    {
+      "name": "aicode-design",
+      "description": "Explore themes, supported CSS classes and UI component previews.",
+      "servers": ["design"],
+      "skills": ["discover-design-system", "preview-component"]
+    }
+  ]
+}

@@ -17,11 +17,17 @@ This repo provides:
 
 As projects scale, conventions in docs like `CLAUDE.md`, `AGENTS.md`, and style guides become hard to keep concise and consistently applied by AI agents. This toolkit moves those conventions into reusable template configs (`scaffold.yaml`, `architect.yaml`, `RULES.yaml`) so agents can discover only the relevant guidance when needed.
 
+## Purpose-based plugins
+
+For toolkit users who prefer an agent plugin, install only the workflows you need: `aicode-bootstrap` (project creation), `aicode-develop` (features and patterns), `aicode-review` (rules-based review), `aicode-admin` (authoring reusable configuration), or `aicode-design` (frontend discovery). Self-contained plugin roots are under [`plugins/`](plugins/) and work with the Claude Code/Cowork marketplace, Codex marketplace, and local Gemini extension installation; Cursor/Grok and Cowork's local stdio runtime still need client acceptance tests. Read the [installation and compatibility guide](docs/plugins/README.md) before use. These bundles group workflows rather than restrict tool access.
+
+Initialize the **consumer project before starting** a scaffold-backed plugin with interactive `npx -y @agiflowai/aicode-toolkit@2.0.0 init --skip-mcp`; plugin installation does not supply templates. Keep MCP server cwd in the consumer workspace. Published style-system `0.2.0` currently ignores some discovery filters until the dispatch fix is released. See [compatibility](docs/plugins/compatibility.md).
+
 ## Quick Start
 
 Requirements:
 
-- Node.js >= 18
+- Node.js >= 22.12 (Node 24 recommended)
 - an MCP-compatible agent such as Claude Code, Cursor, or Gemini CLI
 
 ### 1. Initialize a Workspace

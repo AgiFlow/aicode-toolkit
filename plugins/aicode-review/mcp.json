@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "aicode-architect": {
+      "command": "npx",
+      "args": ["-y", "@agiflowai/architect-mcp@2.0.0", "mcp-serve", "--type", "stdio"]
+    }
+  }
+}

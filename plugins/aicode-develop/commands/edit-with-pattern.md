@@ -1,0 +1,5 @@
+---
+description: Edit a file using toolkit design-pattern guidance and review the result
+---
+
+Use the `develop-feature` skill for the user's requested edit. For each target file, obtain `get-file-design-pattern` with `file_path` **before** editing. After editing call `review-code-change` with `file_path`, inspect any returned `rules` and perform host-agent review if no independent backend review ran. Fix violations and report targeted checks. If templates or MCP tools are missing, explain setup instead of asserting compliance. Obtain approval before destructive or broad generation.

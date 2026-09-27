@@ -65,6 +65,9 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Validate purpose plugins
+        run: pnpm plugins:check && pnpm plugins:test && pnpm plugins:pack
       # Security auditing lives in security.yml, which runs on the same
       # pull_request trigger and gates on high severity. Two half-configured
       # audits is worse than one real one.
