@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { McpClientManagerService } from '../../src/services/McpClientManagerService';
-import { Client } from '@modelcontextprotocol/client';
 import type { McpServerConfig } from '../../src/types';
 
 // Track all created mock client instances
@@ -24,9 +23,7 @@ function createMockClientInstance(): Record<string, ReturnType<typeof vi.fn>> {
 
 // Mock the SDK transports
 vi.mock('@modelcontextprotocol/client/stdio', () => ({
-  StdioClientTransport: class MockStdioTransport {
-    constructor() {}
-  },
+  StdioClientTransport: class MockStdioTransport {},
 }));
 
 // Mock the Client class and browser transports.
@@ -38,12 +35,8 @@ vi.mock('@modelcontextprotocol/client', () => ({
       Object.assign(this, instance);
     }
   },
-  SSEClientTransport: class MockSSETransport {
-    constructor() {}
-  },
-  StreamableHTTPClientTransport: class MockHTTPTransport {
-    constructor() {}
-  },
+  SSEClientTransport: class MockSSETransport {},
+  StreamableHTTPClientTransport: class MockHTTPTransport {},
 }));
 
 const httpConfig: McpServerConfig = {
