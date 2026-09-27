@@ -1,3 +1,13 @@
+## 0.2.1 (2026-09-27)
+
+### 🚀 Features
+
+- add purpose-based multi-client toolkit plugins ([ea8ab52](https://github.com/AgiFlow/aicode-toolkit/commit/ea8ab52))
+
+### ❤️ Thank You
+
+- vuongngo
+
 ## 0.2.0 (2026-09-27)
 
 ### 🩹 Fixes
