@@ -8,6 +8,10 @@ import {
   detectMonolithMode,
   loadTextOption,
   parseJsonOption,
+  parseObjectOption,
+  writeJson,
+  failJson,
+  toolResultData,
   resolveTemplatesPath,
 } from './utils';
 
@@ -20,6 +24,7 @@ interface GenerateBoilerplateOptions {
   targetFolder?: string;
   variables?: string;
   include?: string[];
+  json?: boolean;
 }
 
 /**
@@ -34,20 +39,23 @@ boilerplateCommand
   .command('list')
   .description('List all available boilerplate templates')
   .option('-c, --cursor <cursor>', 'Pagination cursor for next page')
+  .option('--json', 'Print one structured JSON result')
   .action(async (options) => {
     try {
       const templatesDir = await TemplatesManagerService.findTemplatesPath();
-      if (!templatesDir) {
-        messages.error(
+      if (!templatesDir)
+        throw new Error(
           'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
         );
-        process.exit(1);
-      }
       const boilerplateService = new BoilerplateService(templatesDir);
       const { boilerplates, nextCursor } = await boilerplateService.listBoilerplates(
         options.cursor,
       );
 
+      if (options.json) {
+        writeJson({ boilerplates, nextCursor });
+        return;
+      }
       if (boilerplates.length === 0) {
         messages.warning('No boilerplate templates found.');
         return;
@@ -79,6 +87,7 @@ boilerplateCommand
         print.debug(`  scaffold-mcp boilerplate list --cursor "${nextCursor}"`);
       }
     } catch (error) {
+      if (options.json) failJson(error);
       messages.error('Error listing boilerplates:', error as Error);
       process.exit(1);
     }
@@ -99,46 +108,25 @@ boilerplateCommand
   )
   .option('--marker <tag>', 'Custom scaffold marker tag to inject into generated code files')
   .option('--verbose', 'Enable verbose logging')
+  .option('--json', 'Print one structured JSON result')
   .action(async (boilerplateName, options) => {
     try {
       const templatesDir = await TemplatesManagerService.findTemplatesPath();
-      if (!templatesDir) {
-        messages.error(
+      if (!templatesDir)
+        throw new Error(
           'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
         );
-        process.exit(1);
-      }
       const boilerplateService = new BoilerplateService(templatesDir);
 
-      // Parse variables if provided
-      let variables = {};
-      if (options.vars) {
-        try {
-          variables = JSON.parse(options.vars);
-        } catch (error) {
-          messages.error('Error parsing variables JSON:', error as Error);
-          messages.hint(
-            'Example: --vars \'{"appName": "my-app", "description": "My application"}\'',
-          );
-          process.exit(1);
-        }
-      }
+      // Absent variables default to an empty object.
+      const variables = parseObjectOption(options.vars, '--vars');
 
       // Get boilerplate info
       const boilerplate = await boilerplateService.getBoilerplate(boilerplateName);
       if (!boilerplate) {
-        // Fetch all boilerplates by collecting all pages
-        let allBoilerplates: any[] = [];
-        let cursor: string | undefined;
-        do {
-          const result = await boilerplateService.listBoilerplates(cursor);
-          allBoilerplates = allBoilerplates.concat(result.boilerplates);
-          cursor = result.nextCursor;
-        } while (cursor);
-
-        messages.error(`Boilerplate '${boilerplateName}' not found.`);
-        print.warning(`Available boilerplates: ${allBoilerplates.map((b) => b.name).join(', ')}`);
-        process.exit(1);
+        throw new Error(
+          `Boilerplate '${boilerplateName}' not found. Run scaffold-mcp boilerplate list to discover templates.`,
+        );
       }
 
       // Check for required variables
@@ -148,36 +136,21 @@ boilerplateCommand
         'required' in boilerplate.variables_schema
           ? (boilerplate.variables_schema.required as string[])
           : [];
-      const missing = required.filter(
-        (key: string) => !(variables as Record<string, unknown>)[key],
-      );
+      const missing = required.filter((key: string) => !Object.hasOwn(variables, key));
 
       if (missing.length > 0) {
-        messages.error(`Missing required variables: ${missing.join(', ')}`);
-        messages.hint(`Use --vars with a JSON object containing: ${missing.join(', ')}`);
-
-        const exampleVars: Record<string, any> = {};
-        for (const key of required) {
-          if (key === 'appName' || key === 'packageName') {
-            exampleVars[key] = 'my-app';
-          } else if (key === 'description') {
-            exampleVars[key] = 'My application description';
-          } else {
-            exampleVars[key] = `<${key}>`;
-          }
-        }
-        print.debug(
-          `Example: scaffold-mcp boilerplate create ${boilerplateName} --vars '${JSON.stringify(exampleVars)}'`,
+        throw new Error(
+          `Missing required variables: ${missing.join(', ')}. Run scaffold-mcp boilerplate info ${boilerplateName} for the schema.`,
         );
-        process.exit(1);
       }
 
-      if (options.verbose) {
-        print.info(`${icons.wrench} Boilerplate: ${boilerplateName}`);
-        print.info(`${icons.chart} Variables: ${JSON.stringify(variables, null, 2)}`);
+      if (!options.json) {
+        if (options.verbose) {
+          print.info(`${icons.wrench} Boilerplate: ${boilerplateName}`);
+          print.info(`${icons.chart} Variables: ${JSON.stringify(variables, null, 2)}`);
+        }
+        messages.loading(`Creating project from boilerplate '${boilerplateName}'...`);
       }
-
-      messages.loading(`Creating project from boilerplate '${boilerplateName}'...`);
 
       const result = await boilerplateService.useBoilerplate({
         boilerplateName,
@@ -187,6 +160,11 @@ boilerplateCommand
         marker: options.marker,
       });
 
+      if (options.json) {
+        if (!result.success) throw new Error(result.message);
+        writeJson(result);
+        return;
+      }
       if (result.success) {
         messages.success('Project created successfully!');
         print.info(result.message);
@@ -216,10 +194,9 @@ boilerplateCommand
         process.exit(1);
       }
     } catch (error) {
+      if (options.json) failJson(error);
       messages.error('Error creating project:', error as Error);
-      if (options.verbose) {
-        console.error('Stack trace:', (error as Error).stack);
-      }
+      if (options.verbose) console.error('Stack trace:', (error as Error).stack);
       process.exit(1);
     }
   });
@@ -239,6 +216,7 @@ boilerplateCommand
     'JSON array of variable definitions: [{"name":"appName","description":"App name","type":"string","required":true}]',
   )
   .option('-i, --include <path>', 'Template include path (repeatable)', collectOption, [])
+  .option('--json', 'Print one structured JSON result')
   .action(async (boilerplateName: string, options: GenerateBoilerplateOptions) => {
     try {
       const templatesPath = await resolveTemplatesPath();
@@ -286,8 +264,10 @@ boilerplateCommand
         includes: options.include ?? [],
       });
 
-      print.info(assertToolSuccess(result));
+      if (options.json) writeJson(toolResultData(result));
+      else print.info(assertToolSuccess(result));
     } catch (error) {
+      if (options.json) failJson(error);
       print.error(
         'Error generating boilerplate:',
         error instanceof Error ? error.message : String(error),
@@ -300,28 +280,28 @@ boilerplateCommand
 boilerplateCommand
   .command('info <boilerplateName>')
   .description('Show detailed information about a boilerplate template')
-  .action(async (boilerplateName) => {
+  .option('--json', 'Print one structured JSON result')
+  .action(async (boilerplateName, options) => {
     try {
       const templatesDir = await TemplatesManagerService.findTemplatesPath();
-      if (!templatesDir) {
-        messages.error(
+      if (!templatesDir)
+        throw new Error(
           'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
         );
-        process.exit(1);
-      }
       const boilerplateService = new BoilerplateService(templatesDir);
       const bp = await boilerplateService.getBoilerplate(boilerplateName);
 
-      if (!bp) {
-        messages.error(`Boilerplate '${boilerplateName}' not found.`);
-        process.exit(1);
-      }
+      if (!bp) throw new Error(`Boilerplate '${boilerplateName}' not found.`);
 
+      if (options.json) {
+        writeJson(bp);
+        return;
+      }
       print.header(`\n${icons.package} Boilerplate: ${bp.name}\n`);
       print.debug(`Description: ${bp.description}`);
       print.debug(`Template Path: ${bp.template_path}`);
       print.debug(`Target Folder: ${bp.target_folder}`);
-
+      if (bp.instruction) print.debug(`Instructions: ${bp.instruction}`);
       print.header(`\n${icons.config} Variables Schema:`);
       console.log(JSON.stringify(bp.variables_schema, null, 2));
 
@@ -329,6 +309,7 @@ boilerplateCommand
         sections.list(`${icons.folder} Included Files:`, bp.includes);
       }
     } catch (error) {
+      if (options.json) failJson(error);
       messages.error('Error getting boilerplate info:', error as Error);
       process.exit(1);
     }

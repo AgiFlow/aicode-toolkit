@@ -21,6 +21,10 @@ import {
   detectMonolithMode,
   loadTextOption,
   parseJsonOption,
+  parseObjectOption,
+  writeJson,
+  failJson,
+  toolResultData,
   resolveTemplatesPath,
 } from './utils';
 
@@ -33,6 +37,7 @@ interface GenerateFeatureOptions {
   variables?: string;
   include?: string[];
   pattern?: string[];
+  json?: boolean;
 }
 
 /**
@@ -48,15 +53,14 @@ scaffoldCommand
   .description('List available scaffolding methods for a project or template')
   .option('-t, --template <name>', 'Template name (e.g., nextjs-15, typescript-mcp-package)')
   .option('-c, --cursor <cursor>', 'Pagination cursor for next page')
+  .option('--json', 'Print one structured JSON result')
   .action(async (projectPath, options) => {
     try {
       const templatesDir = await TemplatesManagerService.findTemplatesPath();
-      if (!templatesDir) {
-        messages.error(
+      if (!templatesDir)
+        throw new Error(
           'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
         );
-        process.exit(1);
-      }
       const fileSystemService = new FileSystemService();
       const scaffoldingMethodsService = new ScaffoldingMethodsService(
         fileSystemService,
@@ -73,15 +77,10 @@ scaffoldCommand
 
         // Verify project configuration exists (supports both monolith and monorepo)
         const hasConfig = await ProjectConfigResolver.hasConfiguration(absolutePath);
-        if (!hasConfig) {
-          messages.error(`No project configuration found in ${absolutePath}`);
-          messages.hint(
-            'For monorepo: ensure project.json exists with sourceTemplate field\n' +
-              'For monolith: ensure toolkit.yaml exists at workspace root\n' +
-              'Or use --template option to list methods for a specific template',
+        if (!hasConfig)
+          throw new Error(
+            `No project configuration found in ${absolutePath}. Use --template to list methods without a project.`,
           );
-          process.exit(1);
-        }
 
         result = await scaffoldingMethodsService.listScaffoldingMethods(
           absolutePath,
@@ -97,6 +96,10 @@ scaffoldCommand
         displayName = `template: ${options.template}`;
       }
 
+      if (options.json) {
+        writeJson(result);
+        return;
+      }
       const methods = result.methods;
 
       if (methods.length === 0) {
@@ -108,9 +111,7 @@ scaffoldCommand
 
       for (const method of methods) {
         print.highlight(`  ${method.name}`);
-        print.debug(
-          `    ${method.instruction || method.description || 'No description available'}`,
-        );
+        print.debug(`    ${method.description || 'No description available'}`);
 
         if (method.variables_schema.required && method.variables_schema.required.length > 0) {
           print.debug(`    Required: ${method.variables_schema.required.join(', ')}`);
@@ -125,13 +126,16 @@ scaffoldCommand
         const cursorOption = `--cursor "${result.nextCursor}"`;
         if (projectPath) {
           print.debug(`  scaffold-mcp scaffold list ${projectPath} ${cursorOption}`);
-        } else {
+        } else if (options.template) {
           print.debug(
             `  scaffold-mcp scaffold list --template ${options.template} ${cursorOption}`,
           );
+        } else {
+          print.debug(`  scaffold-mcp scaffold list ${cursorOption}`);
         }
       }
     } catch (error) {
+      if (options.json) failJson(error);
       messages.error('Error listing scaffolding methods:', error as Error);
       process.exit(1);
     }
@@ -141,46 +145,29 @@ scaffoldCommand
 scaffoldCommand
   .command('add <featureName>')
   .description('Add a feature to an existing project')
-  .option('-p, --project <path>', 'Project path', process.cwd())
+  .option('-p, --project <path>', 'Project path (defaults to current directory)')
   .option('-v, --vars <json>', 'JSON string containing variables for the feature')
   .option('--marker <tag>', 'Custom scaffold marker tag to inject into generated code files')
   .option('--verbose', 'Enable verbose logging')
+  .option('--json', 'Print one structured JSON result')
   .action(async (featureName, options) => {
     try {
-      const projectPath = path.resolve(options.project);
+      const projectPath = path.resolve(options.project ?? process.cwd());
 
       // Verify project configuration exists (supports both monolith and monorepo)
       const hasConfig = await ProjectConfigResolver.hasConfiguration(projectPath);
-      if (!hasConfig) {
-        messages.error(`No project configuration found in ${projectPath}`);
-        messages.hint(
-          'For monorepo: ensure project.json exists with sourceTemplate field\n' +
-            'For monolith: ensure toolkit.yaml exists at workspace root',
+      if (!hasConfig)
+        throw new Error(
+          `No project configuration found in ${projectPath}. Configure sourceTemplate in project.json or toolkit.yaml.`,
         );
-        process.exit(1);
-      }
 
-      // Parse variables
-      let variables = {};
-      if (options.vars) {
-        try {
-          variables = JSON.parse(options.vars);
-        } catch (error) {
-          messages.error('Error parsing variables JSON:', error as Error);
-          messages.hint(
-            'Example: --vars \'{"componentName": "UserProfile", "description": "User profile component"}\'',
-          );
-          process.exit(1);
-        }
-      }
+      const variables = parseObjectOption(options.vars, '--vars');
 
       const templatesDir = await TemplatesManagerService.findTemplatesPath();
-      if (!templatesDir) {
-        messages.error(
+      if (!templatesDir)
+        throw new Error(
           'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
         );
-        process.exit(1);
-      }
       const fileSystemService = new FileSystemService();
       const scaffoldingMethodsService = new ScaffoldingMethodsService(
         fileSystemService,
@@ -201,14 +188,10 @@ scaffoldCommand
 
       const method = allMethods.find((m) => m.name === featureName);
 
-      if (!method) {
-        messages.error(`Scaffold method '${featureName}' not found.`);
-        print.warning(`Available methods: ${allMethods.map((m) => m.name).join(', ')}`);
-        print.debug(
-          `Run 'scaffold-mcp scaffold list ${options.project}' to see all available methods`,
+      if (!method)
+        throw new Error(
+          `Scaffold method '${featureName}' not found. Run scaffold-mcp scaffold list ${projectPath} to discover methods.`,
         );
-        process.exit(1);
-      }
 
       // Check for required variables
       const required =
@@ -217,37 +200,21 @@ scaffoldCommand
         'required' in method.variables_schema
           ? (method.variables_schema.required as string[])
           : [];
-      const missing = required.filter(
-        (key: string) => !(variables as Record<string, unknown>)[key],
-      );
+      const missing = required.filter((key: string) => !Object.hasOwn(variables, key));
 
-      if (missing.length > 0) {
-        messages.error(`❌ Missing required variables: ${missing.join(', ')}`);
-        messages.hint(`💡 Use --vars with a JSON object containing: ${missing.join(', ')}`);
-
-        const exampleVars: Record<string, any> = {};
-        for (const key of required) {
-          if (key.includes('Name')) {
-            exampleVars[key] = 'MyFeature';
-          } else if (key === 'description') {
-            exampleVars[key] = 'Feature description';
-          } else {
-            exampleVars[key] = `<${key}>`;
-          }
-        }
-        print.debug(
-          `Example: scaffold-mcp scaffold add ${featureName} --project ${options.project} --vars '${JSON.stringify(exampleVars)}'`,
+      if (missing.length > 0)
+        throw new Error(
+          `Missing required variables: ${missing.join(', ')}. Run scaffold-mcp scaffold info ${featureName} --project ${projectPath} for the schema.`,
         );
-        process.exit(1);
-      }
 
-      if (options.verbose) {
-        print.info(`🔧 Feature: ${featureName}`);
-        print.info(`📊 Variables: ${JSON.stringify(variables, null, 2)}`);
-        print.info(`📁 Project Path: ${projectPath}`);
+      if (!options.json) {
+        if (options.verbose) {
+          print.info(`🔧 Feature: ${featureName}`);
+          print.info(`📊 Variables: ${JSON.stringify(variables, null, 2)}`);
+          print.info(`📁 Project Path: ${projectPath}`);
+        }
+        print.info(`🚀 Adding '${featureName}' to project...`);
       }
-
-      print.info(`🚀 Adding '${featureName}' to project...`);
 
       const result = await scaffoldingMethodsService.useScaffoldMethod({
         projectPath,
@@ -267,7 +234,12 @@ scaffoldCommand
           });
         }
 
+        if (options.json) {
+          writeJson({ ...result, scaffoldId });
+          return;
+        }
         messages.success('✅ Feature added successfully!');
+        print.info(result.message);
 
         if (result.createdFiles && result.createdFiles.length > 0) {
           print.header('\n📁 Created files:');
@@ -275,7 +247,10 @@ scaffoldCommand
             print.debug(`   - ${file}`);
           });
         }
-
+        if (result.existingFiles?.length) {
+          print.header('\nExisting files preserved:');
+          result.existingFiles.forEach((file) => print.debug(`   - ${file}`));
+        }
         if (result.warnings && result.warnings.length > 0) {
           messages.warning('\n⚠️  Warnings:');
           result.warnings.forEach((warning) => {
@@ -290,10 +265,12 @@ scaffoldCommand
         print.debug('   - Update imports if necessary');
         print.debug('   - Run tests to ensure everything works');
       } else {
+        if (options.json) throw new Error(result.message);
         messages.error(`❌ Failed to add feature: ${result.message}`);
         process.exit(1);
       }
     } catch (error) {
+      if (options.json) failJson(error);
       messages.error(`❌ Error adding feature: ${(error as Error).message}`);
       process.exit(1);
     }
@@ -319,6 +296,7 @@ scaffoldCommand
     collectOption,
     [],
   )
+  .option('--json', 'Print one structured JSON result')
   .action(async (featureName: string, options: GenerateFeatureOptions) => {
     try {
       const templatesPath = await resolveTemplatesPath();
@@ -361,8 +339,10 @@ scaffoldCommand
         patterns: options.pattern ?? [],
       });
 
-      print.info(assertToolSuccess(result));
+      if (options.json) writeJson(toolResultData(result));
+      else print.info(assertToolSuccess(result));
     } catch (error) {
+      if (options.json) failJson(error);
       print.error(
         'Error generating feature scaffold:',
         error instanceof Error ? error.message : String(error),
@@ -377,24 +357,17 @@ scaffoldCommand
   .description('Show detailed information about a scaffold method')
   .option('-p, --project <path>', 'Project path')
   .option('-t, --template <name>', 'Template name (e.g., nextjs-15, typescript-mcp-package)')
+  .option('--json', 'Print one structured JSON result')
   .action(async (featureName, options) => {
     try {
-      // Require either project or template option
-      if (!options.project && !options.template) {
-        messages.error('Either --project or --template option must be provided');
-        messages.hint('Examples:');
-        print.debug('  scaffold-mcp scaffold info scaffold-route --project ./my-app');
-        print.debug('  scaffold-mcp scaffold info scaffold-route --template nextjs-15');
-        process.exit(1);
-      }
+      // Match scaffold list: use cwd if neither project nor template is supplied.
+      const infoProject = options.project ?? (!options.template ? process.cwd() : undefined);
 
       const templatesDir = await TemplatesManagerService.findTemplatesPath();
-      if (!templatesDir) {
-        messages.error(
+      if (!templatesDir)
+        throw new Error(
           'Templates folder not found. Create a templates folder or specify templatesPath in toolkit.yaml',
         );
-        process.exit(1);
-      }
       const fileSystemService = new FileSystemService();
       const scaffoldingMethodsService = new ScaffoldingMethodsService(
         fileSystemService,
@@ -405,21 +378,15 @@ scaffoldCommand
       let allMethods: any[] = [];
       let cursor: string | undefined;
 
-      if (options.project) {
-        // Use project path
-        const projectPath = path.resolve(options.project);
+      if (infoProject) {
+        const projectPath = path.resolve(infoProject);
 
         // Verify project configuration exists (supports both monolith and monorepo)
         const hasConfig = await ProjectConfigResolver.hasConfiguration(projectPath);
-        if (!hasConfig) {
-          messages.error(`No project configuration found in ${projectPath}`);
-          messages.hint(
-            'For monorepo: ensure project.json exists with sourceTemplate field\n' +
-              'For monolith: ensure toolkit.yaml exists at workspace root\n' +
-              'Or use --template option to view info for a specific template',
+        if (!hasConfig)
+          throw new Error(
+            `No project configuration found in ${projectPath}. Use --template to inspect a feature without a project.`,
           );
-          process.exit(1);
-        }
 
         // Fetch all pages
         do {
@@ -444,14 +411,15 @@ scaffoldCommand
 
       const method = allMethods.find((m) => m.name === featureName);
 
-      if (!method) {
-        messages.error(`❌ Scaffold method '${featureName}' not found.`);
-        process.exit(1);
-      }
+      if (!method) throw new Error(`Scaffold method '${featureName}' not found.`);
 
+      if (options.json) {
+        writeJson(method);
+        return;
+      }
       print.header(`\n🔧 Scaffold Method: ${method.name}\n`);
       print.debug(`Description: ${method.description}`);
-
+      if (method.instruction) print.debug(`Instructions: ${method.instruction}`);
       print.header('\n📝 Variables Schema:');
       print.debug(JSON.stringify(method.variables_schema, null, 2));
 
@@ -468,6 +436,7 @@ scaffoldCommand
         });
       }
     } catch (error) {
+      if (options.json) failJson(error);
       messages.error(`❌ Error getting scaffold info: ${(error as Error).message}`);
       process.exit(1);
     }
