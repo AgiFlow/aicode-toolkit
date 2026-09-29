@@ -12,21 +12,7 @@ mcpServers:
     env: {}
     config:
       instruction: >
-        Use this server for design system operations including theme management,
-        CSS classes extraction, component rendering, and Storybook story indexing.
-  # Scaffold MCP - Code generation and boilerplate scaffolding
-  scaffold-mcp:
-    command: bun
-    args:
-      - run
-      - packages/scaffold-mcp/src/cli.ts
-      - mcp-serve
-    env: {}
-    config:
-      instruction: >
-        Use this server for generating boilerplate code, scaffolding new projects,
-        and adding features to existing projects. Supports multiple templates and
-        custom code generation patterns.
+        Use this server for design system operations including theme management, CSS classes extraction, component rendering, and Storybook story indexing.
 
   # Architect MCP - Design patterns and code review
   architect-mcp:
@@ -38,9 +24,7 @@ mcpServers:
     env: {}
     config:
       instruction: >
-        Use this server for design pattern guidance and code review.
-        Provides tools for getting file design patterns and reviewing code changes
-        against established coding standards.
+        Use this server for design pattern guidance and code review. Provides tools for getting file design patterns and reviewing code changes against established coding standards.
 
   # Nx MCP - Nx workspace management
   nx-mcp:
@@ -50,8 +34,7 @@ mcpServers:
     env: {}
     config:
       instruction: >
-        Use this server for Nx workspace operations, including running tasks,
-        managing projects, and querying the project graph.
+        Use this server for Nx workspace operations, including running tasks, managing projects, and querying the project graph.
 
   # Playwright - Browser automation and testing
   playwright:
@@ -62,8 +45,7 @@ mcpServers:
     env: {}
     config:
       instruction: >
-        Use this server for browser automation, web scraping, and end-to-end testing
-        with Playwright.
+        Use this server for browser automation, web scraping, and end-to-end testing with Playwright.
 
 skills:
   paths:

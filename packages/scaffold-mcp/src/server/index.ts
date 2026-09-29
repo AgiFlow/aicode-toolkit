@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { TemplatesManagerService } from '@agiflowai/aicode-utils';
 import { Server } from '@modelcontextprotocol/server';
 
@@ -36,6 +37,8 @@ function withCapabilities(definition: ToolDefinition, capabilities: string[]): T
 }
 
 export interface ServerOptions {
+  /** Fixed execution workspace, captured once for this server instance. */
+  workspaceRoot?: string;
   adminEnabled?: boolean;
   isMonolith?: boolean;
   promptAsSkill?: boolean;
@@ -52,8 +55,8 @@ export function createServer(options: ServerOptions = {}): Server {
     fallbackToolConfig,
   } = options;
 
-  // Find templates folder by searching upwards from current directory
-  const templatesPath = TemplatesManagerService.findTemplatesPathSync();
+  const workspaceRoot = path.resolve(options.workspaceRoot ?? process.cwd());
+  const templatesPath = TemplatesManagerService.findTemplatesPathSync(workspaceRoot);
 
   if (!templatesPath) {
     throw new Error(
@@ -62,22 +65,28 @@ export function createServer(options: ServerOptions = {}): Server {
     );
   }
 
-  // Initialize tools (conditional based on project type)
+  // Each tool receives the same immutable workspace, independent of process.cwd().
   const listBoilerplatesTool = !isMonolith
-    ? new ListBoilerplatesTool(templatesPath, isMonolith)
+    ? new ListBoilerplatesTool(templatesPath, isMonolith, workspaceRoot)
     : null;
-  const useBoilerplateTool = !isMonolith ? new UseBoilerplateTool(templatesPath, isMonolith) : null;
-  const listScaffoldingMethodsTool = new ListScaffoldingMethodsTool(templatesPath, isMonolith);
-  const useScaffoldMethodTool = new UseScaffoldMethodTool(templatesPath, isMonolith);
-  const writeToFileTool = new WriteToFileTool();
+  const useBoilerplateTool = !isMonolith
+    ? new UseBoilerplateTool(templatesPath, isMonolith, workspaceRoot)
+    : null;
+  const listScaffoldingMethodsTool = new ListScaffoldingMethodsTool(
+    templatesPath,
+    isMonolith,
+    workspaceRoot,
+  );
+  const useScaffoldMethodTool = new UseScaffoldMethodTool(templatesPath, isMonolith, workspaceRoot);
+  const writeToFileTool = new WriteToFileTool(workspaceRoot);
   const generateBoilerplateTool = adminEnabled
-    ? new GenerateBoilerplateTool(templatesPath, isMonolith)
+    ? new GenerateBoilerplateTool(templatesPath, isMonolith, workspaceRoot)
     : null;
   const generateBoilerplateFileTool = adminEnabled
-    ? new GenerateBoilerplateFileTool(templatesPath, isMonolith)
+    ? new GenerateBoilerplateFileTool(templatesPath, isMonolith, workspaceRoot)
     : null;
   const generateFeatureScaffoldTool = adminEnabled
-    ? new GenerateFeatureScaffoldTool(templatesPath, isMonolith)
+    ? new GenerateFeatureScaffoldTool(templatesPath, isMonolith, workspaceRoot)
     : null;
 
   // Initialize prompts (admin only)

@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { CallToolResult } from '@modelcontextprotocol/server';
 import { ProjectConfigResolver } from '@agiflowai/aicode-utils';
 import { BoilerplateGeneratorService } from '../services/BoilerplateGeneratorService';
@@ -12,7 +13,10 @@ export class GenerateBoilerplateTool {
   private boilerplateGeneratorService: BoilerplateGeneratorService;
   private isMonolith: boolean;
 
-  constructor(templatesPath: string, isMonolith: boolean = false) {
+  private readonly workspaceRoot: string;
+
+  constructor(templatesPath: string, isMonolith: boolean = false, workspaceRoot = process.cwd()) {
+    this.workspaceRoot = path.resolve(workspaceRoot);
     this.boilerplateGeneratorService = new BoilerplateGeneratorService(templatesPath);
     this.isMonolith = isMonolith;
   }
@@ -207,7 +211,7 @@ Use this to add custom boilerplate configurations for frameworks not yet support
       // In monolith mode, read templateName from toolkit.yaml if not provided
       if (this.isMonolith && !templateName) {
         try {
-          const config = await ProjectConfigResolver.resolveProjectConfig(process.cwd());
+          const config = await ProjectConfigResolver.resolveProjectConfig(this.workspaceRoot);
           templateName = config.sourceTemplate;
         } catch (error) {
           return {

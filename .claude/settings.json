@@ -66,5 +66,10 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(bun run packages/scaffold-mcp/src/cli.ts *)"
+    ]
   }
 }

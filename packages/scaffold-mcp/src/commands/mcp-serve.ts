@@ -205,6 +205,7 @@ export const mcpServeCommand = new Command('mcp-serve')
       }
 
       const serverOptions: ServerOptions = {
+        workspaceRoot: process.cwd(),
         adminEnabled: adminEnable,
         isMonolith,
         promptAsSkill,

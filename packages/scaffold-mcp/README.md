@@ -4,6 +4,33 @@
 
 Use the local CLI to generate projects and feature boilerplate from template-defined scaffolds without loading MCP tools into your agent's context. MCP serving remains available.
 
+## Agent integration: skills and CLI
+
+Scaffolding uses the `scaffolding` skill and CLI rather than a per-agent MCP server. Toolkit setup installs `.claude/skills/scaffolding/SKILL.md`; existing skills are preserved. The scaffold package also ships `skills/scaffolding/SKILL.md` for plugin distribution.
+
+```bash
+npx --yes @agiflowai/scaffold-mcp@2.0.0 boilerplate list
+npx --yes @agiflowai/scaffold-mcp@2.0.0 scaffold list '<project-path>'
+npx --yes @agiflowai/scaffold-mcp@2.0.0 scaffold info '<feature-name>' --project '<project-path>'
+```
+
+Load the skill before generating files and use the discovered schema for `--vars`. Scaffold CLI hooks remain enabled independently of MCP registration. MCP transport examples below describe the optional compatibility interface, not the default agent integration.
+
+## Embedded MCP workspace ownership
+
+An embedding host can call `createServer({ workspaceRoot, adminEnabled })` with
+an absolute workspace directory. Each server captures that directory once and
+passes it to template discovery and scaffolding tools. Existing callers that omit
+it retain the current directory at construction time. Requests do not switch the
+process working directory. Non-Git workspaces resolve templates relative to the
+explicit directory as well.
+
+Keep separate server instances for different checkouts or admin capabilities.
+Capturing a workspace is not an operating-system sandbox and does not authorize
+sharing one writable server across unrelated callers. The standalone MCP command
+captures its workspace at startup; its stdio transport closes on input EOF or pipe
+closure, including closure during connection startup.
+
 ## Local CLI: progressive discovery
 
 After installing templates (below), discover only what you need:

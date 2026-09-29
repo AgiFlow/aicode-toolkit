@@ -12,8 +12,8 @@ export class UseBoilerplateTool {
   private templateService: TemplateService;
   private isMonolith: boolean;
 
-  constructor(templatesPath: string, isMonolith: boolean = false) {
-    this.boilerplateService = new BoilerplateService(templatesPath);
+  constructor(templatesPath: string, isMonolith: boolean = false, workspaceRoot = process.cwd()) {
+    this.boilerplateService = new BoilerplateService(templatesPath, workspaceRoot);
     this.templateService = new TemplateService();
     this.isMonolith = isMonolith;
   }

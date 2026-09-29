@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { CallToolResult } from '@modelcontextprotocol/server';
 import { ProjectConfigResolver } from '@agiflowai/aicode-utils';
 import { ScaffoldGeneratorService } from '../services/ScaffoldGeneratorService';
@@ -12,7 +13,10 @@ export class GenerateFeatureScaffoldTool {
   private scaffoldGeneratorService: ScaffoldGeneratorService;
   private isMonolith: boolean;
 
-  constructor(templatesPath: string, isMonolith: boolean = false) {
+  private readonly workspaceRoot: string;
+
+  constructor(templatesPath: string, isMonolith: boolean = false, workspaceRoot = process.cwd()) {
+    this.workspaceRoot = path.resolve(workspaceRoot);
     this.scaffoldGeneratorService = new ScaffoldGeneratorService(templatesPath);
     this.isMonolith = isMonolith;
   }
@@ -192,7 +196,7 @@ Use this to add custom feature scaffolds (pages, components, services, etc.) for
       // In monolith mode, read templateName from toolkit.yaml if not provided
       if (this.isMonolith && !templateName) {
         try {
-          const config = await ProjectConfigResolver.resolveProjectConfig(process.cwd());
+          const config = await ProjectConfigResolver.resolveProjectConfig(this.workspaceRoot);
           templateName = config.sourceTemplate;
         } catch (error) {
           return {

@@ -4,20 +4,20 @@ When working on this project, follow the OpenSpec spec-driven development workfl
 
 ## {% if scaffoldMcp %}1{% else %}1{% endif %}. Create Proposals with scaffold-mcp
 
-When implementing new features or changes, use scaffold-mcp MCP tools:
+When implementing new features or changes, use scaffolding CLI:
 
 **For new projects/features:**
 
-1. Use `list-boilerplates` MCP tool to see available templates
-2. Use `use-boilerplate` MCP tool to scaffold new projects{% if projectType == 'monolith' %} (set `monolith: true`){% elsif projectType == 'monorepo' %} (omit `monolith` parameter){% endif %}
-3. Use `list-scaffolding-methods` MCP tool to understand which methods can be used to add features
+1. Use `npx --yes @agiflowai/scaffold-mcp@2.0.0 boilerplate list` MCP tool to see available templates
+2. Use `npx --yes @agiflowai/scaffold-mcp@2.0.0 boilerplate create` MCP tool to scaffold new projects{% if projectType == 'monolith' %} (set `monolith: true`){% elsif projectType == 'monorepo' %} (omit `monolith` parameter){% endif %}
+3. Use `npx --yes @agiflowai/scaffold-mcp@2.0.0 scaffold list` MCP tool to understand which methods can be used to add features
 4. Create OpenSpec proposal with available scaffolding methods in mind: "Create an OpenSpec proposal for [feature description]"
 
 **For adding features to existing code:**
 
-1. Use `list-scaffolding-methods` MCP tool with projectPath to see available features{% if projectType == 'monolith' %} (`projectPath` = workspace root){% elsif projectType == 'monorepo' %} (`projectPath` = project directory with project.json){% endif %}
+1. Use `npx --yes @agiflowai/scaffold-mcp@2.0.0 scaffold list` MCP tool with projectPath to see available features{% if projectType == 'monolith' %} (`projectPath` = workspace root){% elsif projectType == 'monorepo' %} (`projectPath` = project directory with project.json){% endif %}
 2. Review available methods and plan which ones to use for the feature
-3. Use `use-scaffold-method` MCP tool to generate boilerplate code
+3. Use `npx --yes @agiflowai/scaffold-mcp@2.0.0 scaffold add` MCP tool to generate boilerplate code
 4. Create OpenSpec proposal to capture the specs
    {% if projectType %}
 
@@ -98,17 +98,17 @@ During implementation:
 
 {% if scaffoldMcp or architectMcp %}
 
-## MCP Tools Reference
+## Skill, CLI, and MCP Reference
 
 {% endif %}
 {% if scaffoldMcp %}
 
-### scaffold-mcp
+### Scaffolding skill and CLI
 
-- `list-boilerplates` - List available project templates
-- `use-boilerplate` - Create new project from template
-- `list-scaffolding-methods` - List features for existing project
-- `use-scaffold-method` - Add feature to existing project
+- `npx --yes @agiflowai/scaffold-mcp@2.0.0 boilerplate list` - List available project templates
+- `npx --yes @agiflowai/scaffold-mcp@2.0.0 boilerplate create` - Create new project from template
+- `npx --yes @agiflowai/scaffold-mcp@2.0.0 scaffold list` - List features for existing project
+- `npx --yes @agiflowai/scaffold-mcp@2.0.0 scaffold add` - Add feature to existing project
   {% endif %}
   {% if architectMcp %}
 
@@ -122,7 +122,7 @@ During implementation:
 
 {% if scaffoldMcp %}
 
-1. **Plan**: Use scaffold-mcp to generate boilerplate + OpenSpec proposal for specs
+1. **Plan**: Load the scaffolding skill and use its CLI to generate boilerplate + OpenSpec proposal for specs
    {% else %}
 1. **Plan**: Create OpenSpec proposal with specs
    {% endif %}

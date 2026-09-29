@@ -55,11 +55,14 @@ interface ArchitectConfig {
 
 export class ScaffoldingMethodsService {
   private templateService: TemplateService;
+  private readonly workspaceRoot: string;
 
   constructor(
     private fileSystem: IFileSystemService,
     private templatesRootPath: string,
+    workspaceRoot = process.cwd(),
   ) {
+    this.workspaceRoot = path.resolve(workspaceRoot);
     this.templateService = new TemplateService();
   }
 
@@ -67,7 +70,7 @@ export class ScaffoldingMethodsService {
     projectPath: string,
     cursor?: string,
   ): Promise<ListScaffoldingMethodsResult> {
-    const absoluteProjectPath = path.resolve(projectPath);
+    const absoluteProjectPath = path.resolve(this.workspaceRoot, projectPath);
 
     // Use ProjectConfigResolver to get sourceTemplate
     // This supports both monolith (toolkit.yaml) and monorepo (project.json)
@@ -223,7 +226,7 @@ export class ScaffoldingMethodsService {
    * Uses ProjectConfigResolver to find the correct workspace/project root
    */
   private async resolveProjectPath(projectPath: string): Promise<string> {
-    const absolutePath = path.resolve(projectPath);
+    const absolutePath = path.resolve(this.workspaceRoot, projectPath);
     // Use ProjectConfigResolver to handle both monorepo and monolith cases
     const projectConfig = await ProjectConfigResolver.resolveProjectConfig(absolutePath);
 
@@ -349,6 +352,7 @@ export class ScaffoldingMethodsService {
       scaffoldConfigLoader,
       variableReplacer,
       this.templatesRootPath,
+      this.workspaceRoot,
     );
 
     const projectName = path.basename(absoluteProjectPath);

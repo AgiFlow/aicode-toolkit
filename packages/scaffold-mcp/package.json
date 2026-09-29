@@ -29,7 +29,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "skills"
   ],
   "type": "module",
   "main": "./dist/index.cjs",

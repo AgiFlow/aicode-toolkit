@@ -8,12 +8,15 @@ export class WriteToFileTool {
 
   private fileSystemService: FileSystemService;
 
-  constructor() {
+  private readonly workspaceRoot: string;
+
+  constructor(workspaceRoot = process.cwd()) {
+    this.workspaceRoot = path.resolve(workspaceRoot);
     this.fileSystemService = new FileSystemService();
   }
 
   private resolveWorkspaceFilePath(filePath: string): string {
-    const workspaceRoot = path.resolve(process.cwd());
+    const workspaceRoot = this.workspaceRoot;
     const resolvedPath = path.resolve(workspaceRoot, filePath);
     const relativeToWorkspace = path.relative(workspaceRoot, resolvedPath);
     const isWithinWorkspace =
@@ -66,15 +69,15 @@ Parameters:
   /**
    * Execute the tool
    */
-  async execute(args: Record<string, any>): Promise<CallToolResult> {
+  async execute(args: Record<string, unknown>): Promise<CallToolResult> {
     try {
-      const { file_path, content } = args as { file_path: string; content: string };
+      const { file_path, content } = args;
 
-      if (!file_path) {
+      if (typeof file_path !== 'string' || !file_path) {
         throw new Error('Missing required parameter: file_path');
       }
 
-      if (content === undefined || content === null) {
+      if (typeof content !== 'string') {
         throw new Error('Missing required parameter: content');
       }
 

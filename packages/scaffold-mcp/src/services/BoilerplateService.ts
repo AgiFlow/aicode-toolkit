@@ -29,7 +29,10 @@ export class BoilerplateService {
   private templateService: TemplateService;
   private scaffoldService: ScaffoldService;
 
-  constructor(templatesPath: string) {
+  private readonly workspaceRoot: string;
+
+  constructor(templatesPath: string, workspaceRoot = process.cwd()) {
+    this.workspaceRoot = path.resolve(workspaceRoot);
     this.templatesPath = templatesPath;
     this.templateService = new TemplateService();
 
@@ -46,6 +49,7 @@ export class BoilerplateService {
       scaffoldConfigLoader,
       variableReplacementService,
       templatesPath,
+      this.workspaceRoot,
     );
   }
 
@@ -172,7 +176,7 @@ export class BoilerplateService {
     // Auto-detect project type if monolith parameter is not explicitly provided
     if (monolith === undefined || (monolith && !boilerplateName)) {
       try {
-        projectConfig = await ProjectConfigResolver.resolveProjectConfig(process.cwd());
+        projectConfig = await ProjectConfigResolver.resolveProjectConfig(this.workspaceRoot);
       } catch {
         // Config not found - will handle below
       }

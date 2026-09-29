@@ -33,14 +33,15 @@
         "vite"
       ],
       "category": "productivity",
-      "tags": ["bootstrap", "new-project", "starter"],
-      "mcpServers": {
-        "aicode-bootstrap": {
-          "command": "npx",
-          "args": ["-y", "@agiflowai/scaffold-mcp", "mcp-serve"]
-        }
-      },
-      "strict": false
+      "tags": [
+        "bootstrap",
+        "new-project",
+        "starter"
+      ],
+      "strict": false,
+      "skills": [
+        "./skills/scaffolding"
+      ]
     },
     {
       "name": "aicode-develop",
@@ -56,20 +57,28 @@
       "homepage": "https://github.com/AgiFlow/aicode-toolkit#readme",
       "repository": "https://github.com/AgiFlow/aicode-toolkit",
       "license": "AGPL-3.0",
-      "keywords": ["development", "features", "scaffolding", "design-patterns", "architecture"],
+      "keywords": [
+        "development",
+        "features",
+        "scaffolding",
+        "design-patterns",
+        "architecture"
+      ],
       "category": "productivity",
-      "tags": ["development", "features", "patterns"],
-      "commands": ["./configs/claude-code/commands/edit-with-pattern.md"],
+      "tags": [
+        "development",
+        "features",
+        "patterns"
+      ],
+      "commands": [
+        "./configs/claude-code/commands/edit-with-pattern.md"
+      ],
       "agents": [
         "./configs/claude-code/agents/architecture-reviewer.md",
         "./configs/claude-code/agents/test-coverage.md",
         "./configs/claude-code/agents/migration-assistant.md"
       ],
       "mcpServers": {
-        "aicode-scaffold": {
-          "command": "npx",
-          "args": ["-y", "@agiflowai/scaffold-mcp", "mcp-serve"]
-        },
         "aicode-patterns": {
           "command": "npx",
           "args": [
@@ -81,7 +90,10 @@
           ]
         }
       },
-      "strict": false
+      "strict": false,
+      "skills": [
+        "./skills/scaffolding"
+      ]
     },
     {
       "name": "aicode-review",
@@ -97,13 +109,29 @@
       "homepage": "https://github.com/AgiFlow/aicode-toolkit#readme",
       "repository": "https://github.com/AgiFlow/aicode-toolkit",
       "license": "AGPL-3.0",
-      "keywords": ["code-review", "quality", "standards", "rules", "governance"],
+      "keywords": [
+        "code-review",
+        "quality",
+        "standards",
+        "rules",
+        "governance"
+      ],
       "category": "code-quality",
-      "tags": ["review", "quality", "standards"],
+      "tags": [
+        "review",
+        "quality",
+        "standards"
+      ],
       "mcpServers": {
         "aicode-review": {
           "command": "npx",
-          "args": ["-y", "@agiflowai/architect-mcp", "mcp-serve", "--review-tool", "claude-code"]
+          "args": [
+            "-y",
+            "@agiflowai/architect-mcp",
+            "mcp-serve",
+            "--review-tool",
+            "claude-code"
+          ]
         }
       },
       "strict": false
@@ -122,20 +150,34 @@
       "homepage": "https://github.com/AgiFlow/aicode-toolkit#readme",
       "repository": "https://github.com/AgiFlow/aicode-toolkit",
       "license": "AGPL-3.0",
-      "keywords": ["admin", "templates", "customization", "platform", "framework"],
+      "keywords": [
+        "admin",
+        "templates",
+        "customization",
+        "platform",
+        "framework"
+      ],
       "category": "productivity",
-      "tags": ["admin", "templates", "customization"],
+      "tags": [
+        "admin",
+        "templates",
+        "customization"
+      ],
       "mcpServers": {
-        "aicode-scaffold-admin": {
-          "command": "npx",
-          "args": ["-y", "@agiflowai/scaffold-mcp", "mcp-serve", "--admin-enable"]
-        },
         "aicode-architect-admin": {
           "command": "npx",
-          "args": ["-y", "@agiflowai/architect-mcp", "mcp-serve", "--admin-enable"]
+          "args": [
+            "-y",
+            "@agiflowai/architect-mcp",
+            "mcp-serve",
+            "--admin-enable"
+          ]
         }
       },
-      "strict": false
+      "strict": false,
+      "skills": [
+        "./skills/scaffolding"
+      ]
     }
   ]
 }

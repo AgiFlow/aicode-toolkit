@@ -81,6 +81,7 @@ interface ClaudeHookEntry {
 
 interface ClaudeSettingsJson {
   hooks: Record<string, ClaudeHookEntry[]>;
+  [key: string]: unknown;
 }
 
 interface OutputMcpConfigYaml {
@@ -165,23 +166,78 @@ export function buildHookCommand(
   return [server.command, ...prefixArgs, 'hook', '--type', hookType, ...extraFlags].join(' ');
 }
 
+export function buildScaffoldHookCommand(
+  hookType: string,
+  extraFlags: string[],
+  legacyServer?: McpServerDefinition,
+): string {
+  return buildHookCommand(
+    legacyServer ?? { command: 'npx', args: ['--yes', '@agiflowai/scaffold-mcp@2.0.0'] },
+    hookType,
+    extraFlags,
+  );
+}
+
+export function mergeClaudeSettings(
+  existing: Partial<ClaudeSettingsJson>,
+  generated: Record<string, ClaudeHookEntry[]>,
+): ClaudeSettingsJson {
+  const managedTools = new Set(
+    Object.values(generated).flatMap((entries) =>
+      entries.flatMap((entry) =>
+        entry.hooks.flatMap(
+          (hook) => hook.command.match(/\b(?:scaffold-mcp|architect-mcp)\b/g) ?? [],
+        ),
+      ),
+    ),
+  );
+  const hooks: Record<string, ClaudeHookEntry[]> = {};
+  for (const [event, entries] of Object.entries(existing.hooks ?? {})) {
+    if (!Array.isArray(entries)) throw new Error(`Invalid Claude hooks for ${event}`);
+    hooks[event] = entries.flatMap((entry) => {
+      if (!Array.isArray(entry.hooks)) throw new Error(`Invalid Claude hook entry for ${event}`);
+      const retained = entry.hooks.filter(
+        (hook) =>
+          !(
+            hook.type === 'command' &&
+            typeof hook.command === 'string' &&
+            [...managedTools].some((tool) => new RegExp(`\\b${tool}\\b`).test(hook.command))
+          ),
+      );
+      return retained.length > 0 ? [{ ...entry, hooks: retained }] : [];
+    });
+  }
+  for (const [event, entries] of Object.entries(generated)) {
+    hooks[event] = [...(hooks[event] ?? []), ...entries];
+  }
+  return { ...existing, hooks };
+}
+
 export function resolveArchitectClaudeMatcher(
   methodConfig?: ArchitectHookAgentConfig[keyof ArchitectHookAgentConfig],
 ): string {
   return (methodConfig as { matcher?: string } | undefined)?.matcher ?? 'Edit|MultiEdit|Write';
 }
 
-export function buildMcpConfigYaml(config: ToolkitConfig): OutputMcpConfigYaml | null {
+export function buildMcpConfigYaml(
+  config: ToolkitConfig & { 'mcp-config'?: SettingsMcpConfig },
+): OutputMcpConfigYaml | null {
   const settingsMcpConfig = getSettingsMcpConfig(config);
   const servers = settingsMcpConfig?.servers ?? {};
-  const serverEntries = Object.entries(servers);
+  const serverEntries = Object.entries(servers).filter(([name, server]) => {
+    const launch = [server.command, ...(server.args ?? [])].join(' ');
+    return (
+      !['scaffold-mcp', 'scaffolding', 'log-sink', 'log-sink-mcp'].includes(name) &&
+      !/(?:scaffold-mcp|log-sink-mcp).*\bmcp-serve\b/.test(launch)
+    );
+  });
 
-  if (serverEntries.length === 0 && !settingsMcpConfig?.skills?.paths?.length) {
+  if (!settingsMcpConfig?.servers && !settingsMcpConfig?.skills?.paths?.length) {
     return null;
   }
 
   return {
-    ...(serverEntries.length > 0
+    ...(settingsMcpConfig?.servers
       ? {
           mcpServers: Object.fromEntries(
             serverEntries.map(([name, server]) => {
@@ -272,7 +328,7 @@ async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string)
     // --- scaffold-mcp ---
     const scaffoldAgent = config['scaffold-mcp']?.hook?.['claude-code'];
     const scaffoldServer = mcpServers['scaffold-mcp'];
-    if (scaffoldAgent && scaffoldServer) {
+    if (scaffoldAgent) {
       for (const [method, methodConfig] of [
         ['preToolUse', scaffoldAgent.preToolUse],
         ['postToolUse', scaffoldAgent.postToolUse],
@@ -282,7 +338,11 @@ async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string)
       ] as const) {
         if (methodConfig === undefined) continue;
         const extraFlags = methodConfig?.args ? argsToFlags(methodConfig?.args) : [];
-        const command = buildHookCommand(scaffoldServer, `claude-code.${method}`, extraFlags);
+        const command = buildScaffoldHookCommand(
+          `claude-code.${method}`,
+          extraFlags,
+          scaffoldServer,
+        );
         const matcher = (methodConfig as { matcher?: string } | undefined)?.matcher;
         addHookEntry(hooksOutput, METHOD_TO_EVENT[method], command, matcher);
         hasAny = true;
@@ -313,7 +373,21 @@ async function writeClaudeSettings(config: ToolkitConfig, workspaceRoot: string)
       return false;
     }
 
-    const settings: ClaudeSettingsJson = { hooks: hooksOutput };
+    let existing: Partial<ClaudeSettingsJson> = {};
+    try {
+      const text = await readFile(
+        path.join(workspaceRoot, CLAUDE_SETTINGS_DIR, CLAUDE_SETTINGS_FILE),
+        'utf-8',
+      );
+      const parsed: unknown = JSON.parse(text);
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        throw new Error('Claude settings must be an object');
+      }
+      existing = parsed as Partial<ClaudeSettingsJson>;
+    } catch (error) {
+      if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
+    }
+    const settings = mergeClaudeSettings(existing, hooksOutput);
     const claudeDir = path.join(workspaceRoot, CLAUDE_SETTINGS_DIR);
     await mkdir(claudeDir, { recursive: true });
     await writeFile(

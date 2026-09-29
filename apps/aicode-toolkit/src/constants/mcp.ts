@@ -46,7 +46,8 @@ export const MCP_SERVER_INFO = {
     description: 'Code review, design patterns, and coding standards enforcement',
   },
   [MCPServer.SCAFFOLD]: {
-    name: 'Scaffold MCP',
-    description: 'Project scaffolding, boilerplates, and feature generation',
+    name: 'Scaffolding (Skill + CLI)',
+    description:
+      'Project scaffolding and feature generation through a CLI skill, without an MCP server',
   },
 } as const;

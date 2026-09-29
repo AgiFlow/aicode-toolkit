@@ -247,17 +247,9 @@ architect-mcp:
 # Run `aicode sync` to write the output file.
 # ---------------------------------------------------------------------------
 
+# Scaffolding uses the installed scaffolding skill and CLI, not mcp-config.servers.
 # mcp-config:
 #   servers:
-#     scaffold-mcp:
-#       command: bun
-#       args:
-#         - run
-#         - packages/scaffold-mcp/src/cli.ts
-#         - mcp-serve
-#         - --admin-enable
-#         - --prompt-as-skill
-#       instruction: "Use this server for generating boilerplate code, scaffolding new projects, and adding features to existing projects."
 #     architect-mcp:
 #       command: bun
 #       args:

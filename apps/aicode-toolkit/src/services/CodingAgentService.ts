@@ -30,7 +30,9 @@ import {
   GitHubCopilotService,
   type CodingAgentId,
 } from '@agiflowai/coding-agent-bridge';
-import { print } from '@agiflowai/aicode-utils';
+import path from 'node:path';
+import { ensureDir, pathExists, print, writeFile } from '@agiflowai/aicode-utils';
+import scaffoldingSkill from '../instructions/scaffolding.md?raw';
 
 // Re-export the type for convenience
 export type CodingAgent = CodingAgentId;
@@ -207,6 +209,16 @@ export class CodingAgentService {
     }
   }
 
+  private async installScaffoldingSkill(): Promise<void> {
+    const skillDir = path.join(this.workspaceRoot, '.claude', 'skills', 'scaffolding');
+    const skillPath = path.join(skillDir, 'SKILL.md');
+    if (await pathExists(skillPath)) return;
+
+    await ensureDir(skillDir);
+    await writeFile(skillPath, scaffoldingSkill);
+    print.success('Installed the scaffolding CLI skill in .claude/skills/scaffolding');
+  }
+
   /**
    * Setup MCP configuration for the selected coding agent
    * @param agent - The coding agent to configure
@@ -249,6 +261,15 @@ export class CodingAgentService {
       return;
     }
 
+    // Keep the legacy selection ID, but install a skill instead of an MCP server.
+    if (
+      !selectedMcpServers ||
+      selectedMcpServers.includes('scaffold-mcp') ||
+      selectedMcpServers.includes('one-mcp')
+    ) {
+      await this.installScaffoldingSkill();
+    }
+
     // Check if one-mcp is selected
     const useOneMcp = selectedMcpServers?.includes('one-mcp');
 
@@ -279,15 +300,6 @@ export class CodingAgentService {
         { type: 'stdio'; command: string; args: string[]; disabled: boolean }
       > = {};
 
-      if (selectedMcpServers?.includes('scaffold-mcp') ?? true) {
-        mcpServers['scaffold-mcp'] = {
-          type: 'stdio' as const,
-          command: 'npx',
-          args: ['-y', '@agiflowai/scaffold-mcp', 'mcp-serve'],
-          disabled: false,
-        };
-      }
-
       if (selectedMcpServers?.includes('architect-mcp') ?? true) {
         mcpServers['architect-mcp'] = {
           type: 'stdio' as const,
@@ -297,13 +309,11 @@ export class CodingAgentService {
         };
       }
 
-      // Update MCP settings using the service (each service handles its own format conversion)
-      await service.updateMcpSettings({
-        servers: mcpServers,
-      });
-
-      const serverNames = Object.keys(mcpServers).join(' and ');
-      print.success(`Added ${serverNames} to ${configLocation}`);
+      // A scaffold-only selection has no MCP servers to register.
+      if (Object.keys(mcpServers).length > 0) {
+        await service.updateMcpSettings({ servers: mcpServers });
+        print.success(`Added ${Object.keys(mcpServers).join(' and ')} to ${configLocation}`);
+      }
     }
 
     print.info('\nNext steps:');
@@ -330,12 +340,7 @@ export class CodingAgentService {
     const serversToInclude = selectedMcpServers?.filter((s) => s !== 'one-mcp') ?? [];
 
     for (const server of serversToInclude) {
-      if (server === 'scaffold-mcp') {
-        servers['scaffold-mcp'] = {
-          command: 'npx',
-          args: ['-y', '@agiflowai/scaffold-mcp', 'mcp-serve', '--admin-enable'],
-        };
-      } else if (server === 'architect-mcp') {
+      if (server === 'architect-mcp') {
         servers['architect-mcp'] = {
           command: 'npx',
           args: ['-y', '@agiflowai/architect-mcp', 'mcp-serve', '--admin-enable'],
@@ -343,12 +348,8 @@ export class CodingAgentService {
       }
     }
 
-    // If no servers selected (only one-mcp), include all available servers by default
-    if (Object.keys(servers).length === 0) {
-      servers['scaffold-mcp'] = {
-        command: 'npx',
-        args: ['-y', '@agiflowai/scaffold-mcp', 'mcp-serve', '--admin-enable'],
-      };
+    // Selecting only the proxy keeps its architecture default, never a scaffold server.
+    if (serversToInclude.length === 0) {
       servers['architect-mcp'] = {
         command: 'npx',
         args: ['-y', '@agiflowai/architect-mcp', 'mcp-serve', '--admin-enable'],

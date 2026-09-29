@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { CallToolResult } from '@modelcontextprotocol/server';
 import { generateStableId } from '@agiflowai/aicode-utils';
 import { FileSystemService } from '../services/FileSystemService';
@@ -12,11 +13,15 @@ export class UseScaffoldMethodTool {
   private scaffoldingMethodsService: ScaffoldingMethodsService;
   private isMonolith: boolean;
 
-  constructor(templatesPath: string, isMonolith: boolean = false) {
+  private readonly workspaceRoot: string;
+
+  constructor(templatesPath: string, isMonolith: boolean = false, workspaceRoot = process.cwd()) {
+    this.workspaceRoot = path.resolve(workspaceRoot);
     this.fileSystemService = new FileSystemService();
     this.scaffoldingMethodsService = new ScaffoldingMethodsService(
       this.fileSystemService,
       templatesPath,
+      this.workspaceRoot,
     );
     this.isMonolith = isMonolith;
   }
@@ -94,9 +99,9 @@ IMPORTANT:
         marker?: string;
       };
 
-      // In monolith mode, automatically use current working directory
-      // In monorepo mode, projectPath is required by schema
-      const resolvedProjectPath = this.isMonolith ? process.cwd() : projectPath!;
+      // The captured workspace is stable even when another server uses a different checkout.
+      // In monorepo mode, projectPath is required by schema.
+      const resolvedProjectPath = this.isMonolith ? this.workspaceRoot : projectPath!;
 
       const result = await this.scaffoldingMethodsService.useScaffoldMethod({
         projectPath: resolvedProjectPath,

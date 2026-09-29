@@ -13,6 +13,18 @@ This repo provides:
 - rule-based review after edits
 - design-system discovery for frontend work
 
+## Agent integration: skills and CLI
+
+Scaffolding uses the `scaffolding` skill and CLI rather than a per-agent MCP server. Toolkit setup installs `.claude/skills/scaffolding/SKILL.md`; existing skills are preserved. The scaffold package also ships `skills/scaffolding/SKILL.md` for plugin distribution.
+
+```bash
+npx --yes @agiflowai/scaffold-mcp@2.0.0 boilerplate list
+npx --yes @agiflowai/scaffold-mcp@2.0.0 scaffold list '<project-path>'
+npx --yes @agiflowai/scaffold-mcp@2.0.0 scaffold info '<feature-name>' --project '<project-path>'
+```
+
+Load the skill before generating files and use the discovered schema for `--vars`. Scaffold CLI hooks remain enabled independently of MCP registration. MCP transport examples below describe the optional compatibility interface, not the default agent integration.
+
 ## Why This Exists
 
 As projects scale, conventions in docs like `CLAUDE.md`, `AGENTS.md`, and style guides become hard to keep concise and consistently applied by AI agents. This toolkit moves those conventions into reusable template configs (`scaffold.yaml`, `architect.yaml`, `RULES.yaml`) so agents can discover only the relevant guidance when needed.

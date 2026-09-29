@@ -8,16 +8,16 @@ An Nx monorepo for building MCP (Model Context Protocol) servers and tooling. Us
 
 ## Coding Workflow (IMPORTANT)
 
-When working on code in this repository, **ALWAYS** follow this workflow using MCP tools:
+When working on code in this repository, **ALWAYS** follow this workflow using the appropriate skill and CLI or MCP capability:
 
 ### 1. Creating New Applications or Features
 
-**Use scaffold-mcp MCP tools to generate boilerplate code:**
+**Use scaffolding CLI to generate boilerplate code:**
 
-- **List available boilerplates**: Use `list-boilerplates` MCP tool from scaffold-mcp
-- **Create new application**: Use `use-boilerplate` MCP tool from scaffold-mcp
-- **List available features**: Use `list-scaffolding-methods` MCP tool from scaffold-mcp with `projectPath` parameter
-- **Add new feature**: Use `use-scaffold-method` MCP tool from scaffold-mcp
+- **List available boilerplates**: Use `bun run packages/scaffold-mcp/src/cli.ts boilerplate list` CLI command
+- **Create new application**: Use `bun run packages/scaffold-mcp/src/cli.ts boilerplate create` CLI command
+- **List available features**: Use `bun run packages/scaffold-mcp/src/cli.ts scaffold list` CLI command with a project-path argument
+- **Add new feature**: Use `bun run packages/scaffold-mcp/src/cli.ts scaffold add` CLI command
 
 ### 2. Before Editing Files
 
@@ -50,12 +50,12 @@ This checks:
 
 ### Summary
 
-1. **Create**: Use scaffold-mcp MCP tools (`use-boilerplate` or `use-scaffold-method`)
+1. **Create**: Use scaffolding CLI (`bun run packages/scaffold-mcp/src/cli.ts boilerplate create` or `bun run packages/scaffold-mcp/src/cli.ts scaffold add`)
 2. **Before Edit**: Use architect-mcp `get_file_design_pattern` tool to understand patterns
 3. **After Edit**: Use architect-mcp `review_code_change` tool to check for code smells
 4. **Fix**: Address any violations found in the review
 
-**Note**: CLI commands are available for manual user interaction but you should use MCP tools directly.
+**Note**: Scaffolding uses the `scaffolding` skill and repository CLI directly. The architecture tools described above retain their existing MCP interface.
 
 ## Development
 
@@ -74,3 +74,7 @@ pnpm typecheck
 ```
 
 Code quality: Uses [oxlint](https://oxc.rs/docs/guide/usage/linter) for type-aware linting (config: `.oxlintrc.json`) and [oxfmt](https://oxc.rs/docs/guide/usage/formatter) for formatting (config: `.oxfmtrc.json`)
+
+## Scaffolding
+
+Load the `scaffolding` skill before creating files. Run `bun run packages/scaffold-mcp/src/cli.ts boilerplate list` or `bun run packages/scaffold-mcp/src/cli.ts scaffold list <project-path>` before choosing a template. Do not connect a scaffolding MCP server.

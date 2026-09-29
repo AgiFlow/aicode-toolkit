@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { CallToolResult } from '@modelcontextprotocol/server';
 import { ProjectConfigResolver } from '@agiflowai/aicode-utils';
 import listScaffoldingMethodsDescription from '../instructions/tools/list-scaffolding-methods/description.md?raw';
@@ -17,11 +18,15 @@ export class ListScaffoldingMethodsTool {
   private templateService: TemplateService;
   private isMonolith: boolean;
 
-  constructor(templatesPath: string, isMonolith: boolean = false) {
+  private readonly workspaceRoot: string;
+
+  constructor(templatesPath: string, isMonolith: boolean = false, workspaceRoot = process.cwd()) {
+    this.workspaceRoot = path.resolve(workspaceRoot);
     this.fileSystemService = new FileSystemService();
     this.scaffoldingMethodsService = new ScaffoldingMethodsService(
       this.fileSystemService,
       templatesPath,
+      this.workspaceRoot,
     );
     this.templateService = new TemplateService();
     this.isMonolith = isMonolith;
@@ -86,7 +91,7 @@ export class ListScaffoldingMethodsTool {
       // In monolith mode, read template name from toolkit.yaml or project.json
       if (this.isMonolith) {
         try {
-          const config = await ProjectConfigResolver.resolveProjectConfig(process.cwd());
+          const config = await ProjectConfigResolver.resolveProjectConfig(this.workspaceRoot);
           const resolvedTemplateName = config.sourceTemplate;
           result = await this.scaffoldingMethodsService.listScaffoldingMethodsByTemplate(
             resolvedTemplateName,

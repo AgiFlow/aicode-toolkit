@@ -1,0 +1,4 @@
+interface:
+  display_name: Scaffolding
+  short_description: Discover and run scaffolding CLI commands
+  default_prompt: Use $scaffolding to discover templates and scaffold files with the CLI.

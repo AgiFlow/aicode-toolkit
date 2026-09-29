@@ -22,6 +22,45 @@ describe('WriteToFileTool', () => {
     tool = new WriteToFileTool();
   });
 
+  it('keeps its captured workspace after the process working directory changes', async () => {
+    cwdSpy.mockReturnValue('/another-checkout');
+    const result = await tool.execute({ file_path: 'result.txt', content: 'original workspace' });
+    expect(result.isError).toBeFalsy();
+    expect(internals(tool).fileSystemService.writeFile).toHaveBeenCalledWith(
+      '/workspace/result.txt',
+      'original workspace',
+    );
+  });
+
+  it('keeps two explicit workspaces isolated in one process', async () => {
+    const first = new WriteToFileTool('/checkout-a');
+    const second = new WriteToFileTool('/checkout-b');
+    await Promise.all([
+      first.execute({ file_path: 'result.txt', content: 'a' }),
+      second.execute({ file_path: 'result.txt', content: 'b' }),
+    ]);
+    expect(internals(first).fileSystemService.writeFile).toHaveBeenCalledWith(
+      '/checkout-a/result.txt',
+      'a',
+    );
+    expect(internals(second).fileSystemService.writeFile).toHaveBeenCalledWith(
+      '/checkout-b/result.txt',
+      'b',
+    );
+    const rejected = await first.execute({
+      file_path: '/checkout-b/result.txt',
+      content: 'wrong workspace',
+    });
+    expect(rejected.isError).toBe(true);
+    expect(internals(first).fileSystemService.writeFile).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects non-string contents before touching the filesystem', async () => {
+    const result = await tool.execute({ file_path: 'result.txt', content: 123 });
+    expect(result.isError).toBe(true);
+    expect(internals(tool).fileSystemService.writeFile).not.toHaveBeenCalled();
+  });
+
   describe('getDefinition', () => {
     it('should return tool definition with correct schema', () => {
       const definition = tool.getDefinition();

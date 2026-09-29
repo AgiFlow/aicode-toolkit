@@ -13,6 +13,8 @@ import {
   buildMcpConfigYaml,
   buildHookCommand,
   resolveArchitectClaudeMatcher,
+  buildScaffoldHookCommand,
+  mergeClaudeSettings,
 } from '../../src/commands/sync';
 
 // ---------------------------------------------------------------------------
@@ -184,35 +186,105 @@ describe('buildMcpConfigYaml', () => {
     expect(buildMcpConfigYaml({})).toBeNull();
   });
 
-  it('maps mcp-config servers and skills into mcp-config.yaml shape', () => {
+  it('preserves other servers, instructions, and skills while omitting CLI-backed servers', () => {
     expect(
       buildMcpConfigYaml({
         'mcp-config': {
           servers: {
-            'scaffold-mcp': {
+            'scaffold-mcp': { command: 'npx', args: ['@agiflowai/scaffold-mcp', 'mcp-serve'] },
+            'log-sink': { command: 'npx', args: ['@agimon-ai/log-sink-mcp', 'mcp-serve'] },
+            'custom-scaffold-name': {
               command: 'bun',
               args: ['run', 'packages/scaffold-mcp/src/cli.ts', 'mcp-serve'],
-              instruction: 'Use scaffold-mcp for scaffolding.',
+            },
+            'architect-mcp': {
+              command: 'bun',
+              args: ['run', 'packages/architect-mcp/src/cli.ts', 'mcp-serve'],
+              instruction: 'Review architecture.',
+              config: { keepAlive: true },
             },
           },
-          skills: {
-            paths: ['docs/skills'],
-          },
+          skills: { paths: ['docs/skills'] },
         },
-      } as any),
+      }),
     ).toEqual({
       mcpServers: {
-        'scaffold-mcp': {
+        'architect-mcp': {
           command: 'bun',
-          args: ['run', 'packages/scaffold-mcp/src/cli.ts', 'mcp-serve'],
-          config: {
-            instruction: 'Use scaffold-mcp for scaffolding.',
-          },
+          args: ['run', 'packages/architect-mcp/src/cli.ts', 'mcp-serve'],
+          config: { keepAlive: true, instruction: 'Review architecture.' },
         },
       },
-      skills: {
-        paths: ['docs/skills'],
-      },
+      skills: { paths: ['docs/skills'] },
     });
+  });
+
+  it('writes an empty server map so obsolete registrations are cleared on sync', () => {
+    expect(
+      buildMcpConfigYaml({
+        'mcp-config': {
+          servers: { scaffolding: { command: 'scaffold-mcp', args: ['mcp-serve'] } },
+        },
+      }),
+    ).toEqual({ mcpServers: {} });
+  });
+});
+
+describe('CLI-only scaffolding hooks', () => {
+  it('generates a hook command without an MCP server entry', () => {
+    expect(buildScaffoldHookCommand('claude-code.preToolUse', ['--verbose'])).toBe(
+      'npx --yes @agiflowai/scaffold-mcp@2.0.0 hook --type claude-code.preToolUse --verbose',
+    );
+  });
+
+  it('preserves a legacy repository-specific executable during migration', () => {
+    expect(
+      buildScaffoldHookCommand('claude-code.stop', [], {
+        command: 'bun',
+        args: ['run', 'packages/scaffold-mcp/src/cli.ts', 'mcp-serve'],
+      }),
+    ).toBe('bun run packages/scaffold-mcp/src/cli.ts hook --type claude-code.stop');
+  });
+});
+
+describe('mergeClaudeSettings', () => {
+  it('preserves CLI permissions and unrelated hooks while replacing managed hooks idempotently', () => {
+    const existing: Parameters<typeof mergeClaudeSettings>[0] = {
+      permissions: { allow: ['Bash(pnpm exec log-sink-mcp logs search *)'] },
+      hooks: {
+        PreToolUse: [
+          {
+            matcher: 'Write',
+            hooks: [
+              { type: 'command', command: 'scaffold-mcp hook --type claude-code.preToolUse' },
+              { type: 'command', command: 'node tools/preserve-this-hook.js' },
+            ],
+          },
+        ],
+        Notification: [{ hooks: [{ type: 'command', command: 'echo notified' }] }],
+      },
+    };
+    const generated: Parameters<typeof mergeClaudeSettings>[1] = {
+      PreToolUse: [
+        {
+          matcher: 'Write',
+          hooks: [
+            {
+              type: 'command',
+              command: buildScaffoldHookCommand('claude-code.preToolUse', []),
+            },
+          ],
+        },
+      ],
+    };
+
+    const merged = mergeClaudeSettings(existing, generated);
+
+    expect(merged.permissions).toEqual(existing.permissions);
+    expect(merged.hooks.Notification).toEqual(existing.hooks?.Notification);
+    expect(merged.hooks.PreToolUse).toHaveLength(2);
+    expect(merged.hooks.PreToolUse[0].hooks[0].command).toBe('node tools/preserve-this-hook.js');
+    expect(mergeClaudeSettings(merged, generated)).toEqual(merged);
+    expect(existing.hooks?.PreToolUse[0].hooks).toHaveLength(2);
   });
 });

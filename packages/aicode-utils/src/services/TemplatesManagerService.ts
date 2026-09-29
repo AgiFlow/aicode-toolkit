@@ -136,8 +136,8 @@ export class TemplatesManagerService {
 
       // Check if we've reached the filesystem root
       if (currentPath === rootPath) {
-        // No .git found, return current working directory as workspace root
-        return process.cwd();
+        // A non-Git workspace is the caller's starting path, not another server's cwd.
+        return path.resolve(startPath);
       }
 
       // Move up to parent directory
@@ -195,8 +195,8 @@ export class TemplatesManagerService {
 
       // Check if we've reached the filesystem root
       if (currentPath === rootPath) {
-        // No .git found, return current working directory as workspace root
-        return process.cwd();
+        // Preserve the explicit workspace for non-Git callers as well.
+        return path.resolve(startPath);
       }
 
       // Move up to parent directory

@@ -22,14 +22,18 @@ export class ScaffoldService implements IScaffoldService {
 
   private readonly templatesRootPath: string;
   private readonly processingService: ScaffoldProcessingService;
+  private readonly workspaceRoot: string;
 
   constructor(
     private fileSystem: IFileSystemService,
     private scaffoldConfigLoader: IScaffoldConfigLoader,
     private variableReplacer: IVariableReplacementService,
     templatesRootPath?: string,
+    workspaceRoot = process.cwd(),
   ) {
-    const resolvedPath = templatesRootPath || TemplatesManagerService.findTemplatesPathSync();
+    this.workspaceRoot = path.resolve(workspaceRoot);
+    const resolvedPath =
+      templatesRootPath || TemplatesManagerService.findTemplatesPathSync(this.workspaceRoot);
     if (!resolvedPath) {
       throw new Error(
         'Templates folder not found. Please create a "templates" folder in your workspace root, ' +
@@ -62,8 +66,8 @@ export class ScaffoldService implements IScaffoldService {
           ? path.join(targetFolder, projectName)
           : targetFolder
         : projectName
-          ? path.join(process.cwd(), targetFolder, projectName)
-          : path.join(process.cwd(), targetFolder);
+          ? path.join(this.workspaceRoot, targetFolder, projectName)
+          : path.join(this.workspaceRoot, targetFolder);
       const templatePath = path.join(this.templatesRootPath, templateFolder);
 
       // Validate template first

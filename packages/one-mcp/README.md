@@ -548,3 +548,7 @@ The definitions cache stores tool schemas, prompt metadata, and prompt-based ski
 ## License
 
 AGPL-3.0 © AgiflowIO
+
+## CLI-backed capabilities
+
+Scaffolding is now invoked through the `scaffolding` skill and CLI. Do not add a scaffold upstream for ordinary agent work. Examples showing that upstream remain applicable only to the optional MCP compatibility interface. Other MCP integrations are unchanged.

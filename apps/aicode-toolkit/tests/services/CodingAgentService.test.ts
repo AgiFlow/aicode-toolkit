@@ -26,6 +26,8 @@ import { execFileSync } from 'node:child_process';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CodingAgentService } from '../../src/services/CodingAgentService';
 
+const { updateMcpSettings } = vi.hoisted(() => ({ updateMcpSettings: vi.fn() }));
+
 // Mock dependencies
 vi.mock('@agiflowai/aicode-utils', async () => {
   const actual = await vi.importActual('@agiflowai/aicode-utils');
@@ -42,27 +44,27 @@ vi.mock('@agiflowai/coding-agent-bridge', () => {
   // Create mock classes that can be instantiated with 'new'
   const MockClaudeCodeService = class {
     isEnabled = vi.fn().mockResolvedValue(true);
-    updateMcpSettings = vi.fn().mockResolvedValue(undefined);
+    updateMcpSettings = updateMcpSettings;
   };
 
   const MockCodexService = class {
     isEnabled = vi.fn().mockResolvedValue(false);
-    updateMcpSettings = vi.fn().mockResolvedValue(undefined);
+    updateMcpSettings = updateMcpSettings;
   };
 
   const MockCursorService = class {
     isEnabled = vi.fn().mockResolvedValue(false);
-    updateMcpSettings = vi.fn().mockResolvedValue(undefined);
+    updateMcpSettings = updateMcpSettings;
   };
 
   const MockGeminiCliService = class {
     isEnabled = vi.fn().mockResolvedValue(false);
-    updateMcpSettings = vi.fn().mockResolvedValue(undefined);
+    updateMcpSettings = updateMcpSettings;
   };
 
   const MockGitHubCopilotService = class {
     isEnabled = vi.fn().mockResolvedValue(false);
-    updateMcpSettings = vi.fn().mockResolvedValue(undefined);
+    updateMcpSettings = updateMcpSettings;
   };
 
   return {
@@ -90,6 +92,10 @@ describe('CodingAgentService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(fsHelpers.pathExists).mockResolvedValue(false);
+    vi.mocked(fsHelpers.ensureDir).mockResolvedValue(undefined);
+    vi.mocked(fsHelpers.writeFile).mockResolvedValue(undefined);
+    updateMcpSettings.mockResolvedValue(undefined);
     service = new CodingAgentService(workspaceRoot);
   });
 
@@ -130,6 +136,46 @@ describe('CodingAgentService', () => {
       vi.mocked(fsHelpers.writeFile).mockResolvedValue(undefined);
 
       await expect(service.setupMCP(CLAUDE_CODE)).resolves.not.toThrow();
+    });
+
+    it('installs the scaffolding CLI skill without registering a scaffold MCP server', async () => {
+      await service.setupMCP(CLAUDE_CODE);
+
+      expect(fsHelpers.writeFile).toHaveBeenCalledWith(
+        '/test/workspace/.claude/skills/scaffolding/SKILL.md',
+        expect.stringContaining('scaffold-mcp@2.0.0 boilerplate list'),
+      );
+      expect(updateMcpSettings).toHaveBeenCalledWith({
+        servers: {
+          'architect-mcp': expect.any(Object),
+        },
+      });
+    });
+
+    it('preserves an existing scaffolding skill and registers no empty MCP configuration', async () => {
+      vi.mocked(fsHelpers.pathExists).mockResolvedValue(true);
+
+      await service.setupMCP(CLAUDE_CODE, ['scaffold-mcp']);
+
+      expect(fsHelpers.writeFile).not.toHaveBeenCalled();
+      expect(updateMcpSettings).not.toHaveBeenCalled();
+    });
+
+    it('keeps scaffold CLI out of the default one-mcp upstream list', async () => {
+      await service.setupMCP(CLAUDE_CODE, ['one-mcp']);
+
+      const args = vi.mocked(execFileSync).mock.calls[0]?.[1] as string[];
+      const servers = JSON.parse(args[args.indexOf('--mcp-servers') + 1]);
+      expect(servers).not.toHaveProperty('scaffold-mcp');
+      expect(servers).toHaveProperty('architect-mcp');
+      expect(fsHelpers.writeFile).toHaveBeenCalled();
+    });
+
+    it('reports a skill write failure instead of installing partial MCP settings', async () => {
+      vi.mocked(fsHelpers.writeFile).mockRejectedValueOnce(new Error('permission denied'));
+
+      await expect(service.setupMCP(CLAUDE_CODE)).rejects.toThrow('permission denied');
+      expect(updateMcpSettings).not.toHaveBeenCalled();
     });
 
     it('should create one-mcp config using explicit npx package execution', async () => {
