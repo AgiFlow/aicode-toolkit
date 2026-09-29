@@ -1,3 +1,13 @@
+## 2.0.1 (2026-09-27)
+
+### 🚀 Features
+
+- **scaffold-mcp:** improve local CLI discovery and JSON output ([7576371](https://github.com/AgiFlow/aicode-toolkit/commit/7576371))
+
+### ❤️ Thank You
+
+- vuongngo
+
 # 2.0.0 (2026-09-27)
 
 ### 🩹 Fixes

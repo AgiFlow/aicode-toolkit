@@ -1,0 +1,30 @@
+{
+  "name": "aicode-admin",
+  "version": "0.5.0",
+  "description": "Author templates, generators, design patterns and coding rules.",
+  "mcpServers": {
+    "aicode-scaffold-admin": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@agiflowai/scaffold-mcp@2.0.0",
+        "mcp-serve",
+        "--type",
+        "stdio",
+        "--admin-enable"
+      ]
+    },
+    "aicode-architect-admin": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@agiflowai/architect-mcp@2.0.0",
+        "mcp-serve",
+        "--type",
+        "stdio",
+        "--admin-enable"
+      ]
+    }
+  },
+  "contextFileName": "GEMINI.md"
+}

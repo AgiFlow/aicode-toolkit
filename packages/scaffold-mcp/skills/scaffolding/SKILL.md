@@ -12,7 +12,7 @@ metadata:
     - templates/**/scaffold.yaml
     - templates/**/*.liquid
     - project.json
-    - "**/project.json"
+    - '**/project.json'
 ---
 
 # Scaffolding

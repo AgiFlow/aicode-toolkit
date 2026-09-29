@@ -1,0 +1,16 @@
+{
+  "name": "aicode-develop",
+  "version": "0.5.0",
+  "description": "Scaffold features with design-pattern guidance and post-edit review.",
+  "mcpServers": {
+    "aicode-scaffold": {
+      "command": "npx",
+      "args": ["-y", "@agiflowai/scaffold-mcp@2.0.0", "mcp-serve", "--type", "stdio"]
+    },
+    "aicode-architect": {
+      "command": "npx",
+      "args": ["-y", "@agiflowai/architect-mcp@2.0.0", "mcp-serve", "--type", "stdio"]
+    }
+  },
+  "contextFileName": "GEMINI.md"
+}

@@ -681,47 +681,37 @@ mcpServers:
 
       await writeFile(tempConfigPath, JSON.stringify(localConfig));
 
-      // Track the order of fetch calls to verify they happen in parallel
-      const fetchOrder: number[] = [];
-      let fetchCount = 0;
-
-      (global.fetch as any).mockImplementation(async (url: string) => {
-        const currentFetch = ++fetchCount;
-        fetchOrder.push(currentFetch);
-
-        // Simulate network delay
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        if (url.includes('config1.json')) {
-          return { ok: true, json: async () => remoteConfig1 };
-        }
-        if (url.includes('config2.json')) {
-          return { ok: true, json: async () => remoteConfig2 };
-        }
-        if (url.includes('config3.json')) {
-          return { ok: true, json: async () => remoteConfig3 };
-        }
-      });
+      // Hold each response until every request has started. A sequential
+      // implementation cannot start the second request until the first resolves.
+      const completeFetches: Array<() => void> = [];
+      (global.fetch as any).mockImplementation(
+        (url: string) =>
+          new Promise((resolve) => {
+            const config = url.includes('config1.json')
+              ? remoteConfig1
+              : url.includes('config2.json')
+                ? remoteConfig2
+                : remoteConfig3;
+            completeFetches.push(() => resolve({ ok: true, json: async () => config }));
+          }),
+      );
 
       const service = new ConfigFetcherService({
         configFilePath: tempConfigPath,
         useCache: false, // Disable cache for predictable test behavior
       });
 
-      const startTime = Date.now();
-      const result = await service.fetchConfiguration();
-      const endTime = Date.now();
+      const pendingResult = service.fetchConfiguration();
+      await vi.waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(3));
+      expect(completeFetches).toHaveLength(3);
+      for (const complete of completeFetches) complete();
+      const result = await pendingResult;
 
       // Verify all configs were fetched
       expect(result.mcpServers['remote-1']).toBeDefined();
       expect(result.mcpServers['remote-2']).toBeDefined();
       expect(result.mcpServers['remote-3']).toBeDefined();
       expect(global.fetch).toHaveBeenCalledTimes(3);
-
-      // If sequential, would take ~30ms (3 * 10ms)
-      // If parallel, should take ~10ms (max of all)
-      // Allow some buffer for test execution
-      expect(endTime - startTime).toBeLessThan(50);
     });
   });
 

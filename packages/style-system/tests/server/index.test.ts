@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ListSharedComponentsTool, ListThemesTool } from '../../src/tools';
 
 vi.mock('@modelcontextprotocol/server', () => {
   class MockServer {
@@ -55,5 +56,34 @@ describe('style-system server capability metadata', () => {
         }),
       ]),
     );
+  });
+});
+
+afterEach(() => vi.restoreAllMocks());
+
+describe('style-system request dispatch', () => {
+  it.each([
+    ['list_themes', ListThemesTool, { appPath: 'apps/site' }],
+    ['list_shared_components', ListSharedComponentsTool, { tags: ['button'], cursor: 'next' }],
+  ] as const)('forwards %s arguments to its tool', async (name, Tool, args) => {
+    const execute = vi.spyOn(Tool.prototype, 'execute').mockResolvedValue({ content: [] });
+    const { createServer } = await import('../../src/server');
+    const server = createServer() as unknown as MockedServer;
+    const call = Array.from(server.requestHandlers.values())[1];
+
+    await call({ params: { name, arguments: args } });
+    expect(execute).toHaveBeenCalledWith(args);
+  });
+
+  it('uses an empty object for omitted optional arguments', async () => {
+    const execute = vi
+      .spyOn(ListThemesTool.prototype, 'execute')
+      .mockResolvedValue({ content: [] });
+    const { createServer } = await import('../../src/server');
+    const server = createServer() as unknown as MockedServer;
+    const call = Array.from(server.requestHandlers.values())[1];
+
+    await call({ params: { name: 'list_themes' } });
+    expect(execute).toHaveBeenCalledWith({});
   });
 });

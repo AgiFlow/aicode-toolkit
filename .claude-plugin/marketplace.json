@@ -5,179 +5,39 @@
     "email": "vuong@agiflow.io"
   },
   "metadata": {
-    "description": "AI-powered development tools organized by project maturity and purpose. Install only what you need for your development stage.",
-    "version": "0.4.1"
+    "description": "Purpose-based AI development tools for six coding clients.",
+    "version": "0.5.0"
   },
   "plugins": [
     {
       "name": "aicode-bootstrap",
-      "source": {
-        "source": "npm",
-        "package": "@agiflowai/scaffold-mcp"
-      },
-      "description": "🚀 Bootstrap Phase: Create new projects from boilerplate templates. Perfect for starting new applications with Next.js, React, Vite, and more.",
-      "version": "0.4.1",
-      "author": {
-        "name": "AgiflowIO"
-      },
-      "homepage": "https://github.com/AgiFlow/aicode-toolkit#readme",
-      "repository": "https://github.com/AgiFlow/aicode-toolkit",
-      "license": "AGPL-3.0",
-      "keywords": [
-        "bootstrap",
-        "boilerplate",
-        "project-creation",
-        "starter",
-        "nextjs",
-        "react",
-        "vite"
-      ],
-      "category": "productivity",
-      "tags": [
-        "bootstrap",
-        "new-project",
-        "starter"
-      ],
-      "strict": false,
-      "skills": [
-        "./skills/scaffolding"
-      ]
+      "source": "./plugins/aicode-bootstrap",
+      "description": "Discover project boilerplates and create new applications with scaffold-mcp.",
+      "version": "0.5.0"
     },
     {
       "name": "aicode-develop",
-      "source": {
-        "source": "npm",
-        "package": "@agiflowai/scaffold-mcp"
-      },
-      "description": "🔨 Development Phase: Add features to existing projects and get design pattern guidance. Scaffold pages, components, services while following architectural patterns. Includes /edit-with-pattern slash command and 3 specialized agents (Architecture Review, Test Coverage, Migration Assistant) for complex tasks.",
-      "version": "0.4.1",
-      "author": {
-        "name": "AgiflowIO"
-      },
-      "homepage": "https://github.com/AgiFlow/aicode-toolkit#readme",
-      "repository": "https://github.com/AgiFlow/aicode-toolkit",
-      "license": "AGPL-3.0",
-      "keywords": [
-        "development",
-        "features",
-        "scaffolding",
-        "design-patterns",
-        "architecture"
-      ],
-      "category": "productivity",
-      "tags": [
-        "development",
-        "features",
-        "patterns"
-      ],
-      "commands": [
-        "./configs/claude-code/commands/edit-with-pattern.md"
-      ],
-      "agents": [
-        "./configs/claude-code/agents/architecture-reviewer.md",
-        "./configs/claude-code/agents/test-coverage.md",
-        "./configs/claude-code/agents/migration-assistant.md"
-      ],
-      "mcpServers": {
-        "aicode-patterns": {
-          "command": "npx",
-          "args": [
-            "-y",
-            "@agiflowai/architect-mcp",
-            "mcp-serve",
-            "--design-pattern-tool",
-            "claude-code"
-          ]
-        }
-      },
-      "strict": false,
-      "skills": [
-        "./skills/scaffolding"
-      ]
+      "source": "./plugins/aicode-develop",
+      "description": "Scaffold features with design-pattern guidance and post-edit review.",
+      "version": "0.5.0"
     },
     {
       "name": "aicode-review",
-      "source": {
-        "source": "npm",
-        "package": "@agiflowai/architect-mcp"
-      },
-      "description": "✅ Quality Phase: Enforce code quality and review standards. Review code changes against architectural rules and coding standards for mature projects.",
-      "version": "0.4.1",
-      "author": {
-        "name": "AgiflowIO"
-      },
-      "homepage": "https://github.com/AgiFlow/aicode-toolkit#readme",
-      "repository": "https://github.com/AgiFlow/aicode-toolkit",
-      "license": "AGPL-3.0",
-      "keywords": [
-        "code-review",
-        "quality",
-        "standards",
-        "rules",
-        "governance"
-      ],
-      "category": "code-quality",
-      "tags": [
-        "review",
-        "quality",
-        "standards"
-      ],
-      "mcpServers": {
-        "aicode-review": {
-          "command": "npx",
-          "args": [
-            "-y",
-            "@agiflowai/architect-mcp",
-            "mcp-serve",
-            "--review-tool",
-            "claude-code"
-          ]
-        }
-      },
-      "strict": false
+      "source": "./plugins/aicode-review",
+      "description": "Review project changes against applicable architecture and coding rules.",
+      "version": "0.5.0"
     },
     {
       "name": "aicode-admin",
-      "source": {
-        "source": "npm",
-        "package": "@agiflowai/scaffold-mcp"
-      },
-      "description": "⚙️ Customization Phase: Create and manage custom templates, patterns, and rules. For platform engineers and framework authors building reusable templates.",
-      "version": "0.4.1",
-      "author": {
-        "name": "AgiflowIO"
-      },
-      "homepage": "https://github.com/AgiFlow/aicode-toolkit#readme",
-      "repository": "https://github.com/AgiFlow/aicode-toolkit",
-      "license": "AGPL-3.0",
-      "keywords": [
-        "admin",
-        "templates",
-        "customization",
-        "platform",
-        "framework"
-      ],
-      "category": "productivity",
-      "tags": [
-        "admin",
-        "templates",
-        "customization"
-      ],
-      "mcpServers": {
-        "aicode-architect-admin": {
-          "command": "npx",
-          "args": [
-            "-y",
-            "@agiflowai/architect-mcp",
-            "mcp-serve",
-            "--admin-enable"
-          ]
-        }
-      },
-      "strict": false,
-      "skills": [
-        "./skills/scaffolding"
-      ]
+      "source": "./plugins/aicode-admin",
+      "description": "Author templates, generators, design patterns and coding rules.",
+      "version": "0.5.0"
+    },
+    {
+      "name": "aicode-design",
+      "source": "./plugins/aicode-design",
+      "description": "Explore themes, supported CSS classes and UI component previews.",
+      "version": "0.5.0"
     }
   ]
 }

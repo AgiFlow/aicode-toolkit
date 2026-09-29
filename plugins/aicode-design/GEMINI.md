@@ -1,0 +1,5 @@
+# aicode-design
+
+Explore themes, supported CSS classes and UI component previews.
+
+Read the relevant skill under `skills/` for workflow guidance. Run the MCP server in the consumer project, not the extension installation directory. Before enabling scaffold-backed servers, initialize the consumer project interactively with `npx -y @agiflowai/aicode-toolkit@2.0.0 init --skip-mcp`. Workspace configuration may enable admin tools and nested agent backends.
