@@ -41,10 +41,10 @@
     "@agiflowai/coding-agent-bridge": "workspace:*",
     "@agiflowai/hooks-adapter": "workspace:*",
     "@modelcontextprotocol/node": "2.1.0",
-    "@modelcontextprotocol/server": "2.1.0",
+    "@modelcontextprotocol/server": "2.2.0",
     "@modelcontextprotocol/server-legacy": "2.1.0",
     "@types/express": "5.0.6",
-    "chalk": "6.0.0",
+    "chalk": "6.0.1",
     "commander": "15.0.0",
     "execa": "10.0.1",
     "express": "5.2.1",
@@ -57,6 +57,6 @@
     "@types/node": "26.6.3",
     "tsdown": "0.23.0",
     "typescript": "6.0.3",
-    "vitest": "5.0.2"
+    "vitest": "5.0.3"
   }
 }
