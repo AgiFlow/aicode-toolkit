@@ -138,7 +138,7 @@ jobs:
         # Pinned to a release tag. `@main` is a mutable branch ref: it runs
         # whatever is on that branch at that moment, inside the security
         # workflow, and Dependabot's github-actions ecosystem cannot track it.
-        uses: trufflesecurity/trufflehog@v3.97.9
+        uses: trufflesecurity/trufflehog@v3.99.2
         with:
           extra_args: --only-verified --json
           path: ./
