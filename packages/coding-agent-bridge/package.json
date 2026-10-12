@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "@agiflowai/aicode-utils": "workspace:*",
-    "execa": "10.0.1",
+    "execa": "10.1.0",
     "uuid": "14.0.2"
   },
   "devDependencies": {
@@ -47,6 +47,6 @@
     "@vitest/coverage-v8": "5.0.2",
     "tsdown": "0.23.0",
     "typescript": "6.0.3",
-    "vitest": "5.0.2"
+    "vitest": "5.0.3"
   }
 }
