@@ -75,8 +75,8 @@
   },
   "devDependencies": {
     "@types/express": "5.0.6",
-    "@types/node": "26.6.3",
-    "tsdown": "0.23.0",
+    "@types/node": "26.6.5",
+    "tsdown": "0.23.1",
     "typescript": "6.0.3",
     "unplugin-raw": "0.8.0"
   }
