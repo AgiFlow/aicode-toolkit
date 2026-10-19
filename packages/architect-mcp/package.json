@@ -40,23 +40,23 @@
     "@agiflowai/aicode-utils": "workspace:*",
     "@agiflowai/coding-agent-bridge": "workspace:*",
     "@agiflowai/hooks-adapter": "workspace:*",
-    "@modelcontextprotocol/node": "2.1.0",
-    "@modelcontextprotocol/server": "2.1.0",
-    "@modelcontextprotocol/server-legacy": "2.1.0",
+    "@modelcontextprotocol/node": "2.1.1",
+    "@modelcontextprotocol/server": "2.3.1",
+    "@modelcontextprotocol/server-legacy": "2.3.1",
     "@types/express": "5.0.6",
-    "chalk": "6.0.0",
+    "chalk": "6.0.1",
     "commander": "15.0.0",
-    "execa": "10.0.1",
-    "express": "5.2.1",
-    "js-yaml": "5.4.2",
+    "execa": "10.1.1",
+    "express": "5.3.0",
+    "js-yaml": "5.5.0",
     "minimatch": "10.2.6",
-    "uuid": "14.0.2",
-    "zod": "4.6.5"
+    "uuid": "14.0.3",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/node": "26.6.3",
     "tsdown": "0.23.0",
     "typescript": "6.0.3",
-    "vitest": "5.0.2"
+    "vitest": "5.0.5"
   }
 }
