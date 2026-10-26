@@ -41,21 +41,21 @@
   },
   "dependencies": {
     "@agiflowai/aicode-utils": "workspace:*",
-    "@modelcontextprotocol/server": "2.1.0",
+    "@modelcontextprotocol/server": "2.3.1",
     "@tailwindcss/vite": "4.3.3",
-    "chalk": "6.0.0",
+    "chalk": "6.0.1",
     "commander": "15.0.0",
     "glob": "13.0.6",
-    "js-yaml": "5.4.2",
-    "playwright": "1.63.0",
-    "postcss": "8.5.28",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "sharp": "0.35.4",
-    "storybook": "10.6.0",
+    "js-yaml": "5.5.0",
+    "playwright": "1.64.1",
+    "postcss": "8.5.31",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "sharp": "0.35.5",
+    "storybook": "10.6.3",
     "tailwindcss": "4.3.3",
-    "vite": "8.3.1",
-    "vite-plugin-singlefile": "2.3.3"
+    "vite": "8.3.5",
+    "vite-plugin-singlefile": "2.3.4"
   },
   "devDependencies": {
     "@babel/parser": "7.29.9",
@@ -69,7 +69,7 @@
     "tsdown": "0.23.0",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vitest": "5.0.2"
+    "vitest": "5.0.5"
   },
   "engines": {
     "node": ">=22.12.0"
