@@ -43,10 +43,10 @@
   },
   "devDependencies": {
     "@types/chance": "1.1.8",
-    "@types/node": "26.6.3",
-    "@vitest/coverage-v8": "5.0.2",
+    "@types/node": "26.6.5",
+    "@vitest/coverage-v8": "5.0.5",
     "chance": "1.1.13",
-    "tsdown": "0.23.0",
+    "tsdown": "0.23.1",
     "typescript": "6.0.3",
     "vitest": "5.0.2"
   }
